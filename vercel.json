@@ -12,10 +12,5 @@
     "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJidXhmbmNoZmxodHVsYWlubmRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4NDYzMjYsImV4cCI6MjA2OTQyMjMyNn0.AF6IiaeGB9-8FYZNKQsbnl5yZmSjBMj7Ag4eUunEbtc",
     "DATABASE_URL": "postgresql://postgres:CRM_Backend2025@db.bbuxfnchflhtulainndm.supabase.co:5432/postgres",
     "NEXT_PUBLIC_PROJECT_NAME": "nexmax-dashboard"
-  },
-  "functions": {
-    "app/**/*.tsx": {
-      "maxDuration": 30
-    }
   }
 } 
