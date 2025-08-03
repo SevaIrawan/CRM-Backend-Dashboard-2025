@@ -1,0 +1,69 @@
+'use client'
+
+import { useState } from 'react'
+import Header from './Header'
+import Sidebar from './Sidebar'
+import SubHeader from './SubHeader'
+import AccessControl from './AccessControl'
+import PageTransition from './PageTransition'
+import NavPrefetch from './NavPrefetch'
+
+interface LayoutProps {
+  children: React.ReactNode
+  pageTitle?: string
+  subHeaderTitle?: string
+  customSubHeader?: React.ReactNode
+  darkMode?: boolean
+  onToggleDarkMode?: () => void
+  onLogout?: () => void
+  sidebarExpanded?: boolean
+}
+
+export default function Layout({ 
+  children, 
+  pageTitle = "NEXMAX Dashboard",
+  subHeaderTitle,
+  customSubHeader,
+  darkMode = false,
+  onToggleDarkMode = () => {},
+  onLogout = () => {},
+  sidebarExpanded = true
+}: LayoutProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(sidebarExpanded)
+
+  return (
+    <AccessControl>
+      <div className="main-container">
+        <NavPrefetch />
+        
+        <Sidebar 
+          sidebarOpen={sidebarOpen} 
+          setSidebarOpen={setSidebarOpen}
+          darkMode={darkMode}
+          onToggleDarkMode={onToggleDarkMode}
+          onLogout={onLogout}
+          sidebarExpanded={sidebarExpanded}
+        />
+        
+        <Header 
+          pageTitle={pageTitle}
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+          darkMode={darkMode}
+          onToggleDarkMode={onToggleDarkMode}
+          onLogout={onLogout}
+        />
+        
+        <div className={`subheader ${!sidebarOpen ? 'collapsed' : ''}`}>
+          {customSubHeader || <SubHeader title={subHeaderTitle || ' '} />}
+        </div>
+        
+        <div className={`main-content ${!sidebarOpen ? 'collapsed' : ''}`}>
+          <PageTransition>
+            {children}
+          </PageTransition>
+        </div>
+      </div>
+    </AccessControl>
+  )
+} 
