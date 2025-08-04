@@ -134,7 +134,7 @@ export const hasPermission = (userRole: string, pagePath: string): boolean => {
     '/transaction/new-depositor': 'transaction',
     '/transaction/new-register': 'transaction',
     '/transaction/vip-program': 'transaction',
-    '/connection-test': 'supabase',
+    '/supabase': 'supabase',
     '/users': 'users'
   }
 
@@ -177,12 +177,12 @@ export const getMenuItemsByRole = (userRole: string) => {
     { title: 'Strategic Executive', path: '/strategic-executive', permission: 'strategic-executive' },
     { title: 'Business Flow', path: '/business-flow', permission: 'business-flow' },
     { title: 'USC', path: '/usc', permission: 'usc', hasSubmenu: true },
-    { title: 'Business Growth Optimization', path: '/bgo', permission: 'bgo' },
+    { title: 'BGO', path: '/bgo', permission: 'bgo' },
     { title: 'Sales & Revenue', path: '/sr', permission: 'sr' },
-    { title: 'Executive Operation & Optimization', path: '/xoo', permission: 'xoo' },
-    { title: 'Operations & Support Management', path: '/os', permission: 'os' },
+    { title: 'XOO', path: '/xoo', permission: 'xoo' },
+    { title: 'OS', path: '/os', permission: 'os' },
     { title: 'Transaction', path: '/transaction', permission: 'transaction', hasSubmenu: true },
-    { title: 'Supabase', path: '/connection-test', permission: 'supabase' },
+    { title: 'Supabase', path: '/supabase', permission: 'supabase' },
     { title: 'User Management', path: '/users', permission: 'users' }
   ]
 

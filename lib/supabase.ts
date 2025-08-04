@@ -9,24 +9,37 @@ console.log('📡 URL:', SUPABASE_URL)
 console.log('🔑 Key exists:', !!SUPABASE_ANON_KEY)
 console.log('🔑 Key length:', SUPABASE_ANON_KEY?.length || 0)
 
-// Create Supabase client with better configuration
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 10
-    }
-  },
-  global: {
-    headers: {
-      'Content-Type': 'application/json'
-    }
+// Singleton pattern to prevent multiple client instances
+let supabaseInstance: ReturnType<typeof createClient> | null = null
+
+const createSupabaseClient = () => {
+  if (!supabaseInstance) {
+    console.log('🔄 Creating new Supabase client instance...')
+    supabaseInstance = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+        storage: typeof window !== 'undefined' ? window.localStorage : undefined
+      },
+      realtime: {
+        params: {
+          eventsPerSecond: 10
+        }
+      },
+      global: {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    })
+    console.log('✅ Supabase client instance created')
   }
-})
+  return supabaseInstance
+}
+
+// Export the singleton instance
+export const supabase = createSupabaseClient()
 
 // Enhanced connection test with timeout and retry
 export const testSupabaseConnection = async () => {

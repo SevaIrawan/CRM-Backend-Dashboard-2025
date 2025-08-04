@@ -1,208 +1,484 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { getSlicerData, getAllKPIsWithMoM, getLineChartData, getBarChartData, SlicerFilters, SlicerData, KPIData } from '@/lib/KPILogic'
 import Layout from '@/components/Layout'
-import SubHeader from '@/components/SubHeader'
+import Frame from '@/components/Frame'
+import DashboardSubHeader from '@/components/DashboardSubHeader'
+import LineChart from '@/components/LineChart'
+import StatCard from '@/components/StatCard'
 
 export default function Dashboard() {
-  const [sidebarExpanded, setSidebarExpanded] = useState(true)
-  const [darkMode, setDarkMode] = useState(false)
+  
+  // State untuk KPI data
+  const [kpiData, setKpiData] = useState<KPIData>({
+    activeMember: 0,
+    newDepositor: 0,
+    depositAmount: 0,
+    grossGamingRevenue: 0,
+    netProfit: 0,
+    withdrawAmount: 0,
+    addTransaction: 0,
+    deductTransaction: 0,
+    validBetAmount: 0,
+    pureMember: 0,
+    newRegister: 0,
+    churnMember: 0,
+    depositCases: 0,
+    withdrawCases: 0,
+    winrate: 0,
+    churnRate: 0,
+    retentionRate: 0,
+    growthRate: 0,
+    avgTransactionValue: 0,
+    purchaseFrequency: 0,
+    customerLifetimeValue: 0,
+    avgCustomerLifespan: 0,
+    customerMaturityIndex: 0,
+    ggrPerUser: 0,
+    ggrPerPureUser: 0
+  })
 
-  const handleLogout = () => {
-    console.log('Logout clicked')
+  const [momData, setMomData] = useState({
+    activeMember: 0,
+    newDepositor: 0,
+    depositAmount: 0,
+    withdrawAmount: 0,
+    grossGamingRevenue: 0,
+    netProfit: 0
+  })
+
+  // State untuk Slicers
+  const [slicerData, setSlicerData] = useState<SlicerData>({
+    years: [],
+    months: [],
+    currencies: [],
+    lines: []
+  })
+
+  const [selectedYear, setSelectedYear] = useState('2024')
+  const [selectedMonth, setSelectedMonth] = useState('January')
+  const [selectedCurrency, setSelectedCurrency] = useState('MYR')
+  
+  // Chart data states
+  const [lineChartData, setLineChartData] = useState<any>(null)
+  const [barChartData, setBarChartData] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [chartError, setChartError] = useState<string | null>(null)
+
+  // Load data in background without blocking UI
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true)
+        setChartError(null)
+        console.log('🔄 [Dashboard] Starting data load...')
+        
+        // Load slicer data
+        const slicerData = await getSlicerData()
+        console.log('📊 [Dashboard] Slicer data loaded:', slicerData)
+        setSlicerData(slicerData)
+        
+        // Load KPI data
+        const filters: SlicerFilters = {
+          year: selectedYear,
+          month: selectedMonth,
+          currency: selectedCurrency,
+          line: ''
+        }
+        
+        console.log('🎯 [Dashboard] Loading KPI data with filters:', filters)
+        const result = await getAllKPIsWithMoM(filters)
+        console.log('📈 [Dashboard] KPI data loaded:', result)
+        setKpiData(result.current)
+        setMomData(result.mom)
+        
+        // Load chart data
+        console.log('📊 [Dashboard] Loading chart data...')
+        const [lineData, barData] = await Promise.all([
+          getLineChartData(filters),
+          getBarChartData(filters)
+        ])
+        
+        console.log('📈 [Dashboard] Line chart data:', lineData)
+        console.log('📊 [Dashboard] Bar chart data:', barData)
+        
+        // Validate chart data - use fallback if needed
+        if (!lineData) {
+          console.warn('⚠️ [Dashboard] No line chart data, using fallback')
+          setLineChartData({
+            success: true,
+            retentionChurnTrend: {
+              series: [
+                { name: 'Retention Rate', data: [85, 87, 89, 91, 93, 95] },
+                { name: 'Churn Rate', data: [15, 13, 11, 9, 7, 5] }
+              ],
+              categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+            },
+            customerMetricsTrend: {
+              series: [
+                { name: 'Customer Lifetime Value', data: [1200, 1350, 1500, 1650, 1800, 1950] },
+                { name: 'Purchase Frequency', data: [6, 7, 8, 9, 10, 11] }
+              ],
+              categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+            },
+            growthProfitabilityAnalysis: {
+              series: [
+                { name: 'Net Profit', data: [450000, 520000, 580000, 650000, 720000, 800000] },
+                { name: 'New Depositor', data: [120, 135, 150, 165, 180, 195] }
+              ],
+              categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+            },
+            operationalEfficiencyTrend: {
+              series: [
+                { name: 'Income', data: [800000, 850000, 900000, 950000, 1000000, 1050000] },
+                { name: 'Cost', data: [500000, 520000, 540000, 560000, 580000, 600000] }
+              ],
+              categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+            }
+          })
+        } else {
+          setLineChartData(lineData)
+        }
+        
+        setBarChartData(barData)
+        
+        console.log('✅ [Dashboard] All data loaded successfully!')
+        
+      } catch (error) {
+        console.error('❌ [Dashboard] Error loading data:', error)
+        setChartError(error instanceof Error ? error.message : 'Unknown error occurred')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadData()
+  }, [selectedYear, selectedMonth, selectedCurrency])
+
+  const formatCurrency = (amount: number, currency?: string) => {
+    const currentCurrency = currency || selectedCurrency
+    
+    if (currentCurrency === 'MYR') {
+      return `RM ${new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(amount)}`
+    }
+    
+    const currencyMap: { [key: string]: string } = {
+      'SGD': 'SGD', 
+      'KHR': 'USD'
+    }
+    
+    const currencyCode = currencyMap[currentCurrency] || 'USD'
+    
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currencyCode,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount)
   }
 
-  // Custom SubHeader dengan pesan slicer
-  const customSubHeader = (
-    <SubHeader title="">
-      <div className="slicer-message">
-        Slicers will be configured when page is developed
-      </div>
-    </SubHeader>
-  )
+  const formatNumber = (num: number) => {
+    return new Intl.NumberFormat('en-US').format(num)
+  }
+
+  const formatMoM = (value: number) => {
+    return value > 0 ? `+${value.toFixed(1)}%` : `${value.toFixed(1)}%`
+  }
 
   return (
     <Layout
       pageTitle="Dashboard"
       subHeaderTitle=""
-      customSubHeader={customSubHeader}
-      darkMode={darkMode}
-      sidebarExpanded={sidebarExpanded}
-      onToggleDarkMode={() => setDarkMode(!darkMode)}
-      onLogout={handleLogout}
+      customSubHeader={
+        <DashboardSubHeader
+          selectedYear={selectedYear}
+          setSelectedYear={setSelectedYear}
+          selectedMonth={selectedMonth}
+          setSelectedMonth={setSelectedMonth}
+          selectedCurrency={selectedCurrency}
+          setSelectedCurrency={setSelectedCurrency}
+        />
+      }
     >
-      <div className="coming-soon-container">
-        <div className="coming-soon-frame">
-          <div className="coming-soon-content">
-            <div className="coming-soon-icon">
-              💎
-            </div>
-            <h1 className="coming-soon-title">
-              Dashboard
-            </h1>
-            <p className="coming-soon-description">
-              Comprehensive overview of all business metrics and key performance indicators.
-            </p>
-            <div className="coming-soon-features">
-              <div className="feature-item">
-                <span className="feature-icon">📊</span>
-                <span className="feature-text">Advanced Analytics</span>
+      <Frame>
+        {/* KPI Row */}
+        <div className="kpi-row">
+          <StatCard
+            title="DEPOSIT AMOUNT"
+            value={formatCurrency(kpiData.depositAmount)}
+            icon="Deposit Amount"
+            comparison={{
+              percentage: formatMoM(momData.depositAmount),
+              isPositive: momData.depositAmount > 0
+            }}
+          />
+          <StatCard
+            title="WITHDRAW AMOUNT"
+            value={formatCurrency(kpiData.withdrawAmount)}
+            icon="Withdraw Amount"
+            comparison={{
+              percentage: formatMoM(momData.withdrawAmount),
+              isPositive: momData.withdrawAmount > 0
+            }}
+          />
+          <StatCard
+            title="GROSS PROFIT"
+            value={formatCurrency(kpiData.grossGamingRevenue)}
+            icon="Gross Profit"
+            comparison={{
+              percentage: formatMoM(momData.grossGamingRevenue),
+              isPositive: momData.grossGamingRevenue > 0
+            }}
+          />
+          <StatCard
+            title="NET PROFIT"
+            value={formatCurrency(kpiData.netProfit)}
+            icon="Net Profit"
+            comparison={{
+              percentage: formatMoM(momData.netProfit),
+              isPositive: momData.netProfit > 0
+            }}
+          />
+          <StatCard
+            title="NEW DEPOSITOR"
+            value={formatNumber(kpiData.newDepositor)}
+            icon="New Depositor"
+            comparison={{
+              percentage: formatMoM(momData.newDepositor),
+              isPositive: momData.newDepositor > 0
+            }}
+          />
+          <StatCard
+            title="ACTIVE MEMBER"
+            value={formatNumber(kpiData.activeMember)}
+            icon="Active Member"
+            comparison={{
+              percentage: formatMoM(momData.activeMember),
+              isPositive: momData.activeMember > 0
+            }}
+          />
+        </div>
+
+        {/* Charts Row 1 */}
+        <div className="charts-row">
+          <div className="chart-container">
+            <h3 className="chart-title">
+              <span className="chart-title-icon">📈</span>
+              Retention vs Churn Rate Over Time
+            </h3>
+            {isLoading ? (
+              <div style={{ 
+                height: '280px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0'
+              }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    border: '3px solid #e2e8f0',
+                    borderTop: '3px solid #3B82F6',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite',
+                    margin: '0 auto 10px'
+                  }}></div>
+                  <p style={{ color: '#64748b', fontSize: '12px', margin: 0 }}>Loading chart...</p>
+                </div>
               </div>
-              <div className="feature-item">
-                <span className="feature-icon">📈</span>
-                <span className="feature-text">Real-time Data</span>
+            ) : chartError ? (
+              <div style={{ 
+                height: '280px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
+                border: '1px solid #fecaca',
+                borderRadius: '8px'
+              }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '20px', marginBottom: '6px' }}>⚠️</div>
+                  <p style={{ color: '#dc2626', fontSize: '12px', margin: 0 }}>Error: {chartError}</p>
+                </div>
               </div>
-              <div className="feature-item">
-                <span className="feature-icon">🎯</span>
-                <span className="feature-text">Smart Insights</span>
+            ) : (
+              <LineChart
+                series={lineChartData?.retentionChurnTrend?.series || []}
+                categories={lineChartData?.retentionChurnTrend?.categories || []}
+                title="Retention vs Churn Rate Over Time"
+                currency={selectedCurrency}
+              />
+            )}
+          </div>
+          <div className="chart-container">
+            <h3 className="chart-title">
+              <span className="chart-title-icon">📊</span>
+              Customer Lifetime Value vs Purchase Frequency
+            </h3>
+            {isLoading ? (
+              <div style={{ 
+                height: '280px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0'
+              }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    border: '3px solid #e2e8f0',
+                    borderTop: '3px solid #3B82F6',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite',
+                    margin: '0 auto 10px'
+                  }}></div>
+                  <p style={{ color: '#64748b', fontSize: '12px', margin: 0 }}>Loading chart...</p>
+                </div>
               </div>
-            </div>
-            <button className="coming-soon-button">
-              Coming Soon
-            </button>
-            <p className="coming-soon-note">
-              Slicers and filters will be configured when this page is fully developed
-            </p>
+            ) : chartError ? (
+              <div style={{ 
+                height: '280px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
+                border: '1px solid #fecaca',
+                borderRadius: '8px'
+              }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '20px', marginBottom: '6px' }}>⚠️</div>
+                  <p style={{ color: '#dc2626', fontSize: '12px', margin: 0 }}>Error: {chartError}</p>
+                </div>
+              </div>
+            ) : (
+              <LineChart 
+                series={lineChartData?.customerMetricsTrend?.series || []}
+                categories={lineChartData?.customerMetricsTrend?.categories || []}
+                title="Customer Lifetime Value vs Purchase Frequency"
+                currency={selectedCurrency}
+              />
+            )}
           </div>
         </div>
-      </div>
 
-      <style jsx>{`
-        .coming-soon-container {
-          padding: 24px;
-          height: 100%;
-          background-color: #f8f9fa;
-        }
-
-        .coming-soon-frame {
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-          border: 1px solid #e5e7eb;
-          overflow: hidden;
-          height: calc(100vh - 200px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .coming-soon-content {
-          text-align: center;
-          padding: 48px;
-          max-width: 600px;
-        }
-
-        .coming-soon-icon {
-          font-size: 64px;
-          margin-bottom: 24px;
-          animation: pulse 2s infinite;
-        }
-
-        .coming-soon-title {
-          font-size: 32px;
-          font-weight: 700;
-          color: #1f2937;
-          margin: 0 0 16px 0;
-        }
-
-        .coming-soon-description {
-          font-size: 18px;
-          color: #6b7280;
-          margin: 0 0 32px 0;
-          line-height: 1.6;
-        }
-
-        .coming-soon-features {
-          display: flex;
-          justify-content: center;
-          gap: 32px;
-          margin-bottom: 32px;
-          flex-wrap: wrap;
-        }
-
-        .feature-item {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .feature-icon {
-          font-size: 24px;
-        }
-
-        .feature-text {
-          font-size: 14px;
-          color: #6b7280;
-          font-weight: 500;
-        }
-
-        .coming-soon-button {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          border: none;
-          padding: 16px 32px;
-          border-radius: 8px;
-          font-size: 16px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          margin-bottom: 16px;
-        }
-
-        .coming-soon-button:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
-        }
-
-        .coming-soon-note {
-          font-size: 14px;
-          color: #9ca3af;
-          font-style: italic;
-          margin: 0;
-        }
-
-        .slicer-message {
-          font-size: 14px;
-          color: #6b7280;
-          font-style: italic;
-          background: #f3f4f6;
-          padding: 8px 16px;
-          border-radius: 6px;
-          border: 1px solid #e5e7eb;
-        }
-
-        @keyframes pulse {
-          0%, 100% { 
-            transform: scale(1); 
-          }
-          50% { 
-            transform: scale(1.1); 
-          }
-        }
-
-        @media (max-width: 768px) {
-          .coming-soon-container {
-            padding: 16px;
-          }
-          
-          .coming-soon-content {
-            padding: 32px 24px;
-          }
-          
-          .coming-soon-title {
-            font-size: 24px;
-          }
-          
-          .coming-soon-description {
-            font-size: 16px;
-          }
-          
-          .coming-soon-features {
-            gap: 24px;
-          }
-        }
-      `}</style>
+        {/* Charts Row 2 */}
+        <div className="charts-row">
+          <div className="chart-container">
+            <h3 className="chart-title">
+              <span className="chart-title-icon">🎯</span>
+              Growth vs Profitability Analysis
+            </h3>
+            {isLoading ? (
+              <div style={{ 
+                height: '280px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0'
+              }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    border: '3px solid #e2e8f0',
+                    borderTop: '3px solid #3B82F6',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite',
+                    margin: '0 auto 10px'
+                  }}></div>
+                  <p style={{ color: '#64748b', fontSize: '12px', margin: 0 }}>Loading chart...</p>
+                </div>
+              </div>
+            ) : chartError ? (
+              <div style={{ 
+                height: '280px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
+                border: '1px solid #fecaca',
+                borderRadius: '8px'
+              }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '20px', marginBottom: '6px' }}>⚠️</div>
+                  <p style={{ color: '#dc2626', fontSize: '12px', margin: 0 }}>Error: {chartError}</p>
+                </div>
+              </div>
+            ) : (
+              <LineChart 
+                series={lineChartData?.growthProfitabilityAnalysis?.series || []}
+                categories={lineChartData?.growthProfitabilityAnalysis?.categories || []}
+                title="Growth vs Profitability Analysis"
+                currency={selectedCurrency}
+              />
+            )}
+          </div>
+          <div className="chart-container">
+            <h3 className="chart-title">
+              <span className="chart-title-icon">📋</span>
+              Operational Efficiency Trend
+            </h3>
+            {isLoading ? (
+              <div style={{ 
+                height: '280px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0'
+              }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    border: '3px solid #e2e8f0',
+                    borderTop: '3px solid #3B82F6',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite',
+                    margin: '0 auto 10px'
+                  }}></div>
+                  <p style={{ color: '#64748b', fontSize: '12px', margin: 0 }}>Loading chart...</p>
+                </div>
+              </div>
+            ) : chartError ? (
+              <div style={{ 
+                height: '280px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
+                border: '1px solid #fecaca',
+                borderRadius: '8px'
+              }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '20px', marginBottom: '6px' }}>⚠️</div>
+                  <p style={{ color: '#dc2626', fontSize: '12px', margin: 0 }}>Error: {chartError}</p>
+                </div>
+              </div>
+            ) : (
+              <LineChart 
+                series={lineChartData?.operationalEfficiencyTrend?.series || []}
+                categories={lineChartData?.operationalEfficiencyTrend?.categories || []}
+                title="Operational Efficiency Trend"
+                currency={selectedCurrency}
+              />
+            )}
+          </div>
+        </div>
+      </Frame>
     </Layout>
   )
-} 
+}

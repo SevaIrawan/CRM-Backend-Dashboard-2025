@@ -1,5 +1,7 @@
 'use client'
 
+import { useEffect } from 'react'
+
 export default function Error({
   error,
   reset,
@@ -7,20 +9,26 @@ export default function Error({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  useEffect(() => {
+    console.error('❌ App Error:', error)
+  }, [error])
+
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #1a1d29 0%, #2d3142 50%, #1a1d29 100%)',
+      background: '#f8f9fa',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      color: 'white',
-      fontFamily: 'Arial, sans-serif'
+      fontFamily: 'Inter, sans-serif'
     }}>
       <div style={{
         textAlign: 'center',
         padding: '2rem',
-        maxWidth: '500px'
+        maxWidth: '400px',
+        background: 'white',
+        borderRadius: '8px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
       }}>
         <div style={{
           fontSize: '4rem',

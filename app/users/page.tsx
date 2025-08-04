@@ -110,7 +110,7 @@ export default function UsersPage() {
         setUsers([])
       } else {
         console.log('✅ Users loaded from Supabase:', data?.length || 0, 'users')
-        setUsers(data || [])
+        setUsers((data as unknown as User[]) || [])
       }
       
       setLoading(false)

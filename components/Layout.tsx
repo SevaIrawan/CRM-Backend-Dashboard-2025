@@ -55,7 +55,11 @@ export default function Layout({
         />
         
         <div className={`subheader ${!sidebarOpen ? 'collapsed' : ''}`}>
-          {customSubHeader || <SubHeader title={subHeaderTitle || ' '} />}
+          {customSubHeader ? (
+            customSubHeader
+          ) : (
+            <SubHeader title={subHeaderTitle || ' '} />
+          )}
         </div>
         
         <div className={`main-content ${!sidebarOpen ? 'collapsed' : ''}`}>

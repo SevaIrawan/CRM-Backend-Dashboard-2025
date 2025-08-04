@@ -1,9 +1,9 @@
 // Configuration file untuk mengatasi masalah .env.local yang terblokir
-export const config = {
-  // Supabase Configuration
+const config = {
   supabase: {
-    url: process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://bbuxfnchflhtulainndm.supabase.co',
-    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJidXhmbmNoZmxodHVsYWlubmRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4NDYzMjYsImV4cCI6MjA2OTQyMjMyNn0.AF6IiaeGB9-8FYZNKQsbnl5yZmSjBMj7Ag4eUunEbtc'
+    url: 'https://bbuxfnchflhtulainndm.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJidXhmbmNoZmxodHVsYWlubmRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4NDYzMjYsImV4cCI6MjA2OTQyMjMyNn0.AF6IiaeGB9-8FYZNKQsbnl5yZmSjBMj7Ag4eUunEbtc',
+    serviceRoleKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJidXhmbmNoZmxodHVsYWlubmRtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mzg0NjMyNiwiZXhwIjoyMDY5NDIyMzI2fQ.A773GJpWIj7bowBvDckFtl_agYY4Oi_IZSwwsqNP2bQ'
   },
   
   // App Configuration
@@ -20,6 +20,8 @@ export const config = {
     transactions: 'transactions'
   }
 }
+
+export default config
 
 // Helper function untuk mendapatkan konfigurasi
 export const getConfig = () => {

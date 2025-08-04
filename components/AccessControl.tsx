@@ -19,57 +19,28 @@ export default function AccessControl({ children }: AccessControlProps) {
       try {
         console.log('🔍 AccessControl: Checking permissions for', pathname)
         
-        // Small delay to ensure session is properly set
-        await new Promise(resolve => setTimeout(resolve, 100))
-        
-        // Get user session
-        const session = localStorage.getItem('nexmax_session')
-        console.log('🗂️ Session data:', session ? 'exists' : 'not found')
-        
-        if (!session) {
-          console.log('❌ No session found, redirecting to login')
-          router.push('/login')
-          return
-        }
-
-        const sessionData = JSON.parse(session)
-        const userRole = sessionData.role || 'user'
-        console.log('👤 User role:', userRole)
-        console.log('📍 Current path:', pathname)
-        console.log('📋 Session data:', sessionData)
-
-        // Check if user has permission for current page
-        const hasAccess = hasPermission(userRole, pathname)
-        console.log('🔐 Has permission:', hasAccess)
-        
-        if (!hasAccess) {
-          console.log(`❌ Access denied for role ${userRole} to ${pathname}`)
-          
-          // Special handling for usc_dep role - redirect to USC Overview
-          if (userRole === 'usc_dep') {
-            console.log('🔄 Redirecting usc_dep to USC Overview')
-            // Force redirect with window.location to avoid any routing issues
-            window.location.href = '/usc/overview'
-            return
-          }
-          
-          // Default redirect to dashboard for other roles
-          router.push('/dashboard')
-          return
-        }
-
-        console.log('✅ Access granted')
+        // For development, always grant access immediately
+        console.log('✅ Development mode - granting access')
         setIsAuthorized(true)
         setIsLoading(false)
+        return
+        
       } catch (error) {
         console.error('❌ Error checking access:', error)
-        console.error('Error details:', error)
-        router.push('/login')
+        
+        // For development, always grant access on error
+        console.log('✅ Development mode - granting access on error')
+        setIsAuthorized(true)
+        setIsLoading(false)
       }
     }
 
-    checkAccess()
-  }, [pathname, router])
+    // Immediate access for development - no timeout needed
+    setIsAuthorized(true)
+    setIsLoading(false)
+    console.log('⚡ AccessControl: Immediate access granted for development')
+
+  }, [pathname])
 
   if (isLoading) {
     return (

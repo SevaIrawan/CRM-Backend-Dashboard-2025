@@ -29,6 +29,10 @@ export default function Header({
   useEffect(() => {
     // Get user info from session
     try {
+      if (typeof window === 'undefined') {
+        return // Skip on server-side
+      }
+      
       const session = localStorage.getItem('nexmax_session')
       if (session) {
         const sessionData = JSON.parse(session)
@@ -61,7 +65,7 @@ export default function Header({
       case '/xoo':
         return 'Executive Operation & Optimization'
       case '/os':
-        return 'Operations & Support Management'
+        return 'Operation Supervision'
       case '/usc/overview':
         return 'USC Overview'
       case '/usc/sales':
@@ -90,11 +94,13 @@ export default function Header({
   const handleLogout = async () => {
     try {
       console.log('🔄 Starting logout...')
-      localStorage.removeItem('nexmax_session')
-      document.cookie = 'user_id=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT'
-      document.cookie = 'username=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT'
-      document.cookie = 'user_role=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT'
-      console.log('🍪 Cookies cleared manually')
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('nexmax_session')
+        document.cookie = 'user_id=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT'
+        document.cookie = 'username=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT'
+        document.cookie = 'user_role=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT'
+        console.log('🍪 Cookies cleared manually')
+      }
     } catch (error) {
       console.error('❌ Logout error:', error)
     }

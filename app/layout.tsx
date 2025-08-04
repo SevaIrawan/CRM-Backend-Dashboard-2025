@@ -7,6 +7,9 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'NexMax Dashboard',
   description: 'Interactive Dashboard with Username-based Authentication',
+  icons: {
+    icon: '/favicon.ico',
+  },
 }
 
 export default function RootLayout({

@@ -175,6 +175,7 @@ export default function LoginPage() {
                   alt="NEXMAX Logo"
                   width={64}
                   height={64}
+                  priority
                   style={{
                     borderRadius: '50%',
                     objectFit: 'cover',

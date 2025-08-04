@@ -10,14 +10,14 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.38.0",
+    "chart.js": "^4.5.0",
+    "clsx": "^2.0.0",
+    "lucide-react": "^0.294.0",
     "next": "^14.0.0",
     "react": "^18.0.0",
-    "react-dom": "^18.0.0",
-    "@supabase/supabase-js": "^2.38.0",
-    "chart.js": "^4.4.0",
     "react-chartjs-2": "^5.2.0",
-    "lucide-react": "^0.294.0",
-    "clsx": "^2.0.0",
+    "react-dom": "^18.0.0",
     "tailwind-merge": "^2.0.0"
   },
   "devDependencies": {
@@ -47,4 +47,4 @@
     "url": "https://github.com/SevaIrawan/NEXMAX.git"
   },
   "homepage": "https://nexmax-dashboard.vercel.app"
-} 
+}

@@ -8,6 +8,10 @@ export default function HomePage() {
 
   useEffect(() => {
     // Check if user is logged in
+    if (typeof window === 'undefined') {
+      return // Skip on server-side
+    }
+    
     const session = localStorage.getItem('nexmax_session')
     if (session) {
       // User is logged in, redirect to dashboard

@@ -5,6 +5,8 @@ import Layout from '../../components/Layout';
 import SubHeader from '../../components/SubHeader';
 import { YearSlicer, MonthSlicer, CurrencySlicer } from '../../components/slicers';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
+import ComparisonIcon from '../../components/ComparisonIcon';
+import { formatMoMValue } from '../../lib/KPILogic';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -288,7 +290,7 @@ export default function BusinessFlow() {
   const customSubHeader = (
     <SubHeader title="">
       <YearSlicer value={year} onChange={setYear} />
-      <MonthSlicer value={month} onChange={setMonth} />
+      <MonthSlicer value={month} onChange={setMonth} selectedYear={year} selectedCurrency={currency} />
       <CurrencySlicer value={currency} onChange={setCurrency} />
     </SubHeader>
   );
@@ -320,19 +322,37 @@ export default function BusinessFlow() {
                 <div className="kpi-card">
                   <h4 className="kpi-title">NEW CUSTOMER CONVERSION RATE</h4>
                   <div className="kpi-value">4.83%</div>
-                  <div className="kpi-change negative">↘️ -28.23% vs Last Month</div>
+                  <div className="kpi-change">
+                    <ComparisonIcon 
+                      value={-28.23} 
+                      showText={true} 
+                      text={`${formatMoMValue(-28.23)} vs Last Month`}
+                    />
+                  </div>
                 </div>
                 
                 <div className="kpi-card">
                   <h4 className="kpi-title">TOTAL NEW CUSTOMERS</h4>
                   <div className="kpi-value">65</div>
-                  <div className="kpi-change negative">↘️ -47.58% vs Last Month</div>
+                  <div className="kpi-change">
+                    <ComparisonIcon 
+                      value={-47.58} 
+                      showText={true} 
+                      text={`${formatMoMValue(-47.58)} vs Last Month`}
+                    />
+                  </div>
                 </div>
                 
                 <div className="kpi-card">
                   <h4 className="kpi-title">CUSTOMER GROUP JOIN VOLUME</h4>
                   <div className="kpi-value">1,357</div>
-                  <div className="kpi-change negative">↘️ -26.73% vs Last Month</div>
+                  <div className="kpi-change">
+                    <ComparisonIcon 
+                      value={-26.73} 
+                      showText={true} 
+                      text={`${formatMoMValue(-26.73)} vs Last Month`}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -372,25 +392,49 @@ export default function BusinessFlow() {
                 <div className="kpi-card">
                   <h4 className="kpi-title">2ND DEPOSIT RATE (IN GROUP)</h4>
                   <div className="kpi-value">24.22%</div>
-                  <div className="kpi-change negative">↘️ -15.31% vs Last Month</div>
+                  <div className="kpi-change">
+                    <ComparisonIcon 
+                      value={-15.31} 
+                      showText={true} 
+                      text={`${formatMoMValue(-15.31)} vs Last Month`}
+                    />
+                  </div>
                 </div>
                 
                 <div className="kpi-card">
                   <h4 className="kpi-title">2ND DEPOSITS (IN GROUP)</h4>
                   <div className="kpi-value">78</div>
-                  <div className="kpi-change negative">↘️ -51.25% vs Last Month</div>
+                  <div className="kpi-change">
+                    <ComparisonIcon 
+                      value={-51.25} 
+                      showText={true} 
+                      text={`${formatMoMValue(-51.25)} vs Last Month`}
+                    />
+                  </div>
                 </div>
                 
                 <div className="kpi-card">
                   <h4 className="kpi-title">2ND DEPOSIT RATE (NOT IN GROUP)</h4>
                   <div className="kpi-value">11.80%</div>
-                  <div className="kpi-change negative">↘️ -28.53% vs Last Month</div>
+                  <div className="kpi-change">
+                    <ComparisonIcon 
+                      value={-28.53} 
+                      showText={true} 
+                      text={`${formatMoMValue(-28.53)} vs Last Month`}
+                    />
+                  </div>
                 </div>
                 
                 <div className="kpi-card">
                   <h4 className="kpi-title">2ND DEPOSITS (NOT IN GROUP)</h4>
                   <div className="kpi-value">65</div>
-                  <div className="kpi-change negative">↘️ -47.58% vs Last Month</div>
+                  <div className="kpi-change">
+                    <ComparisonIcon 
+                      value={-47.58} 
+                      showText={true} 
+                      text={`${formatMoMValue(-47.58)} vs Last Month`}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -430,13 +474,25 @@ export default function BusinessFlow() {
                 <div className="kpi-card">
                   <h4 className="kpi-title">TOTAL UPGRADED MEMBERS</h4>
                   <div className="kpi-value">188</div>
-                  <div className="kpi-change negative">↘️ -16.27% vs Last Month</div>
+                  <div className="kpi-change">
+                    <ComparisonIcon 
+                      value={-16.27} 
+                      showText={true} 
+                      text={`${formatMoMValue(-16.27)} vs Last Month`}
+                    />
+                  </div>
                 </div>
                 
                 <div className="kpi-card">
                   <h4 className="kpi-title">TOTAL CHURNED MEMBERS</h4>
                   <div className="kpi-value">128</div>
-                  <div className="kpi-change negative">↘️ -12.91% vs Last Month</div>
+                  <div className="kpi-change">
+                    <ComparisonIcon 
+                      value={-12.91} 
+                      showText={true} 
+                      text={`${formatMoMValue(-12.91)} vs Last Month`}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -502,19 +558,37 @@ export default function BusinessFlow() {
                 <div className="kpi-card">
                   <h4 className="kpi-title">CUSTOMER TRANSFER SUCCESS RATE</h4>
                   <div className="kpi-value">80.49%</div>
-                  <div className="kpi-change negative">↘️ -7.27% vs Last Month</div>
+                  <div className="kpi-change">
+                    <ComparisonIcon 
+                      value={-7.27} 
+                      showText={true} 
+                      text={`${formatMoMValue(-7.27)} vs Last Month`}
+                    />
+                  </div>
                 </div>
                 
                 <div className="kpi-card">
                   <h4 className="kpi-title">TARGET COMPLETION</h4>
                   <div className="kpi-value">94.70%</div>
-                  <div className="kpi-change negative">↘️ -5.30% vs Last Month</div>
+                  <div className="kpi-change">
+                    <ComparisonIcon 
+                      value={-5.30} 
+                      showText={true} 
+                      text={`${formatMoMValue(-5.30)} vs Last Month`}
+                    />
+                  </div>
                 </div>
                 
                 <div className="kpi-card">
                   <h4 className="kpi-title">TOTAL REACTIVATED CUSTOMERS</h4>
                   <div className="kpi-value">978</div>
-                  <div className="kpi-change negative">↘️ -23.65% vs Last Month</div>
+                  <div className="kpi-change">
+                    <ComparisonIcon 
+                      value={-23.65} 
+                      showText={true} 
+                      text={`${formatMoMValue(-23.65)} vs Last Month`}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -626,14 +700,6 @@ export default function BusinessFlow() {
         .kpi-change {
           font-size: 12px;
           font-weight: 600;
-        }
-
-        .kpi-change.negative {
-          color: #ef4444;
-        }
-
-        .kpi-change.positive {
-          color: #10b981;
         }
 
         .charts-section {

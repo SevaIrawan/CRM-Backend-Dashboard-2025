@@ -1,43 +1,89 @@
-// CENTRALIZED CURRENCY SLICER - KONSISTEN UNTUK SEMUA PAGE
-import React from 'react';
+'use client'
+
+import React, { useState, useEffect } from 'react'
+import { getSlicerData } from '@/lib/KPILogic'
 
 interface CurrencySlicerProps {
-  value: string;
-  onChange: (value: string) => void;
+  value: string
+  onChange: (value: string) => void
+  className?: string
 }
 
-const CurrencySlicer: React.FC<CurrencySlicerProps> = ({ value, onChange }) => {
-  const currencies = [
-    { code: 'USD', name: 'US Dollar' },
-    { code: 'SGD', name: 'Singapore Dollar' },
-    { code: 'MYR', name: 'Malaysian Ringgit' }
-  ];
+export default function CurrencySlicer({ value, onChange, className = '' }: CurrencySlicerProps) {
+  const [currencies, setCurrencies] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchCurrencies = async () => {
+      try {
+        setLoading(true)
+        console.log('💱 [CurrencySlicer] Fetching currencies from Supabase...')
+        
+        const slicerData = await getSlicerData()
+        setCurrencies(slicerData.currencies)
+        
+        console.log('✅ [CurrencySlicer] Currencies loaded:', slicerData.currencies)
+      } catch (error) {
+        console.error('❌ [CurrencySlicer] Error:', error)
+        setCurrencies([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCurrencies()
+  }, [])
+
+  if (loading) {
+    return (
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={`subheader-select ${className}`}
+        style={{ 
+          padding: '8px 12px',
+          border: '1px solid #e5e7eb', 
+          borderRadius: '8px', 
+          backgroundColor: 'white',
+          fontSize: '14px',
+          color: '#374151',
+          cursor: 'pointer',
+          outline: 'none',
+          transition: 'all 0.2s ease',
+          minWidth: '100px', 
+          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+        }}
+        disabled
+      >
+        <option>Loading...</option>
+      </select>
+    )
+  }
 
   return (
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="subheader-select"
-      style={{
+      className={`subheader-select ${className}`}
+      style={{ 
         padding: '8px 12px',
-        border: '1px solid #d1d5db',
-        borderRadius: '6px',
+        border: '1px solid #e5e7eb', 
+        borderRadius: '8px', 
         backgroundColor: 'white',
         fontSize: '14px',
         color: '#374151',
         cursor: 'pointer',
         outline: 'none',
         transition: 'all 0.2s ease',
-        minWidth: '120px'
+        minWidth: '100px', 
+        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
       }}
     >
       {currencies.map((currency) => (
-        <option key={currency.code} value={currency.code}>
-          {currency.code} - {currency.name}
+        <option key={currency} value={currency}>
+          {currency}
         </option>
       ))}
     </select>
-  );
-};
-
-export default CurrencySlicer; 
+  )
+} 

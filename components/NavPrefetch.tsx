@@ -20,7 +20,7 @@ export default function NavPrefetch() {
       '/xoo',
       '/os',
       '/users',
-      '/connection-test'
+      '/supabase'
     ]
 
     // Prefetch dengan delay untuk tidak mengganggu initial load

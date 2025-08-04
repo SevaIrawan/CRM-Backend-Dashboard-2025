@@ -160,15 +160,19 @@ export default function Sidebar({
   // Get user role from session
   const getUserRole = () => {
     try {
+      if (typeof window === 'undefined') {
+        return 'admin' // Default for server-side rendering
+      }
+      
       const session = localStorage.getItem('nexmax_session')
       if (session) {
         const sessionData = JSON.parse(session)
-        return sessionData.role || 'user'
+        return sessionData.role || 'admin'
       }
     } catch (error) {
       console.error('Error getting user role:', error)
     }
-    return 'user'
+    return 'admin' // Default to admin for development
   }
 
   const userRole = getUserRole()
@@ -182,24 +186,24 @@ export default function Sidebar({
       {
         title: 'Dashboard',
         path: '/dashboard',
-        icon: <DashboardIcon size={16} color="#ffffff" />,
+        icon: <DashboardIcon size={18} color="#ffffff" />,
         permission: 'dashboard'
       },
       {
         title: 'Strategic Executive',
         path: '/strategic-executive',
-        icon: <StrategyIcon size={16} color="#ffffff" />,
+        icon: <StrategyIcon size={18} color="#ffffff" />,
         permission: 'strategic-executive'
       },
       {
         title: 'Business Flow',
         path: '/business-flow',
-        icon: <FlowIcon size={16} color="#ffffff" />,
+        icon: <FlowIcon size={18} color="#ffffff" />,
         permission: 'business-flow'
       },
       {
         title: 'USC',
-        icon: <USCIcon size={16} color="#ffffff" />,
+        icon: <USCIcon size={18} color="#ffffff" />,
         permission: 'usc',
         submenu: [
           { title: 'Overview', path: '/usc/overview' },
@@ -207,32 +211,32 @@ export default function Sidebar({
         ]
       },
       {
-        title: 'Business Growth Optimization',
+        title: 'BGO',
         path: '/bgo',
-        icon: <GrowthIcon size={16} color="#ffffff" />,
+        icon: <GrowthIcon size={18} color="#ffffff" />,
         permission: 'bgo'
       },
       {
         title: 'Sales & Revenue',
         path: '/sr',
-        icon: <SalesIcon size={16} color="#ffffff" />,
+        icon: <SalesIcon size={18} color="#ffffff" />,
         permission: 'sr'
       },
       {
-        title: 'Executive Operation & Optimization',
+        title: 'XOO',
         path: '/xoo',
-        icon: <ExecutiveOptimizationIcon size={16} color="#ffffff" />,
+        icon: <ExecutiveOptimizationIcon size={18} color="#ffffff" />,
         permission: 'xoo'
       },
       {
-        title: 'Operations & Support Management',
+        title: 'OS',
         path: '/os',
-        icon: <ManagementIcon size={16} color="#ffffff" />,
+        icon: <ManagementIcon size={18} color="#ffffff" />,
         permission: 'os'
       },
       {
         title: 'Transaction',
-        icon: <TransactionIcon size={16} color="#ffffff" />,
+        icon: <TransactionIcon size={18} color="#ffffff" />,
         permission: 'transaction',
         submenu: [
           { title: 'Adjustment', path: '/transaction/adjustment' },
@@ -247,14 +251,14 @@ export default function Sidebar({
       },
       {
         title: 'Supabase',
-        path: '/connection-test',
-        icon: <SupabaseIcon size={16} color="#ffffff" />,
+        path: '/supabase',
+        icon: <SupabaseIcon size={18} color="#ffffff" />,
         permission: 'supabase'
       },
       {
         title: 'User Management',
         path: '/users',
-        icon: <UserIcon size={16} color="#ffffff" />,
+        icon: <UserIcon size={18} color="#ffffff" />,
         permission: 'users'
       }
     ]
@@ -364,6 +368,7 @@ export default function Sidebar({
               alt="NEXMAX Logo"
               width={44}
               height={44}
+              priority
               style={{ 
                 borderRadius: '50%',
                 objectFit: 'cover'
@@ -448,7 +453,8 @@ export default function Sidebar({
                      </div>
                     {sidebarOpen && (
                       <span style={{ 
-                        fontSize: '12px', 
+                        fontSize: '14px', 
+                        fontWeight: '500',
                         color: '#ffffff',
                         lineHeight: '1.2',
                         wordWrap: 'break-word',
@@ -557,7 +563,8 @@ export default function Sidebar({
                  </div>
                 {sidebarOpen && (
                   <span style={{ 
-                    fontSize: '12px', 
+                    fontSize: '14px', 
+                    fontWeight: '500',
                     color: '#ffffff',
                     lineHeight: '1.2',
                     wordWrap: 'break-word',
