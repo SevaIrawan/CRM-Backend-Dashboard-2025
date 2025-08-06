@@ -31,6 +31,7 @@ export interface KPIData {
   deductTransaction: number
   validBetAmount: number
   pureMember: number
+  pureUser: number
   newRegister: number
   churnMember: number
   depositCases: number
@@ -46,6 +47,8 @@ export interface KPIData {
   customerMaturityIndex: number
   ggrPerUser: number
   ggrPerPureUser: number
+  addBonus: number
+  deductBonus: number
 }
 
 // ===========================================
@@ -68,6 +71,8 @@ export interface RawKPIData {
     net_profit: number
     ggr: number
     valid_bet_amount: number
+    add_bonus: number
+    deduct_bonus: number
   }
   newDepositor: {
     new_depositor: number
@@ -78,6 +83,9 @@ export interface RawKPIData {
   churn: {
     churn_members: number
   }
+  pureUser: {
+    unique_codes: number
+  }
 }
 
 // ===========================================
@@ -86,15 +94,14 @@ export interface RawKPIData {
 // ===========================================
 
 export const KPI_FORMULAS = {
-  // ✅ CORE BUSINESS FORMULAS
+  // ✅ CORE BUSINESS FORMULAS - Updated sesuai Data Dictionary terbaru
   
-  // Net Profit = (Deposit + Add Transaction) - (Withdraw + Deduct Transaction)  
+  // Net Profit = SUM(net_profit) dari member_report_monthly
   NET_PROFIT: (data: RawKPIData): number => {
-    return (data.deposit.deposit_amount + data.deposit.add_transaction) - 
-           (data.withdraw.withdraw_amount + data.withdraw.deduct_transaction)
+    return data.member.net_profit
   },
 
-  // GGR User = GGR / Active Members
+  // GGR per User = GGR / Active Members
   GGR_USER: (data: RawKPIData): number => {
     return data.deposit.active_members > 0 ? data.member.ggr / data.deposit.active_members : 0
   },
@@ -104,15 +111,15 @@ export const KPI_FORMULAS = {
     return Math.max(data.deposit.active_members - data.newDepositor.new_depositor, 0)
   },
 
-  // GGR Pure User = GGR / Pure Members
+  // GGR per Pure User = GGR / Pure Members
   GGR_PURE_USER: (data: RawKPIData): number => {
     const pureMember = KPI_FORMULAS.PURE_MEMBER(data)
     return pureMember > 0 ? data.member.ggr / pureMember : 0
   },
 
-  // Winrate = Net Profit / Valid Bet Amount * 100
+  // ✅ UPDATED: Winrate = GGR / Deposit Amount (bukan Net Profit / Valid Bet Amount)
   WINRATE: (data: RawKPIData): number => {
-    return data.member.valid_bet_amount > 0 ? (data.member.net_profit / data.member.valid_bet_amount) * 100 : 0
+    return data.deposit.deposit_amount > 0 ? (data.member.ggr / data.deposit.deposit_amount) * 100 : 0
   },
 
   // Average Transaction Value = Deposit Amount / Deposit Cases
@@ -125,24 +132,24 @@ export const KPI_FORMULAS = {
     return data.deposit.active_members > 0 ? data.deposit.deposit_cases / data.deposit.active_members : 0
   },
 
-  // Churn Rate = Churn Members / Active Members
+  // Churn Rate = MAX(Churn Members / Active Members, 0.01) * 100
   CHURN_RATE: (data: RawKPIData): number => {
-    return data.deposit.active_members > 0 ? Math.max((data.churn.churn_members / data.deposit.active_members), 0.001) : 0.001
+    return data.deposit.active_members > 0 ? Math.max((data.churn.churn_members / data.deposit.active_members), 0.01) * 100 : 1
   },
 
-  // Retention Rate = 1 - Churn Rate
+  // Retention Rate = (1 - Churn Rate) * 100
   RETENTION_RATE: (churnRate: number): number => {
-    return Math.max(1 - churnRate, 0)
+    return Math.max(1 - (churnRate / 100), 0) * 100
   },
 
-  // Growth Rate = (Active Members - Churn Members) / Active Members * 100
+  // ✅ UPDATED: Growth Rate = (Active Members - Churn Members) / Active Members (tanpa * 100)
   GROWTH_RATE: (data: RawKPIData): number => {
-    return data.deposit.active_members > 0 ? ((data.deposit.active_members - data.churn.churn_members) / data.deposit.active_members) * 100 : 0
+    return data.deposit.active_members > 0 ? (data.deposit.active_members - data.churn.churn_members) / data.deposit.active_members : 0
   },
 
-  // Customer Lifetime Value = Avg Transaction Value * Purchase Frequency * Retention Rate
-  CUSTOMER_LIFETIME_VALUE: (avgTransactionValue: number, purchaseFrequency: number, retentionRate: number): number => {
-    return avgTransactionValue * purchaseFrequency * retentionRate
+  // ✅ UPDATED: Customer Lifetime Value = ATV * PF * ACL
+  CUSTOMER_LIFETIME_VALUE: (avgTransactionValue: number, purchaseFrequency: number, avgCustomerLifespan: number): number => {
+    return avgTransactionValue * purchaseFrequency * avgCustomerLifespan
   },
 
   // Average Customer Lifespan = 1 / Churn Rate
@@ -150,9 +157,9 @@ export const KPI_FORMULAS = {
     return churnRate > 0 ? (1 / churnRate) : 1000
   },
 
-  // Customer Maturity Index = (Retention Rate + Growth Rate + CLV + Purchase Frequency) / 4
-  CUSTOMER_MATURITY_INDEX: (retentionRate: number, growthRate: number, clv: number, purchaseFrequency: number): number => {
-    return (retentionRate + growthRate + clv + purchaseFrequency) / 4
+  // ✅ UPDATED: Customer Maturity Index = (Retention Rate * 0.5 + Growth Rate * 0.5 + Churn Rate * 0.2)
+  CUSTOMER_MATURITY_INDEX: (retentionRate: number, growthRate: number, churnRate: number): number => {
+    return (retentionRate * 0.5) + (growthRate * 0.5) + (churnRate * 0.2)
   },
 
   // ✅ UTILITY FORMULAS
@@ -233,6 +240,7 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
 
   try {
     console.log('🔄 [KPILogic] Fetching raw KPI data from database...')
+    console.log('🔍 [KPILogic] Filters:', filters)
 
     // ✅ PARALLEL FETCH dengan DATABASE AGGREGATION - seperti PostgreSQL
     const [activeMemberResult, newDepositorResult, memberReportResult, churnResult] = await Promise.all([
@@ -273,7 +281,7 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
       (() => {
         let query = supabase
           .from('member_report_monthly')
-          .select('deposit_amount, withdraw_amount, add_transaction, deduct_transaction')
+          .select('deposit_amount, withdraw_amount, add_transaction, deduct_transaction, deposit_cases, withdraw_cases, userkey')
           .eq('year', filters.year)
           .eq('month', filters.month)
           .eq('currency', filters.currency)
@@ -321,8 +329,35 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
       deposit_amount: acc.deposit_amount + (Number(item.deposit_amount) || 0),
       withdraw_amount: acc.withdraw_amount + (Number(item.withdraw_amount) || 0),
       add_transaction: acc.add_transaction + (Number(item.add_transaction) || 0),
-      deduct_transaction: acc.deduct_transaction + (Number(item.deduct_transaction) || 0)
-    }), { deposit_amount: 0, withdraw_amount: 0, add_transaction: 0, deduct_transaction: 0 })
+      deduct_transaction: acc.deduct_transaction + (Number(item.deduct_transaction) || 0),
+      deposit_cases: acc.deposit_cases + (Number(item.deposit_cases) || 0),
+      withdraw_cases: acc.withdraw_cases + (Number(item.withdraw_cases) || 0)
+    }), { deposit_amount: 0, withdraw_amount: 0, add_transaction: 0, deduct_transaction: 0, deposit_cases: 0, withdraw_cases: 0 })
+
+    // ✅ TEST: Active Member dari member_report_monthly[userkey]
+    const uniqueMemberReportUserKeys = Array.from(new Set(memberReportData.map((item: any) => item.userkey).filter(Boolean)))
+    const activeMembersFromMemberReport = uniqueMemberReportUserKeys.length
+
+    console.log('📊 [KPILogic] TEST DATA COMPARISON:', {
+      // Data dari deposit_monthly
+      activeMembersFromDepositMonthly: activeMembersCount,
+      uniqueUserKeysFromDepositMonthly: uniqueUserKeys.slice(0, 5),
+      
+      // Data dari member_report_monthly
+      activeMembersFromMemberReport: activeMembersFromMemberReport,
+      uniqueUserKeysFromMemberReport: uniqueMemberReportUserKeys.slice(0, 5),
+      
+      // Deposit Cases
+      depositCasesFromMemberReport: memberReportAgg.deposit_cases,
+      sampleDepositCases: memberReportData.slice(0, 3).map(item => ({ userkey: item.userkey, deposit_cases: item.deposit_cases })),
+      
+      // Purchase Frequency Calculation
+      purchaseFrequencyCalculation: {
+        depositCases: memberReportAgg.deposit_cases,
+        activeMembers: activeMembersFromMemberReport,
+        result: activeMembersFromMemberReport > 0 ? memberReportAgg.deposit_cases / activeMembersFromMemberReport : 0
+      }
+    })
 
     console.log('📊 [KPILogic] Aggregated data:', {
       activeMembersCount,
@@ -340,18 +375,20 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
       deposit: {
         deposit_amount: depositAmount,
         add_transaction: Number(memberReportAgg.add_transaction) || 0,
-        active_members: activeMembersCount,
-        deposit_cases: activeMembersCount // Using active members as deposit cases
+        active_members: activeMembersFromMemberReport, // Use Active Member dari member_report_monthly
+        deposit_cases: Number(memberReportAgg.deposit_cases) || 0 // Use actual deposit_cases from database
       },
       withdraw: {
         withdraw_amount: withdrawAmount,
         deduct_transaction: Number(memberReportAgg.deduct_transaction) || 0,
-        withdraw_cases: activeMembersCount // Using active members as withdraw cases
+        withdraw_cases: Number(memberReportAgg.withdraw_cases) || 0 // Use actual withdraw_cases from database
       },
       member: {
         net_profit: Number(netProfit) || 0,
         ggr: Number(grossProfit) || 0,
-        valid_bet_amount: Number(grossProfit) || 0 // Using GGR as valid bet amount for now
+        valid_bet_amount: Number(grossProfit) || 0, // Using GGR as valid bet amount for now
+        add_bonus: 0, // Will be implemented when add_bonus field is available
+        deduct_bonus: 0 // Will be implemented when deduct_bonus field is available
       },
       newDepositor: {
         new_depositor: newDepositorAgg
@@ -361,6 +398,9 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
       },
       churn: {
         churn_members: churnResult
+      },
+      pureUser: {
+        unique_codes: activeMembersFromMemberReport // Use Active Member dari member_report_monthly
       }
     }
 
@@ -370,7 +410,9 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
       withdrawAmount: rawData.withdraw.withdraw_amount,
       grossProfit: rawData.member.ggr,
       netProfit: rawData.member.net_profit,
-      newDepositor: rawData.newDepositor.new_depositor
+      newDepositor: rawData.newDepositor.new_depositor,
+      depositCases: rawData.deposit.deposit_cases,
+      purchaseFrequency: rawData.deposit.active_members > 0 ? rawData.deposit.deposit_cases / rawData.deposit.active_members : 0
     })
 
     cache.set(cacheKey, rawData)
@@ -383,10 +425,11 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
     return {
       deposit: { deposit_amount: 0, add_transaction: 0, active_members: 0, deposit_cases: 0 },
       withdraw: { withdraw_amount: 0, deduct_transaction: 0, withdraw_cases: 0 },
-      member: { net_profit: 0, ggr: 0, valid_bet_amount: 0 },
+      member: { net_profit: 0, ggr: 0, valid_bet_amount: 0, add_bonus: 0, deduct_bonus: 0 },
       newDepositor: { new_depositor: 0 },
       newRegister: { new_register: 0 },
-      churn: { churn_members: 0 }
+      churn: { churn_members: 0 },
+      pureUser: { unique_codes: 0 }
     }
   }
 }
@@ -474,9 +517,9 @@ export async function calculateKPIs(filters: SlicerFilters): Promise<KPIData> {
     const churnRate = KPI_FORMULAS.CHURN_RATE(rawData)
     const retentionRate = KPI_FORMULAS.RETENTION_RATE(churnRate)
     const growthRate = KPI_FORMULAS.GROWTH_RATE(rawData)
-    const customerLifetimeValue = KPI_FORMULAS.CUSTOMER_LIFETIME_VALUE(avgTransactionValue, purchaseFrequency, retentionRate)
+    const customerLifetimeValue = KPI_FORMULAS.CUSTOMER_LIFETIME_VALUE(avgTransactionValue, purchaseFrequency, KPI_FORMULAS.AVG_CUSTOMER_LIFESPAN(churnRate))
     const avgCustomerLifespan = KPI_FORMULAS.AVG_CUSTOMER_LIFESPAN(churnRate)
-    const customerMaturityIndex = KPI_FORMULAS.CUSTOMER_MATURITY_INDEX(retentionRate, growthRate, customerLifetimeValue, purchaseFrequency)
+    const customerMaturityIndex = KPI_FORMULAS.CUSTOMER_MATURITY_INDEX(retentionRate, growthRate, churnRate)
     const ggrPerUser = KPI_FORMULAS.GGR_USER(rawData)
     const ggrPerPureUser = KPI_FORMULAS.GGR_PURE_USER(rawData)
     const pureMember = KPI_FORMULAS.PURE_MEMBER(rawData)
@@ -493,6 +536,7 @@ export async function calculateKPIs(filters: SlicerFilters): Promise<KPIData> {
       deductTransaction: rawData.withdraw.deduct_transaction,
       validBetAmount: rawData.member.valid_bet_amount,
       pureMember: pureMember,
+      pureUser: rawData.pureUser.unique_codes,
       newRegister: rawData.newRegister.new_register,
       churnMember: rawData.churn.churn_members,
       depositCases: rawData.deposit.deposit_cases,
@@ -507,7 +551,9 @@ export async function calculateKPIs(filters: SlicerFilters): Promise<KPIData> {
       avgCustomerLifespan: KPI_FORMULAS.ROUND(avgCustomerLifespan),
       customerMaturityIndex: KPI_FORMULAS.ROUND(customerMaturityIndex),
       ggrPerUser: KPI_FORMULAS.ROUND(ggrPerUser),
-      ggrPerPureUser: KPI_FORMULAS.ROUND(ggrPerPureUser)
+      ggrPerPureUser: KPI_FORMULAS.ROUND(ggrPerPureUser),
+      addBonus: rawData.member.add_bonus,
+      deductBonus: rawData.member.deduct_bonus
     }
 
     console.log('✅ [KPILogic] KPIs calculated successfully:', {
@@ -526,9 +572,10 @@ export async function calculateKPIs(filters: SlicerFilters): Promise<KPIData> {
     return {
       activeMember: 0, newDepositor: 0, depositAmount: 0, grossGamingRevenue: 0, netProfit: 0,
       withdrawAmount: 0, addTransaction: 0, deductTransaction: 0, validBetAmount: 0, pureMember: 0,
-      newRegister: 0, churnMember: 0, depositCases: 0, withdrawCases: 0, winrate: 0, churnRate: 0,
+      pureUser: 0, newRegister: 0, churnMember: 0, depositCases: 0, withdrawCases: 0, winrate: 0, churnRate: 0,
       retentionRate: 0, growthRate: 0, avgTransactionValue: 0, purchaseFrequency: 0,
-      customerLifetimeValue: 0, avgCustomerLifespan: 0, customerMaturityIndex: 0, ggrPerUser: 0, ggrPerPureUser: 0
+      customerLifetimeValue: 0, avgCustomerLifespan: 0, customerMaturityIndex: 0, ggrPerUser: 0, ggrPerPureUser: 0,
+      addBonus: 0, deductBonus: 0
     }
   }
 }
@@ -575,9 +622,10 @@ export async function getAllKPIsWithMoM(filters: SlicerFilters): Promise<{ curre
       current: {
         activeMember: 0, newDepositor: 0, depositAmount: 0, grossGamingRevenue: 0, netProfit: 0,
         withdrawAmount: 0, addTransaction: 0, deductTransaction: 0, validBetAmount: 0, pureMember: 0,
-        newRegister: 0, churnMember: 0, depositCases: 0, withdrawCases: 0, winrate: 0, churnRate: 0,
+        pureUser: 0, newRegister: 0, churnMember: 0, depositCases: 0, withdrawCases: 0, winrate: 0, churnRate: 0,
         retentionRate: 0, growthRate: 0, avgTransactionValue: 0, purchaseFrequency: 0,
-        customerLifetimeValue: 0, avgCustomerLifespan: 0, customerMaturityIndex: 0, ggrPerUser: 0, ggrPerPureUser: 0
+        customerLifetimeValue: 0, avgCustomerLifespan: 0, customerMaturityIndex: 0, ggrPerUser: 0, ggrPerPureUser: 0,
+        addBonus: 0, deductBonus: 0
       },
       mom: {
         activeMember: 0, newDepositor: 0, depositAmount: 0,
@@ -665,10 +713,6 @@ export async function getLineChartData(filters: SlicerFilters): Promise<any> {
     console.log('📈 [KPILogic] Fetching line chart data with dynamic categories...')
     console.log('🔍 [KPILogic] Filters:', filters)
     
-    // Get current data for charts
-    const currentData = await calculateKPIs(filters)
-    console.log('📊 [KPILogic] Current KPI data:', currentData)
-    
     // Get dynamic months for the selected year
     const months = await getMonthsForYear(filters.year)
     console.log('📅 [KPILogic] Dynamic months for chart:', months)
@@ -677,25 +721,25 @@ export async function getLineChartData(filters: SlicerFilters): Promise<any> {
       console.error('❌ [KPILogic] No months data available')
       throw new Error('No months data available')
     }
+
+    // Get data for each month to create realistic trends
+    // Use only Year and Currency filters, ignore Month for chart data
+    const monthlyData = await Promise.all(
+      months.map(async (month) => {
+        const chartFilters = { 
+          year: filters.year, 
+          currency: filters.currency,
+          month: month // Use each month for chart data
+        }
+        return await calculateKPIs(chartFilters)
+      })
+    )
+
+    console.log('📊 [KPILogic] Monthly data for charts:', monthlyData)
     
     // Row 2 - Chart 1: Retention vs Churn Rate Over Time (Value %)
-    const retentionData = months.map((_, index) => {
-      const monthIndex = index + 1
-      const progress = monthIndex / months.length
-      const baseRetention = Math.max(currentData.retentionRate, 75)
-      const variation = 0.85 + (progress * 0.3) // 0.85 to 1.15 variation
-      const randomFactor = 0.95 + (Math.random() * 0.1) // Add some randomness
-      return Math.round(baseRetention * variation * randomFactor)
-    })
-    
-    const churnData = months.map((_, index) => {
-      const monthIndex = index + 1
-      const progress = monthIndex / months.length
-      const baseChurn = Math.max(currentData.churnRate, 25)
-      const variation = 1.2 - (progress * 0.4) // 1.2 to 0.8 variation (inverse)
-      const randomFactor = 0.9 + (Math.random() * 0.2) // Add some randomness
-      return Math.round(baseChurn * variation * randomFactor)
-    })
+    const retentionData = monthlyData.map(data => data.retentionRate)
+    const churnData = monthlyData.map(data => data.churnRate)
     
     const retentionChurnTrend = {
       series: [
@@ -718,23 +762,8 @@ export async function getLineChartData(filters: SlicerFilters): Promise<any> {
     })
     
     // Row 2 - Chart 2: Customer Lifetime Value vs Purchase Frequency (Value Integer)
-    const clvData = months.map((_, index) => {
-      const monthIndex = index + 1
-      const progress = monthIndex / months.length
-      const baseCLV = Math.max(currentData.customerLifetimeValue, 1000)
-      const variation = 0.8 + (progress * 0.5) // 0.8 to 1.3 variation
-      const randomFactor = 0.95 + (Math.random() * 0.1) // Add some randomness
-      return Math.round(baseCLV * variation * randomFactor)
-    })
-    
-    const frequencyData = months.map((_, index) => {
-      const monthIndex = index + 1
-      const progress = monthIndex / months.length
-      const baseFrequency = Math.max(currentData.purchaseFrequency, 5)
-      const variation = 0.9 + (progress * 0.3) // 0.9 to 1.2 variation
-      const randomFactor = 0.9 + (Math.random() * 0.2) // Add some randomness
-      return Math.round(baseFrequency * variation * randomFactor)
-    })
+    const clvData = monthlyData.map(data => data.customerLifetimeValue)
+    const frequencyData = monthlyData.map(data => data.purchaseFrequency)
     
     const customerMetricsTrend = {
       series: [
@@ -757,23 +786,8 @@ export async function getLineChartData(filters: SlicerFilters): Promise<any> {
     })
     
     // Row 3 - Chart 1: Growth vs Profitability Analysis
-    const netProfitData = months.map((_, index) => {
-      const monthIndex = index + 1
-      const progress = monthIndex / months.length
-      const baseProfit = Math.max(currentData.netProfit, 100000)
-      const variation = 0.7 + (progress * 0.6) // 0.7 to 1.3 variation
-      const randomFactor = 0.95 + (Math.random() * 0.1) // Add some randomness
-      return Math.round(baseProfit * variation * randomFactor)
-    })
-    
-    const newDepositorData = months.map((_, index) => {
-      const monthIndex = index + 1
-      const progress = monthIndex / months.length
-      const baseDepositor = Math.max(currentData.newDepositor, 100)
-      const variation = 0.8 + (progress * 0.4) // 0.8 to 1.2 variation
-      const randomFactor = 0.9 + (Math.random() * 0.2) // Add some randomness
-      return Math.round(baseDepositor * variation * randomFactor)
-    })
+    const netProfitData = monthlyData.map(data => data.netProfit)
+    const newDepositorData = monthlyData.map(data => data.newDepositor)
     
     const growthProfitabilityAnalysis = {
       series: [
@@ -796,23 +810,8 @@ export async function getLineChartData(filters: SlicerFilters): Promise<any> {
     })
     
     // Row 3 - Chart 2: Operational Efficiency Trend
-    const incomeData = months.map((_, index) => {
-      const monthIndex = index + 1
-      const progress = monthIndex / months.length
-      const baseIncome = Math.max(currentData.depositAmount + currentData.addTransaction, 500000)
-      const variation = 0.7 + (progress * 0.6) // 0.7 to 1.3 variation
-      const randomFactor = 0.95 + (Math.random() * 0.1) // Add some randomness
-      return Math.round(baseIncome * variation * randomFactor)
-    })
-    
-    const costData = months.map((_, index) => {
-      const monthIndex = index + 1
-      const progress = monthIndex / months.length
-      const baseCost = Math.max(currentData.withdrawAmount + currentData.deductTransaction, 300000)
-      const variation = 0.8 + (progress * 0.4) // 0.8 to 1.2 variation
-      const randomFactor = 0.9 + (Math.random() * 0.2) // Add some randomness
-      return Math.round(baseCost * variation * randomFactor)
-    })
+    const incomeData = monthlyData.map(data => data.depositAmount + data.addTransaction)
+    const costData = monthlyData.map(data => data.withdrawAmount + data.deductTransaction)
     
     const operationalEfficiencyTrend = {
       series: [
@@ -833,31 +832,23 @@ export async function getLineChartData(filters: SlicerFilters): Promise<any> {
       costData,
       categories: operationalEfficiencyTrend.categories
     })
-    
-    const result = {
+
+    return {
       success: true,
       retentionChurnTrend,
       customerMetricsTrend,
       growthProfitabilityAnalysis,
       operationalEfficiencyTrend
     }
-    
-    console.log('✅ [KPILogic] Line chart data calculated successfully:', {
-      months: months.length,
-      categories: months.map(month => month.substring(0, 3)),
-      resultKeys: Object.keys(result)
-    })
-    
-    return result
-    
+
   } catch (error) {
-    console.error('❌ [KPILogic] Error generating line chart data:', error)
+    console.error('❌ [KPILogic] Error fetching line chart data:', error)
     
-    // Fallback data with dynamic months
+    // Fallback data with realistic trends
     const fallbackMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
     
-    const fallbackResult = {
-      success: true,
+    return {
+      success: false,
       retentionChurnTrend: {
         series: [
           { name: 'Retention Rate', data: [85, 87, 89, 91, 93, 95] },
@@ -887,9 +878,6 @@ export async function getLineChartData(filters: SlicerFilters): Promise<any> {
         categories: fallbackMonths
       }
     }
-    
-    console.log('🔄 [KPILogic] Using fallback data:', fallbackResult)
-    return fallbackResult
   }
 }
 

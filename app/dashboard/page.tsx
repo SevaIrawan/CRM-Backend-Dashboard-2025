@@ -22,6 +22,7 @@ export default function Dashboard() {
     deductTransaction: 0,
     validBetAmount: 0,
     pureMember: 0,
+    pureUser: 0,
     newRegister: 0,
     churnMember: 0,
     depositCases: 0,
@@ -36,7 +37,9 @@ export default function Dashboard() {
     avgCustomerLifespan: 0,
     customerMaturityIndex: 0,
     ggrPerUser: 0,
-    ggrPerPureUser: 0
+    ggrPerPureUser: 0,
+    addBonus: 0,
+    deductBonus: 0
   })
 
   const [momData, setMomData] = useState({
@@ -95,9 +98,18 @@ export default function Dashboard() {
         
         // Load chart data
         console.log('📊 [Dashboard] Loading chart data...')
+        
+        // Chart data should only use Year and Currency filters (not Month)
+        const chartFilters: SlicerFilters = {
+          year: selectedYear,
+          month: selectedMonth, // This will be ignored by getLineChartData
+          currency: selectedCurrency,
+          line: ''
+        }
+        
         const [lineData, barData] = await Promise.all([
-          getLineChartData(filters),
-          getBarChartData(filters)
+          getLineChartData(chartFilters),
+          getBarChartData(chartFilters)
         ])
         
         console.log('📈 [Dashboard] Line chart data:', lineData)
