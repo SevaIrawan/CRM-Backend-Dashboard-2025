@@ -1,44 +1,24 @@
 'use client'
 
 import React from 'react'
-import { getComparisonIcon, getComparisonColor } from '@/lib/KPILogic'
+import { ComparisonIcon as CentralComparisonIcon } from '@/lib/centralIcons'
 
 interface ComparisonIconProps {
-  value: number
+  isPositive: boolean
   size?: string
-  showText?: boolean
-  text?: string
   className?: string
 }
 
 export default function ComparisonIcon({ 
-  value, 
+  isPositive, 
   size = '12px', 
-  showText = false, 
-  text = 'vs Last Month',
   className = ''
 }: ComparisonIconProps) {
-  const icon = getComparisonIcon(value, size)
-  const color = getComparisonColor(value)
-  
-  if (showText) {
-    return (
-      <span 
-        className={`comparison-icon ${className}`}
-        style={{ color }}
-        dangerouslySetInnerHTML={{
-          __html: `${text} ${icon}`
-        }}
-      />
-    )
-  }
-  
   return (
-    <span 
-      className={`comparison-icon ${className}`}
-      dangerouslySetInnerHTML={{
-        __html: icon
-      }}
+    <CentralComparisonIcon 
+      isPositive={isPositive}
+      size={size}
+      className={className}
     />
   )
 } 

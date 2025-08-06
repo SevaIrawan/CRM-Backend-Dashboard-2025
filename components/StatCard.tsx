@@ -1,8 +1,8 @@
 'use client'
 
 import React from 'react'
-import { getComparisonIcon, getComparisonColor } from '@/lib/KPILogic'
-import { getKpiIcon } from '@/lib/centralIcons'
+import { getComparisonColor } from '@/lib/KPILogic'
+import { getKpiIcon, ComparisonIcon } from '@/lib/centralIcons'
 
 interface StatCardProps {
   title: string
@@ -58,10 +58,13 @@ export default function StatCard({
               color: getComparisonColor(comparison.isPositive ? 1 : -1),
               fontWeight: 600
             }}
-            dangerouslySetInnerHTML={{
-              __html: `${getComparisonIcon(comparison.isPositive ? 1 : -1, `${comparisonSize}px`)} ${comparison.percentage} ${comparison.text || 'MoM'}`
-            }}
-          />
+          >
+            <ComparisonIcon 
+              isPositive={comparison.isPositive}
+              size={`${comparisonSize}px`}
+            />
+            {comparison.percentage} {comparison.text || 'MoM'}
+          </span>
         </div>
       )}
     </div>

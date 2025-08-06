@@ -830,6 +830,7 @@ body {
   gap: 12px;
   margin-left: auto; /* Push to right */
   flex-shrink: 0; /* Prevent shrinking */
+  justify-content: flex-end; /* Ensure right alignment */
 }
 
 .subheader-select {
@@ -857,7 +858,7 @@ body {
 /* Main Content - AUTO FIT IN ONE FRAME - OPTIMIZED FOR SMOOTH TRANSITIONS */
 .main-content {
   position: fixed;
-  top: 90px; /* Header height */
+  top: 150px; /* Header height (90px) + SubHeader height (60px) */
   left: 280px; /* Match sidebar width */
   right: 0;
   bottom: 0;
@@ -907,6 +908,7 @@ body {
   left: 80px; /* Match collapsed sidebar width dari rules */
   width: calc(100vw - 80px);
   margin-left: 0; /* Reset margin */
+  top: 150px; /* Header height (90px) + SubHeader height (60px) */
 }
 
 /* When subheader exists */
@@ -976,11 +978,13 @@ body {
   
   .subheader {
     left: 60px;
+    top: 90px; /* Header height */
   }
   
   .main-content {
     left: 60px;
     width: calc(100vw - 60px);
+    top: 150px; /* Header height (90px) + SubHeader height (60px) */
   }
   
   .content-container {
@@ -1004,11 +1008,13 @@ body {
   
   .subheader {
     left: 50px;
+    top: 90px; /* Header height */
   }
   
   .main-content {
     left: 50px;
     width: calc(100vw - 50px);
+    top: 150px; /* Header height (90px) + SubHeader height (60px) */
   }
   
   .content-container {
@@ -1020,7 +1026,7 @@ body {
 .stat-card {
   background: white;
   border-radius: 16px;
-  padding: 16px; /* Kecilkan padding */
+  padding: 10px; /* Ubah padding menjadi 10px */
   box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.08), 0 1px 4px 0 rgba(0, 0, 0, 0.04);
   border: 1px solid #e5e7eb;
   transition: all 0.3s ease;
@@ -1039,14 +1045,14 @@ body {
 .stat-card-header {
   display: flex;
   align-items: center;
-  gap: 0px; /* Jarak icon dan title menjadi 0 */
-  margin-bottom: 16px;
+  gap: 0px; /* Kembalikan ke 0, gunakan margin pada title */
+  margin-bottom: 4px; /* Jarak (icon+title) ke Value */
 }
 
 .stat-card-icon {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   color: #3b82f6;
   flex-shrink: 0;
   width: 40px; /* Besarkan dari 32px ke 40px */
@@ -1063,7 +1069,7 @@ body {
   font-size: 15px; /* Besarkan dari 13px ke 15px */
   font-weight: 700;
   color: #374151;
-  margin: 0;
+  margin: 4px 0 0 -12px; /* Tambah margin-top untuk turunkan title */
   text-transform: uppercase;
   letter-spacing: 0.6px;
   flex: 1;
@@ -1072,9 +1078,9 @@ body {
 
 .stat-card-value {
   font-size: 28px;
-  font-weight: 900;
+  font-weight: 600;
   color: #111827;
-  margin: 0 0 12px 0;
+  margin: 0 0 4px 0; /* Jarak Value ke comparison */
   line-height: 1.1;
 }
 
@@ -1084,6 +1090,7 @@ body {
   gap: 6px;
   font-size: 13px;
   font-weight: 600;
+  margin-top: 4px;
 }
 
 .comparison-label {
@@ -1091,11 +1098,15 @@ body {
   align-items: center;
   gap: 4px;
   padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(4px);
 }
 
 .comparison-label svg {
   width: 12px;
   height: 12px;
+  flex-shrink: 0;
 }
 
 .kpi-icon {
