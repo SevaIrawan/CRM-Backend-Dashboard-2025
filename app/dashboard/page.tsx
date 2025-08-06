@@ -276,12 +276,13 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Charts Row 1 */}
-        <div className="charts-row">
+        {/* Charts Grid - Responsive */}
+        <div className="charts-grid">
           <div className="chart-container">
             {isLoading ? (
               <div style={{ 
-                height: '320px', 
+                height: '100%', 
+                minHeight: '350px',
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',
@@ -304,7 +305,8 @@ export default function Dashboard() {
               </div>
             ) : chartError ? (
               <div style={{ 
-                height: '320px', 
+                height: '100%', 
+                minHeight: '350px',
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',
@@ -330,7 +332,8 @@ export default function Dashboard() {
           <div className="chart-container">
             {isLoading ? (
               <div style={{ 
-                height: '320px', 
+                height: '100%', 
+                minHeight: '350px',
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',
@@ -353,7 +356,8 @@ export default function Dashboard() {
               </div>
             ) : chartError ? (
               <div style={{ 
-                height: '320px', 
+                height: '100%', 
+                minHeight: '350px',
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',
@@ -370,20 +374,17 @@ export default function Dashboard() {
               <LineChart 
                 series={lineChartData?.customerMetricsTrend?.series || []}
                 categories={lineChartData?.customerMetricsTrend?.categories || []}
-                title="Customer Lifetime Value vs Purchase Frequency"
+                title="CLV vs Purchase Frequency"
                 chartIcon={getChartIcon('Customer Lifetime Value vs Purchase Frequency')}
                 currency={selectedCurrency}
               />
             )}
           </div>
-        </div>
-
-        {/* Charts Row 2 */}
-        <div className="charts-row">
           <div className="chart-container">
             {isLoading ? (
               <div style={{ 
-                height: '320px', 
+                height: '100%', 
+                minHeight: '350px',
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',
@@ -406,7 +407,8 @@ export default function Dashboard() {
               </div>
             ) : chartError ? (
               <div style={{ 
-                height: '320px', 
+                height: '100%', 
+                minHeight: '350px',
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',
@@ -432,7 +434,8 @@ export default function Dashboard() {
           <div className="chart-container">
             {isLoading ? (
               <div style={{ 
-                height: '320px', 
+                height: '100%', 
+                minHeight: '350px',
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',
@@ -455,7 +458,8 @@ export default function Dashboard() {
               </div>
             ) : chartError ? (
               <div style={{ 
-                height: '320px', 
+                height: '100%', 
+                minHeight: '350px',
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',

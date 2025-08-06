@@ -124,6 +124,13 @@ export default function LineChart({
       datasetLabel.toLowerCase().includes('depositor')
     );
     
+    // Check if this is CLV (Customer Lifetime Value)
+    const isCLVType = datasetLabel && (
+      datasetLabel.toLowerCase().includes('lifetime') ||
+      datasetLabel.toLowerCase().includes('clv') ||
+      datasetLabel.toLowerCase().includes('customer lifetime value')
+    );
+    
     if (isPercentageType) {
       // For percentage - show % symbol
       return value.toFixed(1) + '%';
@@ -138,8 +145,19 @@ export default function LineChart({
         return (value / 1000).toFixed(0) + 'K';
       }
       return value.toLocaleString();
+    } else if (isCLVType) {
+      // For CLV - show full number for thousands, no abbreviation
+      if (value >= 1000000) {
+        return (value / 1000000).toFixed(2) + 'M';
+      } else if (value >= 1000) {
+        return Math.round(value).toLocaleString(); // Show full number for thousands, no decimals
+      } else if (value >= 1) {
+        return value.toFixed(2);
+      } else {
+        return value.toFixed(4); // For very small CLV values
+      }
     } else {
-      // For CLV and other amounts - show as integer only (no currency)
+      // For other amounts - show as integer only (no currency)
       if (value >= 1000000) {
         return (value / 1000000).toFixed(1) + 'M';
       } else if (value >= 1000) {
@@ -173,6 +191,13 @@ export default function LineChart({
       datasetLabel.toLowerCase().includes('depositor')
     );
     
+    // Check if this is CLV (Customer Lifetime Value)
+    const isCLVType = datasetLabel && (
+      datasetLabel.toLowerCase().includes('lifetime') ||
+      datasetLabel.toLowerCase().includes('clv') ||
+      datasetLabel.toLowerCase().includes('customer lifetime value')
+    );
+    
     if (isPercentageType) {
       // For percentage - show % symbol with full precision
       return value.toFixed(2) + '%';
@@ -182,8 +207,15 @@ export default function LineChart({
     } else if (isCountType) {
       // For count/integer - no currency symbol, full number
       return value.toLocaleString() + ' persons';
+    } else if (isCLVType) {
+      // For CLV - show full number for thousands, up to 2 decimals
+      if (value >= 1000) {
+        return Math.round(value).toLocaleString(); // Show full number for thousands, no decimals
+      } else {
+        return value.toFixed(4);
+      }
     } else {
-      // For CLV and other amounts - show as integer only (no currency)
+      // For other amounts - show as integer only (no currency)
       return Math.round(value).toLocaleString();
     }
   };
@@ -226,11 +258,44 @@ export default function LineChart({
         right: 20
       }
     },
-    plugins: {
-      legend: {
-        display: false, // Hide default legend since we'll position them on Y-axes
-      },
-      tooltip: {
+         plugins: {
+       legend: {
+         display: false, // Hide default legend since we'll position them on Y-axes
+       },
+       // Custom plugin untuk background Y1 dan Y2
+       customBackgroundPlugin: {
+         id: 'customBackground',
+         beforeDraw: (chart: any) => {
+           const { ctx, chartArea, scales } = chart;
+           if (!chartArea) return;
+           
+           // Background untuk Y1 (Blue muda) - area kanan
+           if (scales.y1) {
+             ctx.save();
+             ctx.fillStyle = 'rgba(59, 130, 246, 0.1)'; // Blue muda
+             ctx.fillRect(
+               chartArea.right - 100, // Area untuk Y1
+               chartArea.top,
+               100,
+               chartArea.height
+             );
+             ctx.restore();
+           }
+           
+           // Background untuk Y (Orange muda) - area kiri
+           if (scales.y) {
+             ctx.save();
+             ctx.fillStyle = 'rgba(249, 115, 22, 0.1)'; // Orange muda
+             ctx.fillRect(
+               chartArea.left, // Area untuk Y
+               100,
+               chartArea.height
+             );
+             ctx.restore();
+           }
+         }
+       },
+       tooltip: {
         mode: 'index' as const,
         intersect: false,
         backgroundColor: 'rgba(0, 0, 0, 0.9)',
@@ -258,94 +323,113 @@ export default function LineChart({
         }
       }
     },
-    scales: {
-      x: {
-        grid: {
-          display: true,
-          color: 'rgba(0, 0, 0, 0.1)',
-          lineWidth: 1
-        },
-        ticks: {
-          padding: 8
-        }
+         scales: {
+       x: {
+         grid: {
+           display: false,
+           color: 'transparent',
+           lineWidth: 0
+         },
+                 ticks: {
+           padding: 8,
+           font: {
+             weight: 'bold' as const,
+             size: 10
+           }
+         }
       },
-      y: {
-        type: 'linear' as const,
-        display: true,
-        position: 'left' as const,
-        beginAtZero: false,
-        grid: {
-          display: true,
-          color: 'rgba(0, 0, 0, 0.1)',
-          lineWidth: 1
-        },
-        ticks: {
-          padding: 20, // Increased padding for legend space
-          callback: function(tickValue: string | number) {
-            const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
-            // Check series name for percentage
-            const firstSeries = series && series[0];
-            if (firstSeries && firstSeries.name && firstSeries.name.toLowerCase().includes('rate')) {
-              return value + '%';
-            }
-            
-            // For other values - formatted numbers
-            return formatValue(value, firstSeries?.name);
-          }
-        },
-        // Add legend title for left Y-axis
-        title: {
-          display: true,
-          text: series[0]?.name || 'Series 1',
-          color: '#3B82F6', // Blue
-          font: {
-            size: 12,
-            weight: 'bold' as const
-          },
-          padding: {
-            top: 10,
-            bottom: 10
-          }
-        }
+             y: {
+         type: 'linear' as const,
+         display: true,
+         position: 'left' as const,
+         beginAtZero: false,
+         grid: {
+           display: false,
+           color: 'transparent',
+           lineWidth: 0
+         },
+                 ticks: {
+           padding: 20, // Increased padding for legend space
+           font: {
+             weight: 'bold' as const,
+             size: 10
+           },
+                        callback: function(tickValue: string | number) {
+               const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
+               // Check series name for percentage
+               const firstSeries = series && series[0];
+               if (firstSeries && firstSeries.name && firstSeries.name.toLowerCase().includes('rate')) {
+                 return value + '%';
+               }
+               
+               // Check if this is CLV chart
+               const isCLVChart = firstSeries && firstSeries.name && (
+                 firstSeries.name.toLowerCase().includes('lifetime') ||
+                 firstSeries.name.toLowerCase().includes('clv') ||
+                 firstSeries.name.toLowerCase().includes('customer lifetime value')
+               );
+               
+               if (isCLVChart) {
+                 // For CLV - use special formatting
+                 return formatValue(value, firstSeries?.name);
+               }
+               
+               // For other values - formatted numbers
+               return formatValue(value, firstSeries?.name);
+             }
+         },
+                 // Remove legend title from Y-axis since we have it in header
+         title: {
+           display: false
+         }
       },
       // Add second Y-axis if needed
       ...(needsDualYAxis && {
-        y1: {
-          type: 'linear' as const,
-          display: true,
-          position: 'right' as const,
-          beginAtZero: false,
-          grid: {
-            drawOnChartArea: false,
-          },
-          ticks: {
-            padding: 20, // Increased padding for legend space
-            callback: function(tickValue: string | number) {
-              const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
-              // Check second series name for percentage
-              const secondSeries = series && series[1];
-              if (secondSeries && secondSeries.name && secondSeries.name.toLowerCase().includes('rate')) {
-                return value + '%';
-              }
-              
-              // For other values - formatted numbers
-              return formatValue(value, secondSeries?.name);
-            }
-          },
-          // Add legend title for right Y-axis
-          title: {
-            display: true,
-            text: series[1]?.name || 'Series 2',
-            color: '#F97316', // Orange
-            font: {
-              size: 12,
-              weight: 'bold' as const
-            },
-            padding: {
-              top: 10,
-              bottom: 10
-            }
-          }
+                 y1: {
+           type: 'linear' as const,
+           display: true,
+           position: 'right' as const,
+           beginAtZero: false,
+           grid: {
+             drawOnChartArea: false,
+             display: false,
+             color: 'transparent',
+             lineWidth: 0
+           },
+                     ticks: {
+             padding: 20, // Increased padding for legend space
+             font: {
+               weight: 'bold' as const,
+               size: 10
+             },
+             callback: function(tickValue: string | number) {
+               const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
+               // Check second series name for percentage
+               const secondSeries = series && series[1];
+               if (secondSeries && secondSeries.name && secondSeries.name.toLowerCase().includes('rate')) {
+                 return value + '%';
+               }
+               
+               // Check if this is CLV chart (second series)
+               const isCLVChart = secondSeries && secondSeries.name && (
+                 secondSeries.name.toLowerCase().includes('lifetime') ||
+                 secondSeries.name.toLowerCase().includes('clv') ||
+                 secondSeries.name.toLowerCase().includes('customer lifetime value')
+               );
+               
+               if (isCLVChart) {
+                 // For CLV - use special formatting
+                 return formatValue(value, secondSeries?.name);
+               }
+               
+               // For other values - formatted numbers
+               return formatValue(value, secondSeries?.name);
+             }
+           },
+                     // Remove legend title from Y-axis since we have it in header
+           title: {
+             display: false
+           }
         }
       })
     }
@@ -358,19 +442,20 @@ export default function LineChart({
   })
 
   return (
-    <div style={{ 
-      height: '320px', // Increased height to accommodate title
-      width: '100%', 
-      padding: '0',
-      position: 'relative',
-      backgroundColor: '#ffffff',
-      border: '1px solid #e5e7eb',
-      borderRadius: '8px',
-      boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
-      display: 'flex',
-      flexDirection: 'column'
-    }}>
-      {/* Chart Title with Icon */}
+         <div style={{ 
+       height: '100%', // Dynamic height based on container
+       minHeight: '350px', // Minimum height
+       width: '100%', 
+       padding: '0',
+       position: 'relative',
+       backgroundColor: '#ffffff',
+       border: '1px solid #e5e7eb',
+       borderRadius: '8px',
+       boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+       display: 'flex',
+       flexDirection: 'column'
+     }}>
+      {/* Chart Title with Icon and Legend */}
       {title && (
         <div style={{
           padding: '16px 20px 12px 20px',
@@ -379,44 +464,85 @@ export default function LineChart({
           borderRadius: '8px 8px 0 0',
           display: 'flex',
           alignItems: 'center',
-          gap: '8px'
+          justifyContent: 'space-between'
         }}>
-          {chartIcon && (
-            <span 
-              style={{
-                fontSize: '14px',
-                color: '#3b82f6',
-                width: '20px',
-                height: '20px',
-                display: 'inline-block',
-                flexShrink: 0
-              }}
-              dangerouslySetInnerHTML={{ __html: chartIcon }}
-            />
-          )}
-          <h3 style={{
-            margin: 0,
-            fontSize: '15px',
-            fontWeight: 700,
-            color: '#374151',
-            textTransform: 'uppercase',
-            letterSpacing: '0.6px',
-            lineHeight: '1.2'
+          {/* Title and Icon */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
           }}>
-            {title}
-          </h3>
+            {chartIcon && (
+              <span 
+                style={{
+                  fontSize: '14px',
+                  color: '#3b82f6',
+                  width: '20px',
+                  height: '20px',
+                  display: 'inline-block',
+                  flexShrink: 0
+                }}
+                dangerouslySetInnerHTML={{ __html: chartIcon }}
+              />
+            )}
+            <h3 style={{
+              margin: 0,
+              fontSize: '15px',
+              fontWeight: 700,
+              color: '#374151',
+              textTransform: 'uppercase',
+              letterSpacing: '0.6px',
+              lineHeight: '1.2'
+            }}>
+              {title}
+            </h3>
+          </div>
+          
+          {/* Legend */}
+          {series.length > 0 && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              {series.map((item, index) => (
+                <div key={index} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <div style={{
+                    width: '12px',
+                    height: '3px',
+                    backgroundColor: index === 0 ? '#3B82F6' : '#F97316',
+                    borderRadius: '2px'
+                  }} />
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    color: '#6B7280',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    {item.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
       
-      {/* Chart Area */}
-      <div style={{
-        flex: 1,
-        padding: '16px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#ffffff'
-      }}>
+             {/* Chart Area */}
+       <div style={{
+         flex: 1,
+         minHeight: '250px', // Reduced minimum height untuk responsive
+         padding: '0',
+         display: 'flex',
+         alignItems: 'center',
+         justifyContent: 'center',
+         backgroundColor: '#f8f9fa' // Grey muda background
+       }}>
         {(() => {
           try {
             return (
@@ -426,7 +552,8 @@ export default function LineChart({
                 position: 'relative',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                backgroundColor: '#ffffff'
               }}>
                 <Line 
                   data={data} 
@@ -436,10 +563,10 @@ export default function LineChart({
                     maintainAspectRatio: false,
                     layout: {
                       padding: {
-                        top: 10,
-                        bottom: 10,
-                        left: 10,
-                        right: 10
+                        top: 0,
+                        bottom: 0,
+                        left: 0,
+                        right: 0
                       }
                     },
                     plugins: {
@@ -477,93 +604,79 @@ export default function LineChart({
                     },
                     scales: {
                       ...options.scales,
-                      x: {
-                        ...options.scales.x,
-                        grid: {
-                          display: true,
-                          color: 'rgba(0, 0, 0, 0.08)',
-                          lineWidth: 1
-                        },
-                        ticks: {
-                          padding: 4,
-                          font: {
-                            size: 9
-                          }
-                        }
+                                             x: {
+                         ...options.scales.x,
+                         grid: {
+                           display: false,
+                           color: 'transparent',
+                           lineWidth: 0
+                         },
+                                                 ticks: {
+                           padding: 4,
+                           font: {
+                             weight: 'bold' as const,
+                             size: 10
+                           }
+                         }
                       },
-                      y: {
-                        ...options.scales.y,
-                        grid: {
-                          display: true,
-                          color: 'rgba(0, 0, 0, 0.08)',
-                          lineWidth: 1
-                        },
-                        ticks: {
-                          padding: 20, // Increased padding for legend space
-                          font: {
-                            size: 9
-                          },
-                          callback: function(tickValue: string | number) {
-                            const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
-                            const firstSeries = series && series[0];
-                            if (firstSeries && firstSeries.name && firstSeries.name.toLowerCase().includes('rate')) {
-                              return value + '%';
-                            }
-                            
-                            return formatValue(value, firstSeries?.name);
-                          }
-                        },
-                        // Add legend title for left Y-axis
-                        title: {
-                          display: true,
-                          text: series[0]?.name || 'Series 1',
-                          color: '#3B82F6', // Blue
-                          font: {
-                            size: 10,
-                            weight: 'bold'
-                          },
-                          padding: {
-                            top: 5,
-                            bottom: 5
-                          }
-                        }
+                                             y: {
+                         ...options.scales.y,
+                         grid: {
+                           display: false,
+                           color: 'transparent',
+                           lineWidth: 0
+                         },
+                                                 ticks: {
+                           padding: 20, // Increased padding for legend space
+                           font: {
+                             weight: 'bold' as const,
+                             size: 10
+                           },
+                           callback: function(tickValue: string | number) {
+                             const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
+                             const firstSeries = series && series[0];
+                             if (firstSeries && firstSeries.name && firstSeries.name.toLowerCase().includes('rate')) {
+                               return value + '%';
+                             }
+                             
+                             return formatValue(value, firstSeries?.name);
+                           }
+                         },
+                                                 // Remove legend title from Y-axis since we have it in header
+                         title: {
+                           display: false
+                         }
                       },
                       // Add second Y-axis if needed
                       ...(needsDualYAxis && {
-                        y1: {
-                          ...options.scales.y1,
-                          grid: {
-                            drawOnChartArea: false,
-                          },
-                          ticks: {
-                            padding: 20, // Increased padding for legend space
-                            font: {
-                              size: 9
-                            },
-                            callback: function(tickValue: string | number) {
-                              const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
-                              const secondSeries = series && series[1];
-                              if (secondSeries && secondSeries.name && secondSeries.name.toLowerCase().includes('rate')) {
-                                return value + '%';
-                              }
-                              
-                              return formatValue(value, secondSeries?.name);
-                            }
-                          },
-                          // Add legend title for right Y-axis
-                          title: {
-                            display: true,
-                            text: series[1]?.name || 'Series 2',
-                            color: '#F97316', // Orange
-                            font: {
-                              size: 10,
-                              weight: 'bold'
-                            },
-                            padding: {
-                              top: 5,
-                              bottom: 5
-                            }
-                          }
+                                                 y1: {
+                           ...options.scales.y1,
+                           grid: {
+                             drawOnChartArea: false,
+                             display: false,
+                             color: 'transparent',
+                             lineWidth: 0
+                           },
+                                                     ticks: {
+                             padding: 20, // Increased padding for legend space
+                             font: {
+                               weight: 'bold' as const,
+                               size: 10
+                             },
+                             callback: function(tickValue: string | number) {
+                               const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
+                               const secondSeries = series && series[1];
+                               if (secondSeries && secondSeries.name && secondSeries.name.toLowerCase().includes('rate')) {
+                                 return value + '%';
+                               }
+                               
+                               return formatValue(value, secondSeries?.name);
+                             }
+                           },
+                                                     // Remove legend title from Y-axis since we have it in header
+                           title: {
+                             display: false
+                           }
                         }
                       })
                     }

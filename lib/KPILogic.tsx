@@ -96,8 +96,8 @@ export interface RawKPIData {
 export const KPI_FORMULAS = {
   // ✅ CORE BUSINESS FORMULAS - Updated sesuai Data Dictionary terbaru
   
-  // Net Profit = SUM(net_profit) dari member_report_monthly
-  NET_PROFIT: (data: RawKPIData): number => {
+  // Net Profit from database = SUM(net_profit) dari member_report_monthly
+  NET_PROFIT_FROM_DB: (data: RawKPIData): number => {
     return data.member.net_profit
   },
 
@@ -122,12 +122,12 @@ export const KPI_FORMULAS = {
     return data.deposit.deposit_amount > 0 ? (data.member.ggr / data.deposit.deposit_amount) * 100 : 0
   },
 
-  // Average Transaction Value = Deposit Amount / Deposit Cases
+  // ✅ UPDATED: Average Transaction Value (ATV) = Deposit Amount / Deposit Cases
   AVG_TRANSACTION_VALUE: (data: RawKPIData): number => {
     return data.deposit.deposit_cases > 0 ? data.deposit.deposit_amount / data.deposit.deposit_cases : 0
   },
 
-  // Purchase Frequency = Deposit Cases / Active Members
+  // ✅ UPDATED: Purchase Frequency (PF) = Deposit Cases / Active Member
   PURCHASE_FREQUENCY: (data: RawKPIData): number => {
     const result = data.deposit.active_members > 0 ? data.deposit.deposit_cases / data.deposit.active_members : 0
     return Math.round(result * 100) / 100 // Format 2 decimal places (0.00)
@@ -148,12 +148,24 @@ export const KPI_FORMULAS = {
     return data.deposit.active_members > 0 ? (data.deposit.active_members - data.churn.churn_members) / data.deposit.active_members : 0
   },
 
-  // ✅ UPDATED: Customer Lifetime Value = ATV * PF * ACL
+  // ✅ UPDATED: Customer Lifetime Value (CLV) = PF * ATV * ACL
+  // Formula: CLV = (Purchase Frequency) * (Average Transaction Value) * (Average Customer Lifespan)
   CUSTOMER_LIFETIME_VALUE: (avgTransactionValue: number, purchaseFrequency: number, avgCustomerLifespan: number): number => {
-    return avgTransactionValue * purchaseFrequency * avgCustomerLifespan
+    const result = avgTransactionValue * purchaseFrequency * avgCustomerLifespan
+    
+    // 🔍 DEBUG: Log CLV calculation
+    console.log('🔍 [KPILogic] CLV Formula Debug:', {
+      avgTransactionValue,
+      purchaseFrequency,
+      avgCustomerLifespan,
+      result,
+      calculation: `${avgTransactionValue} × ${purchaseFrequency} × ${avgCustomerLifespan} = ${result}`
+    })
+    
+    return result
   },
 
-  // Average Customer Lifespan = 1 / Churn Rate
+  // ✅ UPDATED: Average Customer Lifespan (ACL) = 1 / Churn Rate
   AVG_CUSTOMER_LIFESPAN: (churnRate: number): number => {
     return churnRate > 0 ? (1 / churnRate) : 1000
   },
@@ -164,6 +176,20 @@ export const KPI_FORMULAS = {
   },
 
   // ✅ UTILITY FORMULAS
+
+  // Gross Profit = Deposit Amount - Withdraw Amount
+  // Where: Deposit Amount = SUM(member_report_monthly[deposit_amount])
+  // Where: Withdraw Amount = SUM(member_report_monthly[withdraw_amount])
+  GROSS_PROFIT: (depositAmount: number, withdrawAmount: number): number => {
+    return depositAmount - withdrawAmount
+  },
+
+  // Net Profit = (Deposit Amount + Add Transaction) - (Withdraw Amount + Deduct Transaction)
+  // Where: Deposit Amount = SUM(member_report_monthly[deposit_amount])
+  // Where: Withdraw Amount = SUM(member_report_monthly[withdraw_amount])
+  NET_PROFIT: (depositAmount: number, withdrawAmount: number, addTransaction: number, deductTransaction: number): number => {
+    return (depositAmount + addTransaction) - (withdrawAmount + deductTransaction)
+  },
 
   // Percentage Change (Month over Month)
   PERCENTAGE_CHANGE: (current: number, previous: number): number => {
@@ -244,13 +270,13 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
     console.log('🔍 [KPILogic] Filters:', filters)
 
     // ✅ PARALLEL FETCH dengan DATABASE AGGREGATION - seperti PostgreSQL
-    const [activeMemberResult, newDepositorResult, memberReportResult, churnResult] = await Promise.all([
+    const [activeMemberResult, newDepositorResult, newRegisterResult, memberReportResult, churnResult] = await Promise.all([
       
-      // 1. ACTIVE MEMBER = SOURCE TABLE deposit_monthly[userkey]
+      // 1. ACTIVE MEMBER & PURE USER = SOURCE TABLE deposit_monthly[userkey, unique_code]
       (() => {
         let query = supabase
           .from('deposit_monthly')
-          .select('userkey')
+          .select('userkey, unique_code')
           .eq('year', filters.year)
           .eq('month', filters.month)
           .eq('currency', filters.currency)
@@ -278,7 +304,25 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
         return query.limit(100000)
       })(),
 
-      // 3-6. DEPOSIT AMOUNT, WITHDRAW AMOUNT, GROSS PROFIT, NET PROFIT = SOURCE TABLE member_report_monthly
+      // 3. NEW REGISTER = SOURCE TABLE new_register[new_register]
+      (() => {
+        let query = supabase
+          .from('new_register')
+          .select('new_register')
+          .eq('year', filters.year)
+          .eq('month', filters.month)
+          .eq('currency', filters.currency)
+         
+        if (filters.line) {
+          query = query.eq('line', filters.line)
+        }
+         
+        return query.limit(100000)
+      })(),
+
+      // 4-7. DEPOSIT AMOUNT, WITHDRAW AMOUNT, GROSS PROFIT, NET PROFIT = SOURCE TABLE member_report_monthly
+      // Withdraw Amount = SUM(member_report_monthly[withdraw_amount])
+      // Deposit Amount = SUM(member_report_monthly[deposit_amount])
       (() => {
         let query = supabase
           .from('member_report_monthly')
@@ -300,22 +344,21 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
 
     if (activeMemberResult.error) throw activeMemberResult.error
     if (newDepositorResult.error) throw newDepositorResult.error
+    if (newRegisterResult.error) throw newRegisterResult.error
     if (memberReportResult.error) throw memberReportResult.error
 
     // ✅ CLIENT-SIDE AGGREGATION (optimized)
     const activeMemberData = activeMemberResult.data || []
     const newDepositorData = newDepositorResult.data || []
+    const newRegisterData = newRegisterResult.data || []
     const memberReportData = memberReportResult.data || []
 
     console.log('🔍 [KPILogic] Raw data counts:', {
       activeMemberData: activeMemberData.length,
       newDepositorData: newDepositorData.length,
+      newRegisterData: newRegisterData.length,
       memberReportData: memberReportData.length
     })
-
-    console.log('🔍 [KPILogic] Sample active member data:', activeMemberData.slice(0, 3))
-    console.log('🔍 [KPILogic] Sample new depositor data:', newDepositorData.slice(0, 3))
-    console.log('🔍 [KPILogic] Sample member report data:', memberReportData.slice(0, 3))
 
     // 1. ACTIVE MEMBER = unique count dari deposit_monthly[userkey]
     const uniqueUserKeys = Array.from(new Set(activeMemberData.map((item: any) => item.userkey).filter(Boolean)))
@@ -325,59 +368,44 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
     const newDepositorAgg = newDepositorData.reduce((acc: any, item: any) => 
       acc + (Number(item.new_depositor) || 0), 0)
 
-    // 3-6. Aggregate member_report_monthly data
+    // 3. NEW REGISTER = sum dari new_register[new_register]
+    const newRegisterAgg = newRegisterData.reduce((acc: any, item: any) => 
+      acc + (Number(item.new_register) || 0), 0)
+
+    // 4. PURE USER = count unique dari deposit_monthly[unique_code]
+    const uniqueCodes = Array.from(new Set(activeMemberData.map((item: any) => item.unique_code).filter(Boolean)))
+    const pureUserCount = uniqueCodes.length
+
+    // 5-8. Aggregate member_report_monthly data
+    // Withdraw Amount = SUM(member_report_monthly[withdraw_amount])
+    // Deposit Amount = SUM(member_report_monthly[deposit_amount])
     const memberReportAgg = memberReportData.reduce((acc: any, item: any) => ({
-      deposit_amount: acc.deposit_amount + (Number(item.deposit_amount) || 0),
-      withdraw_amount: acc.withdraw_amount + (Number(item.withdraw_amount) || 0),
+      deposit_amount: acc.deposit_amount + (Number(item.deposit_amount) || 0), // SUM(member_report_monthly[deposit_amount])
+      withdraw_amount: acc.withdraw_amount + (Number(item.withdraw_amount) || 0), // SUM(member_report_monthly[withdraw_amount])
       add_transaction: acc.add_transaction + (Number(item.add_transaction) || 0),
       deduct_transaction: acc.deduct_transaction + (Number(item.deduct_transaction) || 0),
       deposit_cases: acc.deposit_cases + (Number(item.deposit_cases) || 0), // SUM dari deposit_cases
       withdraw_cases: acc.withdraw_cases + (Number(item.withdraw_cases) || 0)
     }), { deposit_amount: 0, withdraw_amount: 0, add_transaction: 0, deduct_transaction: 0, deposit_cases: 0, withdraw_cases: 0 })
 
-    // ✅ TEST: Active Member dari member_report_monthly[userkey] (COUNT UNIQUE)
-    const uniqueMemberReportUserKeys = Array.from(new Set(memberReportData.map((item: any) => item.userkey).filter(Boolean)))
-    const activeMembersFromMemberReport = uniqueMemberReportUserKeys.length
-
-    console.log('📊 [KPILogic] TEST DATA COMPARISON:', {
-      // Data dari deposit_monthly
-      activeMembersFromDepositMonthly: activeMembersCount,
-      uniqueUserKeysFromDepositMonthly: uniqueUserKeys.slice(0, 5),
-      
-      // Data dari member_report_monthly
-      activeMembersFromMemberReport: activeMembersFromMemberReport,
-      uniqueUserKeysFromMemberReport: uniqueMemberReportUserKeys.slice(0, 5),
-      
-      // Deposit Cases - SUM dari member_report_monthly[deposit_cases]
-      depositCasesFromMemberReport: memberReportAgg.deposit_cases,
-      sampleDepositCases: memberReportData.slice(0, 3).map(item => ({ userkey: item.userkey, deposit_cases: item.deposit_cases })),
-      
-      // Purchase Frequency Calculation
-      purchaseFrequencyCalculation: {
-        depositCases: memberReportAgg.deposit_cases, // SUM dari deposit_cases
-        activeMembers: activeMembersFromMemberReport, // COUNT UNIQUE dari userkey
-        result: activeMembersFromMemberReport > 0 ? Math.round((memberReportAgg.deposit_cases / activeMembersFromMemberReport) * 100) / 100 : 0 // Format 2 decimal (0.00)
-      }
-    })
-
     console.log('📊 [KPILogic] Aggregated data:', {
       activeMembersCount,
       newDepositorAgg,
+      newRegisterAgg,
+      pureUserCount,
       memberReportAgg
     })
 
-    // Calculate derived values
+    // Calculate derived values using centralized formulas
     const depositAmount = Number(memberReportAgg.deposit_amount) || 0
     const withdrawAmount = Number(memberReportAgg.withdraw_amount) || 0
-    const grossProfit = depositAmount - withdrawAmount // GGR = deposit_amount - withdraw_amount
-    const netProfit = (depositAmount + Number(memberReportAgg.add_transaction) || 0) - (withdrawAmount + Number(memberReportAgg.deduct_transaction) || 0)
 
     const rawData: RawKPIData = {
       deposit: {
         deposit_amount: depositAmount,
         add_transaction: Number(memberReportAgg.add_transaction) || 0,
-        active_members: activeMembersFromMemberReport, // Use Active Member dari member_report_monthly
-        deposit_cases: Number(memberReportAgg.deposit_cases) || 0 // Use actual deposit_cases from database
+        active_members: activeMembersCount, // Active Member dari deposit_monthly[userkey]
+        deposit_cases: Number(memberReportAgg.deposit_cases) || 0 // Deposit cases dari member_report_monthly
       },
       withdraw: {
         withdraw_amount: withdrawAmount,
@@ -385,9 +413,9 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
         withdraw_cases: Number(memberReportAgg.withdraw_cases) || 0 // Use actual withdraw_cases from database
       },
       member: {
-        net_profit: Number(netProfit) || 0,
-        ggr: Number(grossProfit) || 0,
-        valid_bet_amount: Number(grossProfit) || 0, // Using GGR as valid bet amount for now
+        net_profit: KPI_FORMULAS.NET_PROFIT(depositAmount, withdrawAmount, Number(memberReportAgg.add_transaction) || 0, Number(memberReportAgg.deduct_transaction) || 0),
+        ggr: KPI_FORMULAS.GROSS_PROFIT(depositAmount, withdrawAmount),
+        valid_bet_amount: KPI_FORMULAS.GROSS_PROFIT(depositAmount, withdrawAmount), // Using GGR as valid bet amount for now
         add_bonus: 0, // Will be implemented when add_bonus field is available
         deduct_bonus: 0 // Will be implemented when deduct_bonus field is available
       },
@@ -395,25 +423,52 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
         new_depositor: newDepositorAgg
       },
       newRegister: {
-        new_register: newDepositorAgg // Using new depositor as new register for now
+        new_register: newRegisterAgg // New Register dari new_register[new_register]
       },
       churn: {
         churn_members: churnResult
       },
       pureUser: {
-        unique_codes: activeMembersFromMemberReport // Use Active Member dari member_report_monthly
+        unique_codes: pureUserCount // Pure User dari deposit_monthly[unique_code]
       }
     }
 
-    console.log('✅ [KPILogic] Raw KPI data aggregated with new logic:', {
+    console.log('✅ [KPILogic] Raw KPI data aggregated with correct source tables (NO DUPLICATE):', {
       activeMembers: rawData.deposit.active_members,
       depositAmount: rawData.deposit.deposit_amount,
       withdrawAmount: rawData.withdraw.withdraw_amount,
       grossProfit: rawData.member.ggr,
       netProfit: rawData.member.net_profit,
       newDepositor: rawData.newDepositor.new_depositor,
+      newRegister: rawData.newRegister.new_register,
+      pureUser: rawData.pureUser.unique_codes,
       depositCases: rawData.deposit.deposit_cases,
-      purchaseFrequency: rawData.deposit.active_members > 0 ? rawData.deposit.deposit_cases / rawData.deposit.active_members : 0
+      purchaseFrequency: KPI_FORMULAS.PURCHASE_FREQUENCY(rawData)
+    })
+    
+    // 🔍 DEBUG: Check raw data scale - maybe values are too small
+    console.log('🔍 [KPILogic] RAW DATA SCALE CHECK:', {
+      depositAmount: {
+        value: rawData.deposit.deposit_amount,
+        isInMillions: rawData.deposit.deposit_amount >= 1000000,
+        isInThousands: rawData.deposit.deposit_amount >= 1000,
+        isInHundreds: rawData.deposit.deposit_amount >= 100,
+        expectedRange: 'Should be in thousands or millions for real deposit amounts'
+      },
+      depositCases: {
+        value: rawData.deposit.deposit_cases,
+        isInThousands: rawData.deposit.deposit_cases >= 1000,
+        isInHundreds: rawData.deposit.deposit_cases >= 100,
+        isInTens: rawData.deposit.deposit_cases >= 10,
+        expectedRange: 'Should be in hundreds or thousands for real deposit cases'
+      },
+      activeMembers: {
+        value: rawData.deposit.active_members,
+        isInThousands: rawData.deposit.active_members >= 1000,
+        isInHundreds: rawData.deposit.active_members >= 100,
+        isInTens: rawData.deposit.active_members >= 10,
+        expectedRange: 'Should be in hundreds or thousands for real active members'
+      }
     })
 
     cache.set(cacheKey, rawData)
@@ -450,7 +505,7 @@ async function getChurnMembers(filters: SlicerFilters): Promise<number> {
     const prevQuery = (() => {
       let query = supabase
         .from('deposit_monthly')
-        .select('userkey')
+        .select('userkey, unique_code')
         .eq('year', prevYear)
         .eq('month', prevMonth)
         .eq('currency', filters.currency)
@@ -470,7 +525,7 @@ async function getChurnMembers(filters: SlicerFilters): Promise<number> {
     const currentQuery = (() => {
       let query = supabase
         .from('deposit_monthly')
-        .select('userkey')
+        .select('userkey, unique_code')
         .eq('year', filters.year)
         .eq('month', filters.month)
         .eq('currency', filters.currency)
@@ -510,6 +565,21 @@ export async function calculateKPIs(filters: SlicerFilters): Promise<KPIData> {
 
     // ✅ Step 1: Get raw aggregated data (like PostgreSQL getRawData)
     const rawData = await getRawKPIData(filters)
+    
+    // 🔍 DEBUG: Log raw data from database
+    console.log('🔍 [KPILogic] Raw Data from Database:', {
+      filters,
+      rawData,
+      dataQuality: {
+        hasDepositData: rawData.deposit.deposit_amount > 0 && rawData.deposit.deposit_cases > 0,
+        hasActiveMembers: rawData.deposit.active_members > 0,
+        hasChurnData: rawData.churn.churn_members >= 0,
+        depositAmount: rawData.deposit.deposit_amount,
+        depositCases: rawData.deposit.deposit_cases,
+        activeMembers: rawData.deposit.active_members,
+        churnMembers: rawData.churn.churn_members
+      }
+    })
 
     // ✅ Step 2: Apply centralized formulas (like PostgreSQL FORMULAS)
     const winrate = KPI_FORMULAS.WINRATE(rawData)
@@ -518,9 +588,58 @@ export async function calculateKPIs(filters: SlicerFilters): Promise<KPIData> {
     const churnRate = KPI_FORMULAS.CHURN_RATE(rawData)
     const retentionRate = KPI_FORMULAS.RETENTION_RATE(churnRate)
     const growthRate = KPI_FORMULAS.GROWTH_RATE(rawData)
-    const customerLifetimeValue = KPI_FORMULAS.CUSTOMER_LIFETIME_VALUE(avgTransactionValue, purchaseFrequency, KPI_FORMULAS.AVG_CUSTOMER_LIFESPAN(churnRate))
     const avgCustomerLifespan = KPI_FORMULAS.AVG_CUSTOMER_LIFESPAN(churnRate)
+    const customerLifetimeValue = KPI_FORMULAS.CUSTOMER_LIFETIME_VALUE(avgTransactionValue, purchaseFrequency, avgCustomerLifespan)
+    
+    // 🔍 DEBUG: Validate CLV result
+    console.log('🔍 [KPILogic] CLV Validation:', {
+      customerLifetimeValue,
+      isValid: !isNaN(customerLifetimeValue) && isFinite(customerLifetimeValue),
+      isReasonable: customerLifetimeValue >= 0 && customerLifetimeValue <= 1000000, // Reasonable range
+      components: {
+        avgTransactionValue,
+        purchaseFrequency,
+        avgCustomerLifespan
+      }
+    })
     const customerMaturityIndex = KPI_FORMULAS.CUSTOMER_MATURITY_INDEX(retentionRate, growthRate, churnRate)
+    
+    // 🔍 DEBUG: Log CLV calculation components
+    console.log('🔍 [KPILogic] CLV Calculation Debug:', {
+      avgTransactionValue,
+      purchaseFrequency,
+      avgCustomerLifespan,
+      customerLifetimeValue,
+      churnRate,
+      rawData: {
+        deposit_amount: rawData.deposit.deposit_amount,
+        deposit_cases: rawData.deposit.deposit_cases,
+        active_members: rawData.deposit.active_members,
+        churn_members: rawData.churn.churn_members
+      },
+      formulas: {
+        ATV: `Deposit Amount (${rawData.deposit.deposit_amount}) / Deposit Cases (${rawData.deposit.deposit_cases}) = ${avgTransactionValue}`,
+        PF: `Deposit Cases (${rawData.deposit.deposit_cases}) / Active Members (${rawData.deposit.active_members}) = ${purchaseFrequency}`,
+        ACL: `1 / Churn Rate (${churnRate}) = ${avgCustomerLifespan}`,
+        CLV: `${avgTransactionValue} × ${purchaseFrequency} × ${avgCustomerLifespan} = ${customerLifetimeValue}`
+      }
+    })
+    
+    // 🔍 DEBUG: Check if CLV is too small - maybe data is in wrong scale
+    console.log('🔍 [KPILogic] CLV SCALE CHECK:', {
+      customerLifetimeValue,
+      isInThousands: customerLifetimeValue >= 1000,
+      isInHundreds: customerLifetimeValue >= 100,
+      isInTens: customerLifetimeValue >= 10,
+      isInOnes: customerLifetimeValue >= 1,
+      expectedRange: 'Should be in thousands (1000+) for real CLV values',
+      actualValue: customerLifetimeValue,
+      components: {
+        avgTransactionValue,
+        purchaseFrequency,
+        avgCustomerLifespan
+      }
+    })
     const ggrPerUser = KPI_FORMULAS.GGR_USER(rawData)
     const ggrPerPureUser = KPI_FORMULAS.GGR_PURE_USER(rawData)
     const pureMember = KPI_FORMULAS.PURE_MEMBER(rawData)
@@ -548,7 +667,7 @@ export async function calculateKPIs(filters: SlicerFilters): Promise<KPIData> {
       growthRate: KPI_FORMULAS.ROUND(growthRate),
       avgTransactionValue: KPI_FORMULAS.ROUND(avgTransactionValue),
       purchaseFrequency: KPI_FORMULAS.ROUND(purchaseFrequency),
-      customerLifetimeValue: KPI_FORMULAS.ROUND(customerLifetimeValue),
+      customerLifetimeValue: customerLifetimeValue >= 1000 ? Math.round(customerLifetimeValue) : KPI_FORMULAS.ROUND(customerLifetimeValue),
       avgCustomerLifespan: KPI_FORMULAS.ROUND(avgCustomerLifespan),
       customerMaturityIndex: KPI_FORMULAS.ROUND(customerMaturityIndex),
       ggrPerUser: KPI_FORMULAS.ROUND(ggrPerUser),
@@ -765,6 +884,23 @@ export async function getLineChartData(filters: SlicerFilters): Promise<any> {
     // Row 2 - Chart 2: Customer Lifetime Value vs Purchase Frequency (Value Integer)
     const clvData = monthlyData.map(data => data.customerLifetimeValue)
     const frequencyData = monthlyData.map(data => data.purchaseFrequency)
+    
+    // 🔍 DEBUG: Log CLV chart data specifically
+    console.log('🔍 [KPILogic] CLV Chart Data Debug:', {
+      clvData,
+      clvDataRange: {
+        min: Math.min(...clvData),
+        max: Math.max(...clvData),
+        avg: clvData.reduce((a, b) => a + b, 0) / clvData.length
+      },
+      frequencyData,
+      frequencyDataRange: {
+        min: Math.min(...frequencyData),
+        max: Math.max(...frequencyData),
+        avg: frequencyData.reduce((a, b) => a + b, 0) / frequencyData.length
+      },
+      categories: months.map(month => month.substring(0, 3))
+    })
     
     const customerMetricsTrend = {
       series: [
