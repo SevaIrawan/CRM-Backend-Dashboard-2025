@@ -411,10 +411,11 @@ export default function LineChart({
       {/* Chart Area */}
       <div style={{
         flex: 1,
-        padding: '20px',
+        padding: '16px',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        backgroundColor: '#ffffff'
       }}>
         {(() => {
           try {
@@ -435,10 +436,10 @@ export default function LineChart({
                     maintainAspectRatio: false,
                     layout: {
                       padding: {
-                        top: 20,
-                        bottom: 20,
-                        left: 20,
-                        right: 20
+                        top: 10,
+                        bottom: 10,
+                        left: 10,
+                        right: 10
                       }
                     },
                     plugins: {
