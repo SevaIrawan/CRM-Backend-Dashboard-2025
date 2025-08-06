@@ -217,26 +217,7 @@ body {
 }
 
 /* Chart Title Styling */
-.chart-title {
-  display: flex;
-  align-items: center;
-  font-size: 12px;
-  font-weight: 600;
-  color: #374151;
-  margin: 0 0 6px 0;
-  padding: 0 4px;
-  height: 20px;
-  background: transparent;
-  border: none;
-  flex-shrink: 0;
-}
-
-.chart-title-icon {
-  font-size: 14px;
-  margin-right: 5px;
-  display: inline-block;
-  color: #6b7280;
-}
+/* Chart title styles removed - now handled inside LineChart component */
 
 .line-chart {
   height: 100%;

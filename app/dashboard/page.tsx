@@ -7,6 +7,7 @@ import Frame from '@/components/Frame'
 import DashboardSubHeader from '@/components/DashboardSubHeader'
 import LineChart from '@/components/LineChart'
 import StatCard from '@/components/StatCard'
+import { getChartIcon } from '@/lib/centralIcons'
 
 export default function Dashboard() {
   
@@ -278,13 +279,9 @@ export default function Dashboard() {
         {/* Charts Row 1 */}
         <div className="charts-row">
           <div className="chart-container">
-            <h3 className="chart-title">
-              <span className="chart-title-icon">📈</span>
-              Retention vs Churn Rate Over Time
-            </h3>
             {isLoading ? (
               <div style={{ 
-                height: '280px', 
+                height: '320px', 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',
@@ -307,7 +304,7 @@ export default function Dashboard() {
               </div>
             ) : chartError ? (
               <div style={{ 
-                height: '280px', 
+                height: '320px', 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',
@@ -325,18 +322,15 @@ export default function Dashboard() {
                 series={lineChartData?.retentionChurnTrend?.series || []}
                 categories={lineChartData?.retentionChurnTrend?.categories || []}
                 title="Retention vs Churn Rate Over Time"
+                chartIcon={getChartIcon('Retention vs Churn Rate Over Time')}
                 currency={selectedCurrency}
               />
             )}
           </div>
           <div className="chart-container">
-            <h3 className="chart-title">
-              <span className="chart-title-icon">📊</span>
-              Customer Lifetime Value vs Purchase Frequency
-            </h3>
             {isLoading ? (
               <div style={{ 
-                height: '280px', 
+                height: '320px', 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',
@@ -359,7 +353,7 @@ export default function Dashboard() {
               </div>
             ) : chartError ? (
               <div style={{ 
-                height: '280px', 
+                height: '320px', 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',
@@ -377,6 +371,7 @@ export default function Dashboard() {
                 series={lineChartData?.customerMetricsTrend?.series || []}
                 categories={lineChartData?.customerMetricsTrend?.categories || []}
                 title="Customer Lifetime Value vs Purchase Frequency"
+                chartIcon={getChartIcon('Customer Lifetime Value vs Purchase Frequency')}
                 currency={selectedCurrency}
               />
             )}
@@ -386,13 +381,9 @@ export default function Dashboard() {
         {/* Charts Row 2 */}
         <div className="charts-row">
           <div className="chart-container">
-            <h3 className="chart-title">
-              <span className="chart-title-icon">🎯</span>
-              Growth vs Profitability Analysis
-            </h3>
             {isLoading ? (
               <div style={{ 
-                height: '280px', 
+                height: '320px', 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',
@@ -415,7 +406,7 @@ export default function Dashboard() {
               </div>
             ) : chartError ? (
               <div style={{ 
-                height: '280px', 
+                height: '320px', 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',
@@ -433,18 +424,15 @@ export default function Dashboard() {
                 series={lineChartData?.growthProfitabilityAnalysis?.series || []}
                 categories={lineChartData?.growthProfitabilityAnalysis?.categories || []}
                 title="Growth vs Profitability Analysis"
+                chartIcon={getChartIcon('Growth vs Profitability Analysis')}
                 currency={selectedCurrency}
               />
             )}
           </div>
           <div className="chart-container">
-            <h3 className="chart-title">
-              <span className="chart-title-icon">📋</span>
-              Operational Efficiency Trend
-            </h3>
             {isLoading ? (
               <div style={{ 
-                height: '280px', 
+                height: '320px', 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',
@@ -467,7 +455,7 @@ export default function Dashboard() {
               </div>
             ) : chartError ? (
               <div style={{ 
-                height: '280px', 
+                height: '320px', 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',
@@ -485,6 +473,7 @@ export default function Dashboard() {
                 series={lineChartData?.operationalEfficiencyTrend?.series || []}
                 categories={lineChartData?.operationalEfficiencyTrend?.categories || []}
                 title="Operational Efficiency Trend"
+                chartIcon={getChartIcon('Operational Efficiency Trend')}
                 currency={selectedCurrency}
               />
             )}

@@ -10,6 +10,7 @@ import {
   Legend,
   Filler
 } from 'chart.js';
+import { getChartIcon } from '../lib/centralIcons';
 
 ChartJS.register(
   CategoryScale,
@@ -32,13 +33,15 @@ interface LineChartProps {
   categories: string[];
   title?: string;
   currency?: string;
+  chartIcon?: string;
 }
 
 export default function LineChart({ 
   series, 
   categories, 
   title, 
-  currency = 'MYR' 
+  currency = 'MYR',
+  chartIcon
 }: LineChartProps) {
   
   console.log('📈 [LineChart] Rendering chart:', {
@@ -185,25 +188,18 @@ export default function LineChart({
     }
   };
 
-  // Determine if we need dual Y-axes based on series types
-  const needsDualYAxis = series.length > 1 && (
-    // Check if series have different types (percentage vs amount, frequency vs count, etc.)
-    (series.some(s => s.name.toLowerCase().includes('rate') || s.name.toLowerCase().includes('frequency')) &&
-     series.some(s => !s.name.toLowerCase().includes('rate') && !s.name.toLowerCase().includes('frequency'))) ||
-    // Check if series have very different scales
-    (Math.max(...series[0]?.data || []) / Math.max(...series[1]?.data || []) > 100 ||
-     Math.max(...series[1]?.data || []) / Math.max(...series[0]?.data || []) > 100)
-  );
+  // Force dual Y-axes for all charts with 2 series (as requested by user)
+  const needsDualYAxis = series.length > 1;
 
   const data = {
     labels: categories,
     datasets: series.map((item, index) => ({
       label: item.name,
       data: item.data,
-      borderColor: index === 0 ? '#3B82F6' : '#10B981',
-      backgroundColor: index === 0 ? 'rgba(59, 130, 246, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+      borderColor: index === 0 ? '#3B82F6' : '#F97316', // Blue and Orange
+      backgroundColor: index === 0 ? 'rgba(59, 130, 246, 0.1)' : 'rgba(249, 115, 22, 0.1)', // Blue and Orange with transparency
       borderWidth: 3,
-      pointBackgroundColor: index === 0 ? '#3B82F6' : '#10B981',
+      pointBackgroundColor: index === 0 ? '#3B82F6' : '#F97316', // Blue and Orange
       pointBorderColor: '#ffffff',
       pointBorderWidth: 2,
       pointRadius: 6,
@@ -224,24 +220,15 @@ export default function LineChart({
     },
     layout: {
       padding: {
-        top: 5,
-        bottom: 5,
-        left: 5,
-        right: 5
+        top: 20,
+        bottom: 20,
+        left: 20,
+        right: 20
       }
     },
     plugins: {
       legend: {
-        display: true,
-        position: 'bottom' as const,
-        align: 'center' as const,
-        labels: {
-          usePointStyle: true,
-          padding: 15,
-          font: {
-            size: 12
-          }
-        }
+        display: false, // Hide default legend since we'll position them on Y-axes
       },
       tooltip: {
         mode: 'index' as const,
@@ -293,7 +280,7 @@ export default function LineChart({
           lineWidth: 1
         },
         ticks: {
-          padding: 8,
+          padding: 20, // Increased padding for legend space
           callback: function(tickValue: string | number) {
             const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
             // Check series name for percentage
@@ -304,6 +291,20 @@ export default function LineChart({
             
             // For other values - formatted numbers
             return formatValue(value, firstSeries?.name);
+          }
+        },
+        // Add legend title for left Y-axis
+        title: {
+          display: true,
+          text: series[0]?.name || 'Series 1',
+          color: '#3B82F6', // Blue
+          font: {
+            size: 12,
+            weight: 'bold' as const
+          },
+          padding: {
+            top: 10,
+            bottom: 10
           }
         }
       },
@@ -318,7 +319,7 @@ export default function LineChart({
             drawOnChartArea: false,
           },
           ticks: {
-            padding: 8,
+            padding: 20, // Increased padding for legend space
             callback: function(tickValue: string | number) {
               const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
               // Check second series name for percentage
@@ -329,6 +330,20 @@ export default function LineChart({
               
               // For other values - formatted numbers
               return formatValue(value, secondSeries?.name);
+            }
+          },
+          // Add legend title for right Y-axis
+          title: {
+            display: true,
+            text: series[1]?.name || 'Series 2',
+            color: '#F97316', // Orange
+            font: {
+              size: 12,
+              weight: 'bold' as const
+            },
+            padding: {
+              top: 10,
+              bottom: 10
             }
           }
         }
@@ -344,7 +359,7 @@ export default function LineChart({
 
   return (
     <div style={{ 
-      height: '280px', 
+      height: '320px', // Increased height to accommodate title
       width: '100%', 
       padding: '0',
       position: 'relative',
@@ -352,162 +367,226 @@ export default function LineChart({
       border: '1px solid #e5e7eb',
       borderRadius: '6px',
       display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
+      flexDirection: 'column'
     }}>
-      {(() => {
-        try {
-          return (
-            <div style={{
-              width: '100%',
-              height: '100%',
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <Line 
-                data={data} 
-                options={{
-                  ...options,
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  layout: {
-                    padding: {
-                      top: 5,
-                      bottom: 5,
-                      left: 5,
-                      right: 5
-                    }
-                  },
-                  plugins: {
-                    ...options.plugins,
-                    legend: {
-                      ...options.plugins.legend,
-                      position: 'bottom' as const,
-                      align: 'center' as const,
-                      labels: {
-                        ...options.plugins.legend.labels,
-                        padding: 8,
-                        usePointStyle: true,
-                        font: {
-                          size: 10
-                        }
+      {/* Chart Title with Icon */}
+      {title && (
+        <div style={{
+          padding: '12px 16px 8px 16px',
+          borderBottom: '1px solid #e5e7eb',
+          backgroundColor: '#ffffff',
+          borderRadius: '6px 6px 0 0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          {chartIcon && (
+            <span 
+              style={{
+                fontSize: '14px',
+                color: '#3b82f6',
+                width: '20px',
+                height: '20px',
+                display: 'inline-block',
+                flexShrink: 0
+              }}
+              dangerouslySetInnerHTML={{ __html: chartIcon }}
+            />
+          )}
+          <h3 style={{
+            margin: 0,
+            fontSize: '15px',
+            fontWeight: 700,
+            color: '#374151',
+            textTransform: 'uppercase',
+            letterSpacing: '0.6px',
+            lineHeight: '1.2'
+          }}>
+            {title}
+          </h3>
+        </div>
+      )}
+      
+      {/* Chart Area */}
+      <div style={{
+        flex: 1,
+        padding: '16px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        {(() => {
+          try {
+            return (
+              <div style={{
+                width: '100%',
+                height: '100%',
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Line 
+                  data={data} 
+                  options={{
+                    ...options,
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: {
+                      padding: {
+                        top: 20,
+                        bottom: 20,
+                        left: 20,
+                        right: 20
                       }
                     },
-                    tooltip: {
-                      ...options.plugins.tooltip,
-                      backgroundColor: 'rgba(0, 0, 0, 0.95)',
-                      titleColor: '#ffffff',
-                      bodyColor: '#ffffff',
-                      borderColor: '#3B82F6',
-                      borderWidth: 2,
-                      cornerRadius: 10,
-                      padding: 12,
-                      displayColors: true,
-                      callbacks: {
-                        ...options.plugins.tooltip.callbacks,
-                        title: function(context: any) {
-                          return `📅 ${context[0].label}`;
-                        },
-                        label: function(context: any) {
-                          const value = context.parsed.y;
-                          const datasetLabel = context.dataset.label;
-                          
-                          if (datasetLabel && datasetLabel.toLowerCase().includes('rate')) {
-                            return `  ${datasetLabel}: ${value.toFixed(1)}%`;
-                          }
-                          
-                          return `  ${datasetLabel}: ${formatFullValue(value, datasetLabel)}`;
-                        }
-                      }
-                    }
-                  },
-                  scales: {
-                    ...options.scales,
-                    x: {
-                      ...options.scales.x,
-                      grid: {
-                        display: true,
-                        color: 'rgba(0, 0, 0, 0.08)',
-                        lineWidth: 1
+                    plugins: {
+                      ...options.plugins,
+                      legend: {
+                        display: false, // Hide default legend since we'll position them on Y-axes
                       },
-                      ticks: {
-                        padding: 4,
-                        font: {
-                          size: 9
-                        }
-                      }
-                    },
-                    y: {
-                      ...options.scales.y,
-                      grid: {
-                        display: true,
-                        color: 'rgba(0, 0, 0, 0.08)',
-                        lineWidth: 1
-                      },
-                      ticks: {
-                        padding: 4,
-                        font: {
-                          size: 9
-                        },
-                        callback: function(tickValue: string | number) {
-                          const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
-                          const firstSeries = series && series[0];
-                          if (firstSeries && firstSeries.name && firstSeries.name.toLowerCase().includes('rate')) {
-                            return value + '%';
+                      tooltip: {
+                        ...options.plugins.tooltip,
+                        backgroundColor: 'rgba(0, 0, 0, 0.95)',
+                        titleColor: '#ffffff',
+                        bodyColor: '#ffffff',
+                        borderColor: '#3B82F6',
+                        borderWidth: 2,
+                        cornerRadius: 10,
+                        padding: 12,
+                        displayColors: true,
+                        callbacks: {
+                          ...options.plugins.tooltip.callbacks,
+                          title: function(context: any) {
+                            return `📅 ${context[0].label}`;
+                          },
+                          label: function(context: any) {
+                            const value = context.parsed.y;
+                            const datasetLabel = context.dataset.label;
+                            
+                            if (datasetLabel && datasetLabel.toLowerCase().includes('rate')) {
+                              return `  ${datasetLabel}: ${value.toFixed(1)}%`;
+                            }
+                            
+                            return `  ${datasetLabel}: ${formatFullValue(value, datasetLabel)}`;
                           }
-                          
-                          return formatValue(value, firstSeries?.name);
                         }
                       }
                     },
-                    // Add second Y-axis if needed
-                    ...(needsDualYAxis && {
-                      y1: {
-                        ...options.scales.y1,
+                    scales: {
+                      ...options.scales,
+                      x: {
+                        ...options.scales.x,
                         grid: {
-                          drawOnChartArea: false,
+                          display: true,
+                          color: 'rgba(0, 0, 0, 0.08)',
+                          lineWidth: 1
                         },
                         ticks: {
                           padding: 4,
                           font: {
                             size: 9
+                          }
+                        }
+                      },
+                      y: {
+                        ...options.scales.y,
+                        grid: {
+                          display: true,
+                          color: 'rgba(0, 0, 0, 0.08)',
+                          lineWidth: 1
+                        },
+                        ticks: {
+                          padding: 20, // Increased padding for legend space
+                          font: {
+                            size: 9
                           },
                           callback: function(tickValue: string | number) {
                             const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
-                            const secondSeries = series && series[1];
-                            if (secondSeries && secondSeries.name && secondSeries.name.toLowerCase().includes('rate')) {
+                            const firstSeries = series && series[0];
+                            if (firstSeries && firstSeries.name && firstSeries.name.toLowerCase().includes('rate')) {
                               return value + '%';
                             }
                             
-                            return formatValue(value, secondSeries?.name);
+                            return formatValue(value, firstSeries?.name);
+                          }
+                        },
+                        // Add legend title for left Y-axis
+                        title: {
+                          display: true,
+                          text: series[0]?.name || 'Series 1',
+                          color: '#3B82F6', // Blue
+                          font: {
+                            size: 10,
+                            weight: 'bold'
+                          },
+                          padding: {
+                            top: 5,
+                            bottom: 5
                           }
                         }
-                      }
-                    })
-                  }
-                }} 
-              />
-            </div>
-          )
-        } catch (error) {
-          console.error('❌ [LineChart] Chart.js error:', error)
-          return (
-            <div style={{ 
-              height: '100%', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              backgroundColor: '#f3f4f6',
-              border: '1px solid #d1d5db',
-              borderRadius: '8px'
-            }}>
-              <p style={{ color: '#6b7280', fontSize: '14px' }}>Chart rendering error</p>
-            </div>
-          )
-        }
-      })()}
+                      },
+                      // Add second Y-axis if needed
+                      ...(needsDualYAxis && {
+                        y1: {
+                          ...options.scales.y1,
+                          grid: {
+                            drawOnChartArea: false,
+                          },
+                          ticks: {
+                            padding: 20, // Increased padding for legend space
+                            font: {
+                              size: 9
+                            },
+                            callback: function(tickValue: string | number) {
+                              const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
+                              const secondSeries = series && series[1];
+                              if (secondSeries && secondSeries.name && secondSeries.name.toLowerCase().includes('rate')) {
+                                return value + '%';
+                              }
+                              
+                              return formatValue(value, secondSeries?.name);
+                            }
+                          },
+                          // Add legend title for right Y-axis
+                          title: {
+                            display: true,
+                            text: series[1]?.name || 'Series 2',
+                            color: '#F97316', // Orange
+                            font: {
+                              size: 10,
+                              weight: 'bold'
+                            },
+                            padding: {
+                              top: 5,
+                              bottom: 5
+                            }
+                          }
+                        }
+                      })
+                    }
+                  }} 
+                />
+              </div>
+            )
+          } catch (error) {
+            console.error('❌ [LineChart] Chart.js error:', error)
+            return (
+              <div style={{ 
+                height: '100%', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                backgroundColor: '#f3f4f6',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px'
+              }}>
+                <p style={{ color: '#6b7280', fontSize: '14px' }}>Chart rendering error</p>
+              </div>
+            )
+          }
+        })()}
+      </div>
     </div>
   );
 } 
