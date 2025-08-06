@@ -363,19 +363,20 @@ export default function LineChart({
       width: '100%', 
       padding: '0',
       position: 'relative',
-      backgroundColor: '#f9fafb',
+      backgroundColor: '#ffffff',
       border: '1px solid #e5e7eb',
-      borderRadius: '6px',
+      borderRadius: '8px',
+      boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
       display: 'flex',
       flexDirection: 'column'
     }}>
       {/* Chart Title with Icon */}
       {title && (
         <div style={{
-          padding: '12px 16px 8px 16px',
-          borderBottom: '1px solid #e5e7eb',
+          padding: '16px 20px 12px 20px',
+          borderBottom: '1px solid #f3f4f6',
           backgroundColor: '#ffffff',
-          borderRadius: '6px 6px 0 0',
+          borderRadius: '8px 8px 0 0',
           display: 'flex',
           alignItems: 'center',
           gap: '8px'
@@ -410,7 +411,7 @@ export default function LineChart({
       {/* Chart Area */}
       <div style={{
         flex: 1,
-        padding: '16px',
+        padding: '20px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center'
