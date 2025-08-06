@@ -129,7 +129,8 @@ export const KPI_FORMULAS = {
 
   // Purchase Frequency = Deposit Cases / Active Members
   PURCHASE_FREQUENCY: (data: RawKPIData): number => {
-    return data.deposit.active_members > 0 ? data.deposit.deposit_cases / data.deposit.active_members : 0
+    const result = data.deposit.active_members > 0 ? data.deposit.deposit_cases / data.deposit.active_members : 0
+    return Math.round(result * 100) / 100 // Format 2 decimal places (0.00)
   },
 
   // Churn Rate = MAX(Churn Members / Active Members, 0.01) * 100
@@ -330,11 +331,11 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
       withdraw_amount: acc.withdraw_amount + (Number(item.withdraw_amount) || 0),
       add_transaction: acc.add_transaction + (Number(item.add_transaction) || 0),
       deduct_transaction: acc.deduct_transaction + (Number(item.deduct_transaction) || 0),
-      deposit_cases: acc.deposit_cases + (Number(item.deposit_cases) || 0),
+      deposit_cases: acc.deposit_cases + (Number(item.deposit_cases) || 0), // SUM dari deposit_cases
       withdraw_cases: acc.withdraw_cases + (Number(item.withdraw_cases) || 0)
     }), { deposit_amount: 0, withdraw_amount: 0, add_transaction: 0, deduct_transaction: 0, deposit_cases: 0, withdraw_cases: 0 })
 
-    // ✅ TEST: Active Member dari member_report_monthly[userkey]
+    // ✅ TEST: Active Member dari member_report_monthly[userkey] (COUNT UNIQUE)
     const uniqueMemberReportUserKeys = Array.from(new Set(memberReportData.map((item: any) => item.userkey).filter(Boolean)))
     const activeMembersFromMemberReport = uniqueMemberReportUserKeys.length
 
@@ -347,15 +348,15 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
       activeMembersFromMemberReport: activeMembersFromMemberReport,
       uniqueUserKeysFromMemberReport: uniqueMemberReportUserKeys.slice(0, 5),
       
-      // Deposit Cases
+      // Deposit Cases - SUM dari member_report_monthly[deposit_cases]
       depositCasesFromMemberReport: memberReportAgg.deposit_cases,
       sampleDepositCases: memberReportData.slice(0, 3).map(item => ({ userkey: item.userkey, deposit_cases: item.deposit_cases })),
       
       // Purchase Frequency Calculation
       purchaseFrequencyCalculation: {
-        depositCases: memberReportAgg.deposit_cases,
-        activeMembers: activeMembersFromMemberReport,
-        result: activeMembersFromMemberReport > 0 ? memberReportAgg.deposit_cases / activeMembersFromMemberReport : 0
+        depositCases: memberReportAgg.deposit_cases, // SUM dari deposit_cases
+        activeMembers: activeMembersFromMemberReport, // COUNT UNIQUE dari userkey
+        result: activeMembersFromMemberReport > 0 ? Math.round((memberReportAgg.deposit_cases / activeMembersFromMemberReport) * 100) / 100 : 0 // Format 2 decimal (0.00)
       }
     })
 

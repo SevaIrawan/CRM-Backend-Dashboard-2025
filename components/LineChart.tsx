@@ -125,7 +125,7 @@ export default function LineChart({
       // For percentage - show % symbol
       return value.toFixed(1) + '%';
     } else if (isFrequencyType) {
-      // For frequency - show as decimal number only
+      // For frequency - show as decimal number only (2 decimal places)
       return value.toFixed(2);
     } else if (isCountType) {
       // For count/integer - no currency symbol
@@ -174,8 +174,8 @@ export default function LineChart({
       // For percentage - show % symbol with full precision
       return value.toFixed(2) + '%';
     } else if (isFrequencyType) {
-      // For frequency - show as decimal number only
-      return value.toFixed(4);
+      // For frequency - show as decimal number only (2 decimal places)
+      return value.toFixed(2);
     } else if (isCountType) {
       // For count/integer - no currency symbol, full number
       return value.toLocaleString() + ' persons';
@@ -184,6 +184,16 @@ export default function LineChart({
       return Math.round(value).toLocaleString();
     }
   };
+
+  // Determine if we need dual Y-axes based on series types
+  const needsDualYAxis = series.length > 1 && (
+    // Check if series have different types (percentage vs amount, frequency vs count, etc.)
+    (series.some(s => s.name.toLowerCase().includes('rate') || s.name.toLowerCase().includes('frequency')) &&
+     series.some(s => !s.name.toLowerCase().includes('rate') && !s.name.toLowerCase().includes('frequency'))) ||
+    // Check if series have very different scales
+    (Math.max(...series[0]?.data || []) / Math.max(...series[1]?.data || []) > 100 ||
+     Math.max(...series[1]?.data || []) / Math.max(...series[0]?.data || []) > 100)
+  );
 
   const data = {
     labels: categories,
@@ -199,7 +209,9 @@ export default function LineChart({
       pointRadius: 6,
       pointHoverRadius: 8,
       fill: true,
-      tension: 0.4
+      tension: 0.4,
+      // For dual Y-axis, assign yAxisID
+      yAxisID: needsDualYAxis ? (index === 0 ? 'y' : 'y1') : 'y'
     }))
   };
 
@@ -271,6 +283,9 @@ export default function LineChart({
         }
       },
       y: {
+        type: 'linear' as const,
+        display: true,
+        position: 'left' as const,
         beginAtZero: false,
         grid: {
           display: true,
@@ -291,13 +306,40 @@ export default function LineChart({
             return formatValue(value, firstSeries?.name);
           }
         }
-      }
+      },
+      // Add second Y-axis if needed
+      ...(needsDualYAxis && {
+        y1: {
+          type: 'linear' as const,
+          display: true,
+          position: 'right' as const,
+          beginAtZero: false,
+          grid: {
+            drawOnChartArea: false,
+          },
+          ticks: {
+            padding: 8,
+            callback: function(tickValue: string | number) {
+              const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
+              // Check second series name for percentage
+              const secondSeries = series && series[1];
+              if (secondSeries && secondSeries.name && secondSeries.name.toLowerCase().includes('rate')) {
+                return value + '%';
+              }
+              
+              // For other values - formatted numbers
+              return formatValue(value, secondSeries?.name);
+            }
+          }
+        }
+      })
     }
   };
 
   console.log('📊 [LineChart] Chart data prepared:', {
     labels: data.labels,
-    datasets: data.datasets.map(d => ({ label: d.label, dataLength: d.data.length }))
+    datasets: data.datasets.map(d => ({ label: d.label, dataLength: d.data.length })),
+    needsDualYAxis
   })
 
   return (
@@ -419,7 +461,31 @@ export default function LineChart({
                           return formatValue(value, firstSeries?.name);
                         }
                       }
-                    }
+                    },
+                    // Add second Y-axis if needed
+                    ...(needsDualYAxis && {
+                      y1: {
+                        ...options.scales.y1,
+                        grid: {
+                          drawOnChartArea: false,
+                        },
+                        ticks: {
+                          padding: 4,
+                          font: {
+                            size: 9
+                          },
+                          callback: function(tickValue: string | number) {
+                            const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
+                            const secondSeries = series && series[1];
+                            if (secondSeries && secondSeries.name && secondSeries.name.toLowerCase().includes('rate')) {
+                              return value + '%';
+                            }
+                            
+                            return formatValue(value, secondSeries?.name);
+                          }
+                        }
+                      }
+                    })
                   }
                 }} 
               />
