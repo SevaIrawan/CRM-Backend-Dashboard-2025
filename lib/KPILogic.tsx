@@ -49,6 +49,8 @@ export interface KPIData {
   ggrPerPureUser: number
   addBonus: number
   deductBonus: number
+  conversionRate: number
+  holdPercentage: number
 }
 
 // ===========================================
@@ -173,6 +175,17 @@ export const KPI_FORMULAS = {
   // ✅ UPDATED: Customer Maturity Index = (Retention Rate * 0.5 + Growth Rate * 0.5 + Churn Rate * 0.2)
   CUSTOMER_MATURITY_INDEX: (retentionRate: number, growthRate: number, churnRate: number): number => {
     return (retentionRate * 0.5) + (growthRate * 0.5) + (churnRate * 0.2)
+  },
+
+  // ✅ NEW: New Customer Conversion Rate = (New Depositor / New Register) * 100
+  NEW_CUSTOMER_CONVERSION_RATE: (data: RawKPIData): number => {
+    return data.newRegister.new_register > 0 ? (data.newDepositor.new_depositor / data.newRegister.new_register) * 100 : 0
+  },
+
+  // ✅ NEW: Hold Percentage = GGR / Valid Amount * 100%
+  // Where: GGR = Deposit Amount - Withdraw Amount, Valid Amount = Sum(member_report_monthly[valid_amount])
+  HOLD_PERCENTAGE: (ggr: number, validAmount: number): number => {
+    return validAmount > 0 ? (ggr / validAmount) * 100 : 0
   },
 
   // ✅ UTILITY FORMULAS
@@ -673,7 +686,9 @@ export async function calculateKPIs(filters: SlicerFilters): Promise<KPIData> {
       ggrPerUser: KPI_FORMULAS.ROUND(ggrPerUser),
       ggrPerPureUser: KPI_FORMULAS.ROUND(ggrPerPureUser),
       addBonus: rawData.member.add_bonus,
-      deductBonus: rawData.member.deduct_bonus
+      deductBonus: rawData.member.deduct_bonus,
+      conversionRate: KPI_FORMULAS.ROUND(KPI_FORMULAS.NEW_CUSTOMER_CONVERSION_RATE(rawData)),
+      holdPercentage: KPI_FORMULAS.ROUND(KPI_FORMULAS.HOLD_PERCENTAGE(rawData.member.ggr, rawData.member.valid_bet_amount))
     }
 
     console.log('✅ [KPILogic] KPIs calculated successfully:', {
@@ -695,7 +710,7 @@ export async function calculateKPIs(filters: SlicerFilters): Promise<KPIData> {
       pureUser: 0, newRegister: 0, churnMember: 0, depositCases: 0, withdrawCases: 0, winrate: 0, churnRate: 0,
       retentionRate: 0, growthRate: 0, avgTransactionValue: 0, purchaseFrequency: 0,
       customerLifetimeValue: 0, avgCustomerLifespan: 0, customerMaturityIndex: 0, ggrPerUser: 0, ggrPerPureUser: 0,
-      addBonus: 0, deductBonus: 0
+      addBonus: 0, deductBonus: 0, conversionRate: 0, holdPercentage: 0
     }
   }
 }
@@ -745,7 +760,7 @@ export async function getAllKPIsWithMoM(filters: SlicerFilters): Promise<{ curre
         pureUser: 0, newRegister: 0, churnMember: 0, depositCases: 0, withdrawCases: 0, winrate: 0, churnRate: 0,
         retentionRate: 0, growthRate: 0, avgTransactionValue: 0, purchaseFrequency: 0,
         customerLifetimeValue: 0, avgCustomerLifespan: 0, customerMaturityIndex: 0, ggrPerUser: 0, ggrPerPureUser: 0,
-        addBonus: 0, deductBonus: 0
+        addBonus: 0, deductBonus: 0, conversionRate: 0, holdPercentage: 0
       },
       mom: {
         activeMember: 0, newDepositor: 0, depositAmount: 0,
