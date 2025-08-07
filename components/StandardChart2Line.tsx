@@ -471,7 +471,7 @@ export default function StandardChart2Line({
                height: '32px'
              }}
              dangerouslySetInnerHTML={{ 
-               __html: chartIcon.replace(/<path/g, '<path fill="#3B82F6"') 
+               __html: typeof chartIcon === 'string' ? chartIcon.replace(/<path/g, '<path fill="#3B82F6"') : chartIcon as string
              }}
              />
            )}
