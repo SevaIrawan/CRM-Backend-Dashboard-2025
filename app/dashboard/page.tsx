@@ -60,8 +60,8 @@ export default function Dashboard() {
     lines: []
   })
 
-  const [selectedYear, setSelectedYear] = useState('2024')
-  const [selectedMonth, setSelectedMonth] = useState('January')
+  const [selectedYear, setSelectedYear] = useState('2025')
+  const [selectedMonth, setSelectedMonth] = useState('July')
   const [selectedCurrency, setSelectedCurrency] = useState('MYR')
   
   // Chart data states

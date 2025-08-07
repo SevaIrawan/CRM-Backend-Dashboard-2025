@@ -285,7 +285,7 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
           query = query.eq('line', filters.line)
         }
          
-        return query.limit(100000)
+        return query
       })(),
 
       // 2. NEW DEPOSITOR = SOURCE TABLE new_depositor[new_depositor]
@@ -301,7 +301,7 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
           query = query.eq('line', filters.line)
         }
          
-        return query.limit(100000)
+        return query
       })(),
 
       // 3. NEW REGISTER = SOURCE TABLE new_register[new_register]
@@ -317,7 +317,7 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
           query = query.eq('line', filters.line)
         }
          
-        return query.limit(100000)
+        return query
       })(),
 
       // 4-7. DEPOSIT AMOUNT, WITHDRAW AMOUNT, GROSS PROFIT, NET PROFIT = SOURCE TABLE member_report_monthly
@@ -335,7 +335,7 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
           query = query.eq('line', filters.line)
         }
          
-        return query.limit(100000)
+        return query
       })(),
 
       // Churn member calculation - members who played last month but not this month
@@ -514,7 +514,7 @@ async function getChurnMembers(filters: SlicerFilters): Promise<number> {
         query = query.eq('line', filters.line)
       }
       
-      return query.limit(100000)
+      return query
     })()
     
     const { data: prevUsers, error: prevError } = await prevQuery
@@ -534,7 +534,7 @@ async function getChurnMembers(filters: SlicerFilters): Promise<number> {
         query = query.eq('line', filters.line)
       }
       
-      return query.limit(100000)
+      return query
     })()
     
     const { data: currentUsers, error: currentError } = await currentQuery
@@ -764,10 +764,10 @@ export async function getSlicerData(): Promise<SlicerData> {
     console.log('🔄 [KPILogic] Fetching slicer data...')
 
     const [yearsResult, monthsResult, currenciesResult, linesResult] = await Promise.all([
-      supabase.from('member_report_monthly').select('year').limit(100000),
-      supabase.from('member_report_monthly').select('month').limit(100000),
-      supabase.from('member_report_monthly').select('currency').limit(100000),
-      supabase.from('member_report_monthly').select('line').limit(100000)
+      supabase.from('member_report_monthly').select('year'),
+      supabase.from('member_report_monthly').select('month'),
+      supabase.from('member_report_monthly').select('currency'),
+      supabase.from('member_report_monthly').select('line')
     ])
 
     const years = Array.from(new Set((yearsResult.data || []).map((item: any) => item.year).filter(Boolean))).sort()
@@ -803,7 +803,7 @@ export async function getMonthsForYear(year: string, currency?: string): Promise
       query = query.eq('currency', currency)
     }
     
-    const { data, error } = await query.limit(100000)
+    const { data, error } = await query
 
     if (error) throw error
 
@@ -1158,7 +1158,6 @@ export async function debugTableData(): Promise<void> {
     const { data: allMonths, error: monthsError } = await supabase
       .from('member_report_monthly')
       .select('month, year, currency')
-      .limit(100000)
     
     if (monthsError) throw monthsError
     
@@ -1175,7 +1174,6 @@ export async function debugTableData(): Promise<void> {
       .from('member_report_monthly')
       .select('month, currency')
       .eq('year', '2025')
-      .limit(100000)
     
     if (year2025Error) throw year2025Error
     
@@ -1190,7 +1188,6 @@ export async function debugTableData(): Promise<void> {
       .select('month')
       .eq('year', '2025')
       .eq('currency', 'MYR')
-      .limit(100000)
     
     if (year2025MYRError) throw year2025MYRError
     
@@ -1202,7 +1199,6 @@ export async function debugTableData(): Promise<void> {
       .from('member_report_monthly')
       .select('month, year, currency')
       .eq('month', 'July')
-      .limit(100000)
     
     if (julyError) throw julyError
     
