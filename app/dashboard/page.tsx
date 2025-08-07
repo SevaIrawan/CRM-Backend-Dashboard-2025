@@ -4,7 +4,9 @@ import React, { useState, useEffect } from 'react'
 import { getSlicerData, getAllKPIsWithMoM, getLineChartData, getBarChartData, SlicerFilters, SlicerData, KPIData } from '@/lib/KPILogic'
 import Layout from '@/components/Layout'
 import Frame from '@/components/Frame'
-import DashboardSubHeader from '@/components/DashboardSubHeader'
+import YearSlicer from '@/components/slicers/YearSlicer'
+import MonthSlicer from '@/components/slicers/MonthSlicer'
+import CurrencySlicer from '@/components/slicers/CurrencySlicer'
 import LineChart from '@/components/LineChart'
 import StatCard from '@/components/StatCard'
 import { getChartIcon } from '@/lib/centralIcons'
@@ -207,16 +209,41 @@ export default function Dashboard() {
   return (
     <Layout
       pageTitle="Dashboard"
-      subHeaderTitle=""
+
       customSubHeader={
-        <DashboardSubHeader
-          selectedYear={selectedYear}
-          setSelectedYear={setSelectedYear}
-          selectedMonth={selectedMonth}
-          setSelectedMonth={setSelectedMonth}
-          selectedCurrency={selectedCurrency}
-          setSelectedCurrency={setSelectedCurrency}
-        />
+        <div className="dashboard-subheader">
+          <div className="subheader-title">
+            
+          </div>
+          
+          <div className="subheader-controls">
+            <div className="slicer-group">
+              <label className="slicer-label">YEAR:</label>
+              <YearSlicer 
+                value={selectedYear} 
+                onChange={setSelectedYear}
+              />
+            </div>
+            
+            <div className="slicer-group">
+              <label className="slicer-label">CURRENCY:</label>
+              <CurrencySlicer 
+                value={selectedCurrency} 
+                onChange={setSelectedCurrency}
+              />
+            </div>
+            
+            <div className="slicer-group">
+              <label className="slicer-label">MONTH:</label>
+              <MonthSlicer 
+                value={selectedMonth} 
+                onChange={setSelectedMonth}
+                selectedYear={selectedYear}
+                selectedCurrency={selectedCurrency}
+              />
+            </div>
+          </div>
+        </div>
       }
     >
       <Frame>

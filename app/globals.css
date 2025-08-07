@@ -61,6 +61,8 @@ body {
   overflow: hidden;
   /* Auto adjust berdasarkan rules */
   padding-top: 130px; /* Header (70px) + SubHeader (60px) */
+  display: flex;
+  flex-direction: column;
 }
 
 .content-container.collapsed {
@@ -75,7 +77,8 @@ body {
   flex-direction: column;
   gap: 18px; /* Balanced gap */
   padding: 10px; /* Balanced padding */
-  overflow: hidden;
+  overflow-y: auto; /* Enable vertical scroll */
+  overflow-x: hidden; /* Hide horizontal scroll */
   grid-template-rows: auto 1fr 1fr;
   min-height: 100%;
   max-height: calc(100vh - 130px);
@@ -121,8 +124,6 @@ body {
   color: #374151;
 }
 
-
-
 .slicer-group {
   display: flex;
   align-items: center;
@@ -158,6 +159,7 @@ body {
   margin-bottom: 0;
   flex-shrink: 0;
   padding: 0 4px; /* Balanced padding */
+  flex: 0 0 auto; /* Don't grow or shrink */
 }
 
 /* KPI CARD - AUTO ADJUST WIDTH */
@@ -178,7 +180,7 @@ body {
   gap: 16px; /* Balanced gap */
   margin-bottom: 0;
   flex: 1;
-  min-height: 220px; /* Balanced height */
+  min-height: 200px; /* Reduced height */
   height: auto;
   position: relative;
   z-index: 1;
@@ -189,12 +191,12 @@ body {
 .chart-container {
   background: white;
   border-radius: 8px;
-  padding: 0;
+  padding: 16px; /* Padding sama atas bawah kiri kanan */
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
   border: 1px solid #e5e7eb;
   height: 100%;
-  min-height: 300px; /* Balanced height */
-  max-height: 350px; /* Balanced height */
+  min-height: 280px; /* Increased for better visibility */
+  max-height: 450px; /* Increased max height */
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -211,24 +213,28 @@ body {
   gap: 18px; /* Balanced gap */
   width: 100%;
   margin-top: 10px; /* Balanced margin */
+  min-height: 0; /* Allow shrinking */
+  flex: 1; /* Take remaining space */
 }
 
 /* Mobile responsive */
 @media (max-width: 768px) {
   .charts-grid {
-    grid-template-columns: repeat(2, 1fr); /* Keep 2 columns even on mobile */
-    gap: 12px;
+    grid-template-columns: 1fr; /* Single column on mobile */
+    gap: 16px;
     padding: 0 8px;
   }
   
   .chart-container {
-    min-height: 250px; /* Reduced for mobile */
-    max-height: 280px;
+    min-height: 300px; /* Increased height for mobile */
+    max-height: 400px; /* Increased max height */
+    padding: 12px; /* Padding lebih kecil untuk mobile */
   }
   
   .kpi-row {
-    margin-bottom: 12px;
-    gap: 6px; /* Even smaller gap for mobile */
+    margin-bottom: 16px;
+    gap: 8px;
+    grid-template-columns: repeat(2, 1fr); /* 2 columns on mobile */
   }
   
   .main-content {
@@ -236,8 +242,15 @@ body {
   }
   
   .standard-frame {
-    gap: 16px;
-    padding: 6px;
+    gap: 20px;
+    padding: 8px;
+    overflow-y: auto; /* Ensure scroll on mobile */
+  }
+  
+  /* Ensure charts are fully visible on mobile */
+  .line-chart {
+    min-height: 280px;
+    height: 100%;
   }
 }
 
@@ -249,12 +262,14 @@ body {
   }
   
   .chart-container {
-    min-height: 280px;
-    max-height: 320px;
+    min-height: 250px;
+    max-height: 300px;
+    padding: 14px; /* Padding untuk tablet */
   }
   
   .kpi-row {
     gap: 8px;
+    grid-template-columns: repeat(4, 1fr); /* 4 columns on tablet */
   }
 }
 
@@ -268,6 +283,7 @@ body {
   .chart-container {
     min-height: 400px;
     max-height: 450px;
+    padding: 18px; /* Padding untuk large screen */
   }
 }
 
@@ -517,8 +533,8 @@ body {
   }
   
   .chart-container {
-    min-height: 280px;
-    max-height: 320px;
+    min-height: 250px;
+    max-height: 350px;
   }
 }
 
@@ -616,20 +632,27 @@ body {
   }
   
   .standard-frame {
-    gap: 4px;
-    padding: 4px;
+    gap: 12px;
+    padding: 12px;
+    overflow-y: auto; /* Ensure scroll on very small screens */
   }
   
   .chart-container {
-    padding: 6px;
-    min-height: 80px;
-    max-height: 120px;
+    padding: 8px;
+    min-height: 250px; /* Increased for very small screens */
+    max-height: 350px;
   }
   
   .charts-row {
-    gap: 12px; /* Gap yang cukup untuk mobile kecil */
-    min-height: 100px;
-    max-height: 140px;
+    gap: 10px;
+    min-height: 200px;
+    max-height: 300px;
+  }
+  
+  /* Ensure charts are fully visible on very small screens */
+  .line-chart {
+    min-height: 230px;
+    height: 100%;
   }
 }
 
@@ -854,7 +877,7 @@ body {
   width: calc(100vw - 80px);
 }
 
-/* Sub Header */
+/* Custom SubHeader - Only for pages with customSubHeader */
 .subheader {
   position: fixed;
   top: 90px;
@@ -863,55 +886,36 @@ body {
   height: 60px;
   background-color: #ffffff;
   border-bottom: 1px solid #e2e8f0;
-  z-index: 900 !important; /* Increase z-index */
-  display: flex !important;
+  z-index: 900;
+  display: flex;
   align-items: center;
   padding: 0 24px;
   transition: all 0.3s ease;
-  overflow: visible !important; /* Allow content to be visible */
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  visibility: visible !important;
-  opacity: 1 !important;
-  min-height: 60px !important;
-  background: #ffffff !important;
 }
 
 .subheader.collapsed {
-  left: 80px; /* Match collapsed sidebar width dengan spacing yang tepat */
+  left: 80px; /* Match collapsed sidebar width */
   width: calc(100vw - 80px);
 }
 
-.subheader h2 {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1f2937;
-  margin: 0;
-  letter-spacing: -0.025em;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-
 .subheader-content {
-  display: flex !important;
+  display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
   height: 100%;
   padding: 0 24px;
-  visibility: visible !important;
-  opacity: 1 !important;
 }
 
 .subheader-controls {
-  display: flex !important;
+  display: flex;
   align-items: center;
   gap: 12px;
   margin-left: auto; /* Push to right */
   flex-shrink: 0; /* Prevent shrinking */
   justify-content: flex-end; /* Ensure right alignment */
-  visibility: visible !important;
-  opacity: 1 !important;
-  min-width: 200px !important;
+  min-width: 200px;
 }
 
 .subheader-select {
@@ -924,11 +928,8 @@ body {
   cursor: pointer;
   transition: all 0.2s ease;
   min-width: 100px;
-  visibility: visible !important;
-  opacity: 1 !important;
-  display: block !important;
-  position: relative !important;
-  z-index: 1000 !important;
+  position: relative;
+  z-index: 1000;
 }
 
 .subheader-select:focus {
@@ -944,7 +945,7 @@ body {
 /* Main Content - AUTO FIT IN ONE FRAME - OPTIMIZED FOR SMOOTH TRANSITIONS */
 .main-content {
   position: fixed;
-  top: 150px; /* Header height (90px) + SubHeader height (60px) */
+  top: 90px; /* Only header height when no subheader */
   left: 280px; /* Match sidebar width */
   right: 0;
   bottom: 0;
@@ -956,6 +957,10 @@ body {
   transform: translateZ(0); /* Hardware acceleration */
   will-change: transform, left, width;
   contain: layout style paint;
+}
+
+.main-content.has-subheader {
+  top: 150px; /* Header height (90px) + SubHeader height (60px) */
 }
 
 
@@ -994,13 +999,14 @@ body {
   left: 80px; /* Match collapsed sidebar width dari rules */
   width: calc(100vw - 80px);
   margin-left: 0; /* Reset margin */
+  top: 90px; /* Only header height when no subheader */
+}
+
+.main-content.collapsed.has-subheader {
   top: 150px; /* Header height (90px) + SubHeader height (60px) */
 }
 
-/* When subheader exists */
-.subheader + .main-content {
-  top: 150px; /* 90px header + 60px subheader */
-}
+
 
 /* KPI Cards */
 .kpi-grid {
@@ -1070,6 +1076,10 @@ body {
   .main-content {
     left: 60px;
     width: calc(100vw - 60px);
+    top: 90px; /* Only header height when no subheader */
+  }
+  
+  .main-content.has-subheader {
     top: 150px; /* Header height (90px) + SubHeader height (60px) */
   }
   
@@ -1100,6 +1110,10 @@ body {
   .main-content {
     left: 50px;
     width: calc(100vw - 50px);
+    top: 90px; /* Only header height when no subheader */
+  }
+  
+  .main-content.has-subheader {
     top: 150px; /* Header height (90px) + SubHeader height (60px) */
   }
   

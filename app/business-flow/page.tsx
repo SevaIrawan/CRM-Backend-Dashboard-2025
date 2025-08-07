@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import Layout from '../../components/Layout';
-import DashboardSubHeader from '../../components/DashboardSubHeader';
+import YearSlicer from '../../components/slicers/YearSlicer';
+import MonthSlicer from '../../components/slicers/MonthSlicer';
+import CurrencySlicer from '../../components/slicers/CurrencySlicer';
 
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import StatCard from '../../components/StatCard';
@@ -79,16 +81,41 @@ export default function BusinessFlow() {
   return (
     <Layout
       pageTitle="Business Flow"
-      subHeaderTitle=""
+
       customSubHeader={
-        <DashboardSubHeader
-          selectedYear={year}
-          setSelectedYear={setYear}
-          selectedMonth={month}
-          setSelectedMonth={setMonth}
-          selectedCurrency={currency}
-          setSelectedCurrency={setCurrency}
-        />
+        <div className="dashboard-subheader">
+          <div className="subheader-title">
+            
+          </div>
+          
+          <div className="subheader-controls">
+            <div className="slicer-group">
+              <label className="slicer-label">YEAR:</label>
+              <YearSlicer 
+                value={year} 
+                onChange={setYear}
+              />
+            </div>
+            
+            <div className="slicer-group">
+              <label className="slicer-label">CURRENCY:</label>
+              <CurrencySlicer 
+                value={currency} 
+                onChange={setCurrency}
+              />
+            </div>
+            
+            <div className="slicer-group">
+              <label className="slicer-label">MONTH:</label>
+              <MonthSlicer 
+                value={month} 
+                onChange={setMonth}
+                selectedYear={year}
+                selectedCurrency={currency}
+              />
+            </div>
+          </div>
+        </div>
       }
       darkMode={darkMode}
       sidebarExpanded={sidebarExpanded}
@@ -474,10 +501,12 @@ export default function BusinessFlow() {
       </div>
 
       <style jsx>{`
+
         .business-flow-container {
           padding: 24px;
-          height: 100%;
-          background-color: #f8f9fa;
+          height: calc(100vh - 130px);
+          overflow-y: auto;
+          overflow-x: hidden;
         }
 
         .module-card {

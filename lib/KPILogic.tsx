@@ -132,7 +132,7 @@ export const KPI_FORMULAS = {
   // ✅ UPDATED: Purchase Frequency (PF) = Deposit Cases / Active Member
   PURCHASE_FREQUENCY: (data: RawKPIData): number => {
     const result = data.deposit.active_members > 0 ? data.deposit.deposit_cases / data.deposit.active_members : 0
-    return Math.round(result * 100) / 100 // Format 2 decimal places (0.00)
+    return result // Jangan round, biarkan nilai asli untuk CLV calculation
   },
 
   // Churn Rate = MAX(Churn Members / Active Members, 0.01) * 100
@@ -169,7 +169,9 @@ export const KPI_FORMULAS = {
 
   // ✅ UPDATED: Average Customer Lifespan (ACL) = 1 / Churn Rate
   AVG_CUSTOMER_LIFESPAN: (churnRate: number): number => {
-    return churnRate > 0 ? (1 / churnRate) : 1000
+    // Churn Rate dalam persen, jadi perlu dibagi 100
+    const churnRateDecimal = churnRate / 100
+    return churnRateDecimal > 0 ? (1 / churnRateDecimal) : 1000
   },
 
   // ✅ UPDATED: Customer Maturity Index = (Retention Rate * 0.5 + Growth Rate * 0.5 + Churn Rate * 0.2)

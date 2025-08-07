@@ -382,11 +382,14 @@ password: editingUser.password ? 'updating' : 'keeping current'
   return (
     <Layout
       pageTitle="User Management"
-      subHeaderTitle=""
+      darkMode={darkMode}
+      sidebarExpanded={sidebarExpanded}
+      onToggleDarkMode={handleToggleDarkMode}
+      onLogout={handleLogout}
     >
       <div className="user-management-container">
-        <div className="user-management-frame">
-          <div className="frame-header">
+          <div className="user-management-frame">
+            <div className="frame-header">
             <h2 className="frame-title">Users List</h2>
             <button 
               onClick={() => setShowModal(true)}
@@ -487,10 +490,10 @@ password: editingUser.password ? 'updating' : 'keeping current'
                   ))
                 )}
               </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+                         </table>
+           </div>
+         </div>
+       </div>
 
       {/* Add User Modal */}
       {showModal && (
@@ -614,29 +617,31 @@ password: editingUser.password ? 'updating' : 'keeping current'
       )}
 
       <style jsx>{`
-        .user-management-container {
-          padding: 24px;
-          height: 100%;
-          background-color: #f8f9fa;
-        }
 
-        .user-management-frame {
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-          border: 1px solid #e5e7eb;
-          overflow: hidden;
-          height: calc(100vh - 200px);
-          display: flex;
-          flex-direction: column;
-        }
+
+                          .user-management-container {
+            padding: 24px;
+            height: calc(100vh - 90px);
+            overflow-y: auto;
+            overflow-x: hidden;
+          }
+
+         .user-management-frame {
+           background: white;
+           border-radius: 12px;
+           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+           border: 1px solid #e5e7eb;
+           overflow: hidden;
+           height: 100%;
+           display: flex;
+           flex-direction: column;
+         }
 
         .frame-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
           padding: 24px 32px;
-          border-bottom: 1px solid #e5e7eb;
           background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
         }
 
@@ -990,10 +995,11 @@ password: editingUser.password ? 'updating' : 'keeping current'
           box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
         }
 
-        @media (max-width: 768px) {
-          .user-management-container {
-            padding: 16px;
-          }
+                          @media (max-width: 768px) {
+            .user-management-container {
+              padding: 16px;
+              height: calc(100vh - 90px);
+            }
           
           .frame-header {
             padding: 16px 20px;

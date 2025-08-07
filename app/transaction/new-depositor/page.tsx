@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Layout from '@/components/Layout'
-import SubHeader from '@/components/SubHeader'
+
 
 export default function NewDepositorPage() {
   const [sidebarExpanded, setSidebarExpanded] = useState(true)
@@ -12,20 +12,12 @@ export default function NewDepositorPage() {
     console.log('Logout clicked')
   }
 
-  // Custom SubHeader dengan pesan slicer
-  const customSubHeader = (
-    <SubHeader title="">
-      <div className="slicer-message">
-        Slicers will be configured when page is developed
-      </div>
-    </SubHeader>
-  )
+
 
   return (
     <Layout
       pageTitle="New Depositor"
-      subHeaderTitle=""
-      customSubHeader={customSubHeader}
+
       darkMode={darkMode}
       sidebarExpanded={sidebarExpanded}
       onToggleDarkMode={() => setDarkMode(!darkMode)}
