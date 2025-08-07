@@ -226,10 +226,10 @@ export default function StandardChart2Line({
     } else if (isFrequencyType) {
       // For frequency - show as decimal number only (2 decimal places)
       return value.toFixed(2);
-    } else if (isCountType) {
-      // For count/integer - no currency symbol, full number
-      return value.toLocaleString() + ' persons';
-    } else if (isCLVType) {
+         } else if (isCountType) {
+       // For count/integer - no currency symbol, full number
+       return value.toLocaleString(); // Remove redundant "persons"
+     } else if (isCLVType) {
       // For CLV - show full number for thousands, up to 2 decimals
       if (value >= 1000) {
         return Math.round(value).toLocaleString(); // Show full number for thousands, no decimals
@@ -272,16 +272,19 @@ export default function StandardChart2Line({
       legend: {
         display: false, // Hide legend since we have it in header
       },
-      tooltip: {
-        mode: 'index' as const,
-        intersect: false,
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        titleColor: '#ffffff',
-        bodyColor: '#ffffff',
-        borderColor: '#e5e7eb',
-        borderWidth: 1,
-        cornerRadius: 8,
-        displayColors: true,
+             tooltip: {
+         mode: 'index' as const,
+         intersect: false,
+         backgroundColor: 'rgba(0, 0, 0, 0.8)',
+         titleColor: '#ffffff',
+         bodyColor: '#ffffff',
+         borderColor: '#e5e7eb',
+         borderWidth: 1,
+         cornerRadius: 8,
+         displayColors: true,
+         position: 'nearest' as const,
+         xAlign: 'center' as const,
+         yAlign: 'top' as const,
         callbacks: {
           title: function(context: any) {
             return context[0].label;
@@ -300,13 +303,13 @@ export default function StandardChart2Line({
       intersect: false,
     },
     scales: {
-      x: {
-        display: true,
-        grid: {
-          display: true,
-          color: '#e5e7eb',
-          lineWidth: 1
-        },
+               x: {
+           display: true,
+           grid: {
+             display: true,
+             color: '#f3f4f6', // Lighter grid color
+             lineWidth: 0.5 // Thinner lines
+           },
         ticks: {
           font: {
             weight: 'bold' as const,
@@ -316,16 +319,16 @@ export default function StandardChart2Line({
           padding: 8
         }
       },
-      y: {
-        type: 'linear' as const,
-        display: true,
-        position: 'left' as const,
-        beginAtZero: false,
-        grid: {
-          display: true,
-          color: '#e5e7eb',
-          lineWidth: 1
-        },
+             y: {
+         type: 'linear' as const,
+         display: true,
+         position: 'left' as const,
+         beginAtZero: false,
+         grid: {
+           display: true,
+           color: '#f3f4f6', // Lighter grid color
+           lineWidth: 0.5 // Thinner lines
+         },
         ticks: {
           padding: 20,
           font: {
@@ -374,12 +377,12 @@ export default function StandardChart2Line({
             color: 'transparent',
             lineWidth: 0
           },
-          ticks: {
-            padding: 20, // Increased padding for legend space
-            font: {
-              weight: 'bold' as const,
-              size: 10
-            },
+                     ticks: {
+             padding: 35, // Increased padding to prevent overlap
+             font: {
+               weight: 'bold' as const,
+               size: 10
+             },
             callback: function(tickValue: string | number) {
               const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
               // Check second series name for percentage
@@ -404,9 +407,24 @@ export default function StandardChart2Line({
               return formatValue(value, secondSeries?.name);
             }
           },
-          // Remove legend title from Y-axis since we have it in header
+          // Add title for count type (persons) on right Y-axis
           title: {
-            display: false
+            display: (() => {
+              const secondSeries = series && series[1];
+              const isCountType = secondSeries && secondSeries.name && (
+                secondSeries.name.toLowerCase().includes('count') ||
+                secondSeries.name.toLowerCase().includes('new') ||
+                secondSeries.name.toLowerCase().includes('depositor') ||
+                secondSeries.name.toLowerCase().includes('register')
+              );
+              return isCountType;
+            })(),
+            text: 'persons',
+            font: {
+              size: 10,
+              weight: 'bold' as const
+            },
+            color: '#6b7280'
           }
         }
       })
@@ -421,11 +439,11 @@ export default function StandardChart2Line({
 
   return (
     <div style={{
-      backgroundColor: '#ffffff', // Changed to white background
+      backgroundColor: '#ffffff',
       borderRadius: '12px',
       padding: '24px',
       boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-      border: '1px solid #e5e7eb',
+      border: '1px solid #ffffff', // Changed to white border
       minHeight: '400px',
       display: 'flex',
       flexDirection: 'column'
@@ -444,21 +462,19 @@ export default function StandardChart2Line({
           alignItems: 'center',
           gap: '12px'
         }}>
-          {chartIcon && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '32px',
-              height: '32px',
-              borderRadius: '8px',
-              backgroundColor: '#3B82F6',
-              color: '#ffffff',
-              fontSize: '16px'
-            }}>
-              {chartIcon}
-            </div>
-          )}
+                     {chartIcon && (
+             <div style={{
+               display: 'flex',
+               alignItems: 'center',
+               justifyContent: 'center',
+               width: '32px',
+               height: '32px'
+             }}
+             dangerouslySetInnerHTML={{ 
+               __html: chartIcon.replace(/<path/g, '<path fill="#3B82F6"') 
+             }}
+             />
+           )}
           <h3 style={{
             fontSize: '18px',
             fontWeight: '600',
@@ -504,7 +520,8 @@ export default function StandardChart2Line({
              {/* Chart Container */}
        <div style={{
          flex: 1,
-         minHeight: '250px',
+         minHeight: '300px',
+         height: '300px', // Fixed height to prevent overlapping
          padding: '0',
          display: 'flex',
          alignItems: 'center',
@@ -520,7 +537,8 @@ export default function StandardChart2Line({
                 position: 'relative',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                overflow: 'hidden' // Prevent overflow
               }}>
                 <Line 
                   data={data} 
@@ -528,14 +546,14 @@ export default function StandardChart2Line({
                     ...options,
                     responsive: true,
                     maintainAspectRatio: false,
-                    layout: {
-                      padding: {
-                        top: 0,
-                        bottom: 0,
-                        left: 0,
-                        right: 0
-                      }
-                    }
+                                         layout: {
+                       padding: {
+                         top: 10,
+                         bottom: 10,
+                         left: 10,
+                         right: 40 // Increased right padding for Y-axis labels
+                       }
+                     }
                   }}
                 />
               </div>

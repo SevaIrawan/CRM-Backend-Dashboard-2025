@@ -217,9 +217,9 @@ body {
 .charts-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr); /* Keep 2 columns layout */
-  gap: 18px; /* Balanced gap */
+  gap: 24px; /* Increased gap to prevent overlapping */
   width: 100%;
-  margin-top: 10px; /* Balanced margin */
+  margin-top: 16px; /* Increased margin */
   min-height: 0; /* Allow shrinking */
   flex: 1; /* Take remaining space */
 }

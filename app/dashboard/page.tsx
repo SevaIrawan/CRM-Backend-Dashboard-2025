@@ -8,7 +8,7 @@ import YearSlicer from '@/components/slicers/YearSlicer'
 import MonthSlicer from '@/components/slicers/MonthSlicer'
 import CurrencySlicer from '@/components/slicers/CurrencySlicer'
 import LineChart from '@/components/LineChart'
-import StandardChart2Line from '@/components/StandardChart2Line'
+
 import StatCard from '@/components/StatCard'
 import { getChartIcon } from '@/lib/centralIcons'
 
@@ -248,279 +248,199 @@ export default function Dashboard() {
       }
     >
       <Frame>
-        {/* KPI Row - Updated with 6 New KPIs */}
-        <div className="kpi-row">
-          <StatCard
-            title="DEPOSIT AMOUNT"
-            value={formatCurrency(kpiData.depositAmount)}
-            icon="Deposit Amount"
-            comparison={{
-              percentage: formatMoM(momData.depositAmount),
-              isPositive: momData.depositAmount > 0
-            }}
-          />
-          <StatCard
-            title="NET PROFIT"
-            value={formatCurrency(kpiData.netProfit)}
-            icon="Net Profit"
-            comparison={{
-              percentage: formatMoM(momData.netProfit),
-              isPositive: momData.netProfit > 0
-            }}
-          />
-          <StatCard
-            title="HOLD PERCENTAGE"
-            value={`${kpiData.holdPercentage.toFixed(2)}%`}
-            icon="Hold Percentage"
-            comparison={{
-              percentage: formatMoM(kpiData.holdPercentage),
-              isPositive: kpiData.holdPercentage > 0
-            }}
-          />
-          <StatCard
-            title="ACTIVE MEMBER"
-            value={formatNumber(kpiData.activeMember)}
-            icon="Active Member"
-            comparison={{
-              percentage: formatMoM(momData.activeMember),
-              isPositive: momData.activeMember > 0
-            }}
-          />
-          <StatCard
-            title="CONVERSION RATE"
-            value={`${kpiData.conversionRate.toFixed(2)}%`}
-            icon="Conversion Rate"
-            comparison={{
-              percentage: formatMoM(kpiData.conversionRate),
-              isPositive: kpiData.conversionRate > 0
-            }}
-          />
-          <StatCard
-            title="CHURN RATE"
-            value={`${kpiData.churnRate.toFixed(2)}%`}
-            icon="Churn Rate"
-            comparison={{
-              percentage: formatMoM(kpiData.churnRate),
-              isPositive: kpiData.churnRate < 0 // Churn rate lower is better
-            }}
-          />
-        </div>
+        {/* Content Container - StatCard and Chart Canvas */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '20px',
+          marginTop: '20px'
+        }}>
+          {/* KPI Row - Updated with 6 New KPIs */}
+          <div className="kpi-row">
+            <StatCard
+              title="DEPOSIT AMOUNT"
+              value={formatCurrency(kpiData.depositAmount)}
+              icon="Deposit Amount"
+              comparison={{
+                percentage: formatMoM(momData.depositAmount),
+                isPositive: momData.depositAmount > 0
+              }}
+            />
+            <StatCard
+              title="NET PROFIT"
+              value={formatCurrency(kpiData.netProfit)}
+              icon="Net Profit"
+              comparison={{
+                percentage: formatMoM(momData.netProfit),
+                isPositive: momData.netProfit > 0
+              }}
+            />
+            <StatCard
+              title="HOLD PERCENTAGE"
+              value={`${kpiData.holdPercentage.toFixed(2)}%`}
+              icon="Hold Percentage"
+              comparison={{
+                percentage: formatMoM(kpiData.holdPercentage),
+                isPositive: kpiData.holdPercentage > 0
+              }}
+            />
+            <StatCard
+              title="ACTIVE MEMBER"
+              value={formatNumber(kpiData.activeMember)}
+              icon="Active Member"
+              comparison={{
+                percentage: formatMoM(momData.activeMember),
+                isPositive: momData.activeMember > 0
+              }}
+            />
+            <StatCard
+              title="CONVERSION RATE"
+              value={`${kpiData.conversionRate.toFixed(2)}%`}
+              icon="Conversion Rate"
+              comparison={{
+                percentage: formatMoM(kpiData.conversionRate),
+                isPositive: kpiData.conversionRate > 0
+              }}
+            />
+            <StatCard
+              title="CHURN RATE"
+              value={`${kpiData.churnRate.toFixed(2)}%`}
+              icon="Churn Rate"
+              comparison={{
+                percentage: formatMoM(kpiData.churnRate),
+                isPositive: kpiData.churnRate < 0 // Churn rate lower is better
+              }}
+            />
+          </div>
 
-        {/* Charts Grid - Responsive */}
-        <div className="charts-grid">
-          <div className="chart-container">
-            {isLoading ? (
-              <div style={{ 
-                height: '100%', 
-                minHeight: '350px',
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0'
-              }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{
-                    width: '32px',
-                    height: '32px',
-                    border: '3px solid #e2e8f0',
-                    borderTop: '3px solid #3B82F6',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite',
-                    margin: '0 auto 10px'
-                  }}></div>
-                  <p style={{ color: '#64748b', fontSize: '12px', margin: 0 }}>Loading chart...</p>
-                </div>
-              </div>
-            ) : chartError ? (
-              <div style={{ 
-                height: '100%', 
-                minHeight: '350px',
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
-                border: '1px solid #fecaca',
-                borderRadius: '8px'
-              }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '20px', marginBottom: '6px' }}>⚠️</div>
-                  <p style={{ color: '#dc2626', fontSize: '12px', margin: 0 }}>Error: {chartError}</p>
-                </div>
-              </div>
-            ) : (
-              <StandardChart2Line
+          {/* Single Canvas for 4 Charts - 2 Rows */}
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            padding: '16px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+          }}>
+          {/* Row 1: Chart 1 & 2 */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '16px',
+            marginBottom: '16px'
+          }}>
+            {/* Chart 1: Retention vs Churn Rate */}
+            <div style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '8px',
+              padding: '16px',
+              minHeight: '300px',
+              transition: 'all 0.3s ease',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = 'none';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}>
+              <LineChart
                 series={lineChartData?.retentionChurnTrend?.series || []}
                 categories={lineChartData?.retentionChurnTrend?.categories || []}
-                title="Retention vs Churn Rate Over Time"
-                chartIcon={getChartIcon('Retention vs Churn Rate Over Time')}
+                title="Retention vs Churn Rate"
+                chartIcon={getChartIcon('Retention vs Churn Rate')}
                 currency={selectedCurrency}
-                loading={isLoading}
-                error={chartError}
               />
-            )}
-          </div>
-          <div className="chart-container">
-            {isLoading ? (
-              <div style={{ 
-                height: '100%', 
-                minHeight: '350px',
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0'
-              }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{
-                    width: '32px',
-                    height: '32px',
-                    border: '3px solid #e2e8f0',
-                    borderTop: '3px solid #3B82F6',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite',
-                    margin: '0 auto 10px'
-                  }}></div>
-                  <p style={{ color: '#64748b', fontSize: '12px', margin: 0 }}>Loading chart...</p>
-                </div>
-              </div>
-            ) : chartError ? (
-              <div style={{ 
-                height: '100%', 
-                minHeight: '350px',
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
-                border: '1px solid #fecaca',
-                borderRadius: '8px'
-              }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '20px', marginBottom: '6px' }}>⚠️</div>
-                  <p style={{ color: '#dc2626', fontSize: '12px', margin: 0 }}>Error: {chartError}</p>
-                </div>
-              </div>
-            ) : (
-              <StandardChart2Line 
+            </div>
+
+            {/* Chart 2: CLV vs Purchase Frequency */}
+            <div style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '8px',
+              padding: '16px',
+              minHeight: '300px',
+              transition: 'all 0.3s ease',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = 'none';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}>
+              <LineChart
                 series={lineChartData?.customerMetricsTrend?.series || []}
                 categories={lineChartData?.customerMetricsTrend?.categories || []}
                 title="CLV vs Purchase Frequency"
-                chartIcon={getChartIcon('Customer Lifetime Value vs Purchase Frequency')}
+                chartIcon={getChartIcon('CLV vs Purchase Frequency')}
                 currency={selectedCurrency}
-                loading={isLoading}
-                error={chartError}
               />
-            )}
+            </div>
           </div>
-          <div className="chart-container">
-            {isLoading ? (
-              <div style={{ 
-                height: '100%', 
-                minHeight: '350px',
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0'
-              }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{
-                    width: '32px',
-                    height: '32px',
-                    border: '3px solid #e2e8f0',
-                    borderTop: '3px solid #3B82F6',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite',
-                    margin: '0 auto 10px'
-                  }}></div>
-                  <p style={{ color: '#64748b', fontSize: '12px', margin: 0 }}>Loading chart...</p>
-                </div>
-              </div>
-            ) : chartError ? (
-              <div style={{ 
-                height: '100%', 
-                minHeight: '350px',
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
-                border: '1px solid #fecaca',
-                borderRadius: '8px'
-              }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '20px', marginBottom: '6px' }}>⚠️</div>
-                  <p style={{ color: '#dc2626', fontSize: '12px', margin: 0 }}>Error: {chartError}</p>
-                </div>
-              </div>
-            ) : (
-              <StandardChart2Line 
+
+          {/* Row 2: Chart 3 & 4 */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '24px'
+          }}>
+            {/* Chart 3: Growth vs Profitability */}
+            <div style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '8px',
+              padding: '16px',
+              minHeight: '300px',
+              transition: 'all 0.3s ease',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = 'none';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}>
+              <LineChart
                 series={lineChartData?.growthProfitabilityAnalysis?.series || []}
                 categories={lineChartData?.growthProfitabilityAnalysis?.categories || []}
-                title="Growth vs Profitability Analysis"
-                chartIcon={getChartIcon('Growth vs Profitability Analysis')}
+                title="Growth vs Profitability"
+                chartIcon={getChartIcon('Growth vs Profitability')}
                 currency={selectedCurrency}
-                loading={isLoading}
-                error={chartError}
               />
-            )}
-          </div>
-          <div className="chart-container">
-            {isLoading ? (
-              <div style={{ 
-                height: '100%', 
-                minHeight: '350px',
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0'
-              }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{
-                    width: '32px',
-                    height: '32px',
-                    border: '3px solid #e2e8f0',
-                    borderTop: '3px solid #3B82F6',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite',
-                    margin: '0 auto 10px'
-                  }}></div>
-                  <p style={{ color: '#64748b', fontSize: '12px', margin: 0 }}>Loading chart...</p>
-                </div>
-              </div>
-            ) : chartError ? (
-              <div style={{ 
-                height: '100%', 
-                minHeight: '350px',
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
-                border: '1px solid #fecaca',
-                borderRadius: '8px'
-              }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '20px', marginBottom: '6px' }}>⚠️</div>
-                  <p style={{ color: '#dc2626', fontSize: '12px', margin: 0 }}>Error: {chartError}</p>
-                </div>
-              </div>
-            ) : (
-              <StandardChart2Line 
+            </div>
+
+            {/* Chart 4: Operational Efficiency */}
+            <div style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '8px',
+              padding: '16px',
+              minHeight: '300px',
+              transition: 'all 0.3s ease',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = 'none';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}>
+              <LineChart
                 series={lineChartData?.operationalEfficiencyTrend?.series || []}
                 categories={lineChartData?.operationalEfficiencyTrend?.categories || []}
-                title="Operational Efficiency Trend"
-                chartIcon={getChartIcon('Operational Efficiency Trend')}
+                title="Operational Efficiency"
+                chartIcon={getChartIcon('Operational Efficiency')}
                 currency={selectedCurrency}
-                loading={isLoading}
-                error={chartError}
               />
-            )}
+            </div>
           </div>
         </div>
+        </div>
+
       </Frame>
     </Layout>
   )

@@ -146,15 +146,13 @@ export default function LineChart({
       }
       return value.toLocaleString();
     } else if (isCLVType) {
-      // For CLV - show full number for thousands, no abbreviation
+      // For CLV - show full number without decimals
       if (value >= 1000000) {
-        return (value / 1000000).toFixed(2) + 'M';
+        return Math.round(value / 1000000) + 'M';
       } else if (value >= 1000) {
         return Math.round(value).toLocaleString(); // Show full number for thousands, no decimals
-      } else if (value >= 1) {
-        return value.toFixed(2);
       } else {
-        return value.toFixed(4); // For very small CLV values
+        return Math.round(value).toString(); // No decimals for CLV
       }
     } else {
       // For other amounts - show as integer only (no currency)
@@ -208,11 +206,11 @@ export default function LineChart({
       // For count/integer - no currency symbol, full number
       return value.toLocaleString() + ' persons';
     } else if (isCLVType) {
-      // For CLV - show full number for thousands, up to 2 decimals
+      // For CLV - show full number without decimals
       if (value >= 1000) {
         return Math.round(value).toLocaleString(); // Show full number for thousands, no decimals
       } else {
-        return value.toFixed(4);
+        return Math.round(value).toString(); // No decimals for CLV
       }
     } else {
       // For other amounts - show as integer only (no currency)
@@ -442,19 +440,19 @@ export default function LineChart({
   })
 
   return (
-         <div style={{ 
-       height: '100%', // Dynamic height based on container
-       minHeight: '350px', // Minimum height
-       width: '100%', 
-       padding: '0',
-       position: 'relative',
-       backgroundColor: '#ffffff',
-       border: '1px solid #e5e7eb',
-       borderRadius: '8px',
-       boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
-       display: 'flex',
-       flexDirection: 'column'
-     }}>
+               <div style={{ 
+        height: '100%', // Dynamic height based on container
+        minHeight: '350px', // Minimum height
+        width: '100%', 
+        padding: '0',
+        position: 'relative',
+        backgroundColor: '#ffffff',
+        border: '1px solid #ffffff', // White border
+        borderRadius: '8px',
+        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
       {/* Chart Title with Icon and Legend */}
       {title && (
         <div style={{
@@ -534,27 +532,29 @@ export default function LineChart({
       )}
       
              {/* Chart Area */}
-       <div style={{
-         flex: 1,
-         minHeight: '250px', // Reduced minimum height untuk responsive
-         padding: '0',
-         display: 'flex',
-         alignItems: 'center',
-         justifyContent: 'center',
-         backgroundColor: '#f8f9fa' // Grey muda background
-       }}>
+               <div style={{
+          flex: 1,
+          minHeight: '250px', // Reduced minimum height untuk responsive
+          padding: '0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#ffffff', // White background
+          border: '1px solid #ffffff' // White border untuk canvas
+        }}>
         {(() => {
           try {
             return (
-              <div style={{
-                width: '100%',
-                height: '100%',
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: '#ffffff'
-              }}>
+                             <div style={{
+                 width: '100%',
+                 height: '100%',
+                 position: 'relative',
+                 display: 'flex',
+                 alignItems: 'center',
+                 justifyContent: 'center',
+                 backgroundColor: '#ffffff',
+                 border: '1px solid #ffffff'
+               }}>
                 <Line 
                   data={data} 
                   options={{
