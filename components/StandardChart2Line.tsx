@@ -417,7 +417,7 @@ export default function StandardChart2Line({
                 secondSeries.name.toLowerCase().includes('depositor') ||
                 secondSeries.name.toLowerCase().includes('register')
               );
-              return isCountType;
+              return isCountType || false;
             })(),
             text: 'persons',
             font: {
