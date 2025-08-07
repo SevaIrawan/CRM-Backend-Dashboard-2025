@@ -61,7 +61,7 @@ export default function StandardChart2Line({
   if (loading) {
     return (
       <div style={{
-        backgroundColor: '#f8f9fa',
+        backgroundColor: '#ffffff', // Changed to white background
         borderRadius: '12px',
         padding: '24px',
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
@@ -92,7 +92,7 @@ export default function StandardChart2Line({
   if (error) {
     return (
       <div style={{
-        backgroundColor: '#f8f9fa',
+        backgroundColor: '#ffffff', // Changed to white background
         borderRadius: '12px',
         padding: '24px',
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
@@ -125,7 +125,7 @@ export default function StandardChart2Line({
     console.error('❌ [StandardChart2Line] Invalid data:', { series, categories });
     return (
       <div style={{
-        backgroundColor: '#f8f9fa',
+        backgroundColor: '#ffffff', // Changed to white background
         borderRadius: '12px',
         padding: '24px',
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
@@ -156,7 +156,7 @@ export default function StandardChart2Line({
     console.error('❌ [StandardChart2Line] Invalid series data structure:', series);
     return (
       <div style={{
-        backgroundColor: '#f8f9fa',
+        backgroundColor: '#ffffff', // Changed to white background
         borderRadius: '12px',
         padding: '24px',
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
@@ -421,7 +421,7 @@ export default function StandardChart2Line({
 
   return (
     <div style={{
-      backgroundColor: '#f8f9fa',
+      backgroundColor: '#ffffff', // Changed to white background
       borderRadius: '12px',
       padding: '24px',
       boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
@@ -501,16 +501,16 @@ export default function StandardChart2Line({
         </div>
       </div>
       
-      {/* Chart Container */}
-      <div style={{
-        flex: 1,
-        minHeight: '250px',
-        padding: '0',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#ffffff'
-      }}>
+             {/* Chart Container */}
+       <div style={{
+         flex: 1,
+         minHeight: '250px',
+         padding: '0',
+         display: 'flex',
+         alignItems: 'center',
+         justifyContent: 'center',
+         backgroundColor: '#ffffff' // Keep white for chart area
+       }}>
         {(() => {
           try {
             return (
