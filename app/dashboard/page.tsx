@@ -8,6 +8,7 @@ import YearSlicer from '@/components/slicers/YearSlicer'
 import MonthSlicer from '@/components/slicers/MonthSlicer'
 import CurrencySlicer from '@/components/slicers/CurrencySlicer'
 import LineChart from '@/components/LineChart'
+import StandardChart2Line from '@/components/StandardChart2Line'
 import StatCard from '@/components/StatCard'
 import { getChartIcon } from '@/lib/centralIcons'
 
@@ -349,12 +350,14 @@ export default function Dashboard() {
                 </div>
               </div>
             ) : (
-              <LineChart
+              <StandardChart2Line
                 series={lineChartData?.retentionChurnTrend?.series || []}
                 categories={lineChartData?.retentionChurnTrend?.categories || []}
                 title="Retention vs Churn Rate Over Time"
                 chartIcon={getChartIcon('Retention vs Churn Rate Over Time')}
                 currency={selectedCurrency}
+                loading={isLoading}
+                error={chartError}
               />
             )}
           </div>
@@ -400,12 +403,14 @@ export default function Dashboard() {
                 </div>
               </div>
             ) : (
-              <LineChart 
+              <StandardChart2Line 
                 series={lineChartData?.customerMetricsTrend?.series || []}
                 categories={lineChartData?.customerMetricsTrend?.categories || []}
                 title="CLV vs Purchase Frequency"
                 chartIcon={getChartIcon('Customer Lifetime Value vs Purchase Frequency')}
                 currency={selectedCurrency}
+                loading={isLoading}
+                error={chartError}
               />
             )}
           </div>
@@ -451,12 +456,14 @@ export default function Dashboard() {
                 </div>
               </div>
             ) : (
-              <LineChart 
+              <StandardChart2Line 
                 series={lineChartData?.growthProfitabilityAnalysis?.series || []}
                 categories={lineChartData?.growthProfitabilityAnalysis?.categories || []}
                 title="Growth vs Profitability Analysis"
                 chartIcon={getChartIcon('Growth vs Profitability Analysis')}
                 currency={selectedCurrency}
+                loading={isLoading}
+                error={chartError}
               />
             )}
           </div>
@@ -502,12 +509,14 @@ export default function Dashboard() {
                 </div>
               </div>
             ) : (
-              <LineChart 
+              <StandardChart2Line 
                 series={lineChartData?.operationalEfficiencyTrend?.series || []}
                 categories={lineChartData?.operationalEfficiencyTrend?.categories || []}
                 title="Operational Efficiency Trend"
                 chartIcon={getChartIcon('Operational Efficiency Trend')}
                 currency={selectedCurrency}
+                loading={isLoading}
+                error={chartError}
               />
             )}
           </div>
