@@ -333,13 +333,14 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
         return query
       })(),
 
-      // 4-7. DEPOSIT AMOUNT, WITHDRAW AMOUNT, GROSS PROFIT, NET PROFIT = SOURCE TABLE member_report_monthly
+      // 4-7. DEPOSIT AMOUNT, WITHDRAW AMOUNT, GROSS PROFIT, NET PROFIT, VALID AMOUNT = SOURCE TABLE member_report_monthly
       // Withdraw Amount = SUM(member_report_monthly[withdraw_amount])
       // Deposit Amount = SUM(member_report_monthly[deposit_amount])
+      // Valid Amount = SUM(member_report_monthly[valid_amount])
       (() => {
         let query = supabase
           .from('member_report_monthly')
-          .select('deposit_amount, withdraw_amount, add_transaction, deduct_transaction, deposit_cases, withdraw_cases, userkey')
+          .select('deposit_amount, withdraw_amount, add_transaction, deduct_transaction, deposit_cases, withdraw_cases, valid_amount, userkey')
           .eq('year', filters.year)
           .eq('month', filters.month)
           .eq('currency', filters.currency)
@@ -392,14 +393,16 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
     // 5-8. Aggregate member_report_monthly data
     // Withdraw Amount = SUM(member_report_monthly[withdraw_amount])
     // Deposit Amount = SUM(member_report_monthly[deposit_amount])
+    // Valid Amount = SUM(member_report_monthly[valid_amount])
     const memberReportAgg = memberReportData.reduce((acc: any, item: any) => ({
       deposit_amount: acc.deposit_amount + (Number(item.deposit_amount) || 0), // SUM(member_report_monthly[deposit_amount])
       withdraw_amount: acc.withdraw_amount + (Number(item.withdraw_amount) || 0), // SUM(member_report_monthly[withdraw_amount])
       add_transaction: acc.add_transaction + (Number(item.add_transaction) || 0),
       deduct_transaction: acc.deduct_transaction + (Number(item.deduct_transaction) || 0),
       deposit_cases: acc.deposit_cases + (Number(item.deposit_cases) || 0), // SUM dari deposit_cases
-      withdraw_cases: acc.withdraw_cases + (Number(item.withdraw_cases) || 0)
-    }), { deposit_amount: 0, withdraw_amount: 0, add_transaction: 0, deduct_transaction: 0, deposit_cases: 0, withdraw_cases: 0 })
+      withdraw_cases: acc.withdraw_cases + (Number(item.withdraw_cases) || 0),
+      valid_amount: acc.valid_amount + (Number(item.valid_amount) || 0) // SUM(member_report_monthly[valid_amount])
+    }), { deposit_amount: 0, withdraw_amount: 0, add_transaction: 0, deduct_transaction: 0, deposit_cases: 0, withdraw_cases: 0, valid_amount: 0 })
 
     console.log('📊 [KPILogic] Aggregated data:', {
       activeMembersCount,
@@ -412,6 +415,7 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
     // Calculate derived values using centralized formulas
     const depositAmount = Number(memberReportAgg.deposit_amount) || 0
     const withdrawAmount = Number(memberReportAgg.withdraw_amount) || 0
+    const validAmount = Number(memberReportAgg.valid_amount) || 0
 
     const rawData: RawKPIData = {
       deposit: {
@@ -428,7 +432,7 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
       member: {
         net_profit: KPI_FORMULAS.NET_PROFIT(depositAmount, withdrawAmount, Number(memberReportAgg.add_transaction) || 0, Number(memberReportAgg.deduct_transaction) || 0),
         ggr: KPI_FORMULAS.GROSS_PROFIT(depositAmount, withdrawAmount),
-        valid_bet_amount: KPI_FORMULAS.GROSS_PROFIT(depositAmount, withdrawAmount), // Using GGR as valid bet amount for now
+        valid_bet_amount: validAmount, // Using actual valid_amount from database
         add_bonus: 0, // Will be implemented when add_bonus field is available
         deduct_bonus: 0 // Will be implemented when deduct_bonus field is available
       },

@@ -40,7 +40,9 @@ export default function Dashboard() {
     ggrPerUser: 0,
     ggrPerPureUser: 0,
     addBonus: 0,
-    deductBonus: 0
+    deductBonus: 0,
+    conversionRate: 0,
+    holdPercentage: 0
   })
 
   const [momData, setMomData] = useState({
@@ -218,7 +220,7 @@ export default function Dashboard() {
       }
     >
       <Frame>
-        {/* KPI Row */}
+        {/* KPI Row - Updated with 6 New KPIs */}
         <div className="kpi-row">
           <StatCard
             title="DEPOSIT AMOUNT"
@@ -227,24 +229,6 @@ export default function Dashboard() {
             comparison={{
               percentage: formatMoM(momData.depositAmount),
               isPositive: momData.depositAmount > 0
-            }}
-          />
-          <StatCard
-            title="WITHDRAW AMOUNT"
-            value={formatCurrency(kpiData.withdrawAmount)}
-            icon="Withdraw Amount"
-            comparison={{
-              percentage: formatMoM(momData.withdrawAmount),
-              isPositive: momData.withdrawAmount > 0
-            }}
-          />
-          <StatCard
-            title="GROSS PROFIT"
-            value={formatCurrency(kpiData.grossGamingRevenue)}
-            icon="Gross Profit"
-            comparison={{
-              percentage: formatMoM(momData.grossGamingRevenue),
-              isPositive: momData.grossGamingRevenue > 0
             }}
           />
           <StatCard
@@ -257,12 +241,12 @@ export default function Dashboard() {
             }}
           />
           <StatCard
-            title="NEW DEPOSITOR"
-            value={formatNumber(kpiData.newDepositor)}
-            icon="New Depositor"
+            title="HOLD PERCENTAGE"
+            value={`${kpiData.holdPercentage.toFixed(2)}%`}
+            icon="Hold Percentage"
             comparison={{
-              percentage: formatMoM(momData.newDepositor),
-              isPositive: momData.newDepositor > 0
+              percentage: formatMoM(kpiData.holdPercentage),
+              isPositive: kpiData.holdPercentage > 0
             }}
           />
           <StatCard
@@ -272,6 +256,24 @@ export default function Dashboard() {
             comparison={{
               percentage: formatMoM(momData.activeMember),
               isPositive: momData.activeMember > 0
+            }}
+          />
+          <StatCard
+            title="CONVERSION RATE"
+            value={`${kpiData.conversionRate.toFixed(2)}%`}
+            icon="Conversion Rate"
+            comparison={{
+              percentage: formatMoM(kpiData.conversionRate),
+              isPositive: kpiData.conversionRate > 0
+            }}
+          />
+          <StatCard
+            title="CHURN RATE"
+            value={`${kpiData.churnRate.toFixed(2)}%`}
+            icon="Churn Rate"
+            comparison={{
+              percentage: formatMoM(kpiData.churnRate),
+              isPositive: kpiData.churnRate < 0 // Churn rate lower is better
             }}
           />
         </div>
