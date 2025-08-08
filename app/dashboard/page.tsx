@@ -55,7 +55,10 @@ export default function Dashboard() {
     depositAmount: 0,
     withdrawAmount: 0,
     grossGamingRevenue: 0,
-    netProfit: 0
+    netProfit: 0,
+    holdPercentage: 0,
+    conversionRate: 0,
+    churnRate: 0
   })
 
   // State untuk Slicers
@@ -281,8 +284,8 @@ export default function Dashboard() {
               value={`${kpiData.holdPercentage.toFixed(2)}%`}
               icon="Hold Percentage"
               comparison={{
-                percentage: formatMoM(kpiData.holdPercentage),
-                isPositive: kpiData.holdPercentage > 0
+                percentage: formatMoM(momData.holdPercentage),
+                isPositive: momData.holdPercentage > 0
               }}
             />
             <StatCard
@@ -299,8 +302,8 @@ export default function Dashboard() {
               value={`${kpiData.conversionRate.toFixed(2)}%`}
               icon="Conversion Rate"
               comparison={{
-                percentage: formatMoM(kpiData.conversionRate),
-                isPositive: kpiData.conversionRate > 0
+                percentage: formatMoM(momData.conversionRate),
+                isPositive: momData.conversionRate > 0
               }}
             />
             <StatCard
@@ -308,8 +311,8 @@ export default function Dashboard() {
               value={`${kpiData.churnRate.toFixed(2)}%`}
               icon="Churn Rate"
               comparison={{
-                percentage: formatMoM(kpiData.churnRate),
-                isPositive: kpiData.churnRate < 0 // Churn rate lower is better
+                percentage: formatMoM(momData.churnRate),
+                isPositive: momData.churnRate < 0 // Churn rate lower is better
               }}
             />
           </div>
