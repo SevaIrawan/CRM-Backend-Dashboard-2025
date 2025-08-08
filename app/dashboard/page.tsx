@@ -45,7 +45,8 @@ export default function Dashboard() {
     addBonus: 0,
     deductBonus: 0,
     conversionRate: 0,
-    holdPercentage: 0
+    holdPercentage: 0,
+    headcount: 0
   })
 
   const [momData, setMomData] = useState({
