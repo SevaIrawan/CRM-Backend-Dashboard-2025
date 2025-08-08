@@ -1,197 +1,396 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { getSlicerData, getAllKPIsWithMoM, getLineChartData, getBarChartData, SlicerFilters, SlicerData, KPIData } from '@/lib/KPILogic'
 import Layout from '@/components/Layout'
+import Frame from '@/components/Frame'
+import YearSlicer from '@/components/slicers/YearSlicer'
+import MonthSlicer from '@/components/slicers/MonthSlicer'
+import CurrencySlicer from '@/components/slicers/CurrencySlicer'
+import LineChart from '@/components/LineChart'
+import BarChart from '@/components/BarChart'
+import StatCard from '@/components/StatCard'
+import { getChartIcon } from '@/lib/centralIcons'
 
 export default function StrategicExecutive() {
-  const [sidebarExpanded, setSidebarExpanded] = useState(true)
-  const [darkMode, setDarkMode] = useState(false)
+  
+  // State untuk KPI data
+  const [kpiData, setKpiData] = useState<KPIData>({
+    activeMember: 0,
+    newDepositor: 0,
+    depositAmount: 0,
+    grossGamingRevenue: 0,
+    netProfit: 0,
+    withdrawAmount: 0,
+    addTransaction: 0,
+    deductTransaction: 0,
+    validBetAmount: 0,
+    pureMember: 0,
+    pureUser: 0,
+    newRegister: 0,
+    churnMember: 0,
+    depositCases: 0,
+    withdrawCases: 0,
+    winrate: 0,
+    churnRate: 0,
+    retentionRate: 0,
+    growthRate: 0,
+    avgTransactionValue: 0,
+    purchaseFrequency: 0,
+    customerLifetimeValue: 0,
+    avgCustomerLifespan: 0,
+    customerMaturityIndex: 0,
+    ggrPerUser: 0,
+    ggrPerPureUser: 0,
+    addBonus: 0,
+    deductBonus: 0,
+    conversionRate: 0,
+    holdPercentage: 0,
+    headcount: 0
+  })
 
-  const handleLogout = () => {
-    console.log('Logout clicked')
+  const [momData, setMomData] = useState({
+    activeMember: 0,
+    newDepositor: 0,
+    depositAmount: 0,
+    withdrawAmount: 0,
+    grossGamingRevenue: 0,
+    netProfit: 0,
+    headcount: 0
+  })
+
+  // State untuk Slicers
+  const [slicerData, setSlicerData] = useState<SlicerData>({
+    years: [],
+    months: [],
+    currencies: [],
+    lines: []
+  })
+
+  const [selectedYear, setSelectedYear] = useState('2025')
+  const [selectedMonth, setSelectedMonth] = useState('July')
+  const [selectedCurrency, setSelectedCurrency] = useState('MYR')
+  
+  // Chart data states
+  const [lineChartData, setLineChartData] = useState<any>(null)
+  const [barChartData, setBarChartData] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [chartError, setChartError] = useState<string | null>(null)
+
+  // Load data in background without blocking UI
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true)
+        setChartError(null)
+        console.log('🔄 [StrategicExecutive] Starting data load...')
+        
+        // Load slicer data
+        const slicerData = await getSlicerData()
+        console.log('📊 [StrategicExecutive] Slicer data loaded:', slicerData)
+        setSlicerData(slicerData)
+        
+        // Load KPI data
+        const filters: SlicerFilters = {
+          year: selectedYear,
+          month: selectedMonth,
+          currency: selectedCurrency,
+          line: ''
+        }
+        
+        console.log('🎯 [StrategicExecutive] Loading KPI data with filters:', filters)
+        const result = await getAllKPIsWithMoM(filters)
+        console.log('📈 [StrategicExecutive] KPI data loaded:', result)
+        setKpiData(result.current)
+        setMomData(result.mom)
+        
+        // Load chart data
+        console.log('📊 [StrategicExecutive] Loading chart data...')
+        const chartData = await getLineChartData(filters)
+        console.log('📈 [StrategicExecutive] Line chart data loaded:', chartData)
+        setLineChartData(chartData)
+        
+        const barData = await getBarChartData(filters)
+        console.log('📊 [StrategicExecutive] Bar chart data loaded:', barData)
+        console.log('🔍 [StrategicExecutive] Headcount Department data:', barData?.headcountDepartment)
+        setBarChartData(barData)
+        
+        setIsLoading(false)
+        console.log('✅ [StrategicExecutive] All data loaded successfully')
+        
+      } catch (error) {
+        console.error('❌ [StrategicExecutive] Error loading data:', error)
+        setChartError(error instanceof Error ? error.message : 'Failed to load data')
+        setIsLoading(false)
+      }
+    }
+
+    loadData()
+  }, [selectedYear, selectedMonth, selectedCurrency])
+
+  const formatCurrency = (amount: number, currency?: string) => {
+    const currentCurrency = currency || selectedCurrency
+    let symbol: string
+    
+    switch (currentCurrency) {
+      case 'MYR':
+        symbol = 'RM'
+        break
+      case 'SGD':
+        symbol = 'SGD'
+        break
+      case 'USC':
+        symbol = 'USD'
+        break
+      default:
+        symbol = 'RM'
+    }
+    
+    return `${symbol} ${amount.toLocaleString()}`
+  }
+
+  const formatNumber = (num: number) => {
+    return num.toLocaleString()
+  }
+
+  const formatMoM = (value: number) => {
+    const sign = value >= 0 ? '+' : ''
+    return `${sign}${value.toFixed(1)}%`
   }
 
   return (
     <Layout
       pageTitle="Strategic Executive"
-
-      darkMode={darkMode}
-      sidebarExpanded={sidebarExpanded}
-      onToggleDarkMode={() => setDarkMode(!darkMode)}
-      onLogout={handleLogout}
-    >
-      <div className="coming-soon-container">
-        <div className="coming-soon-frame">
-          <div className="coming-soon-content">
-            <div className="coming-soon-icon">
-              💎
+      customSubHeader={
+        <div className="dashboard-subheader">
+          <div className="subheader-title">
+            
+          </div>
+          
+          <div className="subheader-controls">
+            <div className="slicer-group">
+              <label className="slicer-label">YEAR:</label>
+              <YearSlicer 
+                value={selectedYear} 
+                onChange={setSelectedYear}
+              />
             </div>
-            <h1 className="coming-soon-title">
-              Strategic Executive
-            </h1>
-            <p className="coming-soon-description">
-              This page is under development and will be available soon.
-            </p>
-            <div className="coming-soon-features">
-              <div className="feature-item">
-                <span className="feature-icon">📊</span>
-                <span className="feature-text">Advanced Analytics</span>
-              </div>
-              <div className="feature-item">
-                <span className="feature-icon">📈</span>
-                <span className="feature-text">Real-time Data</span>
-              </div>
-              <div className="feature-item">
-                <span className="feature-icon">🎯</span>
-                <span className="feature-text">Smart Insights</span>
-              </div>
+            
+            <div className="slicer-group">
+              <label className="slicer-label">CURRENCY:</label>
+              <CurrencySlicer 
+                value={selectedCurrency} 
+                onChange={setSelectedCurrency}
+              />
             </div>
-            <button className="coming-soon-button">
-              Coming Soon
-            </button>
-            <p className="coming-soon-note">
-              Slicers and filters will be configured when this page is fully developed
-            </p>
+            
+            <div className="slicer-group">
+              <label className="slicer-label">MONTH:</label>
+              <MonthSlicer 
+                value={selectedMonth} 
+                onChange={setSelectedMonth}
+                selectedYear={selectedYear}
+                selectedCurrency={selectedCurrency}
+              />
+            </div>
           </div>
         </div>
-      </div>
-
-      <style jsx>{`
-        .coming-soon-container {
-          padding: 24px;
-          height: 100%;
-          background-color: #f8f9fa;
-        }
-
-        .coming-soon-frame {
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-          border: 1px solid #e5e7eb;
-          overflow: hidden;
-          height: calc(100vh - 200px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .coming-soon-content {
-          text-align: center;
-          padding: 48px;
-          max-width: 600px;
-        }
-
-        .coming-soon-icon {
-          font-size: 64px;
-          margin-bottom: 24px;
-          animation: pulse 2s infinite;
-        }
-
-        .coming-soon-title {
-          font-size: 32px;
-          font-weight: 700;
-          color: #1f2937;
-          margin: 0 0 16px 0;
-        }
-
-        .coming-soon-description {
-          font-size: 18px;
-          color: #6b7280;
-          margin: 0 0 32px 0;
-          line-height: 1.6;
-        }
-
-        .coming-soon-features {
-          display: flex;
-          justify-content: center;
-          gap: 32px;
-          margin-bottom: 32px;
-          flex-wrap: wrap;
-        }
-
-        .feature-item {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .feature-icon {
-          font-size: 24px;
-        }
-
-        .feature-text {
-          font-size: 14px;
-          color: #6b7280;
-          font-weight: 500;
-        }
-
-        .coming-soon-button {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          border: none;
-          padding: 16px 32px;
-          border-radius: 8px;
-          font-size: 16px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          margin-bottom: 16px;
-        }
-
-        .coming-soon-button:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
-        }
-
-        .coming-soon-note {
-          font-size: 14px;
-          color: #9ca3af;
-          font-style: italic;
-          margin: 0;
-        }
-
-        .slicer-message {
-          font-size: 14px;
-          color: #6b7280;
-          font-style: italic;
-          background: #f3f4f6;
-          padding: 8px 16px;
-          border-radius: 6px;
-          border: 1px solid #e5e7eb;
-        }
-
-        @keyframes pulse {
-          0%, 100% { 
-            transform: scale(1); 
-          }
-          50% { 
-            transform: scale(1.1); 
-          }
-        }
-
-        @media (max-width: 768px) {
-          .coming-soon-container {
-            padding: 16px;
-          }
+      }
+    >
+      <Frame>
+        {/* Content Container with Scroll */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '20px',
+          marginTop: '20px',
+          height: 'calc(100vh - 200px)',
+          overflowY: 'auto',
+          paddingRight: '8px'
+        }}>
           
-          .coming-soon-content {
-            padding: 32px 24px;
-          }
-          
-          .coming-soon-title {
-            font-size: 24px;
-          }
-          
-          .coming-soon-description {
-            font-size: 16px;
-          }
-          
-          .coming-soon-features {
-            gap: 24px;
-          }
-        }
-      `}</style>
-    </Layout>
-  )
+          {/* Row 1: 5 KPI Cards */}
+          <div className="kpi-row" style={{ 
+            display: 'grid',
+            gridTemplateColumns: 'repeat(5, 1fr)',
+            gap: '16px',
+            marginBottom: '20px'
+          }}>
+            <StatCard
+              title="NET PROFIT"
+              value={formatCurrency(kpiData.netProfit)}
+              icon="Net Profit"
+              comparison={{
+                percentage: formatMoM(momData.netProfit),
+                isPositive: momData.netProfit > 0
+              }}
+            />
+            <StatCard
+              title="GGR USER"
+              value={formatCurrency(kpiData.ggrPerUser)}
+              icon="GGR User"
+              comparison={{
+                percentage: formatMoM(kpiData.ggrPerUser),
+                isPositive: kpiData.ggrPerUser > 0
+              }}
+            />
+            <StatCard
+              title="ACTIVE MEMBER"
+              value={formatNumber(kpiData.activeMember)}
+              icon="Active Member"
+              comparison={{
+                percentage: formatMoM(momData.activeMember),
+                isPositive: momData.activeMember > 0
+              }}
+            />
+            <StatCard
+              title="PURE USER"
+              value={formatNumber(kpiData.pureUser)}
+              icon="Pure User"
+              comparison={{
+                percentage: formatMoM(kpiData.pureUser),
+                isPositive: kpiData.pureUser > 0
+              }}
+            />
+            <StatCard
+              title="HEADCOUNT"
+              value={formatCurrency(kpiData.headcount || 0)}
+              icon="Headcount"
+              comparison={{
+                percentage: formatMoM(momData.headcount || 0),
+                isPositive: (momData.headcount || 0) > 0
+              }}
+            />
+          </div>
+
+          {/* Canvas untuk Row 2, 3, 4 - Semua Chart */}
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            padding: '16px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+            marginBottom: '20px'
+          }}>
+            {/* Row 2: 2 Line Charts */}
+            <div className="charts-row" style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '16px',
+              marginBottom: '20px'
+            }}>
+              {/* Chart 1: GGR User Trend */}
+              <div className="chart-container"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}>
+                <LineChart
+                  series={lineChartData?.ggrUserTrend?.series || []}
+                  categories={lineChartData?.ggrUserTrend?.categories || []}
+                  title="GGR USER TREND"
+                  chartIcon={getChartIcon('GGR User')}
+                  currency={selectedCurrency}
+                />
+              </div>
+
+              {/* Chart 2: GGR Pure User Trend */}
+              <div className="chart-container"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}>
+                <LineChart
+                  series={lineChartData?.ggrPureUserTrend?.series || []}
+                  categories={lineChartData?.ggrPureUserTrend?.categories || []}
+                  title="GGR PURE USER TREND"
+                  chartIcon={getChartIcon('GGR Pure User')}
+                  currency={selectedCurrency}
+                />
+              </div>
+            </div>
+
+            {/* Row 3: 2 Line Charts */}
+            <div className="charts-row" style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '16px',
+              marginBottom: '20px'
+            }}>
+              {/* Chart 3: Customer Value Per Headcount */}
+              <div className="chart-container"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}>
+                <LineChart
+                  series={lineChartData?.customerValuePerHeadcount?.series || []}
+                  categories={lineChartData?.customerValuePerHeadcount?.categories || []}
+                  title="CUSTOMER VALUE PER HEADCOUNT"
+                  chartIcon={getChartIcon('Customer Value')}
+                  currency={selectedCurrency}
+                />
+              </div>
+
+              {/* Chart 4: Customer Count vs Headcount */}
+              <div className="chart-container"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}>
+                <LineChart
+                  series={lineChartData?.customerCountVsHeadcount?.series || []}
+                  categories={lineChartData?.customerCountVsHeadcount?.categories || []}
+                  title="CUSTOMER COUNT VS HEADCOUNT"
+                  chartIcon={getChartIcon('Customer Count')}
+                  currency={selectedCurrency}
+                />
+              </div>
+            </div>
+
+            {/* Row 4: 1 Bar Chart */}
+            <div className="charts-row" style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr',
+              marginBottom: '20px'
+            }}>
+              {/* Bar Chart: Headcount Department */}
+              <div className="chart-container"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}>
+                <BarChart
+                  series={barChartData?.headcountDepartment?.series || []}
+                  categories={barChartData?.headcountDepartment?.categories || []}
+                  title="HEADCOUNT BY DEPARTMENT"
+                  chartIcon={getChartIcon('HEADCOUNT BY DEPARTMENT')}
+                  currency={selectedCurrency}
+                />
+              </div>
+            </div>
+          </div>
+       </div>
+     </Frame>
+   </Layout>
+ )
 } 

@@ -10,6 +10,7 @@ import {
   Legend,
 } from 'chart.js';
 import { Bar, Line } from 'react-chartjs-2';
+import { getChartIcon } from '../lib/centralIcons';
 
 ChartJS.register(
   CategoryScale,
@@ -34,6 +35,7 @@ interface BarChartProps {
   currency?: string;
   type?: 'bar' | 'line';
   color?: string;
+  chartIcon?: string;
 }
 
 export default function BarChart({ 
@@ -42,13 +44,14 @@ export default function BarChart({
   title, 
   currency = 'MYR', 
   type = 'bar', 
-  color = '#3B82F6' 
+  color = '#3B82F6',
+  chartIcon
 }: BarChartProps) {
   const getCurrencySymbol = (curr: string): string => {
     switch (curr) {
       case 'MYR': return 'RM';
       case 'SGD': return 'SGD';
-      case 'KHR': return 'USC';
+      case 'USC': return 'USD';
       default: return 'RM';
     }
   };
@@ -157,8 +160,76 @@ export default function BarChart({
   };
 
   return (
-    <div style={{ height: '340px' }}>
-      <Bar data={data} options={options} />
+    <div style={{ 
+      height: '100%', // Dynamic height based on container
+      minHeight: '350px', // Minimum height
+      width: '100%', 
+      padding: '0',
+      position: 'relative',
+      backgroundColor: '#ffffff',
+      border: '1px solid #ffffff', // White border
+      borderRadius: '8px',
+      boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
+      {/* Chart Title with Icon */}
+      {title && (
+        <div style={{
+          padding: '16px 20px 12px 20px',
+          borderBottom: '1px solid #f3f4f6',
+          backgroundColor: '#ffffff',
+          borderRadius: '8px 8px 0 0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          {/* Title and Icon */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            {chartIcon && (
+              <span 
+                style={{
+                  fontSize: '14px',
+                  color: '#3b82f6',
+                  width: '20px',
+                  height: '20px',
+                  display: 'inline-block',
+                  flexShrink: 0
+                }}
+                dangerouslySetInnerHTML={{ __html: chartIcon }}
+              />
+            )}
+            <h3 style={{
+              margin: 0,
+              fontSize: '15px',
+              fontWeight: 700,
+              color: '#374151',
+              textTransform: 'uppercase',
+              letterSpacing: '0.6px',
+              lineHeight: '1.2'
+            }}>
+              {title}
+            </h3>
+          </div>
+        </div>
+      )}
+      
+      {/* Chart Container */}
+      <div style={{ 
+        flex: 1, 
+        padding: '16px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{ height: '100%', width: '100%' }}>
+          <Bar data={data} options={options} />
+        </div>
+      </div>
     </div>
   );
 } 

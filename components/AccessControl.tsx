@@ -15,31 +15,10 @@ export default function AccessControl({ children }: AccessControlProps) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const checkAccess = async () => {
-      try {
-        console.log('🔍 AccessControl: Checking permissions for', pathname)
-        
-        // For development, always grant access immediately
-        console.log('✅ Development mode - granting access')
-        setIsAuthorized(true)
-        setIsLoading(false)
-        return
-        
-      } catch (error) {
-        console.error('❌ Error checking access:', error)
-        
-        // For development, always grant access on error
-        console.log('✅ Development mode - granting access on error')
-        setIsAuthorized(true)
-        setIsLoading(false)
-      }
-    }
-
     // Immediate access for development - no timeout needed
     setIsAuthorized(true)
     setIsLoading(false)
     console.log('⚡ AccessControl: Immediate access granted for development')
-
   }, [pathname])
 
   if (isLoading) {

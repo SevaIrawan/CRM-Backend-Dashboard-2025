@@ -256,7 +256,7 @@ export default function Dashboard() {
           marginTop: '20px'
         }}>
           {/* KPI Row - Updated with 6 New KPIs */}
-          <div className="kpi-row">
+          <div className="kpi-row" style={{ gridTemplateColumns: 'repeat(6, 1fr)' }}>
             <StatCard
               title="DEPOSIT AMOUNT"
               value={formatCurrency(kpiData.depositAmount)}

@@ -95,7 +95,7 @@ export default function LineChart({
     switch (curr) {
       case 'MYR': return 'RM';
       case 'SGD': return 'SGD';
-      case 'KHR': return 'USC';
+      case 'USC': return 'USD';
       default: return 'RM';
     }
   };
@@ -131,6 +131,14 @@ export default function LineChart({
       datasetLabel.toLowerCase().includes('customer lifetime value')
     );
     
+    // Check if this is GGR related (GGR User, GGR Pure User, GGR Per User, etc.)
+    const isGGRType = datasetLabel && (
+      datasetLabel.toLowerCase().includes('ggr') ||
+      datasetLabel.toLowerCase().includes('gross gaming revenue') ||
+      datasetLabel.toLowerCase().includes('per user') ||
+      datasetLabel.toLowerCase().includes('pure user')
+    );
+    
     if (isPercentageType) {
       // For percentage - show % symbol
       return value.toFixed(1) + '%';
@@ -154,6 +162,15 @@ export default function LineChart({
       } else {
         return Math.round(value).toString(); // No decimals for CLV
       }
+    } else if (isGGRType) {
+      // For GGR - show with currency symbol and 2 decimal places
+      const symbol = getCurrencySymbol(currency);
+      if (value >= 1000000) {
+        return `${symbol} ${(value / 1000000).toFixed(2)}M`;
+      } else if (value >= 1000) {
+        return `${symbol} ${(value / 1000).toFixed(2)}K`;
+      }
+      return `${symbol} ${value.toFixed(2)}`;
     } else {
       // For other amounts - show as integer only (no currency)
       if (value >= 1000000) {
@@ -196,6 +213,14 @@ export default function LineChart({
       datasetLabel.toLowerCase().includes('customer lifetime value')
     );
     
+    // Check if this is GGR related (GGR User, GGR Pure User, GGR Per User, etc.)
+    const isGGRType = datasetLabel && (
+      datasetLabel.toLowerCase().includes('ggr') ||
+      datasetLabel.toLowerCase().includes('gross gaming revenue') ||
+      datasetLabel.toLowerCase().includes('per user') ||
+      datasetLabel.toLowerCase().includes('pure user')
+    );
+    
     if (isPercentageType) {
       // For percentage - show % symbol with full precision
       return value.toFixed(2) + '%';
@@ -212,6 +237,10 @@ export default function LineChart({
       } else {
         return Math.round(value).toString(); // No decimals for CLV
       }
+    } else if (isGGRType) {
+      // For GGR - show with currency symbol and 2 decimal places for tooltip
+      const symbol = getCurrencySymbol(currency);
+      return `${symbol} ${value.toFixed(2)}`;
     } else {
       // For other amounts - show as integer only (no currency)
       return Math.round(value).toLocaleString();

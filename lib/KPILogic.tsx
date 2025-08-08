@@ -51,6 +51,7 @@ export interface KPIData {
   deductBonus: number
   conversionRate: number
   holdPercentage: number
+  headcount: number
 }
 
 // ===========================================
@@ -103,9 +104,9 @@ export const KPI_FORMULAS = {
     return data.member.net_profit
   },
 
-  // GGR per User = GGR / Active Members
+  // GGR per User = Net Profit / Active Members
   GGR_USER: (data: RawKPIData): number => {
-    return data.deposit.active_members > 0 ? data.member.ggr / data.deposit.active_members : 0
+    return data.deposit.active_members > 0 ? data.member.net_profit / data.deposit.active_members : 0
   },
 
   // Pure Member = Active Member - New Depositor
@@ -574,6 +575,84 @@ async function getChurnMembers(filters: SlicerFilters): Promise<number> {
   }
 }
 
+// Add headcount data fetching function
+async function getHeadcountData(filters: SlicerFilters): Promise<{ 
+  total_sgd: number, 
+  total_usc: number, 
+  total_myr: number,
+  css_sgd: number,
+  css_myr: number,
+  css_usc: number,
+  sr_sgd: number,
+  sr_myr: number,
+  sr_usc: number,
+  cashier_sgd: number,
+  cashier_myr: number,
+  cashier_usc: number
+}> {
+  try {
+    console.log('👥 [KPILogic] Fetching headcount data...')
+    
+    const { data, error } = await supabase
+      .from('headcountdep')
+      .select('total_sgd, total_usc, total_myr, css_sgd, css_myr, css_usc, sr_sgd, sr_myr, sr_usc, cashier_sgd, cashier_myr, cashier_usc')
+      .eq('year', filters.year)
+      .eq('month', filters.month)
+      .single()
+    
+    if (error) {
+      console.error('❌ [KPILogic] Error fetching headcount data:', error)
+      return { 
+        total_sgd: 0, 
+        total_usc: 0, 
+        total_myr: 0,
+        css_sgd: 0,
+        css_myr: 0,
+        css_usc: 0,
+        sr_sgd: 0,
+        sr_myr: 0,
+        sr_usc: 0,
+        cashier_sgd: 0,
+        cashier_myr: 0,
+        cashier_usc: 0
+      }
+    }
+    
+    console.log('✅ [KPILogic] Headcount data fetched:', data)
+    return {
+      total_sgd: Number(data?.total_sgd) || 0,
+      total_usc: Number(data?.total_usc) || 0,
+      total_myr: Number(data?.total_myr) || 0,
+      css_sgd: Number(data?.css_sgd) || 0,
+      css_myr: Number(data?.css_myr) || 0,
+      css_usc: Number(data?.css_usc) || 0,
+      sr_sgd: Number(data?.sr_sgd) || 0,
+      sr_myr: Number(data?.sr_myr) || 0,
+      sr_usc: Number(data?.sr_usc) || 0,
+      cashier_sgd: Number(data?.cashier_sgd) || 0,
+      cashier_myr: Number(data?.cashier_myr) || 0,
+      cashier_usc: Number(data?.cashier_usc) || 0
+    }
+    
+  } catch (error) {
+    console.error('❌ [KPILogic] Error in getHeadcountData:', error)
+    return { 
+      total_sgd: 0, 
+      total_usc: 0, 
+      total_myr: 0,
+      css_sgd: 0,
+      css_myr: 0,
+      css_usc: 0,
+      sr_sgd: 0,
+      sr_myr: 0,
+      sr_usc: 0,
+      cashier_sgd: 0,
+      cashier_myr: 0,
+      cashier_usc: 0
+    }
+  }
+}
+
 // ===========================================
 // HIGH-LEVEL BUSINESS FUNCTIONS (PostgreSQL Pattern)
 // ===========================================
@@ -584,6 +663,28 @@ export async function calculateKPIs(filters: SlicerFilters): Promise<KPIData> {
 
     // ✅ Step 1: Get raw aggregated data (like PostgreSQL getRawData)
     const rawData = await getRawKPIData(filters)
+    
+    // Get headcount data
+    const headcountData = await getHeadcountData(filters)
+    // Headcount Logic berdasarkan currency yang dipilih
+    let headcount = 0
+    if (filters.currency === 'MYR') {
+      headcount = headcountData.total_myr
+    } else if (filters.currency === 'USC') {
+      headcount = headcountData.total_usc
+    } else if (filters.currency === 'SGD') {
+      headcount = headcountData.total_sgd
+    }
+    
+    // 🔍 DEBUG: Log headcount calculation
+    console.log('🔍 [KPILogic] Headcount Calculation:', {
+      headcountData,
+      selectedCurrency: filters.currency,
+      total_sgd: headcountData.total_sgd,
+      total_myr: headcountData.total_myr,
+      total_usc: headcountData.total_usc,
+      calculatedHeadcount: headcount
+    })
     
     // 🔍 DEBUG: Log raw data from database
     console.log('🔍 [KPILogic] Raw Data from Database:', {
@@ -694,14 +795,16 @@ export async function calculateKPIs(filters: SlicerFilters): Promise<KPIData> {
       addBonus: rawData.member.add_bonus,
       deductBonus: rawData.member.deduct_bonus,
       conversionRate: KPI_FORMULAS.ROUND(KPI_FORMULAS.NEW_CUSTOMER_CONVERSION_RATE(rawData)),
-      holdPercentage: KPI_FORMULAS.ROUND(KPI_FORMULAS.HOLD_PERCENTAGE(rawData.member.ggr, rawData.member.valid_bet_amount))
+      holdPercentage: KPI_FORMULAS.ROUND(KPI_FORMULAS.HOLD_PERCENTAGE(rawData.member.ggr, rawData.member.valid_bet_amount)),
+      headcount: headcount
     }
 
     console.log('✅ [KPILogic] KPIs calculated successfully:', {
       activeMember: result.activeMember,
       netProfit: result.netProfit,
       winrate: result.winrate,
-      churnRate: result.churnRate
+      churnRate: result.churnRate,
+      headcount: result.headcount
     })
 
     return result
@@ -716,7 +819,7 @@ export async function calculateKPIs(filters: SlicerFilters): Promise<KPIData> {
       pureUser: 0, newRegister: 0, churnMember: 0, depositCases: 0, withdrawCases: 0, winrate: 0, churnRate: 0,
       retentionRate: 0, growthRate: 0, avgTransactionValue: 0, purchaseFrequency: 0,
       customerLifetimeValue: 0, avgCustomerLifespan: 0, customerMaturityIndex: 0, ggrPerUser: 0, ggrPerPureUser: 0,
-      addBonus: 0, deductBonus: 0, conversionRate: 0, holdPercentage: 0
+      addBonus: 0, deductBonus: 0, conversionRate: 0, holdPercentage: 0, headcount: 0
     }
   }
 }
@@ -751,7 +854,8 @@ export async function getAllKPIsWithMoM(filters: SlicerFilters): Promise<{ curre
       depositAmount: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.depositAmount, previousData.depositAmount),
       grossGamingRevenue: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.grossGamingRevenue, previousData.grossGamingRevenue),
       netProfit: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.netProfit, previousData.netProfit),
-      withdrawAmount: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.withdrawAmount, previousData.withdrawAmount)
+      withdrawAmount: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.withdrawAmount, previousData.withdrawAmount),
+      headcount: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.headcount, previousData.headcount)
     }
 
     return { current: currentData, mom }
@@ -766,11 +870,11 @@ export async function getAllKPIsWithMoM(filters: SlicerFilters): Promise<{ curre
         pureUser: 0, newRegister: 0, churnMember: 0, depositCases: 0, withdrawCases: 0, winrate: 0, churnRate: 0,
         retentionRate: 0, growthRate: 0, avgTransactionValue: 0, purchaseFrequency: 0,
         customerLifetimeValue: 0, avgCustomerLifespan: 0, customerMaturityIndex: 0, ggrPerUser: 0, ggrPerPureUser: 0,
-        addBonus: 0, deductBonus: 0, conversionRate: 0, holdPercentage: 0
+        addBonus: 0, deductBonus: 0, conversionRate: 0, holdPercentage: 0, headcount: 0
       },
       mom: {
         activeMember: 0, newDepositor: 0, depositAmount: 0,
-        grossGamingRevenue: 0, netProfit: 0, withdrawAmount: 0
+        grossGamingRevenue: 0, netProfit: 0, withdrawAmount: 0, headcount: 0
       }
     }
   }
@@ -872,7 +976,24 @@ export async function getLineChartData(filters: SlicerFilters): Promise<any> {
           currency: filters.currency,
           month: month // Use each month for chart data
         }
-        return await calculateKPIs(chartFilters)
+        const kpiData = await calculateKPIs(chartFilters)
+        
+        // Get headcount data for this month
+        const headcountData = await getHeadcountData(chartFilters)
+        // Headcount Logic berdasarkan currency yang dipilih
+        let headcount = 0
+        if (chartFilters.currency === 'MYR') {
+          headcount = headcountData.total_myr
+        } else if (chartFilters.currency === 'USC') {
+          headcount = headcountData.total_usc
+        } else if (chartFilters.currency === 'SGD') {
+          headcount = headcountData.total_sgd
+        }
+        
+        return {
+          ...kpiData,
+          headcount: headcount
+        }
       })
     )
 
@@ -991,12 +1112,76 @@ export async function getLineChartData(filters: SlicerFilters): Promise<any> {
       categories: operationalEfficiencyTrend.categories
     })
 
+    // Strategic Executive Chart Data
+    // Row 2 - Chart 1: GGR User Trend
+    const ggrUserData = monthlyData.map(data => 
+      data.activeMember > 0 ? data.netProfit / data.activeMember : 0
+    )
+    const ggrUserTrend = {
+      series: [
+        { 
+          name: 'GGR Per User', 
+          data: ggrUserData
+        }
+      ],
+      categories: months.map(month => month.substring(0, 3))
+    }
+    
+    // Row 2 - Chart 2: GGR Pure User Trend
+    const ggrPureUserData = monthlyData.map(data => 
+      data.pureUser > 0 ? data.netProfit / data.pureUser : 0
+    )
+    const ggrPureUserTrend = {
+      series: [
+        { 
+          name: 'GGR Per Pure User', 
+          data: ggrPureUserData
+        }
+      ],
+      categories: months.map(month => month.substring(0, 3))
+    }
+    
+    // Row 3 - Chart 1: Customer Value Per Headcount
+    const customerValuePerHeadcountData = monthlyData.map(data => 
+      data.activeMember > 0 && data.headcount > 0 ? data.activeMember / data.headcount : 0
+    )
+    const customerValuePerHeadcount = {
+      series: [
+        { 
+          name: 'Customer Value Per Headcount', 
+          data: customerValuePerHeadcountData
+        }
+      ],
+      categories: months.map(month => month.substring(0, 3))
+    }
+    
+    // Row 3 - Chart 2: Customer Count vs Headcount
+    const activeMemberData = monthlyData.map(data => data.activeMember)
+    const headcountData = monthlyData.map(data => data.headcount)
+    const customerCountVsHeadcount = {
+      series: [
+        { 
+          name: 'Active Member', 
+          data: activeMemberData
+        },
+        { 
+          name: 'Headcount', 
+          data: headcountData
+        }
+      ],
+      categories: months.map(month => month.substring(0, 3))
+    }
+
     return {
       success: true,
       retentionChurnTrend,
       customerMetricsTrend,
       growthProfitabilityAnalysis,
-      operationalEfficiencyTrend
+      operationalEfficiencyTrend,
+      ggrUserTrend,
+      ggrPureUserTrend,
+      customerValuePerHeadcount,
+      customerCountVsHeadcount
     }
 
   } catch (error) {
@@ -1032,6 +1217,31 @@ export async function getLineChartData(filters: SlicerFilters): Promise<any> {
         series: [
           { name: 'Income', data: [800000, 850000, 900000, 950000, 1000000, 1050000] },
           { name: 'Cost', data: [500000, 520000, 540000, 560000, 580000, 600000] }
+        ],
+        categories: fallbackMonths
+      },
+      ggrUserTrend: {
+        series: [
+          { name: 'GGR Per User', data: [1200, 1350, 1500, 1650, 1800, 1950] }
+        ],
+        categories: fallbackMonths
+      },
+      ggrPureUserTrend: {
+        series: [
+          { name: 'GGR Per Pure User', data: [1800, 1950, 2100, 2250, 2400, 2550] }
+        ],
+        categories: fallbackMonths
+      },
+      customerValuePerHeadcount: {
+        series: [
+          { name: 'Customer Value Per Headcount', data: [2.5, 2.8, 3.1, 3.4, 3.7, 4.0] }
+        ],
+        categories: fallbackMonths
+      },
+      customerCountVsHeadcount: {
+        series: [
+          { name: 'Active Member', data: [1200, 1350, 1500, 1650, 1800, 1950] },
+          { name: 'Headcount', data: [500, 520, 540, 560, 580, 600] }
         ],
         categories: fallbackMonths
       }
@@ -1105,10 +1315,44 @@ export async function getBarChartData(filters: SlicerFilters): Promise<any> {
       categories: months.map(month => month.substring(0, 3))
     })
     
+    // Strategic Executive Bar Chart Data
+    // Row 4 - Bar Chart: Headcount Department
+    const headcountDepartmentData = await getHeadcountData(filters)
+    
+    // HEADCOUNT DEPARTMENT LOGIC berdasarkan currency yang dipilih:
+    let headcount_css = 0
+    let headcount_sr = 0
+    let headcount_cashier = 0
+    
+    if (filters.currency === 'MYR') {
+      headcount_css = headcountDepartmentData.css_myr
+      headcount_sr = headcountDepartmentData.sr_myr
+      headcount_cashier = headcountDepartmentData.cashier_myr
+    } else if (filters.currency === 'USC') {
+      headcount_css = headcountDepartmentData.css_usc
+      headcount_sr = headcountDepartmentData.sr_usc
+      headcount_cashier = headcountDepartmentData.cashier_usc
+    } else if (filters.currency === 'SGD') {
+      headcount_css = headcountDepartmentData.css_sgd
+      headcount_sr = headcountDepartmentData.sr_sgd
+      headcount_cashier = headcountDepartmentData.cashier_sgd
+    }
+    
+    const headcountDepartment = {
+      series: [
+        { 
+          name: 'Headcount', 
+          data: [headcount_css, headcount_sr, headcount_cashier]
+        }
+      ],
+      categories: ['CSS', 'SR', 'Cashier']
+    }
+
     return {
       success: true,
       retentionChurnData,
-      clvFrequencyData
+      clvFrequencyData,
+      headcountDepartment
     }
     
   } catch (error) {
@@ -1128,6 +1372,14 @@ export async function getBarChartData(filters: SlicerFilters): Promise<any> {
         clvData: [1200, 1150, 1300, 1250, 1400, 1320],
         purchaseFreqData: [2.5, 2.3, 2.8, 2.6, 3.0, 2.9],
         categories: fallbackMonths.map(month => month.substring(0, 3))
+      },
+      headcountDepartment: {
+        series: [
+          { name: 'CSS', data: [25] },
+          { name: 'SR', data: [15] },
+          { name: 'Cashier', data: [10] }
+        ],
+        categories: ['Department']
       }
     }
   }
