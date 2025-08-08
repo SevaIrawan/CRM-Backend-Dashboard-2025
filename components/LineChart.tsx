@@ -145,6 +145,15 @@ export default function LineChart({
     } else if (isFrequencyType) {
       // For frequency - show as decimal number only (2 decimal places)
       return value.toFixed(2);
+    } else if (isGGRType) {
+      // For GGR - show with currency symbol and 2 decimal places
+      const symbol = getCurrencySymbol(currency);
+      if (value >= 1000000) {
+        return `${symbol} ${(value / 1000000).toFixed(2)}M`;
+      } else if (value >= 1000) {
+        return `${symbol} ${(value / 1000).toFixed(2)}K`;
+      }
+      return `${symbol} ${value.toFixed(2)}`;
     } else if (isCountType) {
       // For count/integer - no currency symbol
       if (value >= 1000000) {
@@ -162,15 +171,6 @@ export default function LineChart({
       } else {
         return Math.round(value).toString(); // No decimals for CLV
       }
-    } else if (isGGRType) {
-      // For GGR - show with currency symbol and 2 decimal places
-      const symbol = getCurrencySymbol(currency);
-      if (value >= 1000000) {
-        return `${symbol} ${(value / 1000000).toFixed(2)}M`;
-      } else if (value >= 1000) {
-        return `${symbol} ${(value / 1000).toFixed(2)}K`;
-      }
-      return `${symbol} ${value.toFixed(2)}`;
     } else {
       // For other amounts - show as integer only (no currency)
       if (value >= 1000000) {
@@ -227,6 +227,10 @@ export default function LineChart({
     } else if (isFrequencyType) {
       // For frequency - show as decimal number only (2 decimal places)
       return value.toFixed(2);
+    } else if (isGGRType) {
+      // For GGR - show with currency symbol and 2 decimal places for tooltip
+      const symbol = getCurrencySymbol(currency);
+      return `${symbol} ${value.toFixed(2)}`;
     } else if (isCountType) {
       // For count/integer - no currency symbol, full number
       return value.toLocaleString() + ' persons';
@@ -237,10 +241,6 @@ export default function LineChart({
       } else {
         return Math.round(value).toString(); // No decimals for CLV
       }
-    } else if (isGGRType) {
-      // For GGR - show with currency symbol and 2 decimal places for tooltip
-      const symbol = getCurrencySymbol(currency);
-      return `${symbol} ${value.toFixed(2)}`;
     } else {
       // For other amounts - show as integer only (no currency)
       return Math.round(value).toLocaleString();

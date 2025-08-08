@@ -254,7 +254,7 @@ export default function StrategicExecutive() {
             />
             <StatCard
               title="HEADCOUNT"
-              value={formatCurrency(kpiData.headcount || 0)}
+              value={formatNumber(kpiData.headcount || 0)}
               icon="Headcount"
               comparison={{
                 percentage: formatMoM(momData.headcount || 0),
