@@ -467,8 +467,8 @@ export default function StandardChart2Line({
                display: 'flex',
                alignItems: 'center',
                justifyContent: 'center',
-               width: '32px',
-               height: '32px'
+               width: '20px',
+               height: '20px'
              }}
              dangerouslySetInnerHTML={{ 
                __html: typeof chartIcon === 'string' ? chartIcon.replace(/<path/g, '<path fill="#3B82F6"') : chartIcon as string
@@ -476,7 +476,7 @@ export default function StandardChart2Line({
              />
            )}
           <h3 style={{
-            fontSize: '18px',
+            fontSize: '12px',
             fontWeight: '600',
             color: '#1f2937',
             margin: 0

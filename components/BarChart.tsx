@@ -141,8 +141,28 @@ export default function BarChart({
       }
     },
     scales: {
+      x: {
+        grid: {
+          display: true,
+          color: '#e5e7eb',
+          lineWidth: 1,
+          drawBorder: false
+        },
+        ticks: {
+          font: {
+            weight: 'bold' as const,
+            size: 10
+          }
+        }
+      },
       y: {
         beginAtZero: true,
+        grid: {
+          display: true,
+          color: '#e5e7eb',
+          lineWidth: 1,
+          drawBorder: false
+        },
         ticks: {
           callback: function(tickValue: string | number) {
             // For all bar charts - plain numbers without currency
@@ -153,6 +173,10 @@ export default function BarChart({
               return (value / 1000).toFixed(0) + 'K';
             }
             return value;
+          },
+          font: {
+            weight: 'bold' as const,
+            size: 10
           }
         }
       }
@@ -205,7 +229,7 @@ export default function BarChart({
             )}
             <h3 style={{
               margin: 0,
-              fontSize: '15px',
+              fontSize: '12px',
               fontWeight: 700,
               color: '#374151',
               textTransform: 'uppercase',

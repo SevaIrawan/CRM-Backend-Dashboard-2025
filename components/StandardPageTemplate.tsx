@@ -75,7 +75,7 @@ export default function StandardPageTemplate({
           >
             <div style={{ fontSize: '48px', marginBottom: '12px' }}>{kpi.icon}</div>
             <div>
-              <h3 style={{ margin: '0 0 8px 0', color: '#1f2937', fontSize: '18px' }}>
+              <h3 style={{ margin: '0 0 8px 0', color: '#1f2937', fontSize: '12px' }}>
                 {kpi.title}
               </h3>
               <div style={{ 
@@ -290,7 +290,7 @@ export const StandardKPICard = ({
   }}>
     <div style={{ fontSize: '48px', marginBottom: '12px' }}>{icon}</div>
     <div>
-      <h3 style={{ margin: '0 0 8px 0', color: '#1f2937', fontSize: '18px' }}>
+      <h3 style={{ margin: '0 0 8px 0', color: '#1f2937', fontSize: '12px' }}>
         {title}
       </h3>
       <div style={{ 

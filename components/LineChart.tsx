@@ -145,15 +145,15 @@ export default function LineChart({
     } else if (isFrequencyType) {
       // For frequency - show as decimal number only (2 decimal places)
       return value.toFixed(2);
-    } else if (isGGRType) {
-      // For GGR - show with currency symbol and 2 decimal places
-      const symbol = getCurrencySymbol(currency);
-      if (value >= 1000000) {
-        return `${symbol} ${(value / 1000000).toFixed(2)}M`;
-      } else if (value >= 1000) {
-        return `${symbol} ${(value / 1000).toFixed(2)}K`;
-      }
-      return `${symbol} ${value.toFixed(2)}`;
+         } else if (isGGRType) {
+       // For GGR - show with currency symbol and NO decimal places
+       const symbol = getCurrencySymbol(currency);
+       if (value >= 1000000) {
+         return `${symbol} ${Math.round(value / 1000000)}M`;
+       } else if (value >= 1000) {
+         return `${symbol} ${Math.round(value / 1000)}K`;
+       }
+       return `${symbol} ${Math.round(value)}`;
     } else if (isCountType) {
       // For count/integer - no currency symbol
       if (value >= 1000000) {
@@ -227,10 +227,10 @@ export default function LineChart({
     } else if (isFrequencyType) {
       // For frequency - show as decimal number only (2 decimal places)
       return value.toFixed(2);
-    } else if (isGGRType) {
-      // For GGR - show with currency symbol and 2 decimal places for tooltip
-      const symbol = getCurrencySymbol(currency);
-      return `${symbol} ${value.toFixed(2)}`;
+         } else if (isGGRType) {
+       // For GGR - show with currency symbol and NO decimal places for tooltip
+       const symbol = getCurrencySymbol(currency);
+       return `${symbol} ${Math.round(value)}`;
     } else if (isCountType) {
       // For count/integer - no currency symbol, full number
       return value.toLocaleString() + ' persons';
@@ -353,9 +353,10 @@ export default function LineChart({
          scales: {
        x: {
          grid: {
-           display: false,
-           color: 'transparent',
-           lineWidth: 0
+           display: true,
+           color: '#e5e7eb',
+           lineWidth: 1,
+           drawBorder: false
          },
                  ticks: {
            padding: 8,
@@ -371,9 +372,10 @@ export default function LineChart({
          position: 'left' as const,
          beginAtZero: false,
          grid: {
-           display: false,
-           color: 'transparent',
-           lineWidth: 0
+           display: true,
+           color: '#e5e7eb',
+           lineWidth: 1,
+           drawBorder: false
          },
                  ticks: {
            padding: 20, // Increased padding for legend space
@@ -419,9 +421,9 @@ export default function LineChart({
            beginAtZero: false,
            grid: {
              drawOnChartArea: false,
-             display: false,
-             color: 'transparent',
-             lineWidth: 0
+             display: true,
+             color: '#e5e7eb',
+             lineWidth: 1
            },
                      ticks: {
              padding: 20, // Increased padding for legend space
@@ -514,7 +516,7 @@ export default function LineChart({
             )}
             <h3 style={{
               margin: 0,
-              fontSize: '15px',
+              fontSize: '12px',
               fontWeight: 700,
               color: '#374151',
               textTransform: 'uppercase',
@@ -584,133 +586,10 @@ export default function LineChart({
                  backgroundColor: '#ffffff',
                  border: '1px solid #ffffff'
                }}>
-                <Line 
-                  data={data} 
-                  options={{
-                    ...options,
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    layout: {
-                      padding: {
-                        top: 0,
-                        bottom: 0,
-                        left: 0,
-                        right: 0
-                      }
-                    },
-                    plugins: {
-                      ...options.plugins,
-                      legend: {
-                        display: false, // Hide default legend since we'll position them on Y-axes
-                      },
-                      tooltip: {
-                        ...options.plugins.tooltip,
-                        backgroundColor: 'rgba(0, 0, 0, 0.95)',
-                        titleColor: '#ffffff',
-                        bodyColor: '#ffffff',
-                        borderColor: '#3B82F6',
-                        borderWidth: 2,
-                        cornerRadius: 10,
-                        padding: 12,
-                        displayColors: true,
-                        callbacks: {
-                          ...options.plugins.tooltip.callbacks,
-                          title: function(context: any) {
-                            return `📅 ${context[0].label}`;
-                          },
-                          label: function(context: any) {
-                            const value = context.parsed.y;
-                            const datasetLabel = context.dataset.label;
-                            
-                            if (datasetLabel && datasetLabel.toLowerCase().includes('rate')) {
-                              return `  ${datasetLabel}: ${value.toFixed(1)}%`;
-                            }
-                            
-                            return `  ${datasetLabel}: ${formatFullValue(value, datasetLabel)}`;
-                          }
-                        }
-                      }
-                    },
-                    scales: {
-                      ...options.scales,
-                                             x: {
-                         ...options.scales.x,
-                         grid: {
-                           display: false,
-                           color: 'transparent',
-                           lineWidth: 0
-                         },
-                                                 ticks: {
-                           padding: 4,
-                           font: {
-                             weight: 'bold' as const,
-                             size: 10
-                           }
-                         }
-                      },
-                                             y: {
-                         ...options.scales.y,
-                         grid: {
-                           display: false,
-                           color: 'transparent',
-                           lineWidth: 0
-                         },
-                                                 ticks: {
-                           padding: 20, // Increased padding for legend space
-                           font: {
-                             weight: 'bold' as const,
-                             size: 10
-                           },
-                           callback: function(tickValue: string | number) {
-                             const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
-                             const firstSeries = series && series[0];
-                             if (firstSeries && firstSeries.name && firstSeries.name.toLowerCase().includes('rate')) {
-                               return value + '%';
-                             }
-                             
-                             return formatValue(value, firstSeries?.name);
-                           }
-                         },
-                                                 // Remove legend title from Y-axis since we have it in header
-                         title: {
-                           display: false
-                         }
-                      },
-                      // Add second Y-axis if needed
-                      ...(needsDualYAxis && {
-                                                 y1: {
-                           ...options.scales.y1,
-                           grid: {
-                             drawOnChartArea: false,
-                             display: false,
-                             color: 'transparent',
-                             lineWidth: 0
-                           },
-                                                     ticks: {
-                             padding: 20, // Increased padding for legend space
-                             font: {
-                               weight: 'bold' as const,
-                               size: 10
-                             },
-                             callback: function(tickValue: string | number) {
-                               const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
-                               const secondSeries = series && series[1];
-                               if (secondSeries && secondSeries.name && secondSeries.name.toLowerCase().includes('rate')) {
-                                 return value + '%';
-                               }
-                               
-                               return formatValue(value, secondSeries?.name);
-                             }
-                           },
-                                                     // Remove legend title from Y-axis since we have it in header
-                           title: {
-                             display: false
-                           }
-                        }
-                      })
-                    }
-                  }} 
-                />
+                                 <Line 
+                   data={data} 
+                   options={options}
+                 />
               </div>
             )
           } catch (error) {

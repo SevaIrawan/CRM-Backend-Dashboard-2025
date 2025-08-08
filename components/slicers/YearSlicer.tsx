@@ -7,32 +7,38 @@ interface YearSlicerProps {
   value: string
   onChange: (value: string) => void
   className?: string
+  years?: string[]
 }
 
-export default function YearSlicer({ value, onChange, className = '' }: YearSlicerProps) {
+export default function YearSlicer({ value, onChange, className = '', years: propYears }: YearSlicerProps) {
   const [years, setYears] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchYears = async () => {
-      try {
-        setLoading(true)
-        console.log('📅 [YearSlicer] Fetching years from Supabase...')
-        
-        const slicerData = await getSlicerData()
-        setYears(slicerData.years)
-        
-        console.log('✅ [YearSlicer] Years loaded:', slicerData.years)
-      } catch (error) {
-        console.error('❌ [YearSlicer] Error:', error)
-        setYears([])
-      } finally {
-        setLoading(false)
+    if (propYears) {
+      setYears(propYears)
+      setLoading(false)
+    } else {
+      const fetchYears = async () => {
+        try {
+          setLoading(true)
+          console.log('📅 [YearSlicer] Fetching years from Supabase...')
+          
+          const slicerData = await getSlicerData()
+          setYears(slicerData.years)
+          
+          console.log('✅ [YearSlicer] Years loaded:', slicerData.years)
+        } catch (error) {
+          console.error('❌ [YearSlicer] Error:', error)
+          setYears([])
+        } finally {
+          setLoading(false)
+        }
       }
-    }
 
-    fetchYears()
-  }, [])
+      fetchYears()
+    }
+  }, [propYears])
 
   if (loading) {
     return (
@@ -79,6 +85,7 @@ export default function YearSlicer({ value, onChange, className = '' }: YearSlic
         boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
       }}
     >
+      <option value="All">All</option>
       {years.map((year) => (
         <option key={year} value={year}>
           {year}

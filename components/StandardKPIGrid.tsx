@@ -43,8 +43,8 @@ export default function StandardKPIGrid({
             gap: '16px'
           }}>
             <div style={{
-              width: '48px',
-              height: '48px',
+              width: '20px',
+              height: '20px',
               backgroundColor: '#f3f4f6',
               borderRadius: '8px',
               animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'

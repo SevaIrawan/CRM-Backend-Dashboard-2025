@@ -46,12 +46,12 @@ export default function StandardStatCard({
     }}>
       {icon && (
         <div style={{
-          width: '48px',
-          height: '48px',
+          width: '20px',
+          height: '20px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '24px',
+          fontSize: '20px',
           borderRadius: '8px',
           backgroundColor: color ? `${color}20` : '#f3f4f6',
           color: color || '#6b7280'
@@ -61,7 +61,7 @@ export default function StandardStatCard({
       )}
       <div style={{ flex: 1 }}>
         <h3 style={{
-          fontSize: '14px',
+          fontSize: '12px',
           fontWeight: '500',
           color: color || '#6b7280',
           margin: '0 0 8px 0',

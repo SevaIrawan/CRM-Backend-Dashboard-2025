@@ -11,13 +11,11 @@ interface AccessControlProps {
 export default function AccessControl({ children }: AccessControlProps) {
   const router = useRouter()
   const pathname = usePathname()
-  const [isAuthorized, setIsAuthorized] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isAuthorized, setIsAuthorized] = useState(true) // Start as authorized
+  const [isLoading, setIsLoading] = useState(false) // Start as not loading
 
   useEffect(() => {
-    // Immediate access for development - no timeout needed
-    setIsAuthorized(true)
-    setIsLoading(false)
+    // Immediate access for development - no delay
     console.log('⚡ AccessControl: Immediate access granted for development')
   }, [pathname])
 

@@ -9,9 +9,10 @@ interface MonthSlicerProps {
   className?: string
   selectedYear?: string 
   selectedCurrency?: string
+  disabled?: boolean
 }
 
-export default function MonthSlicer({ value, onChange, className = '', selectedYear = '2025', selectedCurrency = 'MYR' }: MonthSlicerProps) { 
+export default function MonthSlicer({ value, onChange, className = '', selectedYear = '2025', selectedCurrency = 'MYR', disabled = false }: MonthSlicerProps) { 
   const [availableMonths, setAvailableMonths] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -49,7 +50,7 @@ export default function MonthSlicer({ value, onChange, className = '', selectedY
     fetchAvailableMonths()
   }, [selectedYear, selectedCurrency])
 
-  if (loading) {
+  if (loading || disabled) {
     return (
       <select 
         value={value} 
@@ -59,18 +60,18 @@ export default function MonthSlicer({ value, onChange, className = '', selectedY
           padding: '8px 12px',
           border: '1px solid #e5e7eb',
           borderRadius: '8px',
-          backgroundColor: 'white',
+          backgroundColor: disabled ? '#f3f4f6' : 'white',
           fontSize: '14px',
-          color: '#374151',
-          cursor: 'pointer',
+          color: disabled ? '#9ca3af' : '#374151',
+          cursor: disabled ? 'not-allowed' : 'pointer',
           outline: 'none',
           transition: 'all 0.2s ease',
           minWidth: '120px',
           boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
         }}
-        disabled
+        disabled={disabled || loading}
       >
-        <option>Loading...</option>
+        <option>{disabled ? 'Select Currency First' : 'Loading...'}</option>
       </select>
     )
   }

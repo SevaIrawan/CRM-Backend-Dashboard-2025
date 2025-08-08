@@ -30,21 +30,21 @@ export default function StatCard({
   return (
     <div className={`stat-card ${className}`}>
       <div className="stat-card-header">
+        <h3 className="stat-card-title">{title}</h3>
         {icon && (
           <div className="stat-card-icon">
             <div 
               dangerouslySetInnerHTML={{ __html: iconSvg }}
-              style={{ 
-                width: '24px', 
-                height: '24px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
+                             style={{ 
+                 width: '20px', 
+                 height: '20px',
+                 display: 'flex',
+                 alignItems: 'center',
+                 justifyContent: 'center'
+               }}
             />
           </div>
         )}
-        <h3 className="stat-card-title">{title}</h3>
       </div>
       
       <div className="stat-card-value">{value}</div>
@@ -62,6 +62,7 @@ export default function StatCard({
             <ComparisonIcon 
               isPositive={comparison.isPositive}
               size={`${comparisonSize}px`}
+              color={getComparisonColor(comparison.isPositive ? 1 : -1)}
             />
             {comparison.percentage} {comparison.text || 'MoM'}
           </span>

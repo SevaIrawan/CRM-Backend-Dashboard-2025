@@ -92,7 +92,7 @@ export default function StandardChart({
       border: '1px solid #e2e8f0'
     }}>
       <h3 style={{
-        fontSize: '18px',
+        fontSize: '12px',
         fontWeight: '600',
         color: '#1f2937',
         margin: '0 0 16px 0'

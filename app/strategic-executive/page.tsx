@@ -294,7 +294,7 @@ export default function StrategicExecutive() {
                   series={lineChartData?.ggrUserTrend?.series || []}
                   categories={lineChartData?.ggrUserTrend?.categories || []}
                   title="GGR USER TREND"
-                  chartIcon={getChartIcon('GGR User')}
+                  chartIcon={getChartIcon('GGR USER TREND')}
                   currency={selectedCurrency}
                 />
               </div>
@@ -313,7 +313,7 @@ export default function StrategicExecutive() {
                   series={lineChartData?.ggrPureUserTrend?.series || []}
                   categories={lineChartData?.ggrPureUserTrend?.categories || []}
                   title="GGR PURE USER TREND"
-                  chartIcon={getChartIcon('GGR Pure User')}
+                  chartIcon={getChartIcon('GGR PURE USER TREND')}
                   currency={selectedCurrency}
                 />
               </div>
