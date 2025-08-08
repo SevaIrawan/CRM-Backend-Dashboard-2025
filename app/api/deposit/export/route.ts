@@ -14,22 +14,22 @@ export async function POST(request: NextRequest) {
 
     // Add filters based on selections
     if (currency && currency !== 'ALL') {
-      query = query.eq('currency', currency)
+      query = query.filter('currency', 'eq', currency)
     }
 
     if (line && line !== 'ALL') {
-      query = query.eq('line', line)
+      query = query.filter('line', 'eq', line)
     }
 
     if (year && year !== 'ALL') {
-      query = query.eq('year', parseInt(year))
+      query = query.filter('year', 'eq', parseInt(year))
     }
 
     // Handle month vs date range filtering
     if (filterMode === 'month' && month && month !== 'ALL') {
-      query = query.eq('month', parseInt(month))
+      query = query.filter('month', 'eq', parseInt(month))
     } else if (filterMode === 'daterange' && startDate && endDate) {
-      query = query.gte('date', startDate).lte('date', endDate)
+      query = query.filter('date', 'gte', startDate).filter('date', 'lte', endDate)
     }
 
     // Order by date descending with improved sorting

@@ -20,30 +20,48 @@ export async function GET(request: NextRequest) {
     })
 
     // Build base query for filtering
-    let baseQuery = supabase.from('deposit_daily')
+    let baseQuery = supabase.from('deposit_daily').select('*')
 
     // Add filters based on selections
     if (currency && currency !== 'ALL') {
-      baseQuery = baseQuery.eq('currency', currency)
+      baseQuery = baseQuery.filter('currency', 'eq', currency)
     }
 
     if (line && line !== 'ALL') {
-      baseQuery = baseQuery.eq('line', line)
+      baseQuery = baseQuery.filter('line', 'eq', line)
     }
 
     if (year && year !== 'ALL') {
-      baseQuery = baseQuery.eq('year', parseInt(year))
+      baseQuery = baseQuery.filter('year', 'eq', parseInt(year))
     }
 
     // Handle month vs date range filtering
     if (filterMode === 'month' && month && month !== 'ALL') {
-      baseQuery = baseQuery.eq('month', parseInt(month))
+      baseQuery = baseQuery.filter('month', 'eq', parseInt(month))
     } else if (filterMode === 'daterange' && startDate && endDate) {
-      baseQuery = baseQuery.gte('date', startDate).lte('date', endDate)
+      baseQuery = baseQuery.filter('date', 'gte', startDate).filter('date', 'lte', endDate)
     }
 
     // Get total count first (separate query)
-    const countResult = await baseQuery.select('*', { count: 'exact', head: true })
+    const countQuery = supabase.from('deposit_daily').select('*', { count: 'exact', head: true })
+    
+    // Apply same filters to count query
+    if (currency && currency !== 'ALL') {
+      countQuery.filter('currency', 'eq', currency)
+    }
+    if (line && line !== 'ALL') {
+      countQuery.filter('line', 'eq', line)
+    }
+    if (year && year !== 'ALL') {
+      countQuery.filter('year', 'eq', parseInt(year))
+    }
+    if (filterMode === 'month' && month && month !== 'ALL') {
+      countQuery.filter('month', 'eq', parseInt(month))
+    } else if (filterMode === 'daterange' && startDate && endDate) {
+      countQuery.filter('date', 'gte', startDate).filter('date', 'lte', endDate)
+    }
+    
+    const countResult = await countQuery
     const totalRecords = countResult.count || 0
 
     console.log(`📊 Total records found: ${totalRecords}`)
@@ -51,7 +69,6 @@ export async function GET(request: NextRequest) {
     // Get data with pagination and sorting
     const offset = (page - 1) * limit
     const result = await baseQuery
-      .select('*')
       .order('date', { ascending: false })
       .order('year', { ascending: false })
       .order('month', { ascending: false })

@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       .order('line')
     
     if (selectedCurrency && selectedCurrency !== 'ALL') {
-      lineQuery = lineQuery.eq('currency', selectedCurrency)
+      lineQuery = lineQuery.filter('currency', 'eq', selectedCurrency)
     }
 
     const { data: lineData, error: lineError } = await lineQuery
@@ -103,13 +103,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Process data
-    const currencies = [...new Set(currencyData?.map(row => row.currency) || [])]
-    const lines = [...new Set(lineData?.map(row => row.line) || [])]
-    const years = [...new Set(yearData?.map(row => row.year?.toString()) || [])]
-    const months = [...new Set(monthData?.map(row => row.month?.toString()) || [])].map(month => ({
+    const currencies = Array.from(new Set(currencyData?.map(row => row.currency).filter(Boolean) || [])) as string[]
+    const lines = Array.from(new Set(lineData?.map(row => row.line).filter(Boolean) || [])) as string[]
+    const years = Array.from(new Set(yearData?.map(row => row.year?.toString()).filter(Boolean) || [])) as string[]
+    const months = Array.from(new Set(monthData?.map(row => row.month?.toString()).filter(Boolean) || [])).map(month => ({
       value: month,
       label: new Date(2000, parseInt(month) - 1, 1).toLocaleString('en', { month: 'long' })
-    }))
+    })) as Array<{value: string, label: string}>
 
     const dateRange = {
       min: dateRangeData?.[0]?.date || '',
