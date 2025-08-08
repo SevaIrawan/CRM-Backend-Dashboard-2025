@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
     const years = Array.from(new Set(yearData?.map(row => row.year?.toString()).filter(Boolean) || [])) as string[]
     const months = Array.from(new Set(monthData?.map(row => row.month?.toString()).filter(Boolean) || [])).map(month => ({
       value: month,
-      label: new Date(2000, parseInt(month) - 1, 1).toLocaleString('en', { month: 'long' })
+      label: new Date(2000, parseInt(month || '1') - 1, 1).toLocaleString('en', { month: 'long' })
     })) as Array<{value: string, label: string}>
 
     const dateRange = {
