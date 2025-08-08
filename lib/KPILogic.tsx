@@ -207,9 +207,30 @@ export const KPI_FORMULAS = {
     return (depositAmount + addTransaction) - (withdrawAmount + deductTransaction)
   },
 
-  // Percentage Change (Month over Month)
+  // Percentage Change (Month over Month) - IMPROVED LOGIC
   PERCENTAGE_CHANGE: (current: number, previous: number): number => {
-    return previous !== 0 ? ((current - previous) / previous * 100) : 0
+    // Jika previous = 0 dan current = 0, return 0%
+    if (previous === 0 && current === 0) {
+      return 0
+    }
+    // Jika previous = 0 dan current > 0, return 100% (dari 0 ke ada nilai)
+    if (previous === 0 && current > 0) {
+      return 100
+    }
+    // Jika previous = 0 dan current < 0, return -100% (dari 0 ke nilai negatif)
+    if (previous === 0 && current < 0) {
+      return -100
+    }
+    // Hitung normal dengan formula: (current - previous) / previous * 100
+    const percentageChange = ((current - previous) / previous) * 100
+    
+    // Validasi hasil
+    if (!isFinite(percentageChange) || isNaN(percentageChange)) {
+      return 0
+    }
+    
+    // Batasi ke range yang masuk akal untuk menghindari nilai ekstrem
+    return Math.min(Math.max(percentageChange, -100), 100)
   },
 
   // Round to specified decimal places
@@ -463,7 +484,15 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
       newRegister: rawData.newRegister.new_register,
       pureUser: rawData.pureUser.unique_codes,
       depositCases: rawData.deposit.deposit_cases,
-      purchaseFrequency: KPI_FORMULAS.PURCHASE_FREQUENCY(rawData)
+      purchaseFrequency: KPI_FORMULAS.PURCHASE_FREQUENCY(rawData),
+      // ✅ SIMPLE DEBUG: Check if data is valid
+      dataValidation: {
+        hasActiveMembers: rawData.deposit.active_members > 0,
+        hasNetProfit: rawData.member.net_profit > 0,
+        hasPureUser: rawData.pureUser.unique_codes > 0,
+        canCalculateGgrPerUser: rawData.deposit.active_members > 0 && rawData.member.net_profit > 0,
+        canCalculateGgrPerPureUser: rawData.pureUser.unique_codes > 0 && rawData.member.net_profit > 0
+      }
     })
     
     // 🔍 DEBUG: Check raw data scale - maybe values are too small
@@ -760,9 +789,35 @@ export async function calculateKPIs(filters: SlicerFilters): Promise<KPIData> {
         avgCustomerLifespan
       }
     })
-    const ggrPerUser = KPI_FORMULAS.GGR_USER(rawData)
-    const ggrPerPureUser = KPI_FORMULAS.GGR_PURE_USER(rawData)
+    // ✅ SIMPLE VALIDATION - Pastikan data valid sebelum kalkulasi
+    const ggrPerUser = rawData.deposit.active_members > 0 ? 
+      (rawData.member.net_profit / rawData.deposit.active_members) : 0
+    const ggrPerPureUser = rawData.pureUser.unique_codes > 0 ? 
+      (rawData.member.net_profit / rawData.pureUser.unique_codes) : 0
     const pureMember = KPI_FORMULAS.PURE_MEMBER(rawData)
+
+    // 🔍 DEBUG: Log GGR USER dan PURE USER calculation
+    console.log('🔍 [KPILogic] GGR USER & PURE USER Calculation:', {
+      ggrPerUser: {
+        netProfit: rawData.member.net_profit,
+        activeMembers: rawData.deposit.active_members,
+        result: ggrPerUser,
+        calculation: `${rawData.member.net_profit} / ${rawData.deposit.active_members} = ${ggrPerUser}`,
+        isValid: !isNaN(ggrPerUser) && isFinite(ggrPerUser) && ggrPerUser >= 0
+      },
+      pureUser: {
+        uniqueCodes: rawData.pureUser.unique_codes,
+        result: rawData.pureUser.unique_codes,
+        isValid: !isNaN(rawData.pureUser.unique_codes) && rawData.pureUser.unique_codes >= 0
+      },
+      pureMember: {
+        activeMembers: rawData.deposit.active_members,
+        newDepositor: rawData.newDepositor.new_depositor,
+        result: pureMember,
+        calculation: `${rawData.deposit.active_members} - ${rawData.newDepositor.new_depositor} = ${pureMember}`,
+        isValid: !isNaN(pureMember) && pureMember >= 0
+      }
+    })
 
     // ✅ Step 3: Return formatted KPI data
     const result: KPIData = {
@@ -847,7 +902,7 @@ export async function getAllKPIsWithMoM(filters: SlicerFilters): Promise<{ curre
       month: prevMonth
     })
 
-    // Calculate MoM using centralized formula
+    // Calculate MoM using centralized formula - COMPLETE KPI LIST
     const mom = {
       activeMember: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.activeMember, previousData.activeMember),
       newDepositor: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.newDepositor, previousData.newDepositor),
@@ -855,8 +910,98 @@ export async function getAllKPIsWithMoM(filters: SlicerFilters): Promise<{ curre
       grossGamingRevenue: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.grossGamingRevenue, previousData.grossGamingRevenue),
       netProfit: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.netProfit, previousData.netProfit),
       withdrawAmount: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.withdrawAmount, previousData.withdrawAmount),
+      addTransaction: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.addTransaction, previousData.addTransaction),
+      deductTransaction: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.deductTransaction, previousData.deductTransaction),
+      validBetAmount: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.validBetAmount, previousData.validBetAmount),
+      pureMember: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.pureMember, previousData.pureMember),
+      pureUser: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.pureUser, previousData.pureUser),
+      newRegister: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.newRegister, previousData.newRegister),
+      churnMember: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.churnMember, previousData.churnMember),
+      depositCases: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.depositCases, previousData.depositCases),
+      withdrawCases: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.withdrawCases, previousData.withdrawCases),
+      winrate: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.winrate, previousData.winrate),
+      churnRate: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.churnRate, previousData.churnRate),
+      retentionRate: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.retentionRate, previousData.retentionRate),
+      growthRate: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.growthRate, previousData.growthRate),
+      avgTransactionValue: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.avgTransactionValue, previousData.avgTransactionValue),
+      purchaseFrequency: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.purchaseFrequency, previousData.purchaseFrequency),
+      customerLifetimeValue: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.customerLifetimeValue, previousData.customerLifetimeValue),
+      avgCustomerLifespan: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.avgCustomerLifespan, previousData.avgCustomerLifespan),
+      customerMaturityIndex: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.customerMaturityIndex, previousData.customerMaturityIndex),
+      ggrPerUser: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.ggrPerUser, previousData.ggrPerUser),
+      ggrPerPureUser: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.ggrPerPureUser, previousData.ggrPerPureUser),
+      addBonus: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.addBonus, previousData.addBonus),
+      deductBonus: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.deductBonus, previousData.deductBonus),
+      conversionRate: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.conversionRate, previousData.conversionRate),
+      holdPercentage: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.holdPercentage, previousData.holdPercentage),
       headcount: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.headcount, previousData.headcount)
     }
+
+    // 🔍 DEBUG: Log raw MoM calculation untuk PURE USER
+    console.log('🔍 [KPILogic] PURE USER MoM Debug:', {
+      currentMonth: filters.month,
+      previousMonth: prevMonth,
+      currentYear: filters.year,
+      previousYear: prevYear,
+      pureUser: {
+        current: currentData.pureUser,
+        previous: previousData.pureUser,
+        mom: mom.pureUser,
+        manualCalculation: ((currentData.pureUser - previousData.pureUser) / previousData.pureUser) * 100,
+        expectedResult: 'Should be around 0.99% for your test case'
+      }
+    })
+
+    // ✅ IMPROVED FIX: Handle invalid MoM values for GGR USER and PURE USER
+    if (!isFinite(mom.ggrPerUser) || isNaN(mom.ggrPerUser)) {
+      mom.ggrPerUser = 0
+    }
+    if (!isFinite(mom.pureUser) || isNaN(mom.pureUser)) {
+      mom.pureUser = 0
+    }
+
+    // 🔍 DEBUG: Log MoM calculation untuk GGR USER dan PURE USER dengan formula yang jelas
+    console.log('🔍 [KPILogic] MoM Debug - GGR USER & PURE USER:', {
+      ggrPerUser: {
+        current: currentData.ggrPerUser,
+        previous: previousData.ggrPerUser,
+        mom: mom.ggrPerUser,
+        formula: '(current - previous) / previous * 100',
+        calculation: `(${currentData.ggrPerUser} - ${previousData.ggrPerUser}) / ${previousData.ggrPerUser} * 100 = ${mom.ggrPerUser}%`,
+        rawData: {
+          currentNetProfit: currentData.netProfit,
+          currentActiveMember: currentData.activeMember,
+          previousNetProfit: previousData.netProfit,
+          previousActiveMember: previousData.activeMember
+        },
+        ggrCalculation: {
+          current: `${currentData.netProfit} / ${currentData.activeMember} = ${currentData.ggrPerUser}`,
+          previous: `${previousData.netProfit} / ${previousData.activeMember} = ${previousData.ggrPerUser}`
+        },
+        // ✅ IMPROVED VALIDATION
+        isValid: !isNaN(currentData.ggrPerUser) && !isNaN(previousData.ggrPerUser) && 
+                isFinite(currentData.ggrPerUser) && isFinite(previousData.ggrPerUser) &&
+                currentData.activeMember > 0 && previousData.activeMember > 0
+      },
+      pureUser: {
+        current: currentData.pureUser,
+        previous: previousData.pureUser,
+        mom: mom.pureUser,
+        formula: '(current - previous) / previous * 100',
+        calculation: `(${currentData.pureUser} - ${previousData.pureUser}) / ${previousData.pureUser} * 100 = ${mom.pureUser}%`,
+        // ✅ IMPROVED VALIDATION
+        isValid: !isNaN(currentData.pureUser) && !isNaN(previousData.pureUser) && 
+                currentData.pureUser >= 0 && previousData.pureUser >= 0
+      },
+      netProfit: {
+        current: currentData.netProfit,
+        previous: previousData.netProfit
+      },
+      activeMember: {
+        current: currentData.activeMember,
+        previous: previousData.activeMember
+      }
+    })
 
     return { current: currentData, mom }
 
@@ -873,8 +1018,12 @@ export async function getAllKPIsWithMoM(filters: SlicerFilters): Promise<{ curre
         addBonus: 0, deductBonus: 0, conversionRate: 0, holdPercentage: 0, headcount: 0
       },
       mom: {
-        activeMember: 0, newDepositor: 0, depositAmount: 0,
-        grossGamingRevenue: 0, netProfit: 0, withdrawAmount: 0, headcount: 0
+        activeMember: 0, newDepositor: 0, depositAmount: 0, grossGamingRevenue: 0, netProfit: 0,
+        withdrawAmount: 0, addTransaction: 0, deductTransaction: 0, validBetAmount: 0, pureMember: 0,
+        pureUser: 0, newRegister: 0, churnMember: 0, depositCases: 0, withdrawCases: 0, winrate: 0,
+        churnRate: 0, retentionRate: 0, growthRate: 0, avgTransactionValue: 0, purchaseFrequency: 0,
+        customerLifetimeValue: 0, avgCustomerLifespan: 0, customerMaturityIndex: 0, ggrPerUser: 0,
+        ggrPerPureUser: 0, addBonus: 0, deductBonus: 0, conversionRate: 0, holdPercentage: 0, headcount: 0
       }
     }
   }

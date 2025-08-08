@@ -52,37 +52,49 @@ body {
   position: relative;
 }
 
-/* Container untuk content yang auto adjust - COMPLIANCE WITH RULES */
+/* ===========================================
+   CENTRALIZED SPACING SETTINGS - JARAK ANTAR ELEMENT
+   =========================================== */
+/* JARAK SIDEBAR KE CONTENT */
 .content-container {
   flex: 1;
-  margin-left: 280px; /* Match sidebar width */
+  margin-left: 280px; /* CENTRALIZED: Jarak dari sidebar */
   transition: margin-left 0.3s ease;
   height: 100vh;
   overflow: hidden;
-  /* Auto adjust berdasarkan rules */
-  padding-top: 130px; /* Header (70px) + SubHeader (60px) */
+  padding-top: 130px; /* CENTRALIZED: Jarak dari header + subheader */
   display: flex;
   flex-direction: column;
 }
 
 .content-container.collapsed {
-  margin-left: 100px; /* Match collapsed sidebar width dari rules */
+  margin-left: 100px; /* CENTRALIZED: Jarak dari sidebar collapsed */
 }
 
-/* STANDARD FRAME RULES - Semua page sama */
+/* JARAK ANTAR ELEMENT DALAM FRAME */
 .standard-frame {
   width: 100%;
   height: calc(100vh - 130px);
   display: flex;
   flex-direction: column;
-  gap: 18px; /* Balanced gap */
-  padding: 10px; /* Balanced padding */
-  overflow-y: auto; /* Enable vertical scroll */
-  overflow-x: hidden; /* Hide horizontal scroll */
+  gap: 18px; /* CENTRALIZED: Jarak antar element */
+  padding: 20px; /* CENTRALIZED: Padding frame */
+  overflow-y: auto;
+  overflow-x: hidden;
   grid-template-rows: auto 1fr 1fr;
   min-height: 100%;
   max-height: calc(100vh - 130px);
   position: relative;
+}
+
+/* CENTRALIZED GAP - SEMUA ELEMENT MENGGUNAKAN GAP YANG SAMA */
+.kpi-row,
+.charts-row,
+.charts-grid,
+.dashboard-grid,
+.chart-grid,
+.chart-row {
+  gap: 18px; /* CENTRALIZED: Sama dengan standard-frame gap */
 }
 
 /* FRAME CONTENT - AUTO ADJUST */
@@ -98,14 +110,15 @@ body {
 
 /* Frame variants */
 .standard-frame.compact {
-  gap: 15px;
+  gap: 18px; /* CENTRALIZED: Sama dengan standard-frame gap */
   padding: 20px;
   height: calc(100vh - 150px);
 }
 
 .standard-frame.full {
-  height: 100vh;
+  gap: 18px; /* CENTRALIZED: Sama dengan standard-frame gap */
   padding: 32px;
+  height: 100vh;
 }
 
 /* DASHBOARD SUBHEADER - CENTRALIZED STYLING */
@@ -136,24 +149,20 @@ body {
   color: #374151;
 }
 
-/* RESPONSIVE GRID SYSTEM - CENTRALIZED */
+/* RESPONSIVE GRID SYSTEM - CENTRALIZED GAP */
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 16px;
 }
 
 .chart-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 20px;
 }
 
-/* KPI ROW - COMPACT & DYNAMIC */
-/* KPI ROW - AUTO ADJUST COLUMNS */
+/* KPI ROW - CENTRALIZED GAP */
 .kpi-row {
   display: grid;
-  gap: 16px;
   width: 100%;
   min-height: auto;
   margin-bottom: 0;
@@ -177,14 +186,13 @@ body {
 
 
 
-/* CHARTS ROW - RESPONSIVE & DYNAMIC */
+/* CHARTS ROW - CENTRALIZED GAP */
 .charts-row {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 16px; /* Balanced gap */
   margin-bottom: 0;
   flex: 1;
-  min-height: 200px; /* Reduced height */
+  min-height: 200px;
   height: auto;
   position: relative;
   z-index: 1;
@@ -210,22 +218,20 @@ body {
   overflow: hidden;
 }
 
-/* Responsive chart grid */
+/* Responsive chart grid - CENTRALIZED GAP */
 .charts-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr); /* Keep 2 columns layout */
-  gap: 16px; /* Match KPI row gap */
+  grid-template-columns: repeat(2, 1fr);
   width: 100%;
-  margin-top: 0; /* Remove margin to align with frame */
-  min-height: 0; /* Allow shrinking */
-  flex: 1; /* Take remaining space */
+  margin-top: 0;
+  min-height: 0;
+  flex: 1;
 }
 
 /* Mobile responsive */
 @media (max-width: 768px) {
   .charts-grid {
     grid-template-columns: 1fr; /* Single column on mobile */
-    gap: 16px;
     padding: 0 8px;
   }
   
@@ -237,7 +243,6 @@ body {
   
   .kpi-row {
     margin-bottom: 16px;
-    gap: 8px;
     grid-template-columns: repeat(2, 1fr); /* 2 columns on mobile */
   }
   
@@ -246,7 +251,6 @@ body {
   }
   
   .standard-frame {
-    gap: 20px;
     padding: 8px;
     overflow-y: auto; /* Ensure scroll on mobile */
   }
@@ -262,7 +266,6 @@ body {
 @media (min-width: 769px) and (max-width: 1024px) {
   .charts-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
   }
   
   .chart-container {
@@ -272,7 +275,6 @@ body {
   }
   
   .kpi-row {
-    gap: 8px;
     grid-template-columns: repeat(4, 1fr); /* 4 columns on tablet */
   }
 }
@@ -281,7 +283,6 @@ body {
 @media (min-width: 1025px) {
   .charts-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
   }
   
   .chart-container {
@@ -523,17 +524,14 @@ body {
 @media (max-width: 1600px) {
   .kpi-row {
     grid-template-columns: repeat(6, 1fr);
-    gap: 8px;
   }
   
   .standard-frame {
-    gap: 20px;
     padding: 10px;
   }
   
   .charts-grid {
     grid-template-columns: repeat(2, 1fr); /* Keep 2 columns */
-    gap: 14px;
   }
   
   .chart-container {
@@ -545,17 +543,14 @@ body {
 @media (max-width: 1400px) {
   .kpi-row {
     grid-template-columns: repeat(6, 1fr);
-    gap: 6px;
   }
   
   .standard-frame {
-    gap: 16px;
     padding: 8px;
   }
   
   .charts-grid {
     grid-template-columns: repeat(2, 1fr); /* Keep 2 columns */
-    gap: 12px;
   }
   
   .chart-container {
@@ -567,17 +562,14 @@ body {
 @media (max-width: 1200px) {
   .kpi-row {
     grid-template-columns: repeat(6, 1fr);
-    gap: 4px;
   }
   
   .standard-frame {
-    gap: 12px;
     padding: 6px;
   }
   
   .charts-grid {
     grid-template-columns: repeat(2, 1fr); /* Keep 2 columns */
-    gap: 10px;
   }
   
   .chart-container {
@@ -604,16 +596,15 @@ body {
   
   .kpi-row {
     grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
+    gap: 18px; /* CENTRALIZED: Sama dengan standard-frame gap */
   }
   
   .charts-row {
     grid-template-columns: 1fr;
-    gap: 16px; /* Gap yang cukup untuk mobile */
   }
   
   .standard-frame {
-    gap: 6px;
+    gap: 18px; /* CENTRALIZED: Sama dengan standard-frame gap */
     padding: 6px;
   }
   
@@ -632,11 +623,9 @@ body {
 @media (max-width: 480px) {
   .kpi-row {
     grid-template-columns: repeat(2, 1fr);
-    gap: 6px;
   }
   
   .standard-frame {
-    gap: 12px;
     padding: 12px;
     overflow-y: auto; /* Ensure scroll on very small screens */
   }
@@ -648,7 +637,6 @@ body {
   }
   
   .charts-row {
-    gap: 10px;
     min-height: 200px;
     max-height: 300px;
   }
@@ -664,7 +652,6 @@ body {
 .chart-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 20px;
   flex: 1;
   min-height: 400px;
 }
@@ -1128,18 +1115,27 @@ body {
 
 
 
-/* STAT CARD STYLES - CENTRALIZED */
+/* ===========================================
+   STAT CARD - CENTRALIZED SETTINGS
+   =========================================== */
 .stat-card {
+  /* Basic styling */
   background: white;
   border-radius: 16px;
-  padding: 10px; /* Ubah padding menjadi 10px */
-  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.08), 0 1px 4px 0 rgba(0, 0, 0, 0.04);
   border: 1px solid #e5e7eb;
-  transition: all 0.3s ease;
-  min-height: 120px; /* Kecilkan tinggi */
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.08), 0 1px 4px 0 rgba(0, 0, 0, 0.04);
+  
+  /* Layout */
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center;
+  min-height: 140px;
+  
+  /* Padding settings - CENTRALIZED */
+  padding: 15px; /* Satu setting untuk semua sisi */
+  
+  /* Transitions */
+  transition: all 0.3s ease;
 }
 
 .stat-card:hover {
@@ -1340,9 +1336,7 @@ img {
 }
 
 /* Reduce layout shifts */
-.stat-card {
-  min-height: 120px;
-}
+/* .stat-card definition moved to main stat-card styles above */
 
 /* Smooth scrolling */
 html {

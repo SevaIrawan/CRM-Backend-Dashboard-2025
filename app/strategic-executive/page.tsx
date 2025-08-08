@@ -56,7 +56,9 @@ export default function StrategicExecutive() {
     withdrawAmount: 0,
     grossGamingRevenue: 0,
     netProfit: 0,
-    headcount: 0
+    headcount: 0,
+    ggrPerUser: 0,
+    pureUser: 0
   })
 
   // State untuk Slicers
@@ -230,8 +232,8 @@ export default function StrategicExecutive() {
               value={formatCurrency(kpiData.ggrPerUser)}
               icon="GGR User"
               comparison={{
-                percentage: formatMoM(kpiData.ggrPerUser),
-                isPositive: kpiData.ggrPerUser > 0
+                percentage: formatMoM(momData.ggrPerUser),
+                isPositive: momData.ggrPerUser > 0
               }}
             />
             <StatCard
@@ -248,8 +250,8 @@ export default function StrategicExecutive() {
               value={formatNumber(kpiData.pureUser)}
               icon="Pure User"
               comparison={{
-                percentage: formatMoM(kpiData.pureUser),
-                isPositive: kpiData.pureUser > 0
+                percentage: formatMoM(momData.pureUser),
+                isPositive: momData.pureUser > 0
               }}
             />
             <StatCard
