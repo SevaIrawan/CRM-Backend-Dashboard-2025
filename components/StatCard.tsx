@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { getComparisonColor } from '@/lib/KPILogic'
-import { getKpiIcon, ComparisonIcon } from '@/lib/centralIcons'
+import { getKpiIcon, ComparisonIcon } from '@/lib/CentralIcon'
 
 interface StatCardProps {
   title: string

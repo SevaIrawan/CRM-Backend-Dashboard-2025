@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { ComparisonIcon as CentralComparisonIcon } from '@/lib/centralIcons'
+import { ComparisonIcon as CentralComparisonIcon } from '@/lib/CentralIcon'
 
 interface ComparisonIconProps {
   isPositive: boolean

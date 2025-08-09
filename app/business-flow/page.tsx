@@ -8,7 +8,7 @@ import CurrencySlicer from '../../components/slicers/CurrencySlicer';
 
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import StatCard from '../../components/StatCard';
-import { COMPARISON_TYPES } from '../../lib/centralIcons';
+import { COMPARISON_TYPES } from '../../lib/CentralIcon';
 import {
   Chart as ChartJS,
   CategoryScale,

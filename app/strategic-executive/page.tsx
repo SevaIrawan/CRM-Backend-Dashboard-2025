@@ -10,7 +10,7 @@ import CurrencySlicer from '@/components/slicers/CurrencySlicer'
 import LineChart from '@/components/LineChart'
 import BarChart from '@/components/BarChart'
 import StatCard from '@/components/StatCard'
-import { getChartIcon } from '@/lib/centralIcons'
+import { getChartIcon } from '@/lib/CentralIcon'
 
 export default function StrategicExecutive() {
   
@@ -230,7 +230,7 @@ export default function StrategicExecutive() {
             <StatCard
               title="GGR USER"
               value={formatCurrency(kpiData.ggrPerUser)}
-              icon="GGR User"
+              icon="GGR USER"
               comparison={{
                 percentage: formatMoM(momData.ggrPerUser),
                 isPositive: momData.ggrPerUser > 0

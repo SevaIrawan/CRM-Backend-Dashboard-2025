@@ -10,7 +10,7 @@ import {
   Legend,
 } from 'chart.js';
 import { Bar, Line } from 'react-chartjs-2';
-import { getChartIcon } from '../lib/centralIcons';
+import { getChartIcon } from '../lib/CentralIcon';
 
 ChartJS.register(
   CategoryScale,

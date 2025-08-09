@@ -10,7 +10,7 @@ import {
   Legend,
   Filler
 } from 'chart.js';
-import { getChartIcon } from '../lib/centralIcons';
+import { getChartIcon } from '../lib/CentralIcon';
 
 ChartJS.register(
   CategoryScale,
@@ -139,6 +139,13 @@ export default function LineChart({
       datasetLabel.toLowerCase().includes('pure user')
     );
     
+    // Check if this is Customer Value Per Headcount or Customer Count vs Headcount
+    const isCustomerValuePerHeadcount = datasetLabel && (
+      datasetLabel.toLowerCase().includes('customer value per headcount') ||
+      datasetLabel.toLowerCase().includes('active member') ||
+      datasetLabel.toLowerCase().includes('headcount')
+    );
+    
     if (isPercentageType) {
       // For percentage - show % symbol
       return value.toFixed(1) + '%';
@@ -154,6 +161,14 @@ export default function LineChart({
          return `${symbol} ${Math.round(value / 1000)}K`;
        }
        return `${symbol} ${Math.round(value)}`;
+    } else if (isCustomerValuePerHeadcount) {
+      // For Customer Value Per Headcount and Customer Count vs Headcount - round up to nearest integer
+      if (value >= 1000000) {
+        return Math.ceil(value / 1000000) + 'M';
+      } else if (value >= 1000) {
+        return Math.ceil(value / 1000) + 'K';
+      }
+      return Math.ceil(value).toLocaleString();
     } else if (isCountType) {
       // For count/integer - no currency symbol
       if (value >= 1000000) {
@@ -221,6 +236,13 @@ export default function LineChart({
       datasetLabel.toLowerCase().includes('pure user')
     );
     
+    // Check if this is Customer Value Per Headcount or Customer Count vs Headcount
+    const isCustomerValuePerHeadcount = datasetLabel && (
+      datasetLabel.toLowerCase().includes('customer value per headcount') ||
+      datasetLabel.toLowerCase().includes('active member') ||
+      datasetLabel.toLowerCase().includes('headcount')
+    );
+    
     if (isPercentageType) {
       // For percentage - show % symbol with full precision
       return value.toFixed(2) + '%';
@@ -231,6 +253,9 @@ export default function LineChart({
        // For GGR - show with currency symbol and NO decimal places for tooltip
        const symbol = getCurrencySymbol(currency);
        return `${symbol} ${Math.round(value)}`;
+    } else if (isCustomerValuePerHeadcount) {
+      // For Customer Value Per Headcount and Customer Count vs Headcount - round up to nearest integer
+      return Math.ceil(value).toLocaleString() + ' persons';
     } else if (isCountType) {
       // For count/integer - no currency symbol, full number
       return value.toLocaleString() + ' persons';
@@ -586,10 +611,10 @@ export default function LineChart({
                  backgroundColor: '#ffffff',
                  border: '1px solid #ffffff'
                }}>
-                                 <Line 
-                   data={data} 
+                <Line 
+                  data={data} 
                    options={options}
-                 />
+                />
               </div>
             )
           } catch (error) {
