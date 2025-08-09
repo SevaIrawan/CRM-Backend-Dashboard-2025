@@ -62,7 +62,6 @@ export default function StatCard({
             <ComparisonIcon 
               isPositive={comparison.isPositive}
               size={`${comparisonSize}px`}
-              color={getComparisonColor(comparison.isPositive ? 1 : -1)}
             />
             {comparison.percentage} {comparison.text || 'MoM'}
           </span>
