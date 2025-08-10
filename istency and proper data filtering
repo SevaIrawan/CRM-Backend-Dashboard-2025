@@ -1,0 +1,84 @@
+warning: in the working copy of 'app/dashboard/page.tsx', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/app/dashboard/page.tsx b/app/dashboard/page.tsx[m
+[1mindex 6a6d355..35912c8 100644[m
+[1m--- a/app/dashboard/page.tsx[m
+[1m+++ b/app/dashboard/page.tsx[m
+[36m@@ -371,27 +371,29 @@[m [mexport default function Dashboard() {[m
+ [m
+   const formatCurrency = (amount: number, currency?: string) => {[m
+     const currentCurrency = currency || selectedCurrency[m
+[32m+[m[32m    let symbol: string[m
+     [m
+[31m-    if (currentCurrency === 'MYR') {[m
+[31m-      return `RM ${new Intl.NumberFormat('en-US', {[m
+[31m-        minimumFractionDigits: 0,[m
+[31m-        maximumFractionDigits: 0[m
+[31m-      }).format(amount)}`[m
+[32m+[m[32m    switch (currentCurrency) {[m
+[32m+[m[32m      case 'MYR':[m
+[32m+[m[32m        symbol = 'RM'[m
+[32m+[m[32m        break[m
+[32m+[m[32m      case 'SGD':[m
+[32m+[m[32m        symbol = 'SGD'[m
+[32m+[m[32m        break[m
+[32m+[m[32m      case 'USC':[m
+[32m+[m[32m        symbol = 'USD'[m
+[32m+[m[32m        break[m
+[32m+[m[32m      case 'ALL':[m
+[32m+[m[32m        symbol = 'RM'[m
+[32m+[m[32m        break[m
+[32m+[m[32m      default:[m
+[32m+[m[32m        symbol = 'RM'[m
+     }[m
+     [m
+[31m-    const currencyMap: { [key: string]: string } = {[m
+[31m-      'SGD': 'SGD', [m
+[31m-      'KHR': 'USD'[m
+[31m-    }[m
+[31m-    [m
+[31m-    const currencyCode = currencyMap[currentCurrency] || 'USD'[m
+[31m-    [m
+[31m-    return new Intl.NumberFormat('en-US', {[m
+[31m-      style: 'currency',[m
+[31m-      currency: currencyCode,[m
+[32m+[m[32m    return `${symbol} ${new Intl.NumberFormat('en-US', {[m
+       minimumFractionDigits: 0,[m
+       maximumFractionDigits: 0[m
+[31m-    }).format(amount)[m
+[32m+[m[32m    }).format(amount)}`[m
+   }[m
+ [m
+   const formatNumber = (num: number) => {[m
+[36m@@ -634,9 +636,27 @@[m [mexport default function Dashboard() {[m
+             </div>[m
+           </div>[m
+         </div>[m
+[31m-        </div>[m
+ [m
+[31m-      </Frame>[m
+[31m-    </Layout>[m
+[31m-  )[m
+[32m+[m[32m        {/* Slicer Info */}[m
+[32m+[m[32m        <div style={{[m
+[32m+[m[32m          background: '#f3f4f6',[m
+[32m+[m[32m          padding: '16px',[m
+[32m+[m[32m          borderRadius: '8px',[m
+[32m+[m[32m          border: '1px solid #e5e7eb',[m
+[32m+[m[32m          textAlign: 'center',[m
+[32m+[m[32m          marginTop: '20px'[m
+[32m+[m[32m        }}>[m
+[32m+[m[32m          <p style={{[m
+[32m+[m[32m            margin: 0,[m
+[32m+[m[32m            color: '#374151',[m
+[32m+[m[32m            fontSize: '14px',[m
+[32m+[m[32m            fontWeight: '500'[m
+[32m+[m[32m          }}>[m
+[32m+[m[32m            Showing data for: {selectedYear} | {selectedMonth} | {selectedCurrency}[m
+[32m+[m[32m          </p>[m
+[32m+[m[32m        </div>[m
+[32m+[m[32m      </div>[m
+[32m+[m[32m    </Frame>[m
+[32m+[m[32m  </Layout>[m
+[32m+[m[32m)[m
+ }[m
+\ No newline at end of file[m

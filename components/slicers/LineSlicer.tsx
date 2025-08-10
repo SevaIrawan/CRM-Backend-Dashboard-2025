@@ -39,7 +39,7 @@ export default function LineSlicer({ lines, selectedLine, onLineChange, disabled
         borderLeft: '1px solid #e5e7eb'
       }}
     >
-      <option value="All">All</option>
+      <option value="ALL">All</option>
       {lines.map((line) => (
         <option key={line} value={line}>
           {line}

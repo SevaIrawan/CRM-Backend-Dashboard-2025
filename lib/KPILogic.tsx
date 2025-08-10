@@ -318,7 +318,7 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
           .eq('month', filters.month)
           .eq('currency', filters.currency)
          
-        if (filters.line) {
+        if (filters.line && filters.line !== 'ALL') {
           query = query.eq('line', filters.line)
         }
          
@@ -334,7 +334,7 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
           .eq('month', filters.month)
           .eq('currency', filters.currency)
          
-        if (filters.line) {
+        if (filters.line && filters.line !== 'ALL') {
           query = query.eq('line', filters.line)
         }
          
@@ -350,7 +350,7 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
           .eq('month', filters.month)
           .eq('currency', filters.currency)
          
-        if (filters.line) {
+        if (filters.line && filters.line !== 'ALL') {
           query = query.eq('line', filters.line)
         }
          
@@ -369,7 +369,7 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
           .eq('month', filters.month)
           .eq('currency', filters.currency)
          
-        if (filters.line) {
+        if (filters.line && filters.line !== 'ALL') {
           query = query.eq('line', filters.line)
         }
          
@@ -559,7 +559,7 @@ async function getChurnMembers(filters: SlicerFilters): Promise<number> {
         .eq('month', prevMonth)
         .eq('currency', filters.currency)
       
-      if (filters.line) {
+      if (filters.line && filters.line !== 'ALL') {
         query = query.eq('line', filters.line)
       }
       
@@ -579,7 +579,7 @@ async function getChurnMembers(filters: SlicerFilters): Promise<number> {
         .eq('month', filters.month)
         .eq('currency', filters.currency)
       
-      if (filters.line) {
+      if (filters.line && filters.line !== 'ALL') {
         query = query.eq('line', filters.line)
       }
       

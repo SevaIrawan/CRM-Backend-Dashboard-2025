@@ -131,12 +131,30 @@ export default function SalesRevenuePage() {
 
   const formatCurrency = (value: number | null | undefined, currency: string): string => {
     if (value === null || value === undefined) return '0';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(value);
+    
+    let symbol: string
+    
+    switch (currency) {
+      case 'MYR':
+        symbol = 'RM'
+        break
+      case 'SGD':
+        symbol = 'SGD'
+        break
+      case 'USC':
+        symbol = 'USD'
+        break
+      case 'ALL':
+        symbol = 'RM'
+        break
+      default:
+        symbol = 'RM'
+    }
+    
+    return `${symbol} ${new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(value)}`
   };
 
   const formatNumber = (value: number | null | undefined): string => {

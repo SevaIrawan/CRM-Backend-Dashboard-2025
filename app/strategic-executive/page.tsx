@@ -144,11 +144,17 @@ export default function StrategicExecutive() {
       case 'USC':
         symbol = 'USD'
         break
+      case 'ALL':
+        symbol = 'RM'
+        break
       default:
         symbol = 'RM'
     }
     
-    return `${symbol} ${amount.toLocaleString()}`
+    return `${symbol} ${new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount)}`
   }
 
   const formatNumber = (num: number) => {
@@ -391,8 +397,27 @@ export default function StrategicExecutive() {
               </div>
             </div>
           </div>
-       </div>
-     </Frame>
-   </Layout>
- )
+
+          {/* Slicer Info */}
+          <div style={{
+            background: '#f3f4f6',
+            padding: '16px',
+            borderRadius: '8px',
+            border: '1px solid #e5e7eb',
+            textAlign: 'center',
+            marginTop: '20px'
+          }}>
+            <p style={{
+              margin: 0,
+              color: '#374151',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}>
+              Showing data for: {selectedYear} | {selectedMonth} | {selectedCurrency}
+            </p>
+          </div>
+        </div>
+      </Frame>
+    </Layout>
+  )
 } 

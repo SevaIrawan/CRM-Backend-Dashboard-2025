@@ -371,27 +371,29 @@ export default function Dashboard() {
 
   const formatCurrency = (amount: number, currency?: string) => {
     const currentCurrency = currency || selectedCurrency
+    let symbol: string
     
-    if (currentCurrency === 'MYR') {
-      return `RM ${new Intl.NumberFormat('en-US', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-      }).format(amount)}`
+    switch (currentCurrency) {
+      case 'MYR':
+        symbol = 'RM'
+        break
+      case 'SGD':
+        symbol = 'SGD'
+        break
+      case 'USC':
+        symbol = 'USD'
+        break
+      case 'ALL':
+        symbol = 'RM'
+        break
+      default:
+        symbol = 'RM'
     }
     
-    const currencyMap: { [key: string]: string } = {
-      'SGD': 'SGD', 
-      'KHR': 'USD'
-    }
-    
-    const currencyCode = currencyMap[currentCurrency] || 'USD'
-    
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currencyCode,
+    return `${symbol} ${new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
-    }).format(amount)
+    }).format(amount)}`
   }
 
   const formatNumber = (num: number) => {
@@ -634,9 +636,27 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-        </div>
 
-      </Frame>
-    </Layout>
-  )
+        {/* Slicer Info */}
+        <div style={{
+          background: '#f3f4f6',
+          padding: '16px',
+          borderRadius: '8px',
+          border: '1px solid #e5e7eb',
+          textAlign: 'center',
+          marginTop: '20px'
+        }}>
+          <p style={{
+            margin: 0,
+            color: '#374151',
+            fontSize: '14px',
+            fontWeight: '500'
+          }}>
+            Showing data for: {selectedYear} | {selectedMonth} | {selectedCurrency}
+          </p>
+        </div>
+      </div>
+    </Frame>
+  </Layout>
+)
 }
