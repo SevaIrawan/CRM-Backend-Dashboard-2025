@@ -262,8 +262,8 @@ export default function LineChart({
       // For count/integer - no currency symbol, formatted number with commas
       return value.toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' persons';
     } else if (isMaturityIndex) {
-      // For maturity index - formatted number without currency, with commas
-      return value.toLocaleString('en-US', { maximumFractionDigits: 0 });
+      // For maturity index - show as percentage with 2 decimal places
+      return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
     } else if (isAmountType) {
       // For amount/currency - with currency symbol, formatted number with commas
       const symbol = getCurrencySymbol(currency);
@@ -418,6 +418,17 @@ export default function LineChart({
                  return value + '%';
                }
                
+               // Check if this is Customer Maturity Index (special case - show as percentage)
+               const isMaturityIndex = firstSeries && firstSeries.name && (
+                 firstSeries.name.toLowerCase().includes('maturity') ||
+                 firstSeries.name.toLowerCase().includes('index')
+               );
+               
+               if (isMaturityIndex) {
+                 // For CMI - show as percentage with 2 decimal places
+                 return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+               }
+               
                // Check if this is CLV chart
                const isCLVChart = firstSeries && firstSeries.name && (
                  firstSeries.name.toLowerCase().includes('lifetime') ||
@@ -464,6 +475,17 @@ export default function LineChart({
                const secondSeries = series && series[1];
                if (secondSeries && secondSeries.name && secondSeries.name.toLowerCase().includes('rate')) {
                  return value + '%';
+               }
+               
+               // Check if this is Customer Maturity Index (second series - special case - show as percentage)
+               const isMaturityIndex = secondSeries && secondSeries.name && (
+                 secondSeries.name.toLowerCase().includes('maturity') ||
+                 secondSeries.name.toLowerCase().includes('index')
+               );
+               
+               if (isMaturityIndex) {
+                 // For CMI - show as percentage with 2 decimal places
+                 return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
                }
                
                // Check if this is CLV chart (second series)
