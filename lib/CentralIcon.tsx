@@ -224,7 +224,9 @@ export function getChartIcon(chartName: string): string {
   const iconMap: { [key: string]: string } = {
     // Existing chart icons
     'Retention vs Churn Rate': KPI_ICONS.retentionChurnChart,
+    'CLV vs Purchase Frequency': KPI_ICONS.customerMetricsChart,
     'Customer Metrics': KPI_ICONS.customerMetricsChart,
+    'Growth vs Profitability': KPI_ICONS.growthProfitabilityChart,
     'Growth & Profitability': KPI_ICONS.growthProfitabilityChart,
     'Operational Efficiency': KPI_ICONS.operationalEfficiencyChart,
     
@@ -245,8 +247,11 @@ export function getChartIcon(chartName: string): string {
     'Net Profit': KPI_ICONS.netProfit,
     'GGR User': KPI_ICONS.ggrUser,
     'GGR Pure User': KPI_ICONS.ggrPureUser,
+    'GGR USER TREND': KPI_ICONS.ggrUser,
+    'GGR PURE USER TREND': KPI_ICONS.ggrPureUser,
     'Customer Value': KPI_ICONS.customerValue,
     'Customer Count': KPI_ICONS.customerCount,
+    'HEADCOUNT BY DEPARTMENT': KPI_ICONS.headcountByDepartment,
     
     // Default fallback
     'default': KPI_ICONS.retentionChurnChart

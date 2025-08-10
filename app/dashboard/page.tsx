@@ -1,14 +1,13 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { getSlicerData, getAllKPIsWithMoM, getLineChartData, getBarChartData, SlicerFilters, SlicerData, KPIData } from '@/lib/KPILogic'
+import { getSlicerData, getAllKPIsWithMoM, getDashboardChartData, SlicerFilters, SlicerData, KPIData } from '@/lib/KPILogic'
 import Layout from '@/components/Layout'
 import Frame from '@/components/Frame'
 import YearSlicer from '@/components/slicers/YearSlicer'
 import MonthSlicer from '@/components/slicers/MonthSlicer'
 import CurrencySlicer from '@/components/slicers/CurrencySlicer'
 import LineChart from '@/components/LineChart'
-
 import StatCard from '@/components/StatCard'
 import { getChartIcon } from '@/lib/CentralIcon'
 
@@ -75,7 +74,6 @@ export default function Dashboard() {
   
   // Chart data states
   const [lineChartData, setLineChartData] = useState<any>(null)
-  const [barChartData, setBarChartData] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [chartError, setChartError] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -100,145 +98,36 @@ export default function Dashboard() {
           console.log('📊 [Dashboard] Slicer data loaded:', slicerData)
           setSlicerData(slicerData)
           
-          // Load KPI data
-          const filters: SlicerFilters = {
+          // Load KPI data with MoM
+          const kpiDataWithMoM = await getAllKPIsWithMoM({
             year: selectedYear,
             month: selectedMonth,
-            currency: selectedCurrency,
-            line: ''
-          }
-          
-          const kpiResult = await getAllKPIsWithMoM(filters)
-          console.log('📈 [Dashboard] KPI data loaded:', kpiResult)
-          setKpiData(kpiResult.current)
-          setMomData(kpiResult.mom)
+            currency: selectedCurrency
+          })
+          console.log('📈 [Dashboard] KPI data loaded:', kpiDataWithMoM)
+          setKpiData(kpiDataWithMoM.current)
+          setMomData(kpiDataWithMoM.mom)
           
           // Load chart data
-          const lineData = await getLineChartData(filters)
-          console.log('📊 [Dashboard] Line chart data loaded:', lineData)
-          setLineChartData(lineData)
+          const chartData = await getDashboardChartData({
+            year: selectedYear,
+            month: selectedMonth,
+            currency: selectedCurrency
+          })
           
-          const barData = await getBarChartData(filters)
-          console.log('📊 [Dashboard] Bar chart data loaded:', barData)
-          setBarChartData(barData)
+          console.log('📊 [Dashboard] Chart data loaded:', chartData)
+          setLineChartData(chartData)
+          
+          setIsLoading(false)
         }
         
-        // Race antara timeout dan data loading
+        // Race between data loading and timeout
         await Promise.race([dataPromise(), timeoutPromise])
-        
-        setIsLoading(false)
-        console.log('✅ [Dashboard] All data loaded successfully')
         
       } catch (error) {
         console.error('❌ [Dashboard] Error loading data:', error)
-        
-        // Jika timeout atau error, gunakan fallback data
-        if (error instanceof Error && error.message.includes('timeout')) {
-          console.log('⏰ [Dashboard] Using fallback data due to timeout')
-          setSlicerData({
-            years: ['2025'],
-            months: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
-            currencies: ['MYR', 'SGD', 'USC'],
-            lines: []
-          })
-          
-          // Set fallback KPI data
-          setKpiData({
-            activeMember: 1250,
-            newDepositor: 85,
-            depositAmount: 2500000,
-            grossGamingRevenue: 1800000,
-            netProfit: 720000,
-            withdrawAmount: 1200000,
-            addTransaction: 1800,
-            deductTransaction: 1200,
-            validBetAmount: 15000000,
-            pureMember: 980,
-            pureUser: 750,
-            newRegister: 120,
-            churnMember: 45,
-            depositCases: 320,
-            withdrawCases: 280,
-            winrate: 0.85,
-            churnRate: 0.12,
-            retentionRate: 0.88,
-            growthRate: 0.15,
-            avgTransactionValue: 850,
-            purchaseFrequency: 8.5,
-            customerLifetimeValue: 1850,
-            avgCustomerLifespan: 18,
-            customerMaturityIndex: 0.75,
-            ggrPerUser: 1440,
-            ggrPerPureUser: 2400,
-            addBonus: 180000,
-            deductBonus: 45000,
-            conversionRate: 0.68,
-            holdPercentage: 0.28,
-            headcount: 45
-          })
-          
-          setMomData({
-            activeMember: 5.2,
-            newDepositor: 8.7,
-            depositAmount: 12.3,
-            withdrawAmount: 9.8,
-            grossGamingRevenue: 15.6,
-            netProfit: 18.9,
-            holdPercentage: 2.1,
-            conversionRate: 3.4,
-            churnRate: -2.3
-          })
-          
-          // Set fallback chart data
-          setLineChartData({
-            success: true,
-            retentionChurnTrend: {
-              series: [
-                { name: 'Retention Rate', data: [85, 87, 89, 91, 93, 95] },
-                { name: 'Churn Rate', data: [15, 13, 11, 9, 7, 5] }
-              ],
-              categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
-            },
-            customerMetricsTrend: {
-              series: [
-                { name: 'Customer Lifetime Value', data: [1200, 1350, 1500, 1650, 1800, 1950] },
-                { name: 'Purchase Frequency', data: [6, 7, 8, 9, 10, 11] }
-              ],
-              categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
-            },
-            growthProfitabilityAnalysis: {
-              series: [
-                { name: 'Net Profit', data: [450000, 520000, 580000, 650000, 720000, 800000] },
-                { name: 'New Depositor', data: [120, 135, 150, 165, 180, 195] }
-              ],
-              categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
-            },
-            operationalEfficiencyTrend: {
-              series: [
-                { name: 'Income', data: [800000, 850000, 900000, 950000, 1000000, 1050000] },
-                { name: 'Cost', data: [500000, 520000, 540000, 560000, 580000, 600000] }
-              ],
-              categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
-            }
-          })
-          
-          setBarChartData({
-            success: true,
-            headcountByDepartment: {
-              series: [
-                { name: 'CSS', data: [12, 15, 18, 20, 22, 25] },
-                { name: 'SR', data: [8, 10, 12, 14, 16, 18] },
-                { name: 'Cashier', data: [6, 8, 10, 12, 14, 16] }
-              ],
-              categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
-            }
-          })
-          
-          setIsLoading(false)
-        } else {
-          setLoadError(error instanceof Error ? error.message : 'Failed to load data')
-          setIsLoading(false)
-        }
+        setLoadError(error instanceof Error ? error.message : 'Unknown error occurred')
+        setIsLoading(false)
       }
     }
 
@@ -407,7 +296,6 @@ export default function Dashboard() {
   return (
     <Layout
       pageTitle="Dashboard"
-
       customSubHeader={
         <div className="dashboard-subheader">
           <div className="subheader-title">
@@ -444,16 +332,19 @@ export default function Dashboard() {
         </div>
       }
     >
-      <Frame>
-        {/* Content Container - StatCard and Chart Canvas */}
+      <Frame variant="standard">
+        {/* Content Container with proper spacing and scroll */}
         <div style={{
           display: 'flex',
           flexDirection: 'column',
           gap: '20px',
-          marginTop: '20px'
+          marginTop: '20px',
+          height: 'calc(100vh - 200px)',
+          overflowY: 'auto',
+          paddingRight: '8px'
         }}>
-          {/* KPI Row - Updated with 6 New KPIs */}
-          <div className="kpi-row" style={{ gridTemplateColumns: 'repeat(6, 1fr)' }}>
+          {/* BARIS 1: KPI CARDS (STANDARD ROW) */}
+          <div className="kpi-row">
             <StatCard
               title="DEPOSIT AMOUNT"
               value={formatCurrency(kpiData.depositAmount)}
@@ -505,158 +396,186 @@ export default function Dashboard() {
               icon="Churn Rate"
               comparison={{
                 percentage: formatMoM(momData.churnRate),
-                isPositive: momData.churnRate < 0 // Churn rate lower is better
+                isPositive: momData.churnRate > 0
               }}
             />
           </div>
 
-          {/* Single Canvas for 4 Charts - 2 Rows */}
-          <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '12px',
-            padding: '16px',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
-          }}>
-          {/* Row 1: Chart 1 & 2 */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '16px',
-            marginBottom: '16px'
-          }}>
-            {/* Chart 1: Retention vs Churn Rate */}
-            <div style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '8px',
-              padding: '16px',
-              minHeight: '300px',
-              transition: 'all 0.3s ease',
-              cursor: 'pointer'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-              e.currentTarget.style.transform = 'translateY(-2px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = 'none';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}>
-              <LineChart
-                series={lineChartData?.retentionChurnTrend?.series || []}
-                categories={lineChartData?.retentionChurnTrend?.categories || []}
-                title="Retention vs Churn Rate"
-                chartIcon={getChartIcon('Retention vs Churn Rate')}
-                currency={selectedCurrency}
-              />
-            </div>
+          {/* Row 2: Financial Performance Charts */}
+          <div className="chart-row">
+            <LineChart
+              series={[
+                { name: 'Retention Rate', data: lineChartData?.retentionRateTrend?.series?.[0]?.data || [] },
+                { name: 'Churn Rate', data: lineChartData?.churnRateTrend?.series?.[0]?.data || [] }
+              ]}
+              categories={lineChartData?.retentionRateTrend?.categories || []}
+              title="RETENTION VS CHURN RATE"
+              currency={selectedCurrency}
+              chartIcon={getChartIcon('Retention vs Churn Rate')}
 
-            {/* Chart 2: CLV vs Purchase Frequency */}
-            <div style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '8px',
-              padding: '16px',
-              minHeight: '300px',
-              transition: 'all 0.3s ease',
-              cursor: 'pointer'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-              e.currentTarget.style.transform = 'translateY(-2px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = 'none';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}>
-              <LineChart
-                series={lineChartData?.customerMetricsTrend?.series || []}
-                categories={lineChartData?.customerMetricsTrend?.categories || []}
-                title="CLV vs Purchase Frequency"
-                chartIcon={getChartIcon('CLV vs Purchase Frequency')}
-                currency={selectedCurrency}
-              />
-            </div>
+            />
+            <LineChart
+              series={[
+                { name: 'Customer Lifetime Value', data: lineChartData?.customerLifetimeValueTrend?.series?.[0]?.data || [] },
+                { name: 'Purchase Frequency', data: lineChartData?.purchaseFrequencyTrend?.series?.[0]?.data || [] }
+              ]}
+              categories={lineChartData?.customerLifetimeValueTrend?.categories || []}
+              title="CLV VS PURCHASE FREQUENCY"
+              currency={selectedCurrency}
+              chartIcon={getChartIcon('CLV vs Purchase Frequency')}
+            />
           </div>
 
-          {/* Row 2: Chart 3 & 4 */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '24px'
-          }}>
-            {/* Chart 3: Growth vs Profitability */}
-            <div style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '8px',
-              padding: '16px',
-              minHeight: '300px',
-              transition: 'all 0.3s ease',
-              cursor: 'pointer'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-              e.currentTarget.style.transform = 'translateY(-2px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = 'none';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}>
-              <LineChart
-                series={lineChartData?.growthProfitabilityAnalysis?.series || []}
-                categories={lineChartData?.growthProfitabilityAnalysis?.categories || []}
-                title="Growth vs Profitability"
-                chartIcon={getChartIcon('Growth vs Profitability')}
-                currency={selectedCurrency}
-              />
-            </div>
+          {/* Row 3: Advanced Analytics Charts */}
+          <div className="chart-row">
+            <LineChart
+              series={[
+                { name: 'Net Profit', data: lineChartData?.netProfitTrend?.series?.[0]?.data || [] },
+                { name: 'New Depositor', data: lineChartData?.newDepositorTrend?.series?.[0]?.data || [] }
+              ]}
+              categories={lineChartData?.netProfitTrend?.categories || []}
+              title="GROWTH VS PROFITABILITY"
+              currency={selectedCurrency}
+              chartIcon={getChartIcon('Growth vs Profitability')}
+            />
+            <LineChart
+              series={[
+                { name: 'Income', data: lineChartData?.incomeTrend?.series?.[0]?.data || [] },
+                { name: 'Cost', data: lineChartData?.costTrend?.series?.[0]?.data || [] }
+              ]}
+              categories={lineChartData?.incomeTrend?.categories || []}
+              title="OPERATIONAL EFFICIENCY"
+              currency={selectedCurrency}
+              chartIcon={getChartIcon('Operational Efficiency')}
+            />
+          </div>
 
-            {/* Chart 4: Operational Efficiency */}
-            <div style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '8px',
-              padding: '16px',
-              minHeight: '300px',
-              transition: 'all 0.3s ease',
-              cursor: 'pointer'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-              e.currentTarget.style.transform = 'translateY(-2px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = 'none';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}>
-              <LineChart
-                series={lineChartData?.operationalEfficiencyTrend?.series || []}
-                categories={lineChartData?.operationalEfficiencyTrend?.categories || []}
-                title="Operational Efficiency"
-                chartIcon={getChartIcon('Operational Efficiency')}
-                currency={selectedCurrency}
-              />
-            </div>
+          {/* Slicer Info */}
+          <div className="slicer-info">
+            <p>Showing data for: {selectedYear} | {selectedMonth} | {selectedCurrency}</p>
           </div>
         </div>
+      </Frame>
 
-        {/* Slicer Info */}
-        <div style={{
-          background: '#f3f4f6',
-          padding: '16px',
-          borderRadius: '8px',
-          border: '1px solid #e5e7eb',
-          textAlign: 'center',
-          marginTop: '20px'
-        }}>
-          <p style={{
-            margin: 0,
-            color: '#374151',
-            fontSize: '14px',
-            fontWeight: '500'
-          }}>
-            Showing data for: {selectedYear} | {selectedMonth} | {selectedCurrency}
-          </p>
-        </div>
-      </div>
-    </Frame>
-  </Layout>
-)
-}
+      <style jsx>{`
+        .loading-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 400px;
+          gap: 16px;
+        }
+
+        .error-container {
+          text-align: center;
+          padding: 48px;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .kpi-row {
+          display: grid;
+          grid-template-columns: repeat(6, 1fr);
+          gap: 20px;
+          margin-bottom: 20px;
+        }
+
+        .chart-row {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 20px;
+          margin-bottom: 20px;
+        }
+
+        .chart-row:last-of-type {
+          margin-bottom: 0;
+        }
+
+        .chart-container {
+          background: #ffffff;
+          border-radius: 12px;
+          padding: 24px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+          border: 1px solid #e5e7eb;
+          min-height: 300px;
+        }
+
+        .chart-header {
+          margin-bottom: 20px;
+          text-align: center;
+        }
+
+        .chart-header h3 {
+          margin: 0 0 8px 0;
+          color: #1f2937;
+          font-size: 18px;
+          font-weight: 600;
+        }
+
+        .chart-header p {
+          margin: 0;
+          color: #6b7280;
+          font-size: 14px;
+        }
+
+        .chart-placeholder {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 200px;
+          color: #6b7280;
+          font-size: 16px;
+          text-align: center;
+          background: #f9fafb;
+          border-radius: 8px;
+          border: 2px dashed #d1d5db;
+        }
+
+        .slicer-info {
+          background: #f3f4f6;
+          padding: 16px;
+          border-radius: 8px;
+          border: 1px solid #e5e7eb;
+          text-align: center;
+          margin-top: 20px;
+        }
+
+        .slicer-info p {
+          margin: 0;
+          color: #6b7280;
+          font-size: 14px;
+        }
+
+        @media (max-width: 1440px) {
+          .chart-row {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+
+        @media (max-width: 1024px) {
+          .kpi-row {
+            grid-template-columns: repeat(3, 1fr);
+          }
+          
+          .chart-row {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .kpi-row {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+
+        @media (max-width: 480px) {
+          .kpi-row {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
+    </Layout>
+  )
+} 
