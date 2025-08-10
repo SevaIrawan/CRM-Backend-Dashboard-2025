@@ -271,131 +271,72 @@ export default function StrategicExecutive() {
             />
           </div>
 
-          {/* Canvas untuk Row 2, 3, 4 - Semua Chart */}
-          <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '12px',
-            padding: '16px',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+          {/* Row 2: 2 Line Charts */}
+          <div className="charts-row" style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '16px',
             marginBottom: '20px'
           }}>
-            {/* Row 2: 2 Line Charts */}
-            <div className="charts-row" style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '16px',
-              marginBottom: '20px'
-            }}>
-              {/* Chart 1: GGR User Trend */}
-              <div className="chart-container"
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = 'none';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}>
-                <LineChart
-                  series={lineChartData?.ggrUserTrend?.series || []}
-                  categories={lineChartData?.ggrUserTrend?.categories || []}
-                  title="GGR USER TREND"
-                  chartIcon={getChartIcon('GGR USER TREND')}
-                  currency={selectedCurrency}
-                />
-              </div>
+            {/* Chart 1: GGR User Trend */}
+            <LineChart
+              series={lineChartData?.ggrUserTrend?.series || []}
+              categories={lineChartData?.ggrUserTrend?.categories || []}
+              title="GGR USER TREND"
+              chartIcon={getChartIcon('GGR USER TREND')}
+              currency={selectedCurrency}
+            />
 
-              {/* Chart 2: GGR Pure User Trend */}
-              <div className="chart-container"
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = 'none';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}>
-                <LineChart
-                  series={lineChartData?.ggrPureUserTrend?.series || []}
-                  categories={lineChartData?.ggrPureUserTrend?.categories || []}
-                  title="GGR PURE USER TREND"
-                  chartIcon={getChartIcon('GGR PURE USER TREND')}
-                  currency={selectedCurrency}
-                />
-              </div>
-            </div>
+            {/* Chart 2: GGR Pure User Trend */}
+            <LineChart
+              series={lineChartData?.ggrPureUserTrend?.series || []}
+              categories={lineChartData?.ggrPureUserTrend?.categories || []}
+              title="GGR PURE USER TREND"
+              chartIcon={getChartIcon('GGR PURE USER TREND')}
+              currency={selectedCurrency}
+            />
+          </div>
 
-            {/* Row 3: 2 Line Charts */}
-            <div className="charts-row" style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '16px',
-              marginBottom: '20px'
-            }}>
-              {/* Chart 3: Customer Value Per Headcount */}
-              <div className="chart-container"
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = 'none';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}>
-                <LineChart
-                  series={lineChartData?.customerValuePerHeadcount?.series || []}
-                  categories={lineChartData?.customerValuePerHeadcount?.categories || []}
-                  title="CUSTOMER VALUE PER HEADCOUNT"
-                  chartIcon={getChartIcon('Customer Value')}
-                  currency={selectedCurrency}
-                />
-              </div>
+          {/* Row 3: 2 Line Charts */}
+          <div className="charts-row" style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '16px',
+            marginBottom: '20px'
+          }}>
+            {/* Chart 3: Customer Value Per Headcount */}
+            <LineChart
+              series={lineChartData?.customerValuePerHeadcount?.series || []}
+              categories={lineChartData?.customerValuePerHeadcount?.categories || []}
+              title="CUSTOMER VALUE PER HEADCOUNT"
+              chartIcon={getChartIcon('Customer Value')}
+              currency={selectedCurrency}
+            />
 
-              {/* Chart 4: Customer Count vs Headcount */}
-              <div className="chart-container"
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = 'none';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}>
-                <LineChart
-                  series={lineChartData?.customerCountVsHeadcount?.series || []}
-                  categories={lineChartData?.customerCountVsHeadcount?.categories || []}
-                  title="CUSTOMER COUNT VS HEADCOUNT"
-                  chartIcon={getChartIcon('Customer Count')}
-                  currency={selectedCurrency}
-                />
-              </div>
-            </div>
+            {/* Chart 4: Customer Count vs Headcount */}
+            <LineChart
+              series={lineChartData?.customerCountVsHeadcount?.series || []}
+              categories={lineChartData?.customerCountVsHeadcount?.categories || []}
+              title="CUSTOMER COUNT VS HEADCOUNT"
+              chartIcon={getChartIcon('Customer Count')}
+              currency={selectedCurrency}
+            />
+          </div>
 
-            {/* Row 4: 1 Bar Chart */}
-            <div className="charts-row" style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr',
-              marginBottom: '20px'
-            }}>
-              {/* Bar Chart: Headcount Department */}
-              <div className="chart-container"
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = 'none';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}>
-                <BarChart
-                  series={barChartData?.headcountDepartment?.series || []}
-                  categories={barChartData?.headcountDepartment?.categories || []}
-                  title="HEADCOUNT BY DEPARTMENT"
-                  chartIcon={getChartIcon('HEADCOUNT BY DEPARTMENT')}
-                  currency={selectedCurrency}
-                />
-              </div>
-            </div>
+          {/* Row 4: 1 Bar Chart */}
+          <div className="charts-row" style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr',
+            marginBottom: '20px'
+          }}>
+            {/* Bar Chart: Headcount Department */}
+            <BarChart
+              series={barChartData?.headcountDepartment?.series || []}
+              categories={barChartData?.headcountDepartment?.categories || []}
+              title="HEADCOUNT BY DEPARTMENT"
+              chartIcon={getChartIcon('HEADCOUNT BY DEPARTMENT')}
+              currency={selectedCurrency}
+            />
           </div>
 
           {/* Slicer Info */}

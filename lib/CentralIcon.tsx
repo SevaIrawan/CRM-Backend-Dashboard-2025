@@ -63,7 +63,7 @@ export const KPI_ICONS = {
   // Business Flow Icons
   conversionRate: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><!--!Font Awesome Free v7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path d="M256.5 72C322.8 72 376.5 125.7 376.5 192C376.5 258.3 322.8 312 256.5 312C190.2 312 136.5 258.3 136.5 192C136.5 125.7 190.2 72 256.5 72zM226.7 368L286.1 368L287.6 368C274.7 394.8 279.8 426.2 299.1 447.5C278.9 469.8 274.3 503.3 289.7 530.9L312.2 571.3C313.1 572.9 314.1 574.5 315.1 576L78.1 576C61.7 576 48.4 562.7 48.4 546.3C48.4 447.8 128.2 368 226.7 368zM432.6 311.6C432.6 298.3 443.3 287.6 456.6 287.6L504.6 287.6C517.9 287.6 528.6 298.3 528.6 311.6L528.6 317.7C528.6 336.6 552.7 350.5 569.1 341.1L574.1 338.2C585.7 331.5 600.6 335.6 607.1 347.3L629.5 387.5C635.7 398.7 632.1 412.7 621.3 419.5L616.6 422.4C600.4 432.5 600.4 462.3 616.6 472.5L621.2 475.4C632 482.2 635.7 496.2 629.5 507.4L607 547.8C600.5 559.5 585.6 563.7 574 556.9L569.1 554C552.7 544.5 528.6 558.5 528.6 577.4L528.6 583.5C528.6 596.8 517.9 607.5 504.6 607.5L456.6 607.5C443.3 607.5 432.6 596.8 432.6 583.5L432.6 577.6C432.6 558.6 408.4 544.6 391.9 554.1L387.1 556.9C375.5 563.6 360.7 559.5 354.1 547.8L331.5 507.4C325.3 496.2 328.9 482.1 339.8 475.3L344.2 472.6C360.5 462.5 360.5 432.5 344.2 422.4L339.7 419.6C328.8 412.8 325.2 398.7 331.4 387.5L353.9 347.2C360.4 335.5 375.3 331.4 386.8 338.1L391.6 340.9C408.1 350.4 432.3 336.4 432.3 317.4L432.3 311.5zM532.5 447.8C532.5 419.1 509.2 395.8 480.5 395.8C451.8 395.8 428.5 419.1 428.5 447.8C428.5 476.5 451.8 499.8 480.5 499.8C509.2 499.8 532.5 476.5 532.5 447.8z"/></svg>`,
 
-  newCustomers: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><!--!Font Awesome Free v7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path d="M136 192C136 125.7 189.7 72 256 72C322.3 72 376 125.7 376 192C376 258.3 322.3 312 256 312C189.7 312 136 258.3 136 192zM48 546.3C48 447.8 127.8 368 226.3 368L285.7 368C384.2 368 464 447.8 464 546.3C464 562.7 450.7 576 434.3 576L77.7 576C61.3 576 48 562.7 48 546.3zM612.4 196.7L532.4 324.7C528.2 331.4 521 335.6 513.1 336C505.2 336.4 497.6 332.8 492.9 326.4L444.9 262.4C436.9 251.8 439.1 236.8 449.7 228.8C460.3 220.8 475.3 223 483.3 233.6L510.3 269.6L571.7 171.3C578.7 160.1 593.5 156.6 604.8 163.7C616.1 170.8 619.5 185.5 612.4 196.8z"/></svg>`,
+  newCustomers: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><!--!Font Awesome Free v7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path d="M136 192C136 125.7 189.7 72 256 72C322.3 72 376 125.7 376 192C376 258.3 322.3 312 256 312C189.7 312 136 258.3 136 192zM48 546.3C48 447.8 127.8 368 226.3 368L285.7 368C384.2 368 464 447.8 464 546.3C464 562.7 450.7 576 434.3 576L77.7 576C61.3 576 48 562.7 48 546.3zM544 160C557.3 160 568 170.7 568 184L568 232L616 232C629.3 232 640 242.7 640 256C640 269.3 629.3 280 616 280L568 280L568 328C568 341.3 557.3 352 544 352C530.7 352 520 341.3 520 328L520 280L472 280C458.7 280 448 269.3 448 256C448 242.7 458.7 232 472 232L520 232L520 184C520 170.7 530.7 160 544 160z"/></svg>`,
 
   groupJoin: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><!--!Font Awesome Free v7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path d="M352.1 476.2L352.1 384.1C352.1 366.4 366.4 352.1 384.1 352.1L476.2 352.1C488.9 352.1 501.1 357.2 510.1 366.2L606.1 462.2C624.8 480.9 624.8 511.3 606.1 530.1L530 606.2C511.3 624.9 480.9 624.9 462.1 606.2L366.1 510.2C357.1 501.2 352 489 352 476.3zM456.1 432C456.1 418.7 445.4 408 432.1 408C418.8 408 408.1 418.7 408.1 432C408.1 445.3 418.8 456 432.1 456C445.4 456 456.1 445.3 456.1 432z"/></svg>`,
 
@@ -158,7 +158,7 @@ export function getKpiIcon(kpiName: string): string {
     'withdrawAmount': KPI_ICONS.withdrawAmount,
     'grossProfit': KPI_ICONS.grossProfit,
     'netProfit': KPI_ICONS.netProfit,
-    'newDepositor': KPI_ICONS.newDepositor,
+    'newDepositor': KPI_ICONS.newCustomers,
     'activeMember': KPI_ICONS.activeMember,
     
     // Alternative mappings (snake_case)
@@ -166,7 +166,7 @@ export function getKpiIcon(kpiName: string): string {
     'withdraw_amount': KPI_ICONS.withdrawAmount,
     'gross_profit': KPI_ICONS.grossProfit,
     'net_profit': KPI_ICONS.netProfit,
-    'new_depositor': KPI_ICONS.newDepositor,
+    'new_depositor': KPI_ICONS.newCustomers,
     'active_member': KPI_ICONS.activeMember,
     
     // Display name mappings (Title Case)
@@ -174,7 +174,7 @@ export function getKpiIcon(kpiName: string): string {
     'Withdraw Amount': KPI_ICONS.withdrawAmount,
     'Gross Profit': KPI_ICONS.grossProfit,
     'Net Profit': KPI_ICONS.netProfit,
-    'New Depositor': KPI_ICONS.newDepositor,
+    'New Depositor': KPI_ICONS.newCustomers,
     'Active Member': KPI_ICONS.activeMember,
     'Pure User': KPI_ICONS.pureUser,
     'Headcount': KPI_ICONS.headcount,
@@ -231,10 +231,10 @@ export function getChartIcon(chartName: string): string {
     'Operational Efficiency': KPI_ICONS.operationalEfficiencyChart,
     
     // Sales Revenue Chart Icons (NEW ADDITIONS)
-    'Deposit Amount': KPI_ICONS.depositAmountTrend,
-    'Withdraw Amount': KPI_ICONS.withdrawAmountTrend,
+    'Deposit Amount': KPI_ICONS.depositAmount,
+    'Withdraw Amount': KPI_ICONS.withdrawAmount,
     'Gross Gaming Revenue': KPI_ICONS.grossGamingRevenueTrend,
-    'New Depositor': KPI_ICONS.newDepositorTrend,
+    'New Depositor': KPI_ICONS.newCustomers,
     'Conversion Rate': KPI_ICONS.conversionRateTrend,
     'Active Member': KPI_ICONS.activeMemberTrend,
     'Average Transaction Value': KPI_ICONS.averageTransactionValueTrend,
