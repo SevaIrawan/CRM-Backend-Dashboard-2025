@@ -36,6 +36,7 @@ interface BarChartProps {
   type?: 'bar' | 'line';
   color?: string;
   chartIcon?: string;
+  horizontal?: boolean;
 }
 
 export default function BarChart({ 
@@ -45,7 +46,8 @@ export default function BarChart({
   currency = 'MYR', 
   type = 'bar', 
   color = '#3B82F6',
-  chartIcon
+  chartIcon,
+  horizontal = false
 }: BarChartProps) {
   const getCurrencySymbol = (curr: string): string => {
     switch (curr) {
@@ -119,6 +121,7 @@ export default function BarChart({
   const options = {
     responsive: true,
     maintainAspectRatio: false,
+    indexAxis: horizontal ? 'y' as const : 'x' as const, // Enable horizontal bar
     plugins: {
       legend: {
         display: false  // HAPUS LEGEND
@@ -126,7 +129,7 @@ export default function BarChart({
       tooltip: {
         callbacks: {
           label: function(context: any) {
-            const value = context.parsed.y;
+            const value = horizontal ? context.parsed.x : context.parsed.y;
             const datasetLabel = context.dataset.label;
             
             // For all bar charts - show plain numbers without currency
@@ -140,7 +143,49 @@ export default function BarChart({
         }
       }
     },
-    scales: {
+    scales: horizontal ? {
+      // For horizontal bar chart
+      x: {
+        beginAtZero: true,
+        grid: {
+          display: true,
+          color: '#e5e7eb',
+          lineWidth: 1,
+          drawBorder: false
+        },
+        ticks: {
+          callback: function(tickValue: string | number) {
+            // For all bar charts - plain numbers without currency
+            const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
+            if (value >= 1000000) {
+              return (value / 1000000).toFixed(1) + 'M';
+            } else if (value >= 1000) {
+              return (value / 1000).toFixed(0) + 'K';
+            }
+            return value;
+          },
+          font: {
+            weight: 'bold' as const,
+            size: 10
+          }
+        }
+      },
+      y: {
+        grid: {
+          display: true,
+          color: '#e5e7eb',
+          lineWidth: 1,
+          drawBorder: false
+        },
+        ticks: {
+          font: {
+            weight: 'bold' as const,
+            size: 10
+          }
+        }
+      }
+    } : {
+      // For vertical bar chart (default)
       x: {
         grid: {
           display: true,

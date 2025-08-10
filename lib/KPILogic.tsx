@@ -1098,6 +1098,34 @@ export async function getMonthsForYear(year: string, currency?: string): Promise
   }
 }
 
+export async function getLinesForCurrency(currency: string, year?: string): Promise<string[]> {
+  try {
+    let query = supabase
+      .from('member_report_monthly')
+      .select('line')
+      .eq('currency', currency)
+    
+    if (year) {
+      query = query.eq('year', year)
+    }
+    
+    const { data, error } = await query
+
+    if (error) throw error
+
+    const lines = Array.from(new Set((data || []).map((item: any) => item.line).filter(Boolean)))
+    
+    // Sort lines alphabetically
+    lines.sort()
+
+    return lines
+
+  } catch (error) {
+    console.error('❌ [KPILogic] Error fetching lines for currency:', error)
+    return []
+  }
+}
+
 // ===========================================
 // CHART DATA FUNCTIONS (PostgreSQL Pattern)
 // ===========================================

@@ -34,6 +34,7 @@ interface LineChartProps {
   title?: string;
   currency?: string;
   chartIcon?: string;
+  hideLegend?: boolean;
 }
 
 export default function LineChart({ 
@@ -41,7 +42,8 @@ export default function LineChart({
   categories, 
   title, 
   currency = 'MYR',
-  chartIcon
+  chartIcon,
+  hideLegend = false
 }: LineChartProps) {
   
   console.log('📈 [LineChart] Rendering chart:', {
@@ -199,11 +201,12 @@ export default function LineChart({
 
   // Full value formatter for tooltip (no abbreviation)
   const formatFullValue = (value: number, datasetLabel?: string): string => {
-    // Check if this is a percentage type (Retention Rate, Churn Rate)
+    // Check if this is a percentage type (Retention Rate, Churn Rate, Winrate)
     const isPercentageType = datasetLabel && (
       datasetLabel.toLowerCase().includes('rate') ||
       datasetLabel.toLowerCase().includes('retention') ||
-      datasetLabel.toLowerCase().includes('churn')
+      datasetLabel.toLowerCase().includes('churn') ||
+      datasetLabel.toLowerCase().includes('winrate')
     );
     
     // Check if this is a frequency/ratio type (Purchase Frequency)
@@ -212,63 +215,62 @@ export default function LineChart({
       datasetLabel.toLowerCase().includes('ratio')
     );
     
+    // Check if this is a count/integer type (New Depositor, Active Member, etc.)
     const isCountType = datasetLabel && (
       datasetLabel.toLowerCase().includes('member') ||
       datasetLabel.toLowerCase().includes('user') ||
       datasetLabel.toLowerCase().includes('unique') ||
       datasetLabel.toLowerCase().includes('pure') ||
       datasetLabel.toLowerCase().includes('count') ||
-      datasetLabel.toLowerCase().includes('depositor')
+      datasetLabel.toLowerCase().includes('depositor') ||
+      datasetLabel.toLowerCase().includes('headcount')
     );
     
-    // Check if this is CLV (Customer Lifetime Value)
-    const isCLVType = datasetLabel && (
+    // Check if this is an amount/currency type (Deposit, Withdraw, Revenue, CLV, etc.)
+    const isAmountType = datasetLabel && (
+      datasetLabel.toLowerCase().includes('amount') ||
+      datasetLabel.toLowerCase().includes('deposit') ||
+      datasetLabel.toLowerCase().includes('withdraw') ||
+      datasetLabel.toLowerCase().includes('revenue') ||
+      datasetLabel.toLowerCase().includes('ggr') ||
+      datasetLabel.toLowerCase().includes('gaming') ||
       datasetLabel.toLowerCase().includes('lifetime') ||
       datasetLabel.toLowerCase().includes('clv') ||
-      datasetLabel.toLowerCase().includes('customer lifetime value')
-    );
-    
-    // Check if this is GGR related (GGR User, GGR Pure User, GGR Per User, etc.)
-    const isGGRType = datasetLabel && (
-      datasetLabel.toLowerCase().includes('ggr') ||
+      datasetLabel.toLowerCase().includes('value') ||
+      datasetLabel.toLowerCase().includes('transaction') ||
+      datasetLabel.toLowerCase().includes('income') ||
+      datasetLabel.toLowerCase().includes('cost') ||
+      datasetLabel.toLowerCase().includes('profit') ||
       datasetLabel.toLowerCase().includes('gross gaming revenue') ||
       datasetLabel.toLowerCase().includes('per user') ||
       datasetLabel.toLowerCase().includes('pure user')
     );
     
-    // Check if this is Customer Value Per Headcount or Customer Count vs Headcount
-    const isCustomerValuePerHeadcount = datasetLabel && (
-      datasetLabel.toLowerCase().includes('customer value per headcount') ||
-      datasetLabel.toLowerCase().includes('active member') ||
-      datasetLabel.toLowerCase().includes('headcount')
+    // Check if this is Customer Maturity Index (special case - no currency, no decimal)
+    const isMaturityIndex = datasetLabel && (
+      datasetLabel.toLowerCase().includes('maturity') ||
+      datasetLabel.toLowerCase().includes('index')
     );
     
     if (isPercentageType) {
-      // For percentage - show % symbol with full precision
-      return value.toFixed(2) + '%';
+      // For percentage - show as percentage with 2 decimal places, formatted with commas
+      return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
     } else if (isFrequencyType) {
-      // For frequency - show as decimal number only (2 decimal places)
-      return value.toFixed(2);
-         } else if (isGGRType) {
-       // For GGR - show with currency symbol and NO decimal places for tooltip
-       const symbol = getCurrencySymbol(currency);
-       return `${symbol} ${Math.round(value)}`;
-    } else if (isCustomerValuePerHeadcount) {
-      // For Customer Value Per Headcount and Customer Count vs Headcount - round up to nearest integer
-      return Math.ceil(value).toLocaleString() + ' persons';
+      // For frequency - show as decimal number with 2 decimal places, formatted with commas
+      return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     } else if (isCountType) {
-      // For count/integer - no currency symbol, full number
-      return value.toLocaleString() + ' persons';
-    } else if (isCLVType) {
-      // For CLV - show full number without decimals
-      if (value >= 1000) {
-        return Math.round(value).toLocaleString(); // Show full number for thousands, no decimals
-      } else {
-        return Math.round(value).toString(); // No decimals for CLV
-      }
+      // For count/integer - no currency symbol, formatted number with commas
+      return value.toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' persons';
+    } else if (isMaturityIndex) {
+      // For maturity index - formatted number without currency, with commas
+      return value.toLocaleString('en-US', { maximumFractionDigits: 0 });
+    } else if (isAmountType) {
+      // For amount/currency - with currency symbol, formatted number with commas
+      const symbol = getCurrencySymbol(currency);
+      return `${symbol} ${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
     } else {
-      // For other amounts - show as integer only (no currency)
-      return Math.round(value).toLocaleString();
+      // Default - formatted number without currency, with commas
+      return value.toLocaleString('en-US', { maximumFractionDigits: 0 });
     }
   };
 
@@ -312,7 +314,7 @@ export default function LineChart({
     },
          plugins: {
        legend: {
-         display: false, // Hide default legend since we'll position them on Y-axes
+         display: false, // ALWAYS disable Chart.js legend - only use custom JSX legend
        },
        // Custom plugin untuk background Y1 dan Y2
        customBackgroundPlugin: {
@@ -553,7 +555,7 @@ export default function LineChart({
           </div>
           
           {/* Legend */}
-          {series.length > 0 && (
+          {!hideLegend && series.length > 0 && (
             <div style={{
               display: 'flex',
               alignItems: 'center',

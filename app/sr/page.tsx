@@ -1,197 +1,719 @@
 'use client'
 
-import { useState } from 'react'
-import Layout from '@/components/Layout'
+import React, { useState, useEffect } from 'react';
+import { getSlicerData, getAllKPIsWithMoM, getLineChartData, SlicerFilters, SlicerData, KPIData, getLinesForCurrency, calculateKPIs, getMonthsForYear } from '@/lib/KPILogic';
+import Layout from '@/components/Layout';
+import Frame from '@/components/Frame';
+import { YearSlicer, MonthSlicer, CurrencySlicer, LineSlicer } from '@/components/slicers';
+import StatCard from '@/components/StatCard';
+import LineChart from '@/components/LineChart';
+import BarChart from '@/components/BarChart';
+import DonutChart from '@/components/DonutChart';
+import { getChartIcon } from '@/lib/CentralIcon';
 
-export default function SR() {
-  const [sidebarExpanded, setSidebarExpanded] = useState(true)
-  const [darkMode, setDarkMode] = useState(false)
+export default function SalesRevenuePage() {
+  const [kpiData, setKpiData] = useState<KPIData | null>(null);
+  const [momData, setMomData] = useState<KPIData | null>(null);
+  const [slicerData, setSlicerData] = useState<SlicerData | null>(null);
+  const [selectedYear, setSelectedYear] = useState('2025');
+  const [selectedMonth, setSelectedMonth] = useState('July');
+  const [selectedCurrency, setSelectedCurrency] = useState('MYR');
+  const [selectedLine, setSelectedLine] = useState('ALL');
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [filteredLines, setFilteredLines] = useState<string[]>([]);
+  const [filteredMonths, setFilteredMonths] = useState<string[]>([]);
+  
+  // Chart data states
+  const [lineChartData, setLineChartData] = useState<any>(null);
+  const [srChartData, setSrChartData] = useState<any>(null);
+  const [chartError, setChartError] = useState<string | null>(null);
 
-  const handleLogout = () => {
-    console.log('Logout clicked')
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        setLoadError(null);
+        console.log('🔄 [Sales Revenue] Starting data load...');
+
+        // Fetch slicer data
+        const slicerDataResult = await getSlicerData();
+        console.log('📊 [Sales Revenue] Slicer data loaded:', slicerDataResult);
+        setSlicerData(slicerDataResult);
+
+        // Fetch filtered lines based on selected currency
+        const linesForCurrency = await getLinesForCurrency(selectedCurrency, selectedYear);
+        console.log('🔗 [Sales Revenue] Lines for currency loaded:', linesForCurrency);
+        setFilteredLines(linesForCurrency);
+
+        // Filter months based on selected year - use all available months for now
+        if (slicerDataResult.months) {
+          setFilteredMonths(slicerDataResult.months);
+        }
+
+        // Fetch KPI data with current filters
+        console.log('📈 [Sales Revenue] Fetching KPI data with filters:', {
+          year: selectedYear,
+          month: selectedMonth,
+          currency: selectedCurrency,
+          line: selectedLine
+        });
+        
+        const kpiResult = await getAllKPIsWithMoM({
+          year: selectedYear,
+          month: selectedMonth,
+          currency: selectedCurrency,
+          line: selectedLine
+        });
+        
+        console.log('📊 [Sales Revenue] KPI result received:', kpiResult);
+        console.log('📊 [Sales Revenue] Current KPI data:', kpiResult.current);
+        console.log('📊 [Sales Revenue] MoM data:', kpiResult.mom);
+
+        setKpiData(kpiResult.current);
+        setMomData(kpiResult.mom);
+
+        // Fetch chart data
+        console.log('📈 [Sales Revenue] Fetching chart data...');
+        const chartFilters: SlicerFilters = {
+          year: selectedYear,
+          month: selectedMonth,
+          currency: selectedCurrency,
+          line: selectedLine
+        };
+        
+        const chartResult = await getLineChartData(chartFilters);
+        console.log('📊 [Sales Revenue] Chart data loaded:', chartResult);
+        setLineChartData(chartResult);
+        
+        // Create Sales Revenue specific chart data using REAL KPI data
+        const srData = await createSRChartData(chartFilters);
+        console.log('📈 [Sales Revenue] SR Chart data created with REAL data:', srData);
+        setSrChartData(srData);
+
+      } catch (error) {
+        console.error('❌ [Sales Revenue] Error loading data:', error);
+        setLoadError('Failed to load data. Please try again.');
+      } finally {
+        setIsLoading(false);
+        console.log('✅ [Sales Revenue] Data loading completed');
+      }
+    };
+
+    const timeoutId = setTimeout(loadData, 100);
+    return () => clearTimeout(timeoutId);
+  }, [selectedYear, selectedMonth, selectedCurrency, selectedLine]);
+
+  // Update filtered lines when currency changes
+  useEffect(() => {
+    const updateFilteredLines = async () => {
+      if (selectedCurrency) {
+        const linesForCurrency = await getLinesForCurrency(selectedCurrency, selectedYear);
+        setFilteredLines(linesForCurrency);
+        
+        // Reset line selection if current selection is not available in new currency
+        if (!linesForCurrency.includes(selectedLine)) {
+          setSelectedLine('ALL');
+        }
+      }
+    };
+
+    updateFilteredLines();
+  }, [selectedCurrency, selectedYear]);
+
+  // Update filtered months when year changes
+  useEffect(() => {
+    if (slicerData?.months) {
+      // For now, use all available months
+      setFilteredMonths(slicerData.months);
+    }
+  }, [slicerData]);
+
+  const formatCurrency = (value: number | null | undefined, currency: string): string => {
+    if (value === null || value === undefined) return '0';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value);
+  };
+
+  const formatNumber = (value: number | null | undefined): string => {
+    if (value === null || value === undefined) return '0';
+    return new Intl.NumberFormat('en-US').format(value);
+  };
+
+  const formatMoM = (value: number | null | undefined): string => {
+    if (value === null || value === undefined) return '0%';
+    return `${value > 0 ? '+' : ''}${value.toFixed(1)}%`;
+  };
+
+  // Function to create Sales Revenue specific chart data using REAL monthly KPI data
+  const createSRChartData = async (filters: SlicerFilters) => {
+    try {
+      console.log('📈 [Sales Revenue] Creating chart data with REAL KPIs...');
+      console.log('🔍 [Sales Revenue] Filters:', filters);
+      
+      // Get dynamic months for the selected year (same as getLineChartData line 1139)
+      const months = await getMonthsForYear(filters.year);
+      console.log('📅 [Sales Revenue] Dynamic months for chart:', months);
+      
+      if (!months || months.length === 0) {
+        console.error('❌ [Sales Revenue] No months data available');
+        return null;
+      }
+      
+      // Get REAL monthly KPI data by calling calculateKPIs for each month
+      // This follows the EXACT same pattern as getLineChartData line 1149-1175
+      const monthlyKPIData = await Promise.all(
+        months.map(async (month) => {
+          const monthFilters = {
+            year: filters.year,
+            currency: filters.currency,
+            month: month,
+            line: filters.line // Include line filter for active slicer
+          };
+          
+          console.log(`📊 [Sales Revenue] Calculating KPIs for ${month}...`);
+          return await calculateKPIs(monthFilters);
+        })
+      );
+      
+      console.log('✅ [Sales Revenue] Monthly KPI data calculated:', monthlyKPIData.length, 'months');
+    
+      return {
+        // Row 2 - Financial Performance Single Line Charts (REAL DATA dari KPILogic)
+        depositAmountTrend: {
+          series: [
+            {
+              name: 'Deposit Amount',
+              data: monthlyKPIData.map(kpi => kpi.depositAmount) // REAL dari calculateKPIs line 826
+            }
+          ],
+          categories: months.map(month => month.substring(0, 3)) // Short month names
+        },
+        withdrawAmountTrend: {
+          series: [
+            {
+              name: 'Withdraw Amount', 
+              data: monthlyKPIData.map(kpi => kpi.withdrawAmount) // REAL dari calculateKPIs line 829
+            }
+          ],
+          categories: months.map(month => month.substring(0, 3)) // Short month names
+        },
+        grossGamingRevenueTrend: {
+          series: [
+            {
+              name: 'Gross Gaming Revenue',
+              data: monthlyKPIData.map(kpi => kpi.grossGamingRevenue) // REAL dari calculateKPIs line 827
+            }
+          ],
+          categories: months.map(month => month.substring(0, 3)) // Short month names
+        },
+        // Row 3 - User Acquisition Charts (REAL DATA with correct chart types)
+        newDepositorBarChart: {
+          series: [
+            {
+              name: 'New Depositor',
+              data: monthlyKPIData.map(kpi => kpi.newDepositor) // REAL dari calculateKPIs line 825
+            }
+          ],
+          categories: months.map(month => month.substring(0, 3)) // Short month names
+        },
+        conversionRateLineChart: {
+          series: [
+            {
+              name: 'Conversion Rate',
+              data: monthlyKPIData.map(kpi => kpi.conversionRate) // REAL dari calculateKPIs line 852
+            }
+          ],
+          categories: months.map(month => month.substring(0, 3)) // Short month names
+        },
+        activeMemberHorizontalBarChart: {
+          series: [
+            {
+              name: 'Active Member',
+              data: monthlyKPIData.map(kpi => kpi.activeMember) // REAL dari calculateKPIs line 824
+            }
+          ],
+          categories: months.map(month => month.substring(0, 3)) // Short month names
+        },
+        // Row 4 - User Behavior Single Line Charts (REAL DATA)
+        avgTransactionValueTrend: {
+          series: [
+            {
+              name: 'Average Transaction Value',
+              data: monthlyKPIData.map(kpi => kpi.avgTransactionValue) // REAL dari calculateKPIs line 843
+            }
+          ],
+          categories: months.map(month => month.substring(0, 3)) // Short month names
+        },
+        purchaseFrequencyTrend: {
+          series: [
+            {
+              name: 'Purchase Frequency',
+              data: monthlyKPIData.map(kpi => kpi.purchaseFrequency) // REAL dari calculateKPIs line 844
+            }
+          ],
+          categories: months.map(month => month.substring(0, 3)) // Short month names
+        },
+        // Row 5 - Advanced Analytics Single Line Charts (REAL DATA)
+        customerLifetimeValueTrend: {
+          series: [
+            {
+              name: 'Customer Lifetime Value',
+              data: monthlyKPIData.map(kpi => kpi.customerLifetimeValue) // REAL dari calculateKPIs line 845
+            }
+          ],
+          categories: months.map(month => month.substring(0, 3)) // Short month names
+        },
+        customerMaturityIndexTrend: {
+          series: [
+            {
+              name: 'Customer Maturity Index',
+              data: monthlyKPIData.map(kpi => kpi.customerMaturityIndex) // REAL dari calculateKPIs line 847
+            }
+          ],
+          categories: months.map(month => month.substring(0, 3)) // Short month names
+        },
+        winrateTrend: {
+          series: [
+            {
+              name: 'Winrate',
+              data: monthlyKPIData.map(kpi => kpi.winrate) // REAL dari calculateKPIs line 839 (sudah dalam percentage)
+            }
+          ],
+          categories: months.map(month => month.substring(0, 3)) // Short month names
+        },
+        // Churn vs Retention data for pie chart (REAL DATA)
+        churnRetentionData: {
+          retentionRate: monthlyKPIData[monthlyKPIData.length - 1]?.retentionRate || 75,
+          churnRate: monthlyKPIData[monthlyKPIData.length - 1]?.churnRate || 25
+        }
+      };
+      
+    } catch (error) {
+      console.error('❌ [Sales Revenue] Error creating chart data:', error);
+      return null;
+    }
+  };
+
+  const customSubHeader = (
+    <div className="dashboard-subheader">
+      <div className="subheader-title">
+        {/* Title area - left side */}
+      </div>
+      
+      <div className="subheader-controls">
+        <div className="slicer-group">
+          <label className="slicer-label">YEAR:</label>
+          <YearSlicer 
+            value={selectedYear} 
+            onChange={setSelectedYear}
+          />
+        </div>
+        
+        <div className="slicer-group">
+          <label className="slicer-label">CURRENCY:</label>
+          <CurrencySlicer 
+            value={selectedCurrency} 
+            onChange={setSelectedCurrency}
+          />
+        </div>
+        
+        <div className="slicer-group">
+          <label className="slicer-label">MONTH:</label>
+          <MonthSlicer 
+            value={selectedMonth} 
+            onChange={setSelectedMonth}
+            selectedYear={selectedYear}
+            selectedCurrency={selectedCurrency}
+          />
+        </div>
+
+        <div className="slicer-group">
+          <label className="slicer-label">LINE:</label>
+          <LineSlicer 
+            lines={filteredLines}
+            selectedLine={selectedLine}
+            onLineChange={setSelectedLine}
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="loading-container">
+          <p>Loading Sales Revenue data...</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <Layout>
+        <div className="error-container">
+          <p>Error: {loadError}</p>
+        </div>
+      </Layout>
+    );
   }
 
   return (
-    <Layout
-      pageTitle="Sales & Revenue"
+    <Layout customSubHeader={customSubHeader}>
+      <Frame variant="standard">
+        {/* Content Container with proper spacing and scroll */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '20px',
+          marginTop: '20px',
+          height: 'calc(100vh - 200px)',
+          overflowY: 'auto',
+          paddingRight: '8px'
+        }}>
+          {/* BARIS 1: KPI CARDS (STANDARD ROW) */}
+          <div className="kpi-row">
+          <StatCard
+            title="DEPOSIT AMOUNT"
+            value={formatCurrency(kpiData?.depositAmount || 0, selectedCurrency)}
+            icon="Deposit Amount"
+            comparison={{
+              percentage: formatMoM(momData?.depositAmount || 0),
+              isPositive: Boolean(momData?.depositAmount && momData.depositAmount > 0)
+            }}
+          />
+          <StatCard
+            title="WITHDRAW AMOUNT"
+            value={formatCurrency(kpiData?.withdrawAmount || 0, selectedCurrency)}
+            icon="Withdraw Amount"
+            comparison={{
+              percentage: formatMoM(momData?.withdrawAmount || 0),
+              isPositive: Boolean(momData?.withdrawAmount && momData.withdrawAmount > 0)
+            }}
+          />
+          <StatCard
+            title="GROSS GAMING REVENUE"
+            value={formatCurrency(kpiData?.grossGamingRevenue || 0, selectedCurrency)}
+            icon="Gross Gaming Revenue"
+            comparison={{
+              percentage: formatMoM(momData?.grossGamingRevenue || 0),
+              isPositive: Boolean(momData?.grossGamingRevenue && momData.grossGamingRevenue > 0)
+            }}
+          />
+          <StatCard
+            title="ACTIVE MEMBER"
+            value={formatNumber(kpiData?.activeMember || 0)}
+            icon="Active Member"
+            comparison={{
+              percentage: formatMoM(momData?.activeMember || 0),
+              isPositive: Boolean(momData?.activeMember && momData.activeMember > 0)
+            }}
+          />
+          <StatCard
+            title="NEW DEPOSITOR"
+            value={formatNumber(kpiData?.newDepositor || 0)}
+            icon="New Depositor"
+            comparison={{
+              percentage: formatMoM(momData?.newDepositor || 0),
+              isPositive: Boolean(momData?.newDepositor && momData.newDepositor > 0)
+            }}
+          />
+          <StatCard
+            title="CONVERSION RATE"
+            value={`${(kpiData?.conversionRate || 0).toFixed(2)}%`}
+            icon="Conversion Rate"
+            comparison={{
+              percentage: formatMoM(momData?.conversionRate || 0),
+              isPositive: Boolean(momData?.conversionRate && momData.conversionRate > 0)
+            }}
+          />
+        </div>
 
-      darkMode={darkMode}
-      sidebarExpanded={sidebarExpanded}
-      onToggleDarkMode={() => setDarkMode(!darkMode)}
-      onLogout={handleLogout}
-    >
-      <div className="coming-soon-container">
-        <div className="coming-soon-frame">
-          <div className="coming-soon-content">
-            <div className="coming-soon-icon">
-              💎
-            </div>
-            <h1 className="coming-soon-title">
-              Sales & Revenue
-            </h1>
-            <p className="coming-soon-description">
-              Comprehensive sales analytics and revenue optimization dashboard with real-time tracking.
-            </p>
-            <div className="coming-soon-features">
-              <div className="feature-item">
-                <span className="feature-icon">📊</span>
-                <span className="feature-text">Advanced Analytics</span>
-              </div>
-              <div className="feature-item">
-                <span className="feature-icon">📈</span>
-                <span className="feature-text">Real-time Data</span>
-              </div>
-              <div className="feature-item">
-                <span className="feature-icon">🎯</span>
-                <span className="feature-text">Smart Insights</span>
-              </div>
-            </div>
-            <button className="coming-soon-button">
-              Coming Soon
-            </button>
-            <p className="coming-soon-note">
-              Slicers and filters will be configured when this page is fully developed
-            </p>
+        {/* BARIS 2: FINANCIAL PERFORMANCE CHARTS */}
+        <div className="chart-row">
+          <div className="chart-container">
+            <LineChart
+              series={srChartData?.depositAmountTrend?.series || []}
+              categories={srChartData?.depositAmountTrend?.categories || []}
+              title="DEPOSIT AMOUNT TREND"
+              chartIcon={getChartIcon('Deposit Amount')}
+              currency={selectedCurrency}
+              hideLegend={true}
+            />
+          </div>
+          
+          <div className="chart-container">
+            <LineChart
+              series={srChartData?.withdrawAmountTrend?.series || []}
+              categories={srChartData?.withdrawAmountTrend?.categories || []}
+              title="WITHDRAW AMOUNT TREND"
+              chartIcon={getChartIcon('Withdraw Amount')}
+              currency={selectedCurrency}
+              hideLegend={true}
+            />
+          </div>
+          
+          <div className="chart-container">
+            <LineChart
+              series={srChartData?.grossGamingRevenueTrend?.series || []}
+              categories={srChartData?.grossGamingRevenueTrend?.categories || []}
+              title="GROSS GAMING REVENUE TREND"
+              chartIcon={getChartIcon('Gross Gaming Revenue')}
+              currency={selectedCurrency}
+              hideLegend={true}
+            />
           </div>
         </div>
-      </div>
+
+        {/* BARIS 3: USER ACQUISITION & ENGAGEMENT CHARTS */}
+        <div className="chart-row">
+          <div className="chart-container">
+            <BarChart
+              series={srChartData?.newDepositorBarChart?.series || []}
+              categories={srChartData?.newDepositorBarChart?.categories || []}
+              title="NEW DEPOSITOR TREND"
+              chartIcon={getChartIcon('New Depositor')}
+              currency={selectedCurrency}
+            />
+          </div>
+          
+          <div className="chart-container">
+            <LineChart
+              series={srChartData?.conversionRateLineChart?.series || []}
+              categories={srChartData?.conversionRateLineChart?.categories || []}
+              title="CONVERSION RATE TREND"
+              chartIcon={getChartIcon('Conversion Rate')}
+              currency={selectedCurrency}
+              hideLegend={true}
+            />
+          </div>
+          
+          <div className="chart-container">
+            <BarChart
+              series={srChartData?.activeMemberHorizontalBarChart?.series || []}
+              categories={srChartData?.activeMemberHorizontalBarChart?.categories || []}
+              title="ACTIVE MEMBER TREND"
+              chartIcon={getChartIcon('Active Member')}
+              currency={selectedCurrency}
+              horizontal={true}
+            />
+          </div>
+        </div>
+
+        {/* BARIS 4: USER BEHAVIOR ANALYTICS CHARTS */}
+        <div className="chart-row">
+          <div className="chart-container">
+            <LineChart
+              series={srChartData?.avgTransactionValueTrend?.series || []}
+              categories={srChartData?.avgTransactionValueTrend?.categories || []}
+              title="AVERAGE TRANSACTION VALUE TREND"
+              chartIcon={getChartIcon('Average Transaction Value')}
+              currency={selectedCurrency}
+              hideLegend={true}
+            />
+          </div>
+          
+          <div className="chart-container">
+            <LineChart
+              series={srChartData?.purchaseFrequencyTrend?.series || []}
+              categories={srChartData?.purchaseFrequencyTrend?.categories || []}
+              title="PURCHASE FREQUENCY TREND"
+              chartIcon={getChartIcon('Purchase Frequency')}
+              currency={selectedCurrency}
+              hideLegend={true}
+            />
+          </div>
+          
+          <div className="chart-container">
+            <DonutChart
+              series={[
+                {
+                  name: 'Retention Rate',
+                  data: [srChartData?.churnRetentionData?.retentionRate || 75]
+                },
+                {
+                  name: 'Churn Rate', 
+                  data: [srChartData?.churnRetentionData?.churnRate || 25]
+                }
+              ]}
+              title="CHURN RATE VS RETENTION RATE"
+              currency={selectedCurrency}
+            />
+          </div>
+        </div>
+
+        {/* BARIS 5: ADVANCED ANALYTICS CHARTS */}
+        <div className="chart-row">
+          <div className="chart-container">
+            <LineChart
+              series={srChartData?.customerLifetimeValueTrend?.series || []}
+              categories={srChartData?.customerLifetimeValueTrend?.categories || []}
+              title="CUSTOMER LIFETIME VALUE TREND"
+              chartIcon={getChartIcon('Customer Lifetime Value')}
+              currency={selectedCurrency}
+              hideLegend={true}
+            />
+          </div>
+          
+          <div className="chart-container">
+            <LineChart
+              series={srChartData?.customerMaturityIndexTrend?.series || []}
+              categories={srChartData?.customerMaturityIndexTrend?.categories || []}
+              title="CUSTOMER MATURITY INDEX TREND"
+              chartIcon={getChartIcon('Customer Maturity Index')}
+              currency={selectedCurrency}
+              hideLegend={true}
+            />
+          </div>
+          
+          <div className="chart-container">
+            <LineChart
+              series={srChartData?.winrateTrend?.series || []}
+              categories={srChartData?.winrateTrend?.categories || []}
+              title="WINRATE TREND"
+              chartIcon={getChartIcon('Winrate')}
+              currency={selectedCurrency}
+              hideLegend={true}
+            />
+          </div>
+        </div>
+
+        {/* Slicer Info */}
+        <div className="slicer-info">
+          <p>Showing data for: {selectedYear} | {selectedMonth} | {selectedCurrency} | {selectedLine}</p>
+        </div>
+        </div>
+      </Frame>
 
       <style jsx>{`
-        .coming-soon-container {
-          padding: 24px;
-          height: 100%;
-          background-color: #f8f9fa;
-        }
-
-        .coming-soon-frame {
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-          border: 1px solid #e5e7eb;
-          overflow: hidden;
-          height: calc(100vh - 200px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .coming-soon-content {
-          text-align: center;
-          padding: 48px;
-          max-width: 600px;
-        }
-
-        .coming-soon-icon {
-          font-size: 64px;
-          margin-bottom: 24px;
-          animation: pulse 2s infinite;
-        }
-
-        .coming-soon-title {
-          font-size: 32px;
-          font-weight: 700;
-          color: #1f2937;
-          margin: 0 0 16px 0;
-        }
-
-        .coming-soon-description {
-          font-size: 18px;
-          color: #6b7280;
-          margin: 0 0 32px 0;
-          line-height: 1.6;
-        }
-
-        .coming-soon-features {
-          display: flex;
-          justify-content: center;
-          gap: 32px;
-          margin-bottom: 32px;
-          flex-wrap: wrap;
-        }
-
-        .feature-item {
+        .loading-container {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 8px;
+          justify-content: center;
+          height: 400px;
+          gap: 16px;
         }
 
-        .feature-icon {
-          font-size: 24px;
+        .error-container {
+          text-align: center;
+          padding: 48px;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
 
-        .feature-text {
-          font-size: 14px;
-          color: #6b7280;
-          font-weight: 500;
+        .kpi-row {
+          display: grid;
+          grid-template-columns: repeat(6, 1fr);
+          gap: 20px;
+          margin-bottom: 20px;
         }
 
-        .coming-soon-button {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          border: none;
-          padding: 16px 32px;
-          border-radius: 8px;
-          font-size: 16px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          margin-bottom: 16px;
+        .chart-row {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 20px;
+          margin-bottom: 20px;
         }
 
-        .coming-soon-button:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+        .chart-row:last-of-type {
+          margin-bottom: 0;
         }
 
-        .coming-soon-note {
-          font-size: 14px;
-          color: #9ca3af;
-          font-style: italic;
-          margin: 0;
-        }
-
-        .slicer-message {
-          font-size: 14px;
-          color: #6b7280;
-          font-style: italic;
-          background: #f3f4f6;
-          padding: 8px 16px;
-          border-radius: 6px;
+        .chart-container {
+          background: #ffffff;
+          border-radius: 12px;
+          padding: 24px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
           border: 1px solid #e5e7eb;
+          min-height: 300px;
         }
 
-        @keyframes pulse {
-          0%, 100% { 
-            transform: scale(1); 
+        .chart-container.full-width {
+          grid-column: 1 / -1;
+        }
+
+        .chart-header {
+          margin-bottom: 20px;
+          text-align: center;
+        }
+
+        .chart-header h3 {
+          margin: 0 0 8px 0;
+          color: #1f2937;
+          font-size: 18px;
+          font-weight: 600;
+        }
+
+        .chart-header p {
+          margin: 0;
+          color: #6b7280;
+          font-size: 14px;
+        }
+
+        .chart-placeholder {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 200px;
+          color: #6b7280;
+          font-size: 16px;
+          text-align: center;
+          background: #f9fafb;
+          border-radius: 8px;
+          border: 2px dashed #d1d5db;
+        }
+
+        .slicer-info {
+          background: #f3f4f6;
+          padding: 16px;
+          border-radius: 8px;
+          border: 1px solid #e5e7eb;
+          text-align: center;
+          margin-top: 20px;
+        }
+
+        .slicer-info p {
+          margin: 0;
+          color: #6b7280;
+          font-size: 14px;
+        }
+
+        @media (max-width: 1440px) {
+          .chart-row {
+            grid-template-columns: repeat(2, 1fr);
           }
-          50% { 
-            transform: scale(1.1); 
+        }
+
+        @media (max-width: 1024px) {
+          .kpi-row {
+            grid-template-columns: repeat(3, 1fr);
+          }
+          
+          .chart-row {
+            grid-template-columns: 1fr;
           }
         }
 
         @media (max-width: 768px) {
-          .coming-soon-container {
-            padding: 16px;
+          .kpi-row {
+            grid-template-columns: repeat(2, 1fr);
           }
-          
-          .coming-soon-content {
-            padding: 32px 24px;
-          }
-          
-          .coming-soon-title {
-            font-size: 24px;
-          }
-          
-          .coming-soon-description {
-            font-size: 16px;
-          }
-          
-          .coming-soon-features {
-            gap: 24px;
+        }
+
+        @media (max-width: 480px) {
+          .kpi-row {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>
     </Layout>
-  )
+  );
 } 
