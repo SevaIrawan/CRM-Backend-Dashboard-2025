@@ -498,19 +498,29 @@ export default function LineChart({
   })
 
   return (
-               <div style={{ 
-        height: '100%', // Dynamic height based on container
-        minHeight: '350px', // Minimum height
-        width: '100%', 
-        padding: '0',
-        position: 'relative',
-        backgroundColor: '#ffffff',
-        border: '1px solid #ffffff', // White border
-        borderRadius: '8px',
-        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
-        display: 'flex',
-        flexDirection: 'column'
-      }}>
+    <div style={{ 
+      height: '100%', // Dynamic height based on container
+      minHeight: '350px', // Minimum height
+      width: '100%', 
+      padding: '0',
+      position: 'relative',
+      backgroundColor: '#ffffff',
+      border: '1px solid #ffffff', // White border
+      borderRadius: '8px',
+      boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+      display: 'flex',
+      flexDirection: 'column',
+      transition: 'all 0.3s ease', // Smooth transition for hover effects
+      cursor: 'pointer' // Indicate interactivity
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.transform = 'translateY(-3px)';
+      e.currentTarget.style.boxShadow = '0 8px 25px 0 rgba(0, 0, 0, 0.12), 0 4px 10px 0 rgba(0, 0, 0, 0.08)';
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.transform = 'translateY(0)';
+      e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)';
+    }}>
       {/* Chart Title with Icon and Legend */}
       {title && (
         <div style={{

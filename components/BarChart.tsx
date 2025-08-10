@@ -132,13 +132,21 @@ export default function BarChart({
             const value = horizontal ? context.parsed.x : context.parsed.y;
             const datasetLabel = context.dataset.label;
             
-            // For all bar charts - show plain numbers without currency
-            if (value >= 1000000) {
-              return `${datasetLabel}: ${(value / 1000000).toFixed(1)}M`;
-            } else if (value >= 1000) {
-              return `${datasetLabel}: ${(value / 1000).toFixed(0)}K`;
+            // Check if this is a count/integer type (New Depositor, Active Member, etc.)
+            const isCountType = datasetLabel && (
+              datasetLabel.toLowerCase().includes('depositor') || 
+              datasetLabel.toLowerCase().includes('member') ||
+              datasetLabel.toLowerCase().includes('user') ||
+              datasetLabel.toLowerCase().includes('count')
+            );
+            
+            if (isCountType) {
+              // For count/integer - show full value with 0,000 format
+              return `${datasetLabel}: ${value.toLocaleString()} persons`;
+            } else {
+              // For amount/numeric - show full value with currency and 0,000 format
+              return `${datasetLabel}: ${getCurrencySymbol(currency)} ${value.toLocaleString()}`;
             }
-            return `${datasetLabel}: ${value}`;
           }
         }
       }
@@ -240,7 +248,17 @@ export default function BarChart({
       borderRadius: '8px',
       boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
       display: 'flex',
-      flexDirection: 'column'
+      flexDirection: 'column',
+      transition: 'all 0.3s ease', // Smooth transition for hover effects
+      cursor: 'pointer' // Indicate interactivity
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.transform = 'translateY(-3px)';
+      e.currentTarget.style.boxShadow = '0 8px 25px 0 rgba(0, 0, 0, 0.12), 0 4px 10px 0 rgba(0, 0, 0, 0.08)';
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.transform = 'translateY(0)';
+      e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)';
     }}>
       {/* Chart Title with Icon */}
       {title && (

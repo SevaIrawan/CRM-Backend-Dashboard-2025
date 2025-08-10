@@ -435,153 +435,123 @@ export default function SalesRevenuePage() {
           />
         </div>
 
-        {/* BARIS 2: FINANCIAL PERFORMANCE CHARTS */}
-        <div className="chart-row">
-          <div className="chart-container">
-            <LineChart
-              series={srChartData?.depositAmountTrend?.series || []}
-              categories={srChartData?.depositAmountTrend?.categories || []}
-              title="DEPOSIT AMOUNT TREND"
-              chartIcon={getChartIcon('Deposit Amount')}
-              currency={selectedCurrency}
-              hideLegend={true}
-            />
-          </div>
-          
-          <div className="chart-container">
-            <LineChart
-              series={srChartData?.withdrawAmountTrend?.series || []}
-              categories={srChartData?.withdrawAmountTrend?.categories || []}
-              title="WITHDRAW AMOUNT TREND"
-              chartIcon={getChartIcon('Withdraw Amount')}
-              currency={selectedCurrency}
-              hideLegend={true}
-            />
-          </div>
-          
-          <div className="chart-container">
-            <LineChart
-              series={srChartData?.grossGamingRevenueTrend?.series || []}
-              categories={srChartData?.grossGamingRevenueTrend?.categories || []}
-              title="GROSS GAMING REVENUE TREND"
-              chartIcon={getChartIcon('Gross Gaming Revenue')}
-              currency={selectedCurrency}
-              hideLegend={true}
-            />
-          </div>
+        {/* Row 2: Financial Performance Charts */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <LineChart
+            series={srChartData?.depositAmountTrend?.series || []}
+            categories={srChartData?.depositAmountTrend?.categories || []}
+            title="DEPOSIT AMOUNT TREND"
+            currency={selectedCurrency}
+            hideLegend={true}
+            chartIcon={getChartIcon('Deposit Amount')}
+          />
+          <LineChart
+            series={srChartData?.withdrawAmountTrend?.series || []}
+            categories={srChartData?.withdrawAmountTrend?.categories || []}
+            title="WITHDRAW AMOUNT TREND"
+            currency={selectedCurrency}
+            hideLegend={true}
+            chartIcon={getChartIcon('Withdraw Amount')}
+          />
+          <LineChart
+            series={srChartData?.grossGamingRevenueTrend?.series || []}
+            categories={srChartData?.grossGamingRevenueTrend?.categories || []}
+            title="GROSS GAMING REVENUE TREND"
+            currency={selectedCurrency}
+            hideLegend={true}
+            chartIcon={getChartIcon('Gross Gaming Revenue')}
+          />
         </div>
 
-        {/* BARIS 3: USER ACQUISITION & ENGAGEMENT CHARTS */}
-        <div className="chart-row">
-          <div className="chart-container">
-            <BarChart
-              series={srChartData?.newDepositorBarChart?.series || []}
-              categories={srChartData?.newDepositorBarChart?.categories || []}
-              title="NEW DEPOSITOR TREND"
-              chartIcon={getChartIcon('New Depositor')}
-              currency={selectedCurrency}
-            />
-          </div>
-          
-          <div className="chart-container">
-            <LineChart
-              series={srChartData?.conversionRateLineChart?.series || []}
-              categories={srChartData?.conversionRateLineChart?.categories || []}
-              title="CONVERSION RATE TREND"
-              chartIcon={getChartIcon('Conversion Rate')}
-              currency={selectedCurrency}
-              hideLegend={true}
-            />
-          </div>
-          
-          <div className="chart-container">
-            <BarChart
-              series={srChartData?.activeMemberHorizontalBarChart?.series || []}
-              categories={srChartData?.activeMemberHorizontalBarChart?.categories || []}
-              title="ACTIVE MEMBER TREND"
-              chartIcon={getChartIcon('Active Member')}
-              currency={selectedCurrency}
-              horizontal={true}
-            />
-          </div>
+        {/* Row 3: User Acquisition Charts */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <BarChart
+            series={srChartData?.newDepositorBarChart?.series || []}
+            categories={srChartData?.newDepositorBarChart?.categories || []}
+            title="NEW DEPOSITOR TREND"
+            currency={selectedCurrency}
+            chartIcon={getChartIcon('New Depositor')}
+          />
+          <LineChart
+            series={srChartData?.conversionRateLineChart?.series || []}
+            categories={srChartData?.conversionRateLineChart?.categories || []}
+            title="CONVERSION RATE TREND"
+            currency={selectedCurrency}
+            hideLegend={true}
+            chartIcon={getChartIcon('Conversion Rate')}
+          />
+          <BarChart
+            series={srChartData?.activeMemberHorizontalBarChart?.series || []}
+            categories={srChartData?.activeMemberHorizontalBarChart?.categories || []}
+            title="ACTIVE MEMBER TREND"
+            currency={selectedCurrency}
+            horizontal={true}
+            chartIcon={getChartIcon('Active Member')}
+          />
         </div>
 
-        {/* BARIS 4: USER BEHAVIOR ANALYTICS CHARTS */}
-        <div className="chart-row">
-          <div className="chart-container">
-            <LineChart
-              series={srChartData?.avgTransactionValueTrend?.series || []}
-              categories={srChartData?.avgTransactionValueTrend?.categories || []}
-              title="AVERAGE TRANSACTION VALUE TREND"
-              chartIcon={getChartIcon('Average Transaction Value')}
-              currency={selectedCurrency}
-              hideLegend={true}
-            />
-          </div>
-          
-          <div className="chart-container">
-            <LineChart
-              series={srChartData?.purchaseFrequencyTrend?.series || []}
-              categories={srChartData?.purchaseFrequencyTrend?.categories || []}
-              title="PURCHASE FREQUENCY TREND"
-              chartIcon={getChartIcon('Purchase Frequency')}
-              currency={selectedCurrency}
-              hideLegend={true}
-            />
-          </div>
-          
-          <div className="chart-container">
-            <DonutChart
-              series={[
-                {
-                  name: 'Retention Rate',
-                  data: [srChartData?.churnRetentionData?.retentionRate || 75]
-                },
-                {
-                  name: 'Churn Rate', 
-                  data: [srChartData?.churnRetentionData?.churnRate || 25]
-                }
-              ]}
-              title="CHURN RATE VS RETENTION RATE"
-              currency={selectedCurrency}
-            />
-          </div>
+        {/* Row 4: User Behavior Analytics */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <LineChart
+            series={srChartData?.avgTransactionValueTrend?.series || []}
+            categories={srChartData?.avgTransactionValueTrend?.categories || []}
+            title="AVERAGE TRANSACTION VALUE TREND"
+            currency={selectedCurrency}
+            hideLegend={true}
+            chartIcon={getChartIcon('Average Transaction Value')}
+          />
+          <LineChart
+            series={srChartData?.purchaseFrequencyTrend?.series || []}
+            categories={srChartData?.purchaseFrequencyTrend?.categories || []}
+            title="PURCHASE FREQUENCY TREND"
+            currency={selectedCurrency}
+            hideLegend={true}
+            chartIcon={getChartIcon('Purchase Frequency')}
+          />
+          <DonutChart
+            series={[
+              {
+                name: 'Retention Rate',
+                data: [srChartData?.churnRetentionData?.retentionRate || 75]
+              },
+              {
+                name: 'Churn Rate', 
+                data: [srChartData?.churnRetentionData?.churnRate || 25]
+              }
+            ]}
+            title="RETENTION VS CHURN RATE"
+            currency={selectedCurrency}
+            colors={['#3B82F6', '#F97316']}
+            chartIcon={getChartIcon('Retention vs Churn Rate')}
+          />
         </div>
 
-        {/* BARIS 5: ADVANCED ANALYTICS CHARTS */}
-        <div className="chart-row">
-          <div className="chart-container">
-            <LineChart
-              series={srChartData?.customerLifetimeValueTrend?.series || []}
-              categories={srChartData?.customerLifetimeValueTrend?.categories || []}
-              title="CUSTOMER LIFETIME VALUE TREND"
-              chartIcon={getChartIcon('Customer Lifetime Value')}
-              currency={selectedCurrency}
-              hideLegend={true}
-            />
-          </div>
-          
-          <div className="chart-container">
-            <LineChart
-              series={srChartData?.customerMaturityIndexTrend?.series || []}
-              categories={srChartData?.customerMaturityIndexTrend?.categories || []}
-              title="CUSTOMER MATURITY INDEX TREND"
-              chartIcon={getChartIcon('Customer Maturity Index')}
-              currency={selectedCurrency}
-              hideLegend={true}
-            />
-          </div>
-          
-          <div className="chart-container">
-            <LineChart
-              series={srChartData?.winrateTrend?.series || []}
-              categories={srChartData?.winrateTrend?.categories || []}
-              title="WINRATE TREND"
-              chartIcon={getChartIcon('Winrate')}
-              currency={selectedCurrency}
-              hideLegend={true}
-            />
-          </div>
+        {/* Row 5: Advanced Analytics Charts */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <LineChart
+            series={srChartData?.customerLifetimeValueTrend?.series || []}
+            categories={srChartData?.customerLifetimeValueTrend?.categories || []}
+            title="CUSTOMER LIFETIME VALUE TREND"
+            currency={selectedCurrency}
+            hideLegend={true}
+            chartIcon={getChartIcon('Customer Lifetime Value')}
+          />
+          <LineChart
+            series={srChartData?.customerMaturityIndexTrend?.series || []}
+            categories={srChartData?.customerMaturityIndexTrend?.categories || []}
+            title="CUSTOMER MATURITY INDEX TREND"
+            currency={selectedCurrency}
+            hideLegend={true}
+            chartIcon={getChartIcon('Customer Maturity Index')}
+          />
+          <LineChart
+            series={srChartData?.winrateTrend?.series || []}
+            categories={srChartData?.winrateTrend?.categories || []}
+            title="WINRATE TREND"
+            currency={selectedCurrency}
+            hideLegend={true}
+            chartIcon={getChartIcon('Winrate')}
+          />
         </div>
 
         {/* Slicer Info */}
@@ -634,10 +604,6 @@ export default function SalesRevenuePage() {
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
           border: 1px solid #e5e7eb;
           min-height: 300px;
-        }
-
-        .chart-container.full-width {
-          grid-column: 1 / -1;
         }
 
         .chart-header {
