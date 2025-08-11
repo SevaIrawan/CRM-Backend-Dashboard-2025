@@ -168,7 +168,6 @@ export default function StrategicExecutive() {
 
   return (
     <Layout
-      pageTitle="Strategic Executive"
       customSubHeader={
         <div className="dashboard-subheader">
           <div className="subheader-title">

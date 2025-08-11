@@ -295,7 +295,6 @@ export default function Dashboard() {
 
   return (
     <Layout
-      pageTitle="Dashboard"
       customSubHeader={
         <div className="dashboard-subheader">
           <div className="subheader-title">

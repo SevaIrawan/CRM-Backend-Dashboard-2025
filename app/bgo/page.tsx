@@ -13,8 +13,6 @@ export default function BGO() {
 
   return (
     <Layout
-      pageTitle="Business Growth Optimization"
-
       darkMode={darkMode}
       sidebarExpanded={sidebarExpanded}
       onToggleDarkMode={() => setDarkMode(!darkMode)}

@@ -80,7 +80,6 @@ export default function BusinessFlow() {
 
   return (
     <Layout
-      pageTitle="Business Flow"
 
       customSubHeader={
         <div className="dashboard-subheader">

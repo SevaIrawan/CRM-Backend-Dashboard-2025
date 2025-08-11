@@ -381,7 +381,6 @@ password: editingUser.password ? 'updating' : 'keeping current'
 
   return (
     <Layout
-      pageTitle="User Management"
       darkMode={darkMode}
       sidebarExpanded={sidebarExpanded}
       onToggleDarkMode={handleToggleDarkMode}

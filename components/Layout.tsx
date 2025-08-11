@@ -21,7 +21,7 @@ interface LayoutProps {
 
 export default function Layout({ 
   children, 
-  pageTitle = "NEXMAX Dashboard",
+  pageTitle, // Remove default value to allow Header to handle dynamic titles
   subHeaderTitle,
   customSubHeader,
   darkMode = false,

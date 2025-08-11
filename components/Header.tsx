@@ -50,6 +50,9 @@ export default function Header({
     if (pageTitle) return pageTitle
     
     switch (pathname) {
+      // Main Pages
+      case '/':
+        return 'NEXMAX Dashboard'
       case '/dashboard':
         return 'Dashboard'
       case '/users':
@@ -66,28 +69,43 @@ export default function Header({
         return 'Executive Operation & Optimization'
       case '/os':
         return 'Operation Supervision'
+      case '/supabase':
+        return 'Supabase Connection'
+      
+      // USC Pages
+      case '/usc':
+        return 'USC'
       case '/usc/overview':
         return 'USC Overview'
       case '/usc/sales':
         return 'USC Sales'
+      
+      // Transaction Pages
       case '/transaction/deposit':
-        return 'Deposit'
+        return 'Transaction - Deposit'
       case '/transaction/withdraw':
-        return 'Withdraw'
-      case '/transaction/exchange':
-        return 'Exchange'
-      case '/transaction/headcount':
-        return 'Headcount'
-      case '/transaction/new-register':
-        return 'New Register'
-      case '/transaction/new-depositor':
-        return 'New Depositor'
+        return 'Transaction - Withdraw'
       case '/transaction/adjustment':
-        return 'Adjustment'
+        return 'Transaction - Adjustment'
+      case '/transaction/exchange':
+        return 'Transaction - Exchange'
+      case '/transaction/headcount':
+        return 'Transaction - Headcount'
+      case '/transaction/member-report':
+        return 'Transaction - Member Report'
+      case '/transaction/new-depositor':
+        return 'Transaction - New Depositor'
+      case '/transaction/new-register':
+        return 'Transaction - New Register'
       case '/transaction/vip-program':
-        return 'VIP Program'
+        return 'Transaction - VIP Program'
+      
+      // Test Pages
+      case '/cache-test':
+        return 'Cache Performance Test'
+      
       default:
-        return 'Dashboard'
+        return 'NEXMAX Dashboard'
     }
   }
 
