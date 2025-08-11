@@ -32,7 +32,7 @@ export default function TransactionAdjustment() {
   const [year, setYear] = useState('ALL')
   const [month, setMonth] = useState('ALL')
   const [dateRange, setDateRange] = useState({ start: '', end: '' })
-  const [filterMode, setFilterMode] = useState('month')
+  const [filterMode, setFilterMode] = useState('month') // 'month' or 'daterange'
   const [useDateRange, setUseDateRange] = useState(false)
 
   // DATA STATES
@@ -41,7 +41,7 @@ export default function TransactionAdjustment() {
     currentPage: 1,
     totalPages: 1,
     totalRecords: 0,
-    recordsPerPage: 1000,
+    recordsPerPage: 1000, // 1000 records per page, displayed 15 at a time with scroll
     hasNextPage: false,
     hasPrevPage: false
   })
@@ -68,6 +68,7 @@ export default function TransactionAdjustment() {
   }, [currency])
 
   useEffect(() => {
+    // Only fetch data if we're not in initial loading state
     if (pagination.currentPage > 0) {
       fetchAdjustmentData()
     }
@@ -76,10 +77,8 @@ export default function TransactionAdjustment() {
   const fetchSlicerOptions = async () => {
     try {
       setSlicerLoading(true)
-      console.log('🔄 Fetching adjustment slicer options...')
-      
       const params = new URLSearchParams()
-      if (currency !== 'ALL') {
+      if (currency && currency !== 'ALL') {
         params.append('selectedCurrency', currency)
       }
       
@@ -87,13 +86,17 @@ export default function TransactionAdjustment() {
       const result = await response.json()
       
       if (result.success) {
-        setSlicerOptions(result.data)
-        console.log('✅ Adjustment slicer options loaded')
+        setSlicerOptions(result.options)
+        
+        // Reset line selection if current line is not available in new options
+        if (line !== 'ALL' && !result.options.lines.includes(line)) {
+          setLine('ALL')
+        }
       } else {
         console.error('Error fetching slicer options:', result.error)
       }
     } catch (error) {
-      console.error('Error fetching adjustment slicer options:', error)
+      console.error('Error fetching slicer options:', error)
     } finally {
       setSlicerLoading(false)
     }
@@ -116,14 +119,18 @@ export default function TransactionAdjustment() {
         limit: pagination.recordsPerPage.toString()
       })
 
+      console.log('📊 API params:', Object.fromEntries(params))
+      
       const response = await fetch(`/api/adjustment/data?${params}`)
       const result = await response.json()
+      
+      console.log('📊 API response:', result)
       
       if (result.success) {
         setAdjustmentData(result.data)
         setPagination(result.pagination)
-        console.log(`✅ Loaded ${result.data.length} adjustment records`)
-        setLoading(false)
+        console.log(`✅ Loaded ${result.data.length} records`)
+        setLoading(false) // Set loading to false immediately after setting data
       } else {
         console.error('Error fetching data:', result.error)
         setAdjustmentData([])
@@ -134,7 +141,7 @@ export default function TransactionAdjustment() {
           hasNextPage: false,
           hasPrevPage: false
         }))
-        setLoading(false)
+        setLoading(false) // Set loading to false even on error
       }
     } catch (error) {
       console.error('Error fetching adjustment data:', error)
@@ -146,35 +153,48 @@ export default function TransactionAdjustment() {
         hasNextPage: false,
         hasPrevPage: false
       }))
-      setLoading(false)
+      setLoading(false) // Set loading to false even on error
     }
   }
 
-  const handleMonthChange = (selectedMonth: string) => {
-    setMonth(selectedMonth)
-    setFilterMode('month')
-    setUseDateRange(false)
-    resetPagination()
-  }
-
-  const handleDateRangeChange = (field: 'start' | 'end', value: string) => {
-    setDateRange(prev => ({ ...prev, [field]: value }))
-    if (field === 'start' || (field === 'end' && dateRange.start)) {
-      setFilterMode('daterange')
-      setUseDateRange(true)
-      setMonth('ALL')
-      resetPagination()
-    }
-  }
-
+  // Reset pagination when filters change
   const resetPagination = () => {
     setPagination(prev => ({ ...prev, currentPage: 1 }))
   }
 
-  const handlePageChange = (newPage: number) => {
-    setPagination(prev => ({ ...prev, currentPage: newPage }))
+  // HANDLE MONTH SELECTION
+  const handleMonthChange = (selectedMonth: string) => {
+    setMonth(selectedMonth)
+    setFilterMode('month')
+    setDateRange({ start: '', end: '' }) // Clear date range
+    setUseDateRange(false) // Uncheck date range
+    resetPagination()
   }
 
+  // HANDLE DATE RANGE SELECTION
+  const handleDateRangeChange = (field: 'start' | 'end', value: string) => {
+    setDateRange(prev => ({ ...prev, [field]: value }))
+    if (value) {
+      setFilterMode('daterange')
+      setMonth('') // Clear month
+      resetPagination()
+    }
+  }
+
+  // HANDLE DATE RANGE TOGGLE
+  const handleDateRangeToggle = (checked: boolean) => {
+    setUseDateRange(checked)
+    if (checked) {
+      setFilterMode('daterange')
+      setMonth('') // Clear month
+    } else {
+      setFilterMode('month')
+      setDateRange({ start: '', end: '' }) // Clear date range
+    }
+    resetPagination()
+  }
+
+  // EXPORT FUNCTION
   const handleExport = async () => {
     try {
       setExporting(true)
@@ -195,16 +215,18 @@ export default function TransactionAdjustment() {
       })
 
       if (response.ok) {
+        // Create download link
         const blob = await response.blob()
         const url = window.URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.style.display = 'none'
         a.href = url
         
+        // Get filename from response headers
         const contentDisposition = response.headers.get('content-disposition')
         const filename = contentDisposition 
           ? contentDisposition.split('filename=')[1].replace(/"/g, '')
-          : 'adjustment_export.csv'
+          : 'adjustment_daily_export.csv'
         
         a.download = filename
         document.body.appendChild(a)
@@ -225,12 +247,12 @@ export default function TransactionAdjustment() {
 
   // SubHeader content
   const subHeaderContent = (
-    <div className="subheader-content">
-      <div className="subheader-title">
-        Filter & Export ({pagination.totalRecords.toLocaleString()} records)
+    <div className="dashboard-subheader">
+      <div className="subheader-left">
+        <span className="filter-export-text"> </span>
       </div>
-      
       <div className="subheader-controls">
+        {/* CURRENCY SLICER */}
         <div className="slicer-group">
           <label className="slicer-label">CURRENCY:</label>
           <select 
@@ -239,16 +261,16 @@ export default function TransactionAdjustment() {
               setCurrency(e.target.value)
               resetPagination()
             }}
-            className={`slicer-select ${slicerLoading ? 'disabled' : ''}`}
-            disabled={slicerLoading}
+            className="slicer-select"
           >
             <option value="ALL">All</option>
-            {slicerOptions.currencies.map((curr) => (
+            {slicerOptions.currencies.map(curr => (
               <option key={curr} value={curr}>{curr}</option>
             ))}
           </select>
         </div>
 
+        {/* LINE SLICER */}
         <div className="slicer-group">
           <label className="slicer-label">LINE:</label>
           <select 
@@ -257,16 +279,17 @@ export default function TransactionAdjustment() {
               setLine(e.target.value)
               resetPagination()
             }}
-            className={`slicer-select ${slicerLoading ? 'disabled' : ''}`}
-            disabled={slicerLoading}
+            disabled={currency === 'ALL' || slicerLoading}
+            className={`slicer-select ${currency === 'ALL' || slicerLoading ? 'disabled' : ''}`}
           >
             <option value="ALL">All</option>
-            {slicerOptions.lines.map((lineOption) => (
-              <option key={lineOption} value={lineOption}>{lineOption}</option>
+            {slicerOptions.lines.map(ln => (
+              <option key={ln} value={ln}>{ln}</option>
             ))}
           </select>
         </div>
 
+        {/* YEAR SLICER */}
         <div className="slicer-group">
           <label className="slicer-label">YEAR:</label>
           <select 
@@ -278,73 +301,31 @@ export default function TransactionAdjustment() {
             className="slicer-select"
           >
             <option value="ALL">All</option>
-            {slicerOptions.years.map((yearOption) => (
-              <option key={yearOption} value={yearOption}>{yearOption}</option>
+            {slicerOptions.years.map(yr => (
+              <option key={yr} value={yr}>{yr}</option>
             ))}
           </select>
         </div>
 
+        {/* MONTH SLICER - DISABLED IF DATE RANGE ACTIVE */}
         <div className="slicer-group">
           <label className="slicer-label">MONTH:</label>
           <select 
             value={month} 
             onChange={(e) => handleMonthChange(e.target.value)}
-            className={`slicer-select ${useDateRange ? 'disabled' : ''}`}
             disabled={useDateRange}
+            className={`slicer-select ${useDateRange ? 'disabled' : ''}`}
           >
             <option value="ALL">All</option>
-            {slicerOptions.months.map((monthOption) => (
-              <option key={monthOption.value} value={monthOption.value}>
-                {monthOption.label}
-              </option>
+            {slicerOptions.months.map(mo => (
+              <option key={mo.value} value={mo.value}>{mo.label}</option>
             ))}
           </select>
         </div>
 
-        <div className="slicer-group">
-          <label className="toggle-label">
-            <input
-              type="checkbox"
-              checked={useDateRange}
-              onChange={(e) => {
-                setUseDateRange(e.target.checked)
-                if (!e.target.checked) {
-                  setDateRange({ start: '', end: '' })
-                  setFilterMode('month')
-                }
-                resetPagination()
-              }}
-            />
-            DATE RANGE
-          </label>
-        </div>
 
-        <div className="slicer-group">
-          <input
-            type="date"
-            placeholder="Start Date"
-            value={dateRange.start}
-            onChange={(e) => handleDateRangeChange('start', e.target.value)}
-            disabled={!useDateRange}
-            min={slicerOptions.dateRange.min}
-            max={slicerOptions.dateRange.max}
-            className={`slicer-input ${!useDateRange ? 'disabled' : ''}`}
-          />
-        </div>
 
-        <div className="slicer-group">
-          <input
-            type="date"
-            placeholder="End Date"
-            value={dateRange.end}
-            onChange={(e) => handleDateRangeChange('end', e.target.value)}
-            disabled={!useDateRange}
-            min={slicerOptions.dateRange.min}
-            max={slicerOptions.dateRange.max}
-            className={`slicer-input ${!useDateRange ? 'disabled' : ''}`}
-          />
-        </div>
-
+        {/* EXPORT BUTTON */}
         <button 
           onClick={handleExport}
           disabled={exporting || adjustmentData.length === 0}
@@ -374,12 +355,49 @@ export default function TransactionAdjustment() {
             </div>
           ) : (
             <>
+              {/* SIMPLE TABLE - REBUILT FROM SCRATCH */}
               <div className="simple-table-container">
-                <div className="simple-title">
-                  <h2>Adjustment Daily Data (Page {pagination.currentPage} of {pagination.totalPages})</h2>
-                  <p>Showing {Math.min(adjustmentData.length, 1000)} of {pagination.totalRecords.toLocaleString()} records</p>
+                
+                {/* Date Range Controls Only - No Title */}
+                <div className="table-header-controls">
+                  <div className="date-range-controls">
+                    <div className="date-range-toggle">
+                      <label className="toggle-label">
+                        <input
+                          type="checkbox"
+                          checked={useDateRange}
+                          onChange={(e) => handleDateRangeToggle(e.target.checked)}
+                        />
+                        Date Range
+                      </label>
+                    </div>
+                    
+                    <div className="date-range-inputs">
+                      <input
+                        type="date"
+                        placeholder="Start Date"
+                        value={dateRange.start}
+                        onChange={(e) => handleDateRangeChange('start', e.target.value)}
+                        disabled={!useDateRange}
+                        min={slicerOptions.dateRange.min}
+                        max={slicerOptions.dateRange.max}
+                        className={`date-input ${!useDateRange ? 'disabled' : ''}`}
+                      />
+                      <input
+                        type="date"
+                        placeholder="End Date"
+                        value={dateRange.end}
+                        onChange={(e) => handleDateRangeChange('end', e.target.value)}
+                        disabled={!useDateRange}
+                        min={slicerOptions.dateRange.min}
+                        max={slicerOptions.dateRange.max}
+                        className={`date-input ${!useDateRange ? 'disabled' : ''}`}
+                      />
+                    </div>
+                  </div>
                 </div>
                 
+                {/* Simple Table */}
                 <div className="simple-table-wrapper">
                   <table className="simple-table">
                     <thead>
@@ -405,29 +423,36 @@ export default function TransactionAdjustment() {
                   </table>
                 </div>
 
-                {pagination.totalPages > 1 && (
-                  <div className="pagination-controls">
-                    <button 
-                      onClick={() => handlePageChange(pagination.currentPage - 1)}
-                      disabled={!pagination.hasPrevPage}
-                      className={`pagination-btn ${!pagination.hasPrevPage ? 'disabled' : ''}`}
-                    >
-                      ← Prev
-                    </button>
-                    
-                    <span className="pagination-info">
-                      Page {pagination.currentPage} of {pagination.totalPages}
-                    </span>
-                    
-                    <button 
-                      onClick={() => handlePageChange(pagination.currentPage + 1)}
-                      disabled={!pagination.hasNextPage}
-                      className={`pagination-btn ${!pagination.hasNextPage ? 'disabled' : ''}`}
-                    >
-                      Next →
-                    </button>
+                {/* Table Footer - Records Info + Pagination */}
+                <div className="table-footer">
+                  <div className="records-info">
+                    Showing {Math.min(adjustmentData.length, 1000)} of {pagination.totalRecords.toLocaleString()} records
                   </div>
-                )}
+                  
+                  {pagination.totalPages > 1 && (
+                    <div className="pagination-controls">
+                      <button
+                        onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage - 1 }))}
+                        disabled={!pagination.hasPrevPage}
+                        className="pagination-btn"
+                      >
+                        ← Prev
+                      </button>
+                      
+                      <span className="pagination-info">
+                        Page {pagination.currentPage} of {pagination.totalPages}
+                      </span>
+                      
+                      <button
+                        onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage + 1 }))}
+                        disabled={!pagination.hasNextPage}
+                        className="pagination-btn"
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </>
           )}
@@ -435,4 +460,4 @@ export default function TransactionAdjustment() {
       </Frame>
     </Layout>
   )
-}
+} 

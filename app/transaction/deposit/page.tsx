@@ -249,7 +249,7 @@ export default function TransactionDeposit() {
   const subHeaderContent = (
     <div className="dashboard-subheader">
       <div className="subheader-left">
-        <span className="filter-export-text">Filter & Export ({pagination.totalRecords.toLocaleString()} records)</span>
+        <span className="filter-export-text"> </span>
       </div>
       <div className="subheader-controls">
         {/* CURRENCY SLICER */}
@@ -323,44 +323,7 @@ export default function TransactionDeposit() {
           </select>
         </div>
 
-        {/* DATE RANGE TOGGLE CHECKBOX */}
-        <div className="slicer-group">
-          <label className="toggle-label">
-            <input
-              type="checkbox"
-              checked={useDateRange}
-              onChange={(e) => handleDateRangeToggle(e.target.checked)}
-            />
-            Date Range
-          </label>
-        </div>
 
-        {/* DATE RANGE SLICERS - DISABLED IF MONTH ACTIVE */}
-        <div className="slicer-group">
-          <input
-            type="date"
-            placeholder="Start Date"
-            value={dateRange.start}
-            onChange={(e) => handleDateRangeChange('start', e.target.value)}
-            disabled={!useDateRange}
-            min={slicerOptions.dateRange.min}
-            max={slicerOptions.dateRange.max}
-            className={`slicer-input ${!useDateRange ? 'disabled' : ''}`}
-          />
-        </div>
-
-        <div className="slicer-group">
-          <input
-            type="date"
-            placeholder="End Date"
-            value={dateRange.end}
-            onChange={(e) => handleDateRangeChange('end', e.target.value)}
-            disabled={!useDateRange}
-            min={slicerOptions.dateRange.min}
-            max={slicerOptions.dateRange.max}
-            className={`slicer-input ${!useDateRange ? 'disabled' : ''}`}
-          />
-        </div>
 
         {/* EXPORT BUTTON */}
         <button 
@@ -395,10 +358,43 @@ export default function TransactionDeposit() {
               {/* SIMPLE TABLE - REBUILT FROM SCRATCH */}
               <div className="simple-table-container">
                 
-                {/* Title Section - Outside table */}
-                <div className="simple-title">
-                  <h2>Deposit Daily Data (Page {pagination.currentPage} of {pagination.totalPages})</h2>
-                  <p>Showing {Math.min(depositData.length, 1000)} of {pagination.totalRecords.toLocaleString()} records</p>
+                {/* Date Range Controls Only - No Title */}
+                <div className="table-header-controls">
+                  <div className="date-range-controls">
+                    <div className="date-range-toggle">
+                      <label className="toggle-label">
+                        <input
+                          type="checkbox"
+                          checked={useDateRange}
+                          onChange={(e) => handleDateRangeToggle(e.target.checked)}
+                        />
+                        Date Range
+                      </label>
+                    </div>
+                    
+                    <div className="date-range-inputs">
+                      <input
+                        type="date"
+                        placeholder="Start Date"
+                        value={dateRange.start}
+                        onChange={(e) => handleDateRangeChange('start', e.target.value)}
+                        disabled={!useDateRange}
+                        min={slicerOptions.dateRange.min}
+                        max={slicerOptions.dateRange.max}
+                        className={`date-input ${!useDateRange ? 'disabled' : ''}`}
+                      />
+                      <input
+                        type="date"
+                        placeholder="End Date"
+                        value={dateRange.end}
+                        onChange={(e) => handleDateRangeChange('end', e.target.value)}
+                        disabled={!useDateRange}
+                        min={slicerOptions.dateRange.min}
+                        max={slicerOptions.dateRange.max}
+                        className={`date-input ${!useDateRange ? 'disabled' : ''}`}
+                      />
+                    </div>
+                  </div>
                 </div>
                 
                 {/* Simple Table */}
@@ -427,30 +423,36 @@ export default function TransactionDeposit() {
                   </table>
                 </div>
 
-                {/* Pagination Section - Inside table container, bottom right */}
-                {pagination.totalPages > 1 && (
-                  <div className="pagination-controls">
-                    <button
-                      onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage - 1 }))}
-                      disabled={!pagination.hasPrevPage}
-                      className="pagination-btn"
-                    >
-                      ← Prev
-                    </button>
-                    
-                    <span className="pagination-info">
-                      Page {pagination.currentPage} of {pagination.totalPages}
-                    </span>
-                    
-                    <button
-                      onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage + 1 }))}
-                      disabled={!pagination.hasNextPage}
-                      className="pagination-btn"
-                    >
-                      Next →
-                    </button>
+                {/* Table Footer - Records Info + Pagination */}
+                <div className="table-footer">
+                  <div className="records-info">
+                    Showing {Math.min(depositData.length, 1000)} of {pagination.totalRecords.toLocaleString()} records
                   </div>
-                )}
+                  
+                  {pagination.totalPages > 1 && (
+                    <div className="pagination-controls">
+                      <button
+                        onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage - 1 }))}
+                        disabled={!pagination.hasPrevPage}
+                        className="pagination-btn"
+                      >
+                        ← Prev
+                      </button>
+                      
+                      <span className="pagination-info">
+                        Page {pagination.currentPage} of {pagination.totalPages}
+                      </span>
+                      
+                      <button
+                        onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage + 1 }))}
+                        disabled={!pagination.hasNextPage}
+                        className="pagination-btn"
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </>
           )}

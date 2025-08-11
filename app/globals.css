@@ -1358,7 +1358,7 @@ html {
   margin-bottom: 16px;
 }
 
-/* Title Section - Fixed at top */
+/* Title Section - Fixed at top (ORIGINAL) */
 .simple-title {
   padding: 14px 18px;
   border-bottom: 1px solid #e5e7eb;
@@ -1376,6 +1376,164 @@ html {
   margin: 0;
   font-size: 13px; /* REDUCED - Match slicer size */
   color: #6b7280;
+}
+
+/* NEW: Title Section with Date Range Controls (LEGACY) */
+.simple-title-with-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f8fafc;
+  gap: 20px;
+}
+
+.simple-title-left h2 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.simple-title-left p {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.simple-title-right {
+  flex-shrink: 0;
+}
+
+/* NEW: Clean Table Header - Date Range Only */
+.table-header-controls {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f8fafc;
+}
+
+/* Table Footer - Records Info + Pagination */
+.table-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 18px;
+  border-top: 1px solid #e5e7eb;
+  background: #f8fafc;
+  gap: 20px;
+}
+
+.records-info {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* Update pagination to work in footer context */
+.table-footer .pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Date Range Controls in Table Header */
+.date-range-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.date-range-toggle {
+  display: flex;
+  align-items: center;
+}
+
+.date-range-toggle .toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #374151;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.date-range-toggle input[type="checkbox"] {
+  margin: 0;
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+.date-range-inputs {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.date-input {
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 12px;
+  width: 130px;
+  background: white;
+  color: #374151;
+}
+
+.date-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px #3b82f6;
+}
+
+.date-input.disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Responsive Design for Date Range */
+@media (max-width: 768px) {
+  .simple-title-with-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .simple-title-right {
+    align-self: flex-end;
+  }
+  
+  .date-range-controls {
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  
+  .date-input {
+    width: 110px;
+    font-size: 11px;
+  }
+  
+  /* New responsive for clean layout */
+  .table-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  
+  .records-info {
+    text-align: center;
+  }
+  
+  .table-footer .pagination-controls {
+    justify-content: center;
+  }
 }
 
 /* Table Wrapper - Scrollable */

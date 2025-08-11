@@ -208,7 +208,7 @@ export default function NewDepositorPage() {
   const subHeaderContent = (
     <div className="subheader-content">
       <div className="subheader-title">
-        Filter & Export ({pagination.totalRecords.toLocaleString()} records)
+        <span className="filter-export-text"> </span>
       </div>
       
       <div className="subheader-controls">
@@ -282,48 +282,6 @@ export default function NewDepositorPage() {
           </select>
         </div>
 
-        <div className="slicer-group">
-          <label className="toggle-label">
-            <input
-              type="checkbox"
-              checked={useDateRange}
-              onChange={(e) => {
-                setUseDateRange(e.target.checked)
-                if (!e.target.checked) {
-                  setDateRange({ start: '', end: '' })
-                  setFilterMode('month')
-                }
-                resetPagination()
-              }}
-            />
-            DATE RANGE
-          </label>
-        </div>
-
-        <div className="slicer-group">
-          <input
-            type="date"
-            value={dateRange.start}
-            onChange={(e) => handleDateRangeChange('start', e.target.value)}
-            disabled={!useDateRange}
-            min={slicerOptions.dateRange.min}
-            max={slicerOptions.dateRange.max}
-            className={`slicer-input ${!useDateRange ? 'disabled' : ''}`}
-          />
-        </div>
-
-        <div className="slicer-group">
-          <input
-            type="date"
-            value={dateRange.end}
-            onChange={(e) => handleDateRangeChange('end', e.target.value)}
-            disabled={!useDateRange}
-            min={slicerOptions.dateRange.min}
-            max={slicerOptions.dateRange.max}
-            className={`slicer-input ${!useDateRange ? 'disabled' : ''}`}
-          />
-        </div>
-
         <button 
           onClick={handleExport}
           disabled={exporting || newDepositorData.length === 0}
@@ -354,9 +312,43 @@ export default function NewDepositorPage() {
           ) : (
             <>
               <div className="simple-table-container">
-                <div className="simple-title">
-                  <h2>New Depositor Daily Data (Page {pagination.currentPage} of {pagination.totalPages})</h2>
-                  <p>Showing {Math.min(newDepositorData.length, 1000)} of {pagination.totalRecords.toLocaleString()} records</p>
+                {/* Date Range Controls Only - No Title */}
+                <div className="table-header-controls">
+                  <div className="date-range-controls">
+                    <div className="date-range-toggle">
+                      <label className="toggle-label">
+                        <input
+                          type="checkbox"
+                          checked={useDateRange}
+                          onChange={(e) => handleDateRangeToggle(e.target.checked)}
+                        />
+                        Date Range
+                      </label>
+                    </div>
+                    
+                    <div className="date-range-inputs">
+                      <input
+                        type="date"
+                        placeholder="Start Date"
+                        value={dateRange.start}
+                        onChange={(e) => handleDateRangeChange('start', e.target.value)}
+                        disabled={!useDateRange}
+                        min={slicerOptions.dateRange.min}
+                        max={slicerOptions.dateRange.max}
+                        className={`date-input ${!useDateRange ? 'disabled' : ''}`}
+                      />
+                      <input
+                        type="date"
+                        placeholder="End Date"
+                        value={dateRange.end}
+                        onChange={(e) => handleDateRangeChange('end', e.target.value)}
+                        disabled={!useDateRange}
+                        min={slicerOptions.dateRange.min}
+                        max={slicerOptions.dateRange.max}
+                        className={`date-input ${!useDateRange ? 'disabled' : ''}`}
+                      />
+                    </div>
+                  </div>
                 </div>
                 
                 <div className="simple-table-wrapper">
