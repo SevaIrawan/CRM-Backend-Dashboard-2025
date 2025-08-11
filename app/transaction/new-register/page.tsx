@@ -1,200 +1,417 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Layout from '@/components/Layout'
+import Frame from '@/components/Frame'
 
+interface NewRegisterData {
+  [key: string]: any
+}
+
+interface SlicerOptions {
+  currencies: string[]
+  lines: string[]
+  years: string[]
+  months: { value: string; label: string }[]
+  dateRange: { min: string; max: string }
+}
+
+interface Pagination {
+  currentPage: number
+  totalPages: number
+  totalRecords: number
+  recordsPerPage: number
+  hasNextPage: boolean
+  hasPrevPage: boolean
+}
 
 export default function NewRegisterPage() {
-  const [sidebarExpanded, setSidebarExpanded] = useState(true)
-  const [darkMode, setDarkMode] = useState(false)
+  const [currency, setCurrency] = useState('ALL')
+  const [line, setLine] = useState('ALL')
+  const [year, setYear] = useState('ALL')
+  const [month, setMonth] = useState('ALL')
+  const [dateRange, setDateRange] = useState({ start: '', end: '' })
+  const [filterMode, setFilterMode] = useState('month')
+  const [useDateRange, setUseDateRange] = useState(false)
 
-  const handleLogout = () => {
-    console.log('Logout clicked')
+  const [newRegisterData, setNewRegisterData] = useState<NewRegisterData[]>([])
+  const [pagination, setPagination] = useState<Pagination>({
+    currentPage: 1,
+    totalPages: 1,
+    totalRecords: 0,
+    recordsPerPage: 1000,
+    hasNextPage: false,
+    hasPrevPage: false
+  })
+  const [slicerOptions, setSlicerOptions] = useState<SlicerOptions>({
+    currencies: [],
+    lines: [],
+    years: [],
+    months: [],
+    dateRange: { min: '', max: '' }
+  })
+  const [loading, setLoading] = useState(true)
+  const [slicerLoading, setSlicerLoading] = useState(false)
+  const [exporting, setExporting] = useState(false)
+
+  useEffect(() => {
+    fetchSlicerOptions()
+    fetchNewRegisterData()
+  }, [])
+
+  useEffect(() => {
+    if (currency !== 'ALL') {
+      fetchSlicerOptions()
+    }
+  }, [currency])
+
+  useEffect(() => {
+    if (pagination.currentPage > 0) {
+      fetchNewRegisterData()
+    }
+  }, [currency, line, year, month, dateRange, filterMode, pagination.currentPage])
+
+  const fetchSlicerOptions = async () => {
+    try {
+      setSlicerLoading(true)
+      const params = new URLSearchParams()
+      if (currency !== 'ALL') {
+        params.append('selectedCurrency', currency)
+      }
+      
+      const response = await fetch(`/api/new-register/slicer-options?${params}`)
+      const result = await response.json()
+      
+      if (result.success) {
+        setSlicerOptions(result.data)
+      }
+    } catch (error) {
+      console.error('Error fetching new-register slicer options:', error)
+    } finally {
+      setSlicerLoading(false)
+    }
   }
 
+  const fetchNewRegisterData = async () => {
+    try {
+      setLoading(true)
+      const params = new URLSearchParams({
+        currency,
+        line,
+        year,
+        month,
+        startDate: dateRange.start,
+        endDate: dateRange.end,
+        filterMode,
+        page: pagination.currentPage.toString(),
+        limit: pagination.recordsPerPage.toString()
+      })
 
+      const response = await fetch(`/api/new-register/data?${params}`)
+      const result = await response.json()
+      
+      if (result.success) {
+        setNewRegisterData(result.data)
+        setPagination(result.pagination)
+        setLoading(false)
+      } else {
+        setNewRegisterData([])
+        setPagination(prev => ({ 
+          ...prev, 
+          totalRecords: 0, 
+          totalPages: 0,
+          hasNextPage: false,
+          hasPrevPage: false
+        }))
+        setLoading(false)
+      }
+    } catch (error) {
+      console.error('Error fetching new-register data:', error)
+      setNewRegisterData([])
+      setLoading(false)
+    }
+  }
+
+  const handleMonthChange = (selectedMonth: string) => {
+    setMonth(selectedMonth)
+    setFilterMode('month')
+    setUseDateRange(false)
+    resetPagination()
+  }
+
+  const handleDateRangeChange = (field: 'start' | 'end', value: string) => {
+    setDateRange(prev => ({ ...prev, [field]: value }))
+    if (field === 'start' || (field === 'end' && dateRange.start)) {
+      setFilterMode('daterange')
+      setUseDateRange(true)
+      setMonth('ALL')
+      resetPagination()
+    }
+  }
+
+  const resetPagination = () => {
+    setPagination(prev => ({ ...prev, currentPage: 1 }))
+  }
+
+  const handlePageChange = (newPage: number) => {
+    setPagination(prev => ({ ...prev, currentPage: newPage }))
+  }
+
+  const handleExport = async () => {
+    try {
+      setExporting(true)
+      const response = await fetch('/api/new-register/export', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          currency,
+          line,
+          year,
+          month,
+          startDate: dateRange.start,
+          endDate: dateRange.end,
+          filterMode
+        }),
+      })
+
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.style.display = 'none'
+        a.href = url
+        
+        const contentDisposition = response.headers.get('content-disposition')
+        const filename = contentDisposition 
+          ? contentDisposition.split('filename=')[1].replace(/"/g, '')
+          : 'new_register_export.csv'
+        
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      } else {
+        const error = await response.json()
+        alert(`Export failed: ${error.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Export error:', error)
+      alert('Export failed. Please try again.')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const subHeaderContent = (
+    <div className="subheader-content">
+      <div className="subheader-title">
+        Filter & Export ({pagination.totalRecords.toLocaleString()} records)
+      </div>
+      
+      <div className="subheader-controls">
+        <div className="slicer-group">
+          <label className="slicer-label">CURRENCY:</label>
+          <select 
+            value={currency} 
+            onChange={(e) => {
+              setCurrency(e.target.value)
+              resetPagination()
+            }}
+            className={`slicer-select ${slicerLoading ? 'disabled' : ''}`}
+            disabled={slicerLoading}
+          >
+            <option value="ALL">All</option>
+            {slicerOptions.currencies.map((curr) => (
+              <option key={curr} value={curr}>{curr}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="slicer-group">
+          <label className="slicer-label">LINE:</label>
+          <select 
+            value={line} 
+            onChange={(e) => {
+              setLine(e.target.value)
+              resetPagination()
+            }}
+            className={`slicer-select ${slicerLoading ? 'disabled' : ''}`}
+            disabled={slicerLoading}
+          >
+            <option value="ALL">All</option>
+            {slicerOptions.lines.map((lineOption) => (
+              <option key={lineOption} value={lineOption}>{lineOption}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="slicer-group">
+          <label className="slicer-label">YEAR:</label>
+          <select 
+            value={year} 
+            onChange={(e) => {
+              setYear(e.target.value)
+              resetPagination()
+            }}
+            className="slicer-select"
+          >
+            <option value="ALL">All</option>
+            {slicerOptions.years.map((yearOption) => (
+              <option key={yearOption} value={yearOption}>{yearOption}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="slicer-group">
+          <label className="slicer-label">MONTH:</label>
+          <select 
+            value={month} 
+            onChange={(e) => handleMonthChange(e.target.value)}
+            className={`slicer-select ${useDateRange ? 'disabled' : ''}`}
+            disabled={useDateRange}
+          >
+            <option value="ALL">All</option>
+            {slicerOptions.months.map((monthOption) => (
+              <option key={monthOption.value} value={monthOption.value}>
+                {monthOption.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="slicer-group">
+          <label className="toggle-label">
+            <input
+              type="checkbox"
+              checked={useDateRange}
+              onChange={(e) => {
+                setUseDateRange(e.target.checked)
+                if (!e.target.checked) {
+                  setDateRange({ start: '', end: '' })
+                  setFilterMode('month')
+                }
+                resetPagination()
+              }}
+            />
+            DATE RANGE
+          </label>
+        </div>
+
+        <div className="slicer-group">
+          <input
+            type="date"
+            value={dateRange.start}
+            onChange={(e) => handleDateRangeChange('start', e.target.value)}
+            disabled={!useDateRange}
+            min={slicerOptions.dateRange.min}
+            max={slicerOptions.dateRange.max}
+            className={`slicer-input ${!useDateRange ? 'disabled' : ''}`}
+          />
+        </div>
+
+        <div className="slicer-group">
+          <input
+            type="date"
+            value={dateRange.end}
+            onChange={(e) => handleDateRangeChange('end', e.target.value)}
+            disabled={!useDateRange}
+            min={slicerOptions.dateRange.min}
+            max={slicerOptions.dateRange.max}
+            className={`slicer-input ${!useDateRange ? 'disabled' : ''}`}
+          />
+        </div>
+
+        <button 
+          onClick={handleExport}
+          disabled={exporting || newRegisterData.length === 0}
+          className={`export-button ${exporting || newRegisterData.length === 0 ? 'disabled' : ''}`}
+        >
+          {exporting ? 'Exporting...' : 'Export'}
+        </button>
+      </div>
+    </div>
+  )
 
   return (
-    <Layout
-      pageTitle="New Register"
+    <Layout customSubHeader={subHeaderContent}>
+      <Frame variant="compact">
+        <div className="deposit-container">
+          {loading ? (
+            <div className="loading-container">
+              <div className="loading-spinner"></div>
+              <p>Loading new register data...</p>
+            </div>
+          ) : newRegisterData.length === 0 ? (
+            <div className="empty-container">
+              <div className="empty-icon">📭</div>
+              <div className="empty-text">
+                No new register data found for the selected filters
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="simple-table-container">
+                <div className="simple-title">
+                  <h2>New Register Data (Page {pagination.currentPage} of {pagination.totalPages})</h2>
+                  <p>Showing {Math.min(newRegisterData.length, 1000)} of {pagination.totalRecords.toLocaleString()} records</p>
+                </div>
+                
+                <div className="simple-table-wrapper">
+                  <table className="simple-table">
+                    <thead>
+                      <tr>
+                        {newRegisterData.length > 0 && Object.keys(newRegisterData[0]).map((column) => (
+                          <th key={column}>{column.toUpperCase().replace(/_/g, ' ')}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {newRegisterData.map((row, index) => (
+                        <tr key={index}>
+                          {Object.keys(row).map((column) => (
+                            <td key={column}>
+                              {typeof row[column] === 'number'
+                                ? row[column].toFixed(2)
+                                : row[column] || '-'}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-      darkMode={darkMode}
-      sidebarExpanded={sidebarExpanded}
-      onToggleDarkMode={() => setDarkMode(!darkMode)}
-      onLogout={handleLogout}
-    >
-      <div className="coming-soon-container">
-        <div className="coming-soon-frame">
-          <div className="coming-soon-content">
-            <div className="coming-soon-icon">
-              💎
-            </div>
-            <h1 className="coming-soon-title">
-              New Register
-            </h1>
-            <p className="coming-soon-description">
-              This page is under development and will be available soon.
-            </p>
-            <div className="coming-soon-features">
-              <div className="feature-item">
-                <span className="feature-icon">📊</span>
-                <span className="feature-text">Advanced Analytics</span>
+                {pagination.totalPages > 1 && (
+                  <div className="pagination-controls">
+                    <button 
+                      onClick={() => handlePageChange(pagination.currentPage - 1)}
+                      disabled={!pagination.hasPrevPage}
+                      className={`pagination-btn ${!pagination.hasPrevPage ? 'disabled' : ''}`}
+                    >
+                      ← Prev
+                    </button>
+                    
+                    <span className="pagination-info">
+                      Page {pagination.currentPage} of {pagination.totalPages}
+                    </span>
+                    
+                    <button 
+                      onClick={() => handlePageChange(pagination.currentPage + 1)}
+                      disabled={!pagination.hasNextPage}
+                      className={`pagination-btn ${!pagination.hasNextPage ? 'disabled' : ''}`}
+                    >
+                      Next →
+                    </button>
+                  </div>
+                )}
               </div>
-              <div className="feature-item">
-                <span className="feature-icon">📈</span>
-                <span className="feature-text">Real-time Data</span>
-              </div>
-              <div className="feature-item">
-                <span className="feature-icon">🎯</span>
-                <span className="feature-text">Smart Insights</span>
-              </div>
-            </div>
-            <button className="coming-soon-button">
-              Coming Soon
-            </button>
-            <p className="coming-soon-note">
-              Slicers and filters will be configured when this page is fully developed
-            </p>
-          </div>
+            </>
+          )}
         </div>
-      </div>
-
-      <style jsx>{`
-        .coming-soon-container {
-          padding: 24px;
-          height: 100%;
-          background-color: #f8f9fa;
-        }
-
-        .coming-soon-frame {
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-          border: 1px solid #e5e7eb;
-          overflow: hidden;
-          height: calc(100vh - 200px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .coming-soon-content {
-          text-align: center;
-          padding: 48px;
-          max-width: 600px;
-        }
-
-        .coming-soon-icon {
-          font-size: 64px;
-          margin-bottom: 24px;
-          animation: pulse 2s infinite;
-        }
-
-        .coming-soon-title {
-          font-size: 32px;
-          font-weight: 700;
-          color: #1f2937;
-          margin: 0 0 16px 0;
-        }
-
-        .coming-soon-description {
-          font-size: 18px;
-          color: #6b7280;
-          margin: 0 0 32px 0;
-          line-height: 1.6;
-        }
-
-        .coming-soon-features {
-          display: flex;
-          justify-content: center;
-          gap: 32px;
-          margin-bottom: 32px;
-          flex-wrap: wrap;
-        }
-
-        .feature-item {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .feature-icon {
-          font-size: 24px;
-        }
-
-        .feature-text {
-          font-size: 14px;
-          color: #6b7280;
-          font-weight: 500;
-        }
-
-        .coming-soon-button {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          border: none;
-          padding: 16px 32px;
-          border-radius: 8px;
-          font-size: 16px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          margin-bottom: 16px;
-        }
-
-        .coming-soon-button:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
-        }
-
-        .coming-soon-note {
-          font-size: 14px;
-          color: #9ca3af;
-          font-style: italic;
-          margin: 0;
-        }
-
-        .slicer-message {
-          font-size: 14px;
-          color: #6b7280;
-          font-style: italic;
-          background: #f3f4f6;
-          padding: 8px 16px;
-          border-radius: 6px;
-          border: 1px solid #e5e7eb;
-        }
-
-        @keyframes pulse {
-          0%, 100% { 
-            transform: scale(1); 
-          }
-          50% { 
-            transform: scale(1.1); 
-          }
-        }
-
-        @media (max-width: 768px) {
-          .coming-soon-container {
-            padding: 16px;
-          }
-          
-          .coming-soon-content {
-            padding: 32px 24px;
-          }
-          
-          .coming-soon-title {
-            font-size: 24px;
-          }
-          
-          .coming-soon-description {
-            font-size: 16px;
-          }
-          
-          .coming-soon-features {
-            gap: 24px;
-          }
-        }
-      `}</style>
+      </Frame>
     </Layout>
   )
-} 
+}

@@ -244,6 +244,7 @@ export default function Sidebar({
           { title: 'Withdraw', path: '/transaction/withdraw' },
           { title: 'Exchange', path: '/transaction/exchange' },
           { title: 'Headcount', path: '/transaction/headcount' },
+          { title: 'Member Report', path: '/transaction/member-report' },
           { title: 'New Depositor', path: '/transaction/new-depositor' },
           { title: 'New Register', path: '/transaction/new-register' },
           { title: 'VIP Program', path: '/transaction/vip-program' }

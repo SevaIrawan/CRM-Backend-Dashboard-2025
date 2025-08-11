@@ -15,12 +15,12 @@ export async function GET(request: NextRequest) {
   const limit = parseInt(searchParams.get('limit') || '1000')
 
   try {
-    console.log('📊 Fetching deposit_daily data with filters:', { 
+    console.log('📊 Fetching member_report_daily data with filters:', { 
       currency, line, year, month, startDate, endDate, filterMode, page, limit 
     })
 
     // Build base query for filtering
-    let baseQuery = supabase.from('deposit_daily').select('*')
+    let baseQuery = supabase.from('member_report_daily').select('*')
 
     // Add filters based on selections
     if (currency && currency !== 'ALL') {
@@ -37,13 +37,13 @@ export async function GET(request: NextRequest) {
 
     // Handle month vs date range filtering
     if (filterMode === 'month' && month && month !== 'ALL') {
-      baseQuery = baseQuery.filter('month', 'eq', month) // month is text, not integer
+      baseQuery = baseQuery.filter('month', 'eq', month)
     } else if (filterMode === 'daterange' && startDate && endDate) {
       baseQuery = baseQuery.filter('date', 'gte', startDate).filter('date', 'lte', endDate)
     }
 
     // Get total count first (separate query)
-    const countQuery = supabase.from('deposit_daily').select('*', { count: 'exact', head: true })
+    const countQuery = supabase.from('member_report_daily').select('*', { count: 'exact', head: true })
     
     // Apply same filters to count query
     if (currency && currency !== 'ALL') {
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
       countQuery.filter('year', 'eq', parseInt(year))
     }
     if (filterMode === 'month' && month && month !== 'ALL') {
-      countQuery.filter('month', 'eq', month) // month is text, not integer
+      countQuery.filter('month', 'eq', month)
     } else if (filterMode === 'daterange' && startDate && endDate) {
       countQuery.filter('date', 'gte', startDate).filter('date', 'lte', endDate)
     }
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
     const countResult = await countQuery
     const totalRecords = countResult.count || 0
 
-    console.log(`📊 Total records found: ${totalRecords}`)
+    console.log(`📊 Total member_report_daily records found: ${totalRecords}`)
 
     // Get data with pagination and sorting
     const offset = (page - 1) * limit
@@ -78,13 +78,13 @@ export async function GET(request: NextRequest) {
       console.error('❌ Supabase query error:', result.error)
       return NextResponse.json({ 
         success: false, 
-        error: 'Database error while fetching data',
+        error: 'Database error while fetching member_report_daily data',
         message: result.error.message 
       }, { status: 500 })
     }
 
     const totalPages = Math.ceil(totalRecords / limit)
-    console.log(`✅ Found ${result.data?.length || 0} records from deposit_daily (Page ${page} of ${totalPages})`)
+    console.log(`✅ Found ${result.data?.length || 0} member_report_daily records (Page ${page} of ${totalPages})`)
 
     return NextResponse.json({
       success: true,
@@ -109,11 +109,10 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ Error fetching deposit_daily data:', error)
+    console.error('❌ Error fetching member_report_daily data:', error)
     return NextResponse.json({ 
-      success: false,
-      error: 'Database error while fetching data',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      success: false, 
+      error: 'Internal server error while fetching member_report_daily data' 
     }, { status: 500 })
   }
 }

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Layout from '@/components/Layout'
 import Frame from '@/components/Frame'
 
-interface NewDepositorData {
+interface MemberReportData {
   [key: string]: any
 }
 
@@ -25,7 +25,7 @@ interface Pagination {
   hasPrevPage: boolean
 }
 
-export default function NewDepositorPage() {
+export default function MemberReportPage() {
   const [currency, setCurrency] = useState('ALL')
   const [line, setLine] = useState('ALL')
   const [year, setYear] = useState('ALL')
@@ -34,7 +34,7 @@ export default function NewDepositorPage() {
   const [filterMode, setFilterMode] = useState('month')
   const [useDateRange, setUseDateRange] = useState(false)
 
-  const [newDepositorData, setNewDepositorData] = useState<NewDepositorData[]>([])
+  const [memberReportData, setMemberReportData] = useState<MemberReportData[]>([])
   const [pagination, setPagination] = useState<Pagination>({
     currentPage: 1,
     totalPages: 1,
@@ -56,7 +56,7 @@ export default function NewDepositorPage() {
 
   useEffect(() => {
     fetchSlicerOptions()
-    fetchNewDepositorData()
+    fetchMemberReportData()
   }, [])
 
   useEffect(() => {
@@ -67,7 +67,7 @@ export default function NewDepositorPage() {
 
   useEffect(() => {
     if (pagination.currentPage > 0) {
-      fetchNewDepositorData()
+      fetchMemberReportData()
     }
   }, [currency, line, year, month, dateRange, filterMode, pagination.currentPage])
 
@@ -79,20 +79,20 @@ export default function NewDepositorPage() {
         params.append('selectedCurrency', currency)
       }
       
-      const response = await fetch(`/api/new-depositor/slicer-options?${params}`)
+      const response = await fetch(`/api/member-report/slicer-options?${params}`)
       const result = await response.json()
       
       if (result.success) {
         setSlicerOptions(result.data)
       }
     } catch (error) {
-      console.error('Error fetching new-depositor slicer options:', error)
+      console.error('Error fetching member-report slicer options:', error)
     } finally {
       setSlicerLoading(false)
     }
   }
 
-  const fetchNewDepositorData = async () => {
+  const fetchMemberReportData = async () => {
     try {
       setLoading(true)
       const params = new URLSearchParams({
@@ -107,15 +107,15 @@ export default function NewDepositorPage() {
         limit: pagination.recordsPerPage.toString()
       })
 
-      const response = await fetch(`/api/new-depositor/data?${params}`)
+      const response = await fetch(`/api/member-report/data?${params}`)
       const result = await response.json()
       
       if (result.success) {
-        setNewDepositorData(result.data)
+        setMemberReportData(result.data)
         setPagination(result.pagination)
         setLoading(false)
       } else {
-        setNewDepositorData([])
+        setMemberReportData([])
         setPagination(prev => ({ 
           ...prev, 
           totalRecords: 0, 
@@ -126,8 +126,8 @@ export default function NewDepositorPage() {
         setLoading(false)
       }
     } catch (error) {
-      console.error('Error fetching new-depositor data:', error)
-      setNewDepositorData([])
+      console.error('Error fetching member-report data:', error)
+      setMemberReportData([])
       setLoading(false)
     }
   }
@@ -160,7 +160,7 @@ export default function NewDepositorPage() {
   const handleExport = async () => {
     try {
       setExporting(true)
-      const response = await fetch('/api/new-depositor/export', {
+      const response = await fetch('/api/member-report/export', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -186,7 +186,7 @@ export default function NewDepositorPage() {
         const contentDisposition = response.headers.get('content-disposition')
         const filename = contentDisposition 
           ? contentDisposition.split('filename=')[1].replace(/"/g, '')
-          : 'new_depositor_export.csv'
+          : 'member_report_export.csv'
         
         a.download = filename
         document.body.appendChild(a)
@@ -326,8 +326,8 @@ export default function NewDepositorPage() {
 
         <button 
           onClick={handleExport}
-          disabled={exporting || newDepositorData.length === 0}
-          className={`export-button ${exporting || newDepositorData.length === 0 ? 'disabled' : ''}`}
+          disabled={exporting || memberReportData.length === 0}
+          className={`export-button ${exporting || memberReportData.length === 0 ? 'disabled' : ''}`}
         >
           {exporting ? 'Exporting...' : 'Export'}
         </button>
@@ -342,34 +342,34 @@ export default function NewDepositorPage() {
           {loading ? (
             <div className="loading-container">
               <div className="loading-spinner"></div>
-              <p>Loading new depositor data...</p>
+              <p>Loading member report data...</p>
             </div>
-          ) : newDepositorData.length === 0 ? (
+          ) : memberReportData.length === 0 ? (
             <div className="empty-container">
               <div className="empty-icon">📭</div>
               <div className="empty-text">
-                No new depositor data found for the selected filters
+                No member report data found for the selected filters
               </div>
             </div>
           ) : (
             <>
               <div className="simple-table-container">
                 <div className="simple-title">
-                  <h2>New Depositor Daily Data (Page {pagination.currentPage} of {pagination.totalPages})</h2>
-                  <p>Showing {Math.min(newDepositorData.length, 1000)} of {pagination.totalRecords.toLocaleString()} records</p>
+                  <h2>Member Report Daily Data (Page {pagination.currentPage} of {pagination.totalPages})</h2>
+                  <p>Showing {Math.min(memberReportData.length, 1000)} of {pagination.totalRecords.toLocaleString()} records</p>
                 </div>
                 
                 <div className="simple-table-wrapper">
                   <table className="simple-table">
                     <thead>
                       <tr>
-                        {newDepositorData.length > 0 && Object.keys(newDepositorData[0]).map((column) => (
+                        {memberReportData.length > 0 && Object.keys(memberReportData[0]).map((column) => (
                           <th key={column}>{column.toUpperCase().replace(/_/g, ' ')}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {newDepositorData.map((row, index) => (
+                      {memberReportData.map((row, index) => (
                         <tr key={index}>
                           {Object.keys(row).map((column) => (
                             <td key={column}>

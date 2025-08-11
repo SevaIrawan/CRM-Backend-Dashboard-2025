@@ -30,7 +30,7 @@ export default function TransactionDeposit() {
   const [currency, setCurrency] = useState('ALL')
   const [line, setLine] = useState('ALL')
   const [year, setYear] = useState('ALL')
-  const [month, setMonth] = useState('')
+  const [month, setMonth] = useState('ALL')
   const [dateRange, setDateRange] = useState({ start: '', end: '' })
   const [filterMode, setFilterMode] = useState('month') // 'month' or 'daterange'
   const [useDateRange, setUseDateRange] = useState(false)
@@ -41,7 +41,7 @@ export default function TransactionDeposit() {
     currentPage: 1,
     totalPages: 1,
     totalRecords: 0,
-    recordsPerPage: 1000,
+    recordsPerPage: 1000, // 1000 records per page, displayed 15 at a time with scroll
     hasNextPage: false,
     hasPrevPage: false
   })
@@ -282,9 +282,7 @@ export default function TransactionDeposit() {
             disabled={currency === 'ALL' || slicerLoading}
             className={`slicer-select ${currency === 'ALL' || slicerLoading ? 'disabled' : ''}`}
           >
-            <option value="ALL">
-              {currency === 'ALL' ? 'Select Currency First' : slicerLoading ? 'Loading...' : 'All'}
-            </option>
+            <option value="ALL">All</option>
             {slicerOptions.lines.map(ln => (
               <option key={ln} value={ln}>{ln}</option>
             ))}
@@ -318,7 +316,7 @@ export default function TransactionDeposit() {
             disabled={useDateRange}
             className={`slicer-select ${useDateRange ? 'disabled' : ''}`}
           >
-            <option value="">Select Month</option>
+            <option value="ALL">All</option>
             {slicerOptions.months.map(mo => (
               <option key={mo.value} value={mo.value}>{mo.label}</option>
             ))}
@@ -339,9 +337,9 @@ export default function TransactionDeposit() {
 
         {/* DATE RANGE SLICERS - DISABLED IF MONTH ACTIVE */}
         <div className="slicer-group">
-          <label className="slicer-label">START:</label>
           <input
             type="date"
+            placeholder="Start Date"
             value={dateRange.start}
             onChange={(e) => handleDateRangeChange('start', e.target.value)}
             disabled={!useDateRange}
@@ -352,9 +350,9 @@ export default function TransactionDeposit() {
         </div>
 
         <div className="slicer-group">
-          <label className="slicer-label">END:</label>
           <input
             type="date"
+            placeholder="End Date"
             value={dateRange.end}
             onChange={(e) => handleDateRangeChange('end', e.target.value)}
             disabled={!useDateRange}
@@ -370,7 +368,7 @@ export default function TransactionDeposit() {
           disabled={exporting || depositData.length === 0}
           className={`export-button ${exporting || depositData.length === 0 ? 'disabled' : ''}`}
         >
-          {exporting ? '⏳ Exporting...' : '📥 Export CSV'}
+          {exporting ? 'Exporting...' : 'Export'}
         </button>
       </div>
     </div>
@@ -378,7 +376,7 @@ export default function TransactionDeposit() {
 
   return (
     <Layout customSubHeader={subHeaderContent}>
-      <Frame>
+      <Frame variant="compact">
         <div className="deposit-container">
           {loading ? (
             <div className="loading-container">
@@ -394,14 +392,18 @@ export default function TransactionDeposit() {
             </div>
           ) : (
             <>
-              <div className="data-table-container">
-                <div className="table-header">
+              {/* SIMPLE TABLE - REBUILT FROM SCRATCH */}
+              <div className="simple-table-container">
+                
+                {/* Title Section - Outside table */}
+                <div className="simple-title">
                   <h2>Deposit Daily Data (Page {pagination.currentPage} of {pagination.totalPages})</h2>
-                  <p>Showing {depositData.length} of {pagination.totalRecords.toLocaleString()} records</p>
+                  <p>Showing {Math.min(depositData.length, 1000)} of {pagination.totalRecords.toLocaleString()} records</p>
                 </div>
                 
-                <div className="table-wrapper">
-                  <table className="data-table">
+                {/* Simple Table */}
+                <div className="simple-table-wrapper">
+                  <table className="simple-table">
                     <thead>
                       <tr>
                         {depositData.length > 0 && Object.keys(depositData[0]).map((column) => (
@@ -424,32 +426,32 @@ export default function TransactionDeposit() {
                     </tbody>
                   </table>
                 </div>
-              </div>
 
-              {/* Pagination Section - Outside table container, bottom right */}
-              {pagination.totalPages > 1 && (
-                <div className="pagination-controls">
-                  <button
-                    onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage - 1 }))}
-                    disabled={!pagination.hasPrevPage}
-                    className="pagination-btn"
-                  >
-                    ← Previous
-                  </button>
-                  
-                  <span className="pagination-info">
-                    Page {pagination.currentPage} of {pagination.totalPages}
-                  </span>
-                  
-                  <button
-                    onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage + 1 }))}
-                    disabled={!pagination.hasNextPage}
-                    className="pagination-btn"
-                  >
-                    Next →
-                  </button>
-                </div>
-              )}
+                {/* Pagination Section - Inside table container, bottom right */}
+                {pagination.totalPages > 1 && (
+                  <div className="pagination-controls">
+                    <button
+                      onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage - 1 }))}
+                      disabled={!pagination.hasPrevPage}
+                      className="pagination-btn"
+                    >
+                      ← Prev
+                    </button>
+                    
+                    <span className="pagination-info">
+                      Page {pagination.currentPage} of {pagination.totalPages}
+                    </span>
+                    
+                    <button
+                      onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage + 1 }))}
+                      disabled={!pagination.hasNextPage}
+                      className="pagination-btn"
+                    >
+                      Next →
+                    </button>
+                  </div>
+                )}
+              </div>
             </>
           )}
         </div>

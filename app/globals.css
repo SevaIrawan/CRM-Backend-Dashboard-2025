@@ -132,7 +132,7 @@ body {
 }
 
 .subheader-title {
-  font-size: 18px;
+  font-size: 16px; /* PROFESSIONAL SIZE - Match table title */
   font-weight: 600;
   color: #374151;
 }
@@ -140,13 +140,18 @@ body {
 .slicer-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px; /* More compact spacing */
+  min-width: 0; /* Allow shrinking */
+  flex-shrink: 0; /* Prevent excessive shrinking */
 }
 
 .slicer-label {
-  font-size: 14px;
+  font-size: 12px; /* PROFESSIONAL SIZE - More readable */
   font-weight: 500;
   color: #374151;
+  white-space: nowrap;
+  min-width: fit-content;
+  text-transform: uppercase;
 }
 
 /* RESPONSIVE GRID SYSTEM - CENTRALIZED GAP */
@@ -893,11 +898,12 @@ body {
 .subheader-controls {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 6px; /* More compact gap */
   margin-left: auto; /* Push to right */
   flex-shrink: 0; /* Prevent shrinking */
   justify-content: flex-end; /* Ensure right alignment */
-  min-width: 200px;
+  flex-wrap: wrap; /* Allow wrapping for better mobile support */
+  max-width: calc(100vw - 300px); /* Prevent overflow */
 }
 
 .subheader-select {
@@ -1336,124 +1342,97 @@ html {
 }
 
 /* Table Title Row - Freeze */
-.table-title-row {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  background: white;
-  border-bottom: 2px solid #e9ecef;
-}
-
-.table-title-cell {
-  padding: 15px 20px;
-  text-align: left;
-  background: white;
-  border: none;
-}
-
-.table-title-content h2 {
-  margin: 0 0 5px 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-}
-
-.table-title-content p {
-  margin: 0;
-  font-size: 14px;
-  color: #666;
-}
-
-/* Data Table Headers - Below Title */
-.data-table th:not(.table-title-cell) {
-  position: sticky;
-  top: 80px; /* Adjust based on title row height */
-  z-index: 10;
-  background: white;
-  border-bottom: 1px solid #e9ecef;
-}
+/* OLD TABLE CSS DELETED */
 
 /* Data Table Container */
-.data-table-container {
+/* ======================================
+   SIMPLE TABLE - REBUILT FROM SCRATCH
+   ====================================== */
+
+/* Container */
+.simple-table-container {
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 20px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 16px;
 }
 
-.table-header {
-  padding: 20px 24px;
-  border-bottom: 1px solid #e2e8f0;
+/* Title Section - Fixed at top */
+.simple-title {
+  padding: 14px 18px;
+  border-bottom: 1px solid #e5e7eb;
   background: #f8fafc;
-  flex-shrink: 0;
-  position: sticky;
-  top: 0;
-  z-index: 20;
 }
 
-.table-header h2 {
-  margin: 0;
-  color: #1f2937;
-  font-size: 1.25rem;
+.simple-title h2 {
+  margin: 0 0 4px 0;
+  font-size: 16px; /* REDUCED - Professional size */
   font-weight: 600;
+  color: #1f2937;
 }
 
-.table-header p {
-  margin: 8px 0 0 0;
+.simple-title p {
+  margin: 0;
+  font-size: 13px; /* REDUCED - Match slicer size */
   color: #6b7280;
-  font-size: 14px;
 }
 
-.table-wrapper {
-  flex: 1;
-  overflow: auto;
-  min-height: 0;
+/* Table Wrapper - Scrollable */
+.simple-table-wrapper {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 600px; /* Limit height for scroll */
 }
 
-.data-table {
+/* Table */
+.simple-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
 }
 
-.data-table thead {
+/* Table Headers - Sticky */
+.simple-table thead {
   position: sticky;
   top: 0;
-  background: #f9fafb;
+  background: #374151; /* ABU-ABU GELAP */
   z-index: 10;
 }
 
-.data-table th {
-  padding: 12px 16px;
+.simple-table th {
+  padding: 10px 14px; /* Slightly smaller padding */
   text-align: left;
   font-weight: 600;
-  color: #374151;
-  border-bottom: 2px solid #e5e7eb;
+  color: white; /* WHITE TEXT on dark background */
+  border-bottom: 1px solid #4b5563;
+  border-right: 1px solid #4b5563;
+  background: #374151; /* ABU-ABU GELAP */
   white-space: nowrap;
-  background: #f9fafb;
+  font-size: 12px; /* PROFESSIONAL SIZE - Match slicer labels */
 }
 
-.data-table td {
-  padding: 12px 16px;
+/* Table Data */
+.simple-table td {
+  padding: 10px 14px; /* Match header padding */
   border-bottom: 1px solid #e5e7eb;
+  border-right: 1px solid #e5e7eb;
   color: #1f2937;
   white-space: nowrap;
+  font-size: 12px; /* PROFESSIONAL SIZE - Match header */
 }
 
-.data-table tbody tr:hover {
+/* Row hover */
+.simple-table tbody tr:hover {
   background: #f9fafb;
 }
 
-.data-table tbody tr:nth-child(even) {
+/* Zebra stripes */
+.simple-table tbody tr:nth-child(even) {
   background: #fafafa;
 }
 
-.data-table tbody tr:nth-child(even):hover {
-  background: #f0f0f0;
+.simple-table tbody tr:nth-child(even):hover {
+  background: #f3f4f6;
 }
 
 /* Pagination Controls - Bottom right */
@@ -1461,16 +1440,17 @@ html {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 16px;
-  padding: 20px;
-  background: transparent;
-  border-top: none;
-  flex-shrink: 0;
+  gap: 12px; /* Compact gap */
+  padding: 12px 16px; /* Compact padding */
+  background: white;
+  border-top: 1px solid #e5e7eb; /* Separator from table */
+  flex-shrink: 0; /* Don't shrink */
 }
 
 .pagination-btn {
-  padding: 8px 16px;
+  padding: 6px 12px; /* Compact padding */
   border: 1px solid #d1d5db;
+  font-size: 12px; /* Compact font size */
   background: white;
   color: #374151;
   border-radius: 6px;
@@ -1493,7 +1473,8 @@ html {
 .pagination-info {
   font-weight: 500;
   color: #6b7280;
-  font-size: 14px;
+  font-size: 12px; /* Compact font size */
+  white-space: nowrap; /* Prevent wrapping */
 }
 
 /* Scrollbar styling */
@@ -1516,11 +1497,12 @@ html {
   background: #a8a8a8;
 }
 
-/* Deposit Container - Full height */
+/* Deposit Container - Compact height */
 .deposit-container {
-  height: 100%;
+  height: calc(100vh - 200px); /* Compact height calculation */
   display: flex;
   flex-direction: column;
+  gap: 12px; /* Compact gap */
 }
 
 @media (max-width: 768px) {
@@ -1534,18 +1516,126 @@ html {
     padding: 8px 12px;
     font-size: 12px;
   }
+
+  .subheader-controls {
+    max-width: 100%;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .slicer-group {
+    gap: 3px;
+  }
+
+  .slicer-select {
+    min-width: 50px;
+    max-width: 80px;
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+
+  .slicer-input {
+    min-width: 70px;
+    max-width: 90px;
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+
+  .slicer-label {
+    font-size: 9px;
+  }
+
+  .export-button {
+    font-size: 10px;
+    padding: 3px 8px;
+    min-width: 50px;
+  }
+
+  .toggle-label {
+    font-size: 9px;
+    gap: 2px;
+  }
 }
 
 /* Slicer Components */
 .slicer-select {
-  padding: 8px 12px;
-  border-radius: 6px;
+  padding: 4px 8px; /* Even more compact padding */
+  border-radius: 4px; /* Smaller border radius */
   border: 1px solid #d1d5db;
-  font-size: 14px;
+  font-size: 13px; /* PROFESSIONAL SIZE */
+  min-width: 70px; /* Professional width */
+  max-width: 110px; /* Professional width */
   font-weight: 500;
   background-color: white;
   cursor: pointer;
   transition: all 0.2s ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slicer-input {
+  padding: 6px 10px; /* Professional padding */
+  border-radius: 4px;
+  border: 1px solid #d1d5db;
+  font-size: 13px; /* PROFESSIONAL SIZE */
+  min-width: 90px; /* Smaller for compact layout */
+  max-width: 110px; /* Smaller for compact layout */
+  background-color: white;
+  transition: all 0.2s ease;
+}
+
+.slicer-input.disabled {
+  background-color: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.export-button {
+  padding: 4px 10px; /* Compact padding */
+  border-radius: 4px;
+  border: none;
+  font-size: 13px; /* PROFESSIONAL SIZE */
+  font-weight: 500;
+  background-color: #10b981;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  min-width: 60px; /* Compact width */
+}
+
+.export-button:hover:not(.disabled) {
+  background-color: #059669;
+}
+
+.export-button.disabled {
+  background-color: #d1d5db;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 3px; /* Smaller gap */
+  font-size: 10px; /* Smaller font */
+  color: #374151;
+  cursor: pointer;
+  white-space: nowrap;
+  text-transform: uppercase; /* Compact style */
+}
+
+.toggle-label input[type="checkbox"] {
+  margin: 0;
+  transform: scale(0.9);
+}
+
+.filter-export-text {
+  font-size: 14px; /* Compact font size */
+  font-weight: 600;
+  color: #374151;
+  white-space: nowrap; /* Prevent wrapping */
 }
 
 .slicer-select:hover:not(.disabled) {

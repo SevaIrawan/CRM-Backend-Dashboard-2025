@@ -6,11 +6,11 @@ export async function GET(request: NextRequest) {
   const selectedCurrency = searchParams.get('selectedCurrency')
 
   try {
-    console.log('🔍 Fetching unique values from deposit_daily for slicers...', { selectedCurrency })
+    console.log('🔍 Fetching unique values from new_register for slicers...', { selectedCurrency })
 
     // Get unique currencies
     const { data: currencyData, error: currencyError } = await supabase
-      .from('deposit_daily')
+      .from('new_register')
       .select('currency')
       .not('currency', 'is', null)
       .order('currency')
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
     // Get unique lines - dependent on selected currency
     let lineQuery = supabase
-      .from('deposit_daily')
+      .from('new_register')
       .select('line')
       .not('line', 'is', null)
       .order('line')
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
     // Get unique years
     const { data: yearData, error: yearError } = await supabase
-      .from('deposit_daily')
+      .from('new_register')
       .select('year')
       .not('year', 'is', null)
       .order('year', { ascending: false })
@@ -62,9 +62,9 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    // Get unique months - month is stored as text in database
+    // Get unique months
     const { data: monthData, error: monthError } = await supabase
-      .from('deposit_daily')
+      .from('new_register')
       .select('month')
       .not('month', 'is', null)
       .order('month')
@@ -80,14 +80,14 @@ export async function GET(request: NextRequest) {
 
     // Get date range (min and max dates)
     const { data: dateRangeData, error: dateRangeError } = await supabase
-      .from('deposit_daily')
+      .from('new_register')
       .select('date')
       .not('date', 'is', null)
       .order('date', { ascending: true })
       .limit(1)
 
     const { data: maxDateData, error: maxDateError } = await supabase
-      .from('deposit_daily')
+      .from('new_register')
       .select('date')
       .not('date', 'is', null)
       .order('date', { ascending: false })
@@ -106,51 +106,47 @@ export async function GET(request: NextRequest) {
     const currencies = Array.from(new Set(currencyData?.map(row => row.currency).filter(Boolean) || [])) as string[]
     const lines = Array.from(new Set(lineData?.map(row => row.line).filter(Boolean) || [])) as string[]
     const years = Array.from(new Set(yearData?.map(row => row.year?.toString()).filter(Boolean) || [])) as string[]
+    
     const monthNames = [
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'
     ]
     
-    const months = Array.from(new Set(monthData?.map(row => row.month?.toString()).filter(Boolean) || []))
-      .filter(month => monthNames.includes(month)) // Only valid month names
-      .sort((a, b) => monthNames.indexOf(a) - monthNames.indexOf(b)) // Sort by month order
-      .map(month => ({
-        value: month,
-        label: month
-      })) as Array<{value: string, label: string}>
+    const rawMonths = Array.from(new Set(monthData?.map(row => row.month).filter(Boolean) || []))
+    const validMonths = rawMonths.filter(month => monthNames.includes(month))
+    const sortedMonths = validMonths.sort((a, b) => monthNames.indexOf(a) - monthNames.indexOf(b))
+    const months = sortedMonths.map(month => ({ value: month, label: month }))
 
-    const dateRange = {
-      min: dateRangeData?.[0]?.date || '',
-      max: maxDateData?.[0]?.date || ''
-    }
+    const minDate = dateRangeData?.[0]?.date || ''
+    const maxDate = maxDateData?.[0]?.date || ''
 
-    console.log('✅ Slicer options loaded:', {
+    console.log('✅ New_register slicer options processed:', {
       currencies: currencies.length,
       lines: lines.length,
       years: years.length,
       months: months.length,
-      monthDetails: months,
-      dateRange,
-      selectedCurrency
+      dateRange: { min: minDate, max: maxDate }
     })
 
     return NextResponse.json({
       success: true,
-      options: {
+      data: {
         currencies,
         lines,
         years,
         months,
-        dateRange
+        dateRange: {
+          min: minDate,
+          max: maxDate
+        }
       }
     })
 
   } catch (error) {
-    console.error('❌ Error fetching slicer options:', error)
+    console.error('❌ Error fetching new_register slicer options:', error)
     return NextResponse.json({ 
-      success: false,
-      error: 'Database error while fetching slicer options',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      success: false, 
+      error: 'Internal server error while fetching new_register slicer options' 
     }, { status: 500 })
   }
 }
