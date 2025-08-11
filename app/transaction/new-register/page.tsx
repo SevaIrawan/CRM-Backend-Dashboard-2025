@@ -149,6 +149,19 @@ export default function NewRegisterPage() {
     }
   }
 
+  // HANDLE DATE RANGE TOGGLE
+  const handleDateRangeToggle = (checked: boolean) => {
+    setUseDateRange(checked)
+    if (checked) {
+      setFilterMode('daterange')
+      setMonth('') // Clear month
+    } else {
+      setFilterMode('month')
+      setDateRange({ start: '', end: '' }) // Clear date range
+    }
+    resetPagination()
+  }
+
   const resetPagination = () => {
     setPagination(prev => ({ ...prev, currentPage: 1 }))
   }
