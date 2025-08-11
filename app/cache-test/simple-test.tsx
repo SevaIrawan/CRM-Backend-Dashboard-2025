@@ -147,7 +147,7 @@ export default function SimpleCacheTest() {
       
       addResult('🎯 All tests completed successfully! 🚀');
     } catch (error) {
-      addResult(`❌ Test error: ${error.message}`);
+      addResult(`❌ Test error: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsLoading(false);
     }

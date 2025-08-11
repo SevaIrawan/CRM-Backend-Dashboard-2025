@@ -281,7 +281,7 @@ class DataLoadingOptimizer {
       suggestions.push('Implement connection pooling for database queries')
     }
 
-    if (stats.failedOperations.length > stats.totalOperations * 0.1) {
+    if (stats.failedOperations > stats.totalOperations * 0.1) {
       suggestions.push('Add retry logic with exponential backoff')
       suggestions.push('Improve error handling and user feedback')
       suggestions.push('Check network and database connectivity')

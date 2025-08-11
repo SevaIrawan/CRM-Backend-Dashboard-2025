@@ -111,13 +111,13 @@ export async function GET(request: NextRequest) {
       'July', 'August', 'September', 'October', 'November', 'December'
     ]
     
-    const months = Array.from(new Set(monthData?.map(row => row.month?.toString()).filter(Boolean) || []))
-      .filter(month => monthNames.includes(month)) // Only valid month names
-      .sort((a, b) => monthNames.indexOf(a) - monthNames.indexOf(b)) // Sort by month order
-      .map(month => ({
-        value: month,
-        label: month
-      })) as Array<{value: string, label: string}>
+    const rawMonths = Array.from(new Set(monthData?.map(row => row.month?.toString()).filter(Boolean) || [])) as string[]
+    const validMonths = rawMonths.filter((month: string) => monthNames.includes(month)) // Only valid month names
+    const sortedMonths = validMonths.sort((a: string, b: string) => monthNames.indexOf(a) - monthNames.indexOf(b)) // Sort by month order
+    const months = sortedMonths.map(month => ({
+      value: month,
+      label: month
+    })) as Array<{value: string, label: string}>
 
     const dateRange = {
       min: dateRangeData?.[0]?.date || '',

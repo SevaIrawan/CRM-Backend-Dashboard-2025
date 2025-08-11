@@ -225,7 +225,7 @@ class AdvancedCache {
     const now = Date.now()
     const expiredKeys: string[] = []
     
-    for (const [key, item] of this.cache.entries()) {
+    for (const [key, item] of Array.from(this.cache.entries())) {
       if (now - item.timestamp > this.config.defaultTTL) {
         expiredKeys.push(key)
       }

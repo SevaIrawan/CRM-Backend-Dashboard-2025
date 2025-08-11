@@ -58,7 +58,7 @@ class BrowserCache {
   // Simulate memory usage
   getMemoryUsage() {
     let totalSize = 0;
-    for (const [key, value] of this.cache.entries()) {
+    for (const [key, value] of Array.from(this.cache.entries())) {
       totalSize += JSON.stringify(key).length;
       totalSize += JSON.stringify(value).length;
     }
@@ -233,7 +233,7 @@ export default function BrowserCacheTest() {
       
       addResult('🎯 All tests completed successfully! 🚀');
     } catch (error) {
-      addResult(`❌ Test error: ${error.message}`);
+      addResult(`❌ Test error: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsLoading(false);
     }
