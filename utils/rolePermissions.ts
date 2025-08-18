@@ -134,6 +134,7 @@ export const hasPermission = (userRole: string, pagePath: string): boolean => {
     '/transaction/new-depositor': 'transaction',
     '/transaction/new-register': 'transaction',
     '/transaction/vip-program': 'transaction',
+    '/transaction/master-data': 'transaction',
     '/supabase': 'supabase',
     '/users': 'users'
   }

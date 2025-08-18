@@ -54,6 +54,28 @@ export default function MemberReportPage() {
   const [slicerLoading, setSlicerLoading] = useState(false)
   const [exporting, setExporting] = useState(false)
 
+  // Format table cell function
+  const formatTableCell = (value: any) => {
+    if (value === null || value === undefined || value === '') {
+      return '-'
+    }
+    
+    if (typeof value === 'number') {
+      // Check if it's an integer (no decimal part)
+      if (Number.isInteger(value)) {
+        return value.toLocaleString()
+      } else {
+        // Decimal number - format with 2 decimal places
+        return value.toLocaleString('en-US', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        })
+      }
+    }
+    
+    return value
+  }
+
   useEffect(() => {
     fetchSlicerOptions()
     fetchMemberReportData()
@@ -369,7 +391,7 @@ export default function MemberReportPage() {
                     <thead>
                       <tr>
                         {memberReportData.length > 0 && Object.keys(memberReportData[0]).map((column) => (
-                          <th key={column}>{column.toUpperCase().replace(/_/g, ' ')}</th>
+                          <th key={column} style={{ textAlign: 'center' }}>{column.toUpperCase().replace(/_/g, ' ')}</th>
                         ))}
                       </tr>
                     </thead>
@@ -377,10 +399,8 @@ export default function MemberReportPage() {
                       {memberReportData.map((row, index) => (
                         <tr key={index}>
                           {Object.keys(row).map((column) => (
-                            <td key={column}>
-                              {typeof row[column] === 'number'
-                                ? row[column].toFixed(2)
-                                : row[column] || '-'}
+                            <td key={column} style={{ textAlign: 'center' }}>
+                              {formatTableCell(row[column])}
                             </td>
                           ))}
                         </tr>

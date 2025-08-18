@@ -247,7 +247,8 @@ export default function Sidebar({
           { title: 'Member Report', path: '/transaction/member-report' },
           { title: 'New Depositor', path: '/transaction/new-depositor' },
           { title: 'New Register', path: '/transaction/new-register' },
-          { title: 'VIP Program', path: '/transaction/vip-program' }
+          { title: 'VIP Program', path: '/transaction/vip-program' },
+          { title: 'Master Data', path: '/transaction/master-data' }
         ]
       },
       {

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Layout from '@/components/Layout'
 import Frame from '@/components/Frame'
 
-interface WithdrawData {
+interface MasterData {
   [key: string]: any
 }
 
@@ -25,7 +25,7 @@ interface Pagination {
   hasPrevPage: boolean
 }
 
-export default function TransactionWithdraw() {
+export default function MasterData() {
   // SLICERS STATE
   const [currency, setCurrency] = useState('ALL')
   const [line, setLine] = useState('ALL')
@@ -36,7 +36,7 @@ export default function TransactionWithdraw() {
   const [useDateRange, setUseDateRange] = useState(false)
 
   // DATA STATES
-  const [withdrawData, setWithdrawData] = useState<WithdrawData[]>([])
+  const [masterData, setMasterData] = useState<MasterData[]>([])
   const [pagination, setPagination] = useState<Pagination>({
     currentPage: 1,
     totalPages: 1,
@@ -80,7 +80,7 @@ export default function TransactionWithdraw() {
 
   useEffect(() => {
     fetchSlicerOptions()
-    fetchWithdrawData()
+    fetchMasterData()
   }, [])
 
   useEffect(() => {
@@ -92,7 +92,7 @@ export default function TransactionWithdraw() {
   useEffect(() => {
     // Only fetch data if we're not in initial loading state
     if (pagination.currentPage > 0) {
-      fetchWithdrawData()
+      fetchMasterData()
     }
   }, [currency, line, year, month, dateRange, filterMode, pagination.currentPage])
 
@@ -104,7 +104,7 @@ export default function TransactionWithdraw() {
         params.append('selectedCurrency', currency)
       }
       
-      const response = await fetch(`/api/withdraw/slicer-options?${params}`)
+      const response = await fetch(`/api/master-data/slicer-options?${params}`)
       const result = await response.json()
       
       if (result.success) {
@@ -124,10 +124,10 @@ export default function TransactionWithdraw() {
     }
   }
 
-  const fetchWithdrawData = async () => {
+  const fetchMasterData = async () => {
     try {
       setLoading(true)
-      console.log('🔄 Fetching withdraw data...')
+      console.log('🔄 Fetching master data...')
       
       const params = new URLSearchParams({
         currency,
@@ -143,19 +143,19 @@ export default function TransactionWithdraw() {
 
       console.log('📊 API params:', Object.fromEntries(params))
       
-      const response = await fetch(`/api/withdraw/data?${params}`)
+      const response = await fetch(`/api/master-data/data?${params}`)
       const result = await response.json()
       
       console.log('📊 API response:', result)
       
       if (result.success) {
-        setWithdrawData(result.data)
+        setMasterData(result.data)
         setPagination(result.pagination)
         console.log(`✅ Loaded ${result.data.length} records`)
         setLoading(false) // Set loading to false immediately after setting data
       } else {
         console.error('Error fetching data:', result.error)
-        setWithdrawData([])
+        setMasterData([])
         setPagination(prev => ({ 
           ...prev, 
           totalRecords: 0, 
@@ -166,8 +166,8 @@ export default function TransactionWithdraw() {
         setLoading(false) // Set loading to false even on error
       }
     } catch (error) {
-      console.error('Error fetching withdraw data:', error)
-      setWithdrawData([])
+      console.error('Error fetching master data:', error)
+      setMasterData([])
       setPagination(prev => ({ 
         ...prev, 
         totalRecords: 0, 
@@ -220,7 +220,7 @@ export default function TransactionWithdraw() {
   const handleExport = async () => {
     try {
       setExporting(true)
-      const response = await fetch('/api/withdraw/export', {
+      const response = await fetch('/api/master-data/export', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -248,7 +248,7 @@ export default function TransactionWithdraw() {
         const contentDisposition = response.headers.get('content-disposition')
         const filename = contentDisposition 
           ? contentDisposition.split('filename=')[1].replace(/"/g, '')
-          : 'withdraw_daily_export.csv'
+          : 'master_data_export.csv'
         
         a.download = filename
         document.body.appendChild(a)
@@ -345,13 +345,11 @@ export default function TransactionWithdraw() {
           </select>
         </div>
 
-
-
         {/* EXPORT BUTTON */}
         <button 
           onClick={handleExport}
-          disabled={exporting || withdrawData.length === 0}
-          className={`export-button ${exporting || withdrawData.length === 0 ? 'disabled' : ''}`}
+          disabled={exporting || masterData.length === 0}
+          className={`export-button ${exporting || masterData.length === 0 ? 'disabled' : ''}`}
         >
           {exporting ? 'Exporting...' : 'Export'}
         </button>
@@ -362,17 +360,17 @@ export default function TransactionWithdraw() {
   return (
     <Layout customSubHeader={subHeaderContent}>
       <Frame variant="compact">
-        <div className="deposit-container">
+        <div className="master-data-container">
           {loading ? (
             <div className="loading-container">
               <div className="loading-spinner"></div>
-              <p>Loading withdraw data...</p>
+              <p>Loading master data...</p>
             </div>
-          ) : withdrawData.length === 0 ? (
+          ) : masterData.length === 0 ? (
             <div className="empty-container">
               <div className="empty-icon">📭</div>
               <div className="empty-text">
-                No withdraw data found for the selected filters
+                No master data found for the selected filters
               </div>
             </div>
           ) : (
@@ -424,19 +422,23 @@ export default function TransactionWithdraw() {
                   <table className="simple-table">
                     <thead>
                       <tr>
-                        {withdrawData.length > 0 && Object.keys(withdrawData[0]).map((column) => (
-                          <th key={column} style={{ textAlign: 'center' }}>{column.toUpperCase().replace(/_/g, ' ')}</th>
-                        ))}
+                                                 {masterData.length > 0 && Object.keys(masterData[0])
+                           .filter(column => !['userkey', 'id', 'created_at', 'updated_at'].includes(column))
+                           .map((column) => (
+                             <th key={column} style={{ textAlign: 'center' }}>{column.toUpperCase().replace(/_/g, ' ')}</th>
+                           ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {withdrawData.map((row, index) => (
+                      {masterData.map((row, index) => (
                         <tr key={index}>
-                          {Object.keys(row).map((column) => (
-                            <td key={column} style={{ textAlign: 'center' }}>
-                              {formatTableCell(row[column])}
-                            </td>
-                          ))}
+                          {Object.keys(row)
+                            .filter(column => !['userkey', 'id', 'created_at', 'updated_at'].includes(column))
+                                                         .map((column) => (
+                               <td key={column} style={{ textAlign: 'center' }}>
+                                 {formatTableCell(row[column])}
+                               </td>
+                             ))}
                         </tr>
                       ))}
                     </tbody>
@@ -446,7 +448,7 @@ export default function TransactionWithdraw() {
                 {/* Table Footer - Records Info + Pagination */}
                 <div className="table-footer">
                   <div className="records-info">
-                    Showing {Math.min(withdrawData.length, 1000)} of {pagination.totalRecords.toLocaleString()} records
+                    Showing {Math.min(masterData.length, 1000)} of {pagination.totalRecords.toLocaleString()} records
                   </div>
                   
                   {pagination.totalPages > 1 && (
@@ -480,4 +482,4 @@ export default function TransactionWithdraw() {
       </Frame>
     </Layout>
   )
-} 
+}
