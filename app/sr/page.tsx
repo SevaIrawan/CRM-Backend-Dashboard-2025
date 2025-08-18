@@ -248,11 +248,15 @@ export default function SalesRevenuePage() {
           ],
           categories: months.map(month => month.substring(0, 3)) // Short month names
         },
-        activeMemberHorizontalBarChart: {
+        activeMemberPureMemberLineChart: {
           series: [
             {
               name: 'Active Member',
-              data: monthlyKPIData.map(kpi => kpi.activeMember) // REAL dari calculateKPIs line 824
+              data: monthlyKPIData.map(kpi => kpi.activeMember) // REAL dari calculateKPIs
+            },
+            {
+              name: 'Pure Member',
+              data: monthlyKPIData.map(kpi => kpi.pureMember) // REAL dari calculateKPIs
             }
           ],
           categories: months.map(month => month.substring(0, 3)) // Short month names
@@ -304,10 +308,10 @@ export default function SalesRevenuePage() {
           ],
           categories: months.map(month => month.substring(0, 3)) // Short month names
         },
-        // Churn vs Retention data for pie chart (REAL DATA)
+        // Churn vs Retention data for pie chart (REAL DATA dari KPILogic)
         churnRetentionData: {
-          retentionRate: monthlyKPIData[monthlyKPIData.length - 1]?.retentionRate || 75,
-          churnRate: monthlyKPIData[monthlyKPIData.length - 1]?.churnRate || 25
+          retentionRate: monthlyKPIData[monthlyKPIData.length - 1]?.retentionRate || 0,
+          churnRate: monthlyKPIData[monthlyKPIData.length - 1]?.churnRate || 0
         }
       };
       
@@ -498,14 +502,14 @@ export default function SalesRevenuePage() {
             hideLegend={true}
             chartIcon={getChartIcon('Conversion Rate')}
           />
-          <BarChart
-            series={srChartData?.activeMemberHorizontalBarChart?.series || []}
-            categories={srChartData?.activeMemberHorizontalBarChart?.categories || []}
-            title="ACTIVE MEMBER TREND"
-            currency={selectedCurrency}
-            horizontal={true}
-            chartIcon={getChartIcon('Active Member')}
-          />
+                     <LineChart
+             series={srChartData?.activeMemberPureMemberLineChart?.series || []}
+             categories={srChartData?.activeMemberPureMemberLineChart?.categories || []}
+             title="ACTIVE MEMBER VS PURE MEMBER TREND"
+             currency={selectedCurrency}
+             hideLegend={true}
+             chartIcon={getChartIcon('Active Member')}
+           />
         </div>
 
         {/* Row 4: User Behavior Analytics */}
@@ -530,11 +534,11 @@ export default function SalesRevenuePage() {
             series={[
               {
                 name: 'Retention Rate',
-                data: [srChartData?.churnRetentionData?.retentionRate || 75]
+                data: [kpiData?.retentionRate || 0]  // ✅ Data sesuai slicer bulan yang dipilih
               },
               {
                 name: 'Churn Rate', 
-                data: [srChartData?.churnRetentionData?.churnRate || 25]
+                data: [kpiData?.churnRate || 0]      // ✅ Data sesuai slicer bulan yang dipilih
               }
             ]}
             title="RETENTION VS CHURN RATE"
