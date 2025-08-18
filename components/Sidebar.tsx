@@ -60,6 +60,8 @@ export default function Sidebar({
       setOpenSubmenu('Transaction')
     } else if (pathname.startsWith('/usc/')) {
       setOpenSubmenu('USC')
+    } else if (pathname.startsWith('/member-analytics/')) {
+      setOpenSubmenu('Member Analytics')
     }
   }, [pathname])
 
@@ -223,6 +225,19 @@ export default function Sidebar({
         permission: 'sr'
       },
       {
+        title: 'Member Analytics',
+        icon: <GrowthIcon size={18} color="#ffffff" />,
+        permission: 'member-analytics',
+        submenu: [
+          { title: 'Member Overview', path: '/member-analytics/overview' },
+          { title: 'Growth Analysis', path: '/member-analytics/growth' },
+          { title: 'Behavior Analysis', path: '/member-analytics/behavior' },
+          { title: 'Performance Metrics', path: '/member-analytics/performance' },
+          { title: 'Predictive Analytics', path: '/member-analytics/predictive' },
+          { title: 'Segmentation Analysis', path: '/member-analytics/segmentation' }
+        ]
+      },
+      {
         title: 'XOO',
         path: '/xoo',
         icon: <ExecutiveOptimizationIcon size={18} color="#ffffff" />,
@@ -290,7 +305,7 @@ export default function Sidebar({
   // Helper function untuk mendeteksi sub menu secara dinamis
   // Tambahkan path baru di sini untuk menambah sub menu baru
   const isSubmenuPath = (path: string) => {
-    return path.startsWith('/transaction/') || path.startsWith('/usc/')
+    return path.startsWith('/transaction/') || path.startsWith('/usc/') || path.startsWith('/member-analytics/')
   }
 
   // Helper function untuk mendapatkan parent menu dari path
@@ -298,6 +313,7 @@ export default function Sidebar({
   const getParentMenuFromPath = (path: string) => {
     if (path.startsWith('/transaction/')) return 'Transaction'
     if (path.startsWith('/usc/')) return 'USC'
+    if (path.startsWith('/member-analytics/')) return 'Member Analytics'
     return null
   }
 
