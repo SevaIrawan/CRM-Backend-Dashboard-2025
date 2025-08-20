@@ -145,11 +145,15 @@ export const getLastUpdateDateFromDatabase = async (year: string, month: string)
     }
     
     if (data && data.length > 0) {
-      const lastUpdateDate = new Date(data[0].date);
-      const lastUpdateDay = lastUpdateDate.getDate();
-      
-      console.log(`✅ [DailyAverage] Last update date found: ${lastUpdateDate.toISOString().split('T')[0]} (day ${lastUpdateDay})`);
-      return lastUpdateDay;
+      // Fix type error: properly type the date field
+      const dateValue = data[0]?.date;
+      if (dateValue) {
+        const lastUpdateDate = new Date(dateValue as string);
+        const lastUpdateDay = lastUpdateDate.getDate();
+        
+        console.log(`✅ [DailyAverage] Last update date found: ${lastUpdateDate.toISOString().split('T')[0]} (day ${lastUpdateDay})`);
+        return lastUpdateDay;
+      }
     }
     
     console.log(`⚠️ [DailyAverage] No data found for ${month} ${year}, using total days as fallback`);
