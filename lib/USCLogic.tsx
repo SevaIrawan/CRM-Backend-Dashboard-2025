@@ -385,7 +385,7 @@ export async function getUSCChartData(
       const dailyGroups: { [key: string]: any[] } = {}
       
       data.forEach(row => {
-        const date = new Date(row.date)
+        const date = new Date(row.date as string)
         const dayKey = `${date.getMonth() + 1}/${date.getDate()}`
         
         if (!dailyGroups[dayKey]) {
@@ -512,7 +512,7 @@ function groupByMonth(data: any[]): any[] {
   const monthlyGroups: { [key: string]: any[] } = {}
   
   data.forEach(row => {
-    const date = new Date(row.date)
+    const date = new Date(row.date as string)
     const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`
     
     if (!monthlyGroups[monthKey]) {
