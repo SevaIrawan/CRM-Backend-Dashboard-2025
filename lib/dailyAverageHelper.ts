@@ -196,11 +196,13 @@ export const calculateDailyAverageWithFormula = async (
   try {
     console.log(`🧮 [DailyAverage] Calculating ${kpiName} with formula logic...`);
     
-    const formulaLogic = KPI_FORMULA_LOGIC[kpiName];
-    if (!formulaLogic) {
+    // Fix type error: check if kpiName exists in KPI_FORMULA_LOGIC
+    if (!(kpiName in KPI_FORMULA_LOGIC)) {
       console.log(`📊 [DailyAverage] ${kpiName} - No formula logic, using direct calculation`);
       return await calculateDailyAverage(monthlyData[kpiName] || 0, year, month);
     }
+    
+    const formulaLogic = KPI_FORMULA_LOGIC[kpiName as keyof typeof KPI_FORMULA_LOGIC];
     
     // Calculate per-day components first
     const dailyComponents: { [key: string]: number } = {};
@@ -314,7 +316,7 @@ export const calculateAllKPIsDailyAverage = async (
     
     for (const kpiName of kpiNames) {
       try {
-        if (KPI_FORMULA_LOGIC[kpiName]) {
+        if (kpiName in KPI_FORMULA_LOGIC) {
           // KPI with formula logic
           dailyAverages[kpiName] = await calculateDailyAverageWithFormula(kpiName, monthlyData, year, month);
         } else {
@@ -443,7 +445,7 @@ export async function getDailyAverageForKPI(
 ): Promise<number> {
   try {
     // Check if KPI has formula logic
-    if (KPI_FORMULA_LOGIC[kpiName]) {
+    if (kpiName in KPI_FORMULA_LOGIC) {
       return await calculateDailyAverageWithFormula(kpiName, { [kpiName]: monthlyValue }, year, month);
     } else {
       return await calculateDailyAverage(monthlyValue, year, month);
