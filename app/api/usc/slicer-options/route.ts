@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 
     // Extract unique years
     const uniqueYears = Array.from(new Set(
-      yearData?.map(row => new Date(row.date).getFullYear().toString()) || []
+      yearData?.map(row => new Date(row.date as string).getFullYear().toString()) || []
     ))
     const years = uniqueYears.sort((a, b) => parseInt(b) - parseInt(a))
 
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     // Extract unique months
     const uniqueMonths = Array.from(new Set(
       monthData?.map(row => {
-        const date = new Date(row.date)
+        const date = new Date(row.date as string)
         const monthNames = [
           'January', 'February', 'March', 'April', 'May', 'June',
           'July', 'August', 'September', 'October', 'November', 'December'
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
 
     // Extract unique currencies and add "All" option
     const uniqueCurrencies = Array.from(new Set(
-      currencyData?.map(row => row.currency).filter(Boolean) || []
+      currencyData?.map(row => row.currency as string).filter(Boolean) || []
     ))
     const currencies = ['All', ...uniqueCurrencies]
 
