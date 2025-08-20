@@ -18,9 +18,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Extract unique lines and add "All" option
-    const lines = ['All', ...new Set(
+    const uniqueLines = Array.from(new Set(
       lineData?.map(row => row.line).filter(Boolean) || []
-    )]
+    ))
+    const lines = ['All', ...uniqueLines]
 
     const response = {
       success: true,
