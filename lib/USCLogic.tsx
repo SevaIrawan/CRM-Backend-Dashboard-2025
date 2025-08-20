@@ -85,7 +85,7 @@ export async function getUSCKPIData(
       .from('member_report_usc')
       .select('line')
       .limit(10)
-    console.log('🔍 [USCLogic] Available lines in database:', [...new Set(availableLines?.map(row => row.line) || [])])
+    console.log('🔍 [USCLogic] Available lines in database:', Array.from(new Set(availableLines?.map(row => row.line) || [])))
     
     // Debug: Check total records in table
     const { count: totalRecords } = await supabase
