@@ -19,7 +19,7 @@ export default function USCOverview() {
   const [darkMode, setDarkMode] = useState(false)
   const [selectedYear, setSelectedYear] = useState('2025')
   const [selectedMonth, setSelectedMonth] = useState('January')
-  const [selectedCurrency, setSelectedCurrency] = useState('MYR') // Hidden but active
+  const [selectedCurrency, setSelectedCurrency] = useState('USC') // Hidden but active
   const [selectedLine, setSelectedLine] = useState('All')
   const [selectedStartDate, setSelectedStartDate] = useState('')
   const [selectedEndDate, setSelectedEndDate] = useState('')
@@ -42,7 +42,10 @@ export default function USCOverview() {
     netProfit: 0,
     activeMember: 0,
     ggrUser: 0,
-    daUser: 0
+    daUser: 0,
+    newMember: 0,
+    averageTransactionValue: 0,
+    purchaseFrequency: 0
   })
 
   // USC MoM Data from Supabase
@@ -57,23 +60,49 @@ export default function USCOverview() {
     netProfit: 0,
     activeMember: 0,
     ggrUser: 0,
-    daUser: 0
+    daUser: 0,
+    newMember: 0,
+    averageTransactionValue: 0,
+    purchaseFrequency: 0
   })
 
-  // USC Daily Average Data from Supabase
-  const [dailyAverages, setDailyAverages] = useState<USCKPIData>({
-    depositAmount: 0,
-    depositCases: 0,
-    withdrawAmount: 0,
-    withdrawCases: 0,
-    addTransaction: 0,
-    deductTransaction: 0,
-    ggr: 0,
-    netProfit: 0,
-    activeMember: 0,
-    ggrUser: 0,
-    daUser: 0
-  })
+     // USC Daily Average Data from Supabase
+   const [dailyAverages, setDailyAverages] = useState<USCKPIData>({
+     depositAmount: 0,
+     depositCases: 0,
+     withdrawAmount: 0,
+     withdrawCases: 0,
+     addTransaction: 0,
+     deductTransaction: 0,
+     ggr: 0,
+     netProfit: 0,
+     activeMember: 0,
+     ggrUser: 0,
+     daUser: 0,
+     newMember: 0,
+     averageTransactionValue: 0,
+     purchaseFrequency: 0
+   })
+
+       // USC Chart Data from Supabase
+    const [chartData, setChartData] = useState<any>({
+      ggrUserTrend: {
+        series: [{ name: 'GGR User Trend', data: [0, 0, 0, 0, 0, 0] }],
+        categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+      },
+      daUserTrend: {
+        series: [{ name: 'DA User Trend', data: [0, 0, 0, 0, 0, 0] }],
+        categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+      },
+      atvTrend: {
+        series: [{ name: 'Average Transaction Value Trend', data: [0, 0, 0, 0, 0, 0] }],
+        categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+      },
+      pfTrend: {
+        series: [{ name: 'Purchase Frequency Trend', data: [0, 0, 0, 0, 0, 0] }],
+        categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+      }
+    })
 
   const handleLogout = () => {
     console.log('Logout clicked')
@@ -144,14 +173,15 @@ export default function USCOverview() {
 
       const result = await response.json()
 
-      if (result.success) {
-        setUscData(result.data.kpi)
-        setMomData(result.data.mom)
-        setDailyAverages(result.data.dailyAverage)
-        console.log('✅ [USC Overview] Data loaded successfully')
-      } else {
-        console.error('❌ [USC Overview] API error:', result.error)
-      }
+             if (result.success) {
+         setUscData(result.data.kpi)
+         setMomData(result.data.mom)
+         setDailyAverages(result.data.dailyAverage)
+         setChartData(result.data.chart)
+         console.log('✅ [USC Overview] Data loaded successfully')
+       } else {
+         console.error('❌ [USC Overview] API error:', result.error)
+       }
     } catch (error) {
       console.error('❌ [USC Overview] Fetch error:', error)
     } finally {
@@ -169,31 +199,54 @@ export default function USCOverview() {
 
   // Format functions (standard like other pages)
   const formatCurrency = (value: number): string => {
-    return `RM ${value.toLocaleString()}`
+    const currencySymbol = selectedCurrency === 'MYR' ? 'RM' : selectedCurrency === 'USC' ? 'USD' : selectedCurrency === 'SGD' ? 'SGD' : 'RM'
+    return `${currencySymbol} ${new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value)}`
   }
 
-  const formatNumber = (value: number): string => {
-    return value.toLocaleString()
+  const formatNumber = (value: number, decimals: number = 0): string => {
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals
+    }).format(value)
   }
 
   const formatMoM = (value: number): string => {
     return `${value > 0 ? '+' : ''}${value.toFixed(1)}%`
   }
 
-  // Mock chart data with standard format
-  const lineChartData1 = {
-    series: [
-      { name: 'USC Revenue', data: [400, 300, 600, 800, 500, 700] }
-    ],
-    categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
-  }
+                       // Real chart data from USC Logic
+           const ggrUserTrendData = {
+        series: [
+          { name: 'GGR User', data: chartData.ggrUserTrend.series[0].data }
+        ],
+        categories: chartData.ggrUserTrend.categories,
+        currency: selectedCurrency
+      }
 
-  const lineChartData2 = {
-    series: [
-      { name: 'USC Customer Growth', data: [200, 400, 300, 600, 800, 500] }
-    ],
-    categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
-  }
+      const daUserTrendData = {
+        series: [
+          { name: 'DA User', data: chartData.daUserTrend.series[0].data }
+        ],
+        categories: chartData.daUserTrend.categories,
+        currency: selectedCurrency
+      }
+
+     const atvTrendData = {
+       series: [
+         { name: 'Average Transaction Value', data: chartData.atvTrend.series[0].data }
+       ],
+       categories: chartData.atvTrend.categories
+     }
+
+     const pfTrendData = {
+       series: [
+         { name: 'Purchase Frequency', data: chartData.pfTrend.series[0].data }
+       ],
+       categories: chartData.pfTrend.categories
+     }
 
   const pieChartData = [
     { name: 'Category A', data: [400] },
@@ -420,113 +473,113 @@ export default function USCOverview() {
               flexDirection: 'column',
               gap: '20px'
             }}>
-                             {/* Row 1: 4 KPI Cards */}
-               <div className="kpi-row">
-                 <div className="usc-stat-card">
-                   <StatCard
-                     title="Deposit Amount"
-                     value={formatCurrency(uscData.depositAmount)}
-                     icon="Deposit Amount"
-                     additionalKpi={{
-                       label: "DAILY AVERAGE",
-                       value: formatCurrency(dailyAverages.depositAmount)
-                     }}
-                     comparison={{
-                       percentage: formatMoM(momData.depositAmount),
-                       isPositive: momData.depositAmount > 0
-                     }}
-                   />
-                 </div>
-                 <div className="usc-stat-card">
-                   <StatCard
-                     title="Net Profit"
-                     value={formatCurrency(uscData.netProfit)}
-                     icon="Net Profit"
-                     additionalKpi={{
-                       label: "DAILY AVERAGE",
-                       value: formatCurrency(dailyAverages.netProfit)
-                     }}
-                     comparison={{
-                       percentage: formatMoM(momData.netProfit),
-                       isPositive: momData.netProfit > 0
-                     }}
-                   />
-                 </div>
-                 <div className="usc-stat-card">
-                   <StatCard
-                     title="GGR"
-                     value={formatCurrency(uscData.ggr)}
-                     icon="GGR"
-                     additionalKpi={{
-                       label: "DAILY AVERAGE",
-                       value: formatCurrency(dailyAverages.ggr)
-                     }}
-                     comparison={{
-                       percentage: formatMoM(momData.ggr),
-                       isPositive: momData.ggr > 0
-                     }}
-                   />
-                 </div>
-                 <div className="usc-stat-card">
-                   <StatCard
-                     title="Active Member"
-                     value={formatNumber(uscData.activeMember)}
-                     icon="Active Member"
-                     additionalKpi={{
-                       label: "DAILY AVERAGE",
-                       value: "-"
-                     }}
-                     comparison={{
-                       percentage: formatMoM(momData.activeMember),
-                       isPositive: momData.activeMember > 0
-                     }}
-                   />
-                 </div>
-               </div>
+                                                           {/* Row 1: 4 KPI Cards */}
+                <div className="kpi-row">
+                                    <div className="usc-stat-card">
+                     <StatCard
+                       title="GGR User"
+                       value={formatCurrency(uscData.ggrUser)}
+                       icon="GGR User"
+                       additionalKpi={{
+                         label: "DAILY AVERAGE",
+                         value: formatCurrency(dailyAverages.ggrUser)
+                       }}
+                       comparison={{
+                         percentage: formatMoM(momData.ggrUser),
+                         isPositive: momData.ggrUser > 0
+                       }}
+                     />
+                   </div>
+                   <div className="usc-stat-card">
+                     <StatCard
+                       title="Deposit Amount User"
+                       value={formatCurrency(uscData.daUser)}
+                       icon="Deposit Amount User"
+                       additionalKpi={{
+                         label: "DAILY AVERAGE",
+                         value: formatCurrency(dailyAverages.daUser)
+                       }}
+                       comparison={{
+                         percentage: formatMoM(momData.daUser),
+                         isPositive: momData.daUser > 0
+                       }}
+                     />
+                   </div>
+                   <div className="usc-stat-card">
+                     <StatCard
+                       title="Average Transaction Value"
+                       value={formatCurrency(uscData.averageTransactionValue)}
+                       icon="Average Transaction Value"
+                       additionalKpi={{
+                         label: "DAILY AVERAGE",
+                         value: formatCurrency(dailyAverages.averageTransactionValue)
+                       }}
+                       comparison={{
+                         percentage: formatMoM(momData.averageTransactionValue),
+                         isPositive: momData.averageTransactionValue > 0
+                       }}
+                     />
+                   </div>
+                   <div className="usc-stat-card">
+                     <StatCard
+                       title="Purchase Frequency"
+                       value={formatNumber(uscData.purchaseFrequency, 2)}
+                       icon="Purchase Frequency"
+                       additionalKpi={{
+                         label: "DAILY AVERAGE",
+                         value: formatNumber(dailyAverages.purchaseFrequency, 2)
+                       }}
+                       comparison={{
+                         percentage: formatMoM(momData.purchaseFrequency),
+                         isPositive: momData.purchaseFrequency > 0
+                       }}
+                     />
+                   </div>
+                </div>
 
-              {/* Row 2: 2 Line Charts */}
-              <div className="chart-row">
-                <div className="usc-chart">
-                  <LineChart
-                    series={lineChartData1.series}
-                    categories={lineChartData1.categories}
-                    title="USC Revenue Trend"
-                    currency={selectedCurrency}
-                    chartIcon={getChartIcon('USC Revenue Trend')}
-                  />
+                                            {/* Row 2: 2 Line Charts */}
+                <div className="chart-row">
+                                     <div className="usc-chart">
+                     <LineChart
+                       series={ggrUserTrendData.series}
+                       categories={ggrUserTrendData.categories}
+                       title="GGR User Trend"
+                       currency={ggrUserTrendData.currency}
+                       chartIcon={getChartIcon('GGR User Trend')}
+                     />
+                   </div>
+                   <div className="usc-chart">
+                     <LineChart
+                       series={daUserTrendData.series}
+                       categories={daUserTrendData.categories}
+                       title="DA User Trend"
+                       currency={daUserTrendData.currency}
+                       chartIcon={getChartIcon('DA User Trend')}
+                     />
+                   </div>
                 </div>
-                <div className="usc-chart">
-                  <LineChart
-                    series={lineChartData2.series}
-                    categories={lineChartData2.categories}
-                    title="USC Customer Growth"
-                    currency={selectedCurrency}
-                    chartIcon={getChartIcon('USC Customer Growth')}
-                  />
-                </div>
-              </div>
 
-              {/* Row 3: 2 Line Charts */}
-              <div className="chart-row">
-                <div className="usc-chart">
-                  <LineChart
-                    series={lineChartData1.series}
-                    categories={lineChartData1.categories}
-                    title="USC Profit Trend"
-                    currency={selectedCurrency}
-                    chartIcon={getChartIcon('USC Profit Trend')}
-                  />
+                {/* Row 3: 2 Line Charts */}
+                <div className="chart-row">
+                  <div className="usc-chart">
+                    <LineChart
+                      series={atvTrendData.series}
+                      categories={atvTrendData.categories}
+                      title="Average Transaction Value Trend"
+                      currency={selectedCurrency}
+                      chartIcon={getChartIcon('Average Transaction Value Trend')}
+                    />
+                  </div>
+                  <div className="usc-chart">
+                    <LineChart
+                      series={pfTrendData.series}
+                      categories={pfTrendData.categories}
+                      title="Purchase Frequency"
+                      currency={selectedCurrency}
+                      chartIcon={getChartIcon('Purchase Frequency')}
+                    />
+                  </div>
                 </div>
-                <div className="usc-chart">
-                  <LineChart
-                    series={lineChartData2.series}
-                    categories={lineChartData2.categories}
-                    title="USC Conversion Rate"
-                    currency={selectedCurrency}
-                    chartIcon={getChartIcon('USC Conversion Rate')}
-                  />
-                </div>
-              </div>
             </div>
           </div>
 
@@ -574,61 +627,61 @@ export default function USCOverview() {
            <div className="kpi-row">
              <div className="usc-stat-card">
                <StatCard
-                 title="Deposit Cases"
-                 value={formatNumber(uscData.depositCases)}
-                 icon="Deposit Cases"
+                 title="Net Profit"
+                 value={formatCurrency(uscData.netProfit)}
+                 icon="Net Profit"
                  additionalKpi={{
                    label: "DAILY AVERAGE",
-                   value: formatNumber(Math.round(dailyAverages.depositCases))
+                   value: formatCurrency(dailyAverages.netProfit)
                  }}
                  comparison={{
-                   percentage: formatMoM(momData.depositCases),
-                   isPositive: momData.depositCases > 0
+                   percentage: formatMoM(momData.netProfit),
+                   isPositive: momData.netProfit > 0
                  }}
                />
              </div>
              <div className="usc-stat-card">
                <StatCard
-                 title="GGR User"
-                 value={formatCurrency(uscData.ggrUser)}
-                 icon="GGR User"
+                 title="New Customer"
+                 value={formatNumber(uscData.newMember)}
+                 icon="New Customer"
                  additionalKpi={{
                    label: "DAILY AVERAGE",
-                   value: formatCurrency(dailyAverages.ggrUser)
+                   value: formatNumber(Math.round(dailyAverages.newMember))
                  }}
                  comparison={{
-                   percentage: formatMoM(momData.ggrUser),
-                   isPositive: momData.ggrUser > 0
+                   percentage: formatMoM(momData.newMember),
+                   isPositive: momData.newMember > 0
                  }}
                />
              </div>
              <div className="usc-stat-card">
                <StatCard
-                 title="DA User"
-                 value={formatCurrency(uscData.daUser)}
-                 icon="DA User"
+                 title="Active Member"
+                 value={formatNumber(uscData.activeMember)}
+                 icon="Active Member"
                  additionalKpi={{
                    label: "DAILY AVERAGE",
-                   value: formatCurrency(dailyAverages.daUser)
+                   value: formatNumber(Math.round(dailyAverages.activeMember))
                  }}
                  comparison={{
-                   percentage: formatMoM(momData.daUser),
-                   isPositive: momData.daUser > 0
+                   percentage: formatMoM(momData.activeMember),
+                   isPositive: momData.activeMember > 0
                  }}
                />
              </div>
              <div className="usc-stat-card">
                <StatCard
-                 title="Withdraw Amount"
-                 value={formatCurrency(uscData.withdrawAmount)}
-                 icon="Withdraw Amount"
+                 title="Deposit Amount"
+                 value={formatCurrency(uscData.depositAmount)}
+                 icon="Deposit Amount"
                  additionalKpi={{
                    label: "DAILY AVERAGE",
-                   value: formatCurrency(dailyAverages.withdrawAmount)
+                   value: formatCurrency(dailyAverages.depositAmount)
                  }}
                  comparison={{
-                   percentage: formatMoM(momData.withdrawAmount),
-                   isPositive: momData.withdrawAmount > 0
+                   percentage: formatMoM(momData.depositAmount),
+                   isPositive: momData.depositAmount > 0
                  }}
                />
              </div>
@@ -748,26 +801,26 @@ export default function USCOverview() {
              </div>
            </div>
 
-           {/* Row 4: 2 Line Charts */}
+                       {/* Row 4: 2 Line Charts */}
           <div className="chart-row">
-            <div className="usc-chart">
-              <LineChart
-                series={lineChartData1.series}
-                categories={lineChartData1.categories}
-                title="USC Monthly Sales"
-                currency={selectedCurrency}
-                chartIcon={getChartIcon('USC Monthly Sales')}
-              />
-            </div>
-            <div className="usc-chart">
-              <LineChart
-                series={lineChartData2.series}
-                categories={lineChartData2.categories}
-                title="USC Customer Retention"
-                currency={selectedCurrency}
-                chartIcon={getChartIcon('USC Customer Retention')}
-              />
-            </div>
+                         <div className="usc-chart">
+               <LineChart
+                 series={ggrUserTrendData.series}
+                 categories={ggrUserTrendData.categories}
+                 title="USC Monthly Sales"
+                 currency={ggrUserTrendData.currency}
+                 chartIcon={getChartIcon('USC Monthly Sales')}
+               />
+             </div>
+             <div className="usc-chart">
+               <LineChart
+                 series={daUserTrendData.series}
+                 categories={daUserTrendData.categories}
+                 title="USC Customer Retention"
+                 currency={daUserTrendData.currency}
+                 chartIcon={getChartIcon('USC Customer Retention')}
+               />
+             </div>
           </div>
 
                      {/* Row 5: 1 Table Chart */}
@@ -865,12 +918,12 @@ export default function USCOverview() {
              </div>
            </div>
 
-           {/* Row 6: 2 Line Charts */}
+                       {/* Row 6: 2 Line Charts */}
           <div className="chart-row">
             <div className="usc-chart">
               <LineChart
-                series={lineChartData1.series}
-                categories={lineChartData1.categories}
+                series={atvTrendData.series}
+                categories={atvTrendData.categories}
                 title="USC Market Share"
                 currency={selectedCurrency}
                 chartIcon={getChartIcon('USC Market Share')}
@@ -878,8 +931,8 @@ export default function USCOverview() {
             </div>
             <div className="usc-chart">
               <LineChart
-                series={lineChartData2.series}
-                categories={lineChartData2.categories}
+                series={pfTrendData.series}
+                categories={pfTrendData.categories}
                 title="USC Growth Rate"
                 currency={selectedCurrency}
                 chartIcon={getChartIcon('USC Growth Rate')}
@@ -889,24 +942,24 @@ export default function USCOverview() {
 
                      {/* Row 7: 2 Line Charts */}
            <div className="chart-row">
-             <div className="usc-chart">
-               <LineChart
-                 series={lineChartData1.series}
-                 categories={lineChartData1.categories}
-                 title="USC Regional Performance"
-                 currency={selectedCurrency}
-                 chartIcon={getChartIcon('USC Regional Performance')}
-               />
-             </div>
-             <div className="usc-chart">
-               <LineChart
-                 series={lineChartData2.series}
-                 categories={lineChartData2.categories}
-                 title="USC Seasonal Trends"
-                 currency={selectedCurrency}
-                 chartIcon={getChartIcon('USC Seasonal Trends')}
-               />
-             </div>
+                           <div className="usc-chart">
+                <LineChart
+                  series={ggrUserTrendData.series}
+                  categories={ggrUserTrendData.categories}
+                  title="USC Regional Performance"
+                  currency={ggrUserTrendData.currency}
+                  chartIcon={getChartIcon('USC Regional Performance')}
+                />
+              </div>
+              <div className="usc-chart">
+                <LineChart
+                  series={daUserTrendData.series}
+                  categories={daUserTrendData.categories}
+                  title="USC Seasonal Trends"
+                  currency={daUserTrendData.currency}
+                  chartIcon={getChartIcon('USC Seasonal Trends')}
+                />
+              </div>
            </div>
              </div>
                        </div>

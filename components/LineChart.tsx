@@ -116,15 +116,14 @@ export default function LineChart({
       datasetLabel.toLowerCase().includes('ratio')
     );
     
-    // Check if this is a count/integer type (Members, Users, Depositor count, etc.)
-    const isCountType = datasetLabel && (
-      datasetLabel.toLowerCase().includes('member') ||
-      datasetLabel.toLowerCase().includes('user') ||
-      datasetLabel.toLowerCase().includes('unique') ||
-      datasetLabel.toLowerCase().includes('pure') ||
-      datasetLabel.toLowerCase().includes('count') ||
-      datasetLabel.toLowerCase().includes('depositor')
-    );
+         // Check if this is a count/integer type (Members, Depositor count, etc.)
+     const isCountType = datasetLabel && (
+       datasetLabel.toLowerCase().includes('member') ||
+       datasetLabel.toLowerCase().includes('unique') ||
+       datasetLabel.toLowerCase().includes('pure') ||
+       datasetLabel.toLowerCase().includes('count') ||
+       datasetLabel.toLowerCase().includes('depositor')
+     );
     
     // Check if this is CLV (Customer Lifetime Value)
     const isCLVType = datasetLabel && (
@@ -133,13 +132,14 @@ export default function LineChart({
       datasetLabel.toLowerCase().includes('customer lifetime value')
     );
     
-    // Check if this is GGR related (GGR User, GGR Pure User, GGR Per User, etc.)
-    const isGGRType = datasetLabel && (
-      datasetLabel.toLowerCase().includes('ggr') ||
-      datasetLabel.toLowerCase().includes('gross gaming revenue') ||
-      datasetLabel.toLowerCase().includes('per user') ||
-      datasetLabel.toLowerCase().includes('pure user')
-    );
+         // Check if this is GGR related (GGR User, GGR Pure User, GGR Per User, etc.)
+     const isGGRType = datasetLabel && (
+       datasetLabel.toLowerCase().includes('ggr') ||
+       datasetLabel.toLowerCase().includes('gross gaming revenue') ||
+       datasetLabel.toLowerCase().includes('per user') ||
+       datasetLabel.toLowerCase().includes('pure user') ||
+       datasetLabel.toLowerCase().includes('da user') // Add DA User for currency format
+     );
     
     // Check if this is Customer Value Per Headcount or Customer Count vs Headcount
     const isCustomerValuePerHeadcount = datasetLabel && (
@@ -151,18 +151,18 @@ export default function LineChart({
     if (isPercentageType) {
       // For percentage - show % symbol
       return value.toFixed(1) + '%';
-    } else if (isFrequencyType) {
-      // For frequency - show as decimal number only (2 decimal places)
-      return value.toFixed(2);
-         } else if (isGGRType) {
-       // For GGR - show with currency symbol and NO decimal places
-       const symbol = getCurrencySymbol(currency);
-       if (value >= 1000000) {
-         return `${symbol} ${Math.round(value / 1000000)}M`;
-       } else if (value >= 1000) {
-         return `${symbol} ${Math.round(value / 1000)}K`;
-       }
-       return `${symbol} ${Math.round(value)}`;
+         } else if (isFrequencyType) {
+       // For frequency - show as decimal number only (NO decimal places for Y-axis)
+       return Math.round(value).toString();
+              } else if (isGGRType) {
+        // For GGR - show with currency symbol and NO decimal places (Y-axis)
+        const symbol = getCurrencySymbol(currency);
+        if (value >= 1000000) {
+          return `${symbol} ${Math.round(value / 1000000)}M`;
+        } else if (value >= 1000) {
+          return `${symbol} ${Math.round(value / 1000)}K`;
+        }
+        return `${symbol} ${Math.round(value)}`;
     } else if (isCustomerValuePerHeadcount) {
       // For Customer Value Per Headcount and Customer Count vs Headcount - round up to nearest integer
       if (value >= 1000000) {
@@ -218,7 +218,6 @@ export default function LineChart({
     // Check if this is a count/integer type (New Depositor, Active Member, etc.)
     const isCountType = datasetLabel && (
       datasetLabel.toLowerCase().includes('member') ||
-      datasetLabel.toLowerCase().includes('user') ||
       datasetLabel.toLowerCase().includes('unique') ||
       datasetLabel.toLowerCase().includes('pure') ||
       datasetLabel.toLowerCase().includes('count') ||
@@ -243,7 +242,8 @@ export default function LineChart({
       datasetLabel.toLowerCase().includes('profit') ||
       datasetLabel.toLowerCase().includes('gross gaming revenue') ||
       datasetLabel.toLowerCase().includes('per user') ||
-      datasetLabel.toLowerCase().includes('pure user')
+      datasetLabel.toLowerCase().includes('pure user') ||
+      datasetLabel.toLowerCase().includes('user') // Add user back for GGR User, DA User
     );
     
     // Check if this is Customer Maturity Index (special case - no currency, no decimal)
@@ -265,9 +265,9 @@ export default function LineChart({
       // For maturity index - show as percentage with 2 decimal places
       return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
     } else if (isAmountType) {
-      // For amount/currency - with currency symbol, formatted number with commas
+      // For amount/currency - with currency symbol, formatted number with 2 decimal places
       const symbol = getCurrencySymbol(currency);
-      return `${symbol} ${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+      return `${symbol} ${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     } else {
       // Default - formatted number without currency, with commas
       return value.toLocaleString('en-US', { maximumFractionDigits: 0 });

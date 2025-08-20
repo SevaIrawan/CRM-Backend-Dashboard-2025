@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 [USC API] Fetching data with params:', { year, month, currency, line, startDate, endDate })
 
+    console.log('🔍 [USC API] About to call getUSCKPIData...')
     // Fetch all USC data in parallel
     const [kpiData, momData, dailyAverageData, chartData] = await Promise.all([
       getUSCKPIData(year, month, currency, line, startDate, endDate),
@@ -20,6 +21,7 @@ export async function GET(request: NextRequest) {
       getUSCDailyAverageData(year, month, currency, line, startDate, endDate),
       getUSCChartData(year, month, currency, line, startDate, endDate)
     ])
+    console.log('🔍 [USC API] All data fetched, kpiData:', kpiData)
 
     const response = {
       success: true,
