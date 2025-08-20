@@ -17,9 +17,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Extract unique years
-    const years = [...new Set(
+    const uniqueYears = Array.from(new Set(
       yearData?.map(row => new Date(row.date).getFullYear().toString()) || []
-    )].sort((a, b) => parseInt(b) - parseInt(a))
+    ))
+    const years = uniqueYears.sort((a, b) => parseInt(b) - parseInt(a))
 
     // Get unique months from member_report_usc table
     const { data: monthData, error: monthError } = await supabase
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Extract unique months
-    const months = [...new Set(
+    const uniqueMonths = Array.from(new Set(
       monthData?.map(row => {
         const date = new Date(row.date)
         const monthNames = [
@@ -42,7 +43,8 @@ export async function GET(request: NextRequest) {
         ]
         return monthNames[date.getMonth()]
       }) || []
-    )]
+    ))
+    const months = uniqueMonths
 
     // Get unique currencies from member_report_usc table
     const { data: currencyData, error: currencyError } = await supabase
@@ -56,9 +58,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Extract unique currencies and add "All" option
-    const currencies = ['All', ...new Set(
+    const uniqueCurrencies = Array.from(new Set(
       currencyData?.map(row => row.currency).filter(Boolean) || []
-    )]
+    ))
+    const currencies = ['All', ...uniqueCurrencies]
 
     const response = {
       success: true,
