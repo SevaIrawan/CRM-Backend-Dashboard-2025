@@ -1192,6 +1192,51 @@ body {
   margin-top: 2px; /* Reduced from 4px */
 }
 
+/* New layout for bottom row: Additional KPI on left, Comparison on right */
+.stat-card-bottom-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2px;
+  gap: 8px;
+}
+
+/* Additional KPI styling (left side) */
+.stat-card-additional-kpi {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  flex: 1;
+}
+
+.additional-kpi-label {
+  font-size: 9px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  line-height: 1.1;
+}
+
+.additional-kpi-value {
+  font-size: 11px;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.1;
+}
+
+/* Updated comparison styling (right side) */
+.stat-card-comparison {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-top: 0; /* Remove top margin since it's in flex container */
+  margin-left: auto; /* Push to right side */
+}
+
 .comparison-label {
   display: inline-flex;
   align-items: center;

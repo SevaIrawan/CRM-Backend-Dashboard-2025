@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from '../../components/Layout';
 import YearSlicer from '../../components/slicers/YearSlicer';
 import MonthSlicer from '../../components/slicers/MonthSlicer';
@@ -21,6 +21,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import { calculateDailyAverage, getCurrentMonthProgress, getAllKPIsWithDailyAverage } from '../../lib/dailyAverageHelper';
 
 ChartJS.register(
   CategoryScale,
@@ -40,6 +41,57 @@ export default function BusinessFlow() {
   const [year, setYear] = useState('2025');
   const [month, setMonth] = useState('July');
   const [currency, setCurrency] = useState('MYR');
+
+  // Add state for daily average calculations
+  const [dailyAverages, setDailyAverages] = useState({
+    newCustomerConversionRate: 0,
+    totalNewCustomers: 0,
+    customerGroupJoinVolume: 0,
+    secondDepositRateInGroup: 0,
+    secondDepositRateNonGroup: 0,
+    secondDepositRateTotal: 0,
+    secondDepositRateDifference: 0
+  });
+
+  // Calculate daily averages for ALL KPIs when month/year changes
+  useEffect(() => {
+    const calculateDailyAverages = async () => {
+      try {
+        console.log('🔄 [Business Flow] Using Central Daily Average function...');
+        
+        // Mock data for Business Flow (static values)
+        const mockData = {
+          newCustomerConversionRate: 4.83,
+          totalNewCustomers: 65,
+          customerGroupJoinVolume: 1357,
+          secondDepositRateInGroup: 24.22,
+          secondDepositRateNonGroup: 18.45,
+          secondDepositRateTotal: 21.33,
+          secondDepositRateDifference: 5.77
+        };
+        
+        // Use central function - sama seperti getAllKPIsWithMoM
+        const result = await getAllKPIsWithDailyAverage(mockData, year, month);
+        
+        setDailyAverages({
+          newCustomerConversionRate: result.dailyAverage.newCustomerConversionRate || 0,
+          totalNewCustomers: result.dailyAverage.totalNewCustomers || 0,
+          customerGroupJoinVolume: result.dailyAverage.customerGroupJoinVolume || 0,
+          secondDepositRateInGroup: result.dailyAverage.secondDepositRateInGroup || 0,
+          secondDepositRateNonGroup: result.dailyAverage.secondDepositRateNonGroup || 0,
+          secondDepositRateTotal: result.dailyAverage.secondDepositRateTotal || 0,
+          secondDepositRateDifference: result.dailyAverage.secondDepositRateDifference || 0
+        });
+        
+        console.log('✅ [Business Flow] Central Daily Average applied to ALL KPIs');
+        
+      } catch (error) {
+        console.error('❌ [Business Flow] Error with central Daily Average:', error);
+      }
+    };
+
+    calculateDailyAverages();
+  }, [year, month]);
 
   // Mock user data - akan diganti dengan Supabase auth
   const user = {
@@ -140,18 +192,30 @@ export default function BusinessFlow() {
                   title="NEW CUSTOMER CONVERSION RATE"
                   value="4.83%"
                   icon="conversion-rate"
+                  additionalKpi={{
+                    label: "DAILY AVERAGE",
+                    value: `${dailyAverages.newCustomerConversionRate.toFixed(2)}%`
+                  }}
                   comparison={COMPARISON_TYPES.MOM_NEGATIVE(-28.23)}
                 />
                 <StatCard 
                   title="TOTAL NEW CUSTOMERS"
                   value="65"
                   icon="new-customers"
+                  additionalKpi={{
+                    label: "DAILY AVERAGE",
+                    value: Math.round(dailyAverages.totalNewCustomers)
+                  }}
                   comparison={COMPARISON_TYPES.MOM_NEGATIVE(-47.58)}
                 />
                 <StatCard 
                   title="CUSTOMER GROUP JOIN VOLUME"
                   value="1,357"
                   icon="group-join"
+                  additionalKpi={{
+                    label: "DAILY AVERAGE",
+                    value: Math.round(dailyAverages.customerGroupJoinVolume)
+                  }}
                   comparison={COMPARISON_TYPES.MOM_NEGATIVE(-26.73)}
                 />
               </div>
@@ -214,12 +278,20 @@ export default function BusinessFlow() {
                   title="2ND DEPOSIT RATE (IN GROUP)"
                   value="24.22%"
                   icon="deposit-rate"
+                  additionalKpi={{
+                    label: "DAILY AVERAGE",
+                    value: "0.81%"
+                  }}
                   comparison={COMPARISON_TYPES.MOM_NEGATIVE(-15.31)}
                 />
                 <StatCard 
                   title="2ND DEPOSITS (IN GROUP)"
                   value="78"
                   icon="deposits"
+                  additionalKpi={{
+                    label: "DAILY AVERAGE",
+                    value: "2.60"
+                  }}
                   comparison={COMPARISON_TYPES.MOM_NEGATIVE(-51.25)}
                 />
                 <StatCard 

@@ -8,6 +8,10 @@ interface StatCardProps {
   title: string
   value: string | number
   icon?: string // KPI name for icon lookup
+  additionalKpi?: {  // New prop for additional KPI (Daily Average)
+    label: string
+    value: string | number
+  }
   comparison?: {
     percentage: string
     isPositive: boolean
@@ -21,6 +25,7 @@ export default function StatCard({
   title, 
   value, 
   icon,
+  additionalKpi,  // New prop
   comparison, 
   comparisonSize = 12,
   className = '' 
@@ -49,24 +54,36 @@ export default function StatCard({
       
       <div className="stat-card-value">{value}</div>
       
-      {comparison && (
-        <div className="stat-card-comparison">
-          <span 
-            className="comparison-label"
-            style={{
-              fontSize: `${comparisonSize}px`,
-              color: getComparisonColor(comparison.isPositive ? 1 : -1),
-              fontWeight: 600
-            }}
-          >
-            <ComparisonIcon 
-              isPositive={comparison.isPositive}
-              size={`${comparisonSize}px`}
-            />
-            {comparison.percentage} {comparison.text || 'MoM'}
-          </span>
-        </div>
-      )}
+      {/* New layout: Additional KPI on left, Comparison on right */}
+      <div className="stat-card-bottom-row">
+        {/* Left side: Additional KPI (Daily Average) */}
+        {additionalKpi && (
+          <div className="stat-card-additional-kpi">
+            <span className="additional-kpi-label">{additionalKpi.label}</span>
+            <span className="additional-kpi-value">{additionalKpi.value}</span>
+          </div>
+        )}
+        
+        {/* Right side: Comparison */}
+        {comparison && (
+          <div className="stat-card-comparison">
+            <span 
+              className="comparison-label"
+              style={{
+                fontSize: `${comparisonSize}px`,
+                color: getComparisonColor(comparison.isPositive ? 1 : -1),
+                fontWeight: 600
+              }}
+            >
+              <ComparisonIcon 
+                isPositive={comparison.isPositive}
+                size={`${comparisonSize}px`}
+              />
+              {comparison.percentage} {comparison.text || 'MoM'}
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   )
 } 

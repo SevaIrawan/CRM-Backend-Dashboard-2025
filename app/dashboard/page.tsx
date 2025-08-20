@@ -10,6 +10,7 @@ import CurrencySlicer from '@/components/slicers/CurrencySlicer'
 import LineChart from '@/components/LineChart'
 import StatCard from '@/components/StatCard'
 import { getChartIcon } from '@/lib/CentralIcon'
+import { calculateDailyAverage, getMonthInfo, getAllKPIsWithDailyAverage } from '@/lib/dailyAverageHelper';
 
 export default function Dashboard() {
   
@@ -78,6 +79,16 @@ export default function Dashboard() {
   const [chartError, setChartError] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
 
+  // Restore original state for 6 KPIs only
+  const [dailyAverages, setDailyAverages] = useState({
+    depositAmount: 0,
+    netProfit: 0,
+    holdPercentage: 0,
+    activeMember: 0,
+    conversionRate: 0,
+    churnRate: 0
+  });
+
   // Load data in background without blocking UI
   useEffect(() => {
     const loadData = async () => {
@@ -133,6 +144,36 @@ export default function Dashboard() {
 
     loadData()
   }, [selectedYear, selectedMonth, selectedCurrency])
+
+  // Calculate daily averages for 6 KPIs when KPI data changes
+  useEffect(() => {
+    const calculateDailyAverages = async () => {
+      if (kpiData && selectedYear && selectedMonth) {
+        try {
+          console.log('🔄 [Dashboard] Using Central Daily Average function...');
+          
+          // Use central function - sama seperti getAllKPIsWithMoM
+          const result = await getAllKPIsWithDailyAverage(kpiData, selectedYear, selectedMonth);
+          
+          setDailyAverages({
+            depositAmount: result.dailyAverage.depositAmount || 0,
+            netProfit: result.dailyAverage.netProfit || 0,
+            holdPercentage: result.dailyAverage.holdPercentage || 0,
+            activeMember: result.dailyAverage.activeMember || 0,
+            conversionRate: result.dailyAverage.conversionRate || 0,
+            churnRate: result.dailyAverage.churnRate || 0
+          });
+          
+          console.log('✅ [Dashboard] Central Daily Average applied to 6 KPIs');
+          
+        } catch (error) {
+          console.error('❌ [Dashboard] Error with central Daily Average:', error);
+        }
+      }
+    };
+
+    calculateDailyAverages();
+  }, [kpiData, selectedYear, selectedMonth]);
 
   // Loading screen component
   if (isLoading) {
@@ -348,6 +389,10 @@ export default function Dashboard() {
               title="DEPOSIT AMOUNT"
               value={formatCurrency(kpiData.depositAmount)}
               icon="Deposit Amount"
+              additionalKpi={{
+                label: "DAILY AVERAGE",
+                value: formatCurrency(dailyAverages.depositAmount)
+              }}
               comparison={{
                 percentage: formatMoM(momData.depositAmount),
                 isPositive: momData.depositAmount > 0
@@ -357,6 +402,10 @@ export default function Dashboard() {
               title="NET PROFIT"
               value={formatCurrency(kpiData.netProfit)}
               icon="Net Profit"
+              additionalKpi={{
+                label: "DAILY AVERAGE",
+                value: formatCurrency(dailyAverages.netProfit)
+              }}
               comparison={{
                 percentage: formatMoM(momData.netProfit),
                 isPositive: momData.netProfit > 0
@@ -364,17 +413,25 @@ export default function Dashboard() {
             />
             <StatCard
               title="HOLD PERCENTAGE"
-              value={`${kpiData.holdPercentage.toFixed(2)}%`}
+              value={`${(kpiData.holdPercentage || 0).toFixed(2)}%`}
               icon="Hold Percentage"
+              additionalKpi={{
+                label: "DAILY AVERAGE",
+                value: `${dailyAverages.holdPercentage.toFixed(2)}%`
+              }}
               comparison={{
-                percentage: formatMoM(momData.holdPercentage),
-                isPositive: momData.holdPercentage > 0
+                percentage: formatMoM(momData.holdPercentage || 0),
+                isPositive: (momData.holdPercentage || 0) > 0
               }}
             />
             <StatCard
               title="ACTIVE MEMBER"
               value={formatNumber(kpiData.activeMember)}
               icon="Active Member"
+              additionalKpi={{
+                label: "DAILY AVERAGE",
+                value: formatNumber(Math.round(dailyAverages.activeMember))
+              }}
               comparison={{
                 percentage: formatMoM(momData.activeMember),
                 isPositive: momData.activeMember > 0
@@ -382,20 +439,28 @@ export default function Dashboard() {
             />
             <StatCard
               title="CONVERSION RATE"
-              value={`${kpiData.conversionRate.toFixed(2)}%`}
+              value={`${(kpiData.conversionRate || 0).toFixed(2)}%`}
               icon="Conversion Rate"
+              additionalKpi={{
+                label: "DAILY AVERAGE",
+                value: `${dailyAverages.conversionRate.toFixed(2)}%`
+              }}
               comparison={{
-                percentage: formatMoM(momData.conversionRate),
-                isPositive: momData.conversionRate > 0
+                percentage: formatMoM(momData.conversionRate || 0),
+                isPositive: (momData.conversionRate || 0) > 0
               }}
             />
             <StatCard
               title="CHURN RATE"
-              value={`${kpiData.churnRate.toFixed(2)}%`}
+              value={`${(kpiData.churnRate || 0).toFixed(2)}%`}
               icon="Churn Rate"
+              additionalKpi={{
+                label: "DAILY AVERAGE",
+                value: `${dailyAverages.churnRate.toFixed(2)}%`
+              }}
               comparison={{
-                percentage: formatMoM(momData.churnRate),
-                isPositive: momData.churnRate > 0
+                percentage: formatMoM(momData.churnRate || 0),
+                isPositive: (momData.churnRate || 0) > 0
               }}
             />
           </div>

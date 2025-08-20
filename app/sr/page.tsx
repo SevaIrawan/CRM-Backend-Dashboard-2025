@@ -10,6 +10,7 @@ import LineChart from '@/components/LineChart';
 import BarChart from '@/components/BarChart';
 import DonutChart from '@/components/DonutChart';
 import { getChartIcon } from '@/lib/CentralIcon';
+import { calculateDailyAverage, getMonthInfo, getAllKPIsWithDailyAverage } from '@/lib/dailyAverageHelper';
 
 export default function SalesRevenuePage() {
   const [kpiData, setKpiData] = useState<KPIData | null>(null);
@@ -28,6 +29,16 @@ export default function SalesRevenuePage() {
   const [lineChartData, setLineChartData] = useState<any>(null);
   const [srChartData, setSrChartData] = useState<any>(null);
   const [chartError, setChartError] = useState<string | null>(null);
+
+  // Add state for daily average calculations
+  const [dailyAverages, setDailyAverages] = useState({
+    depositAmount: 0,
+    withdrawAmount: 0,
+    grossGamingRevenue: 0,
+    activeMember: 0,
+    newDepositor: 0,
+    conversionRate: 0
+  });
 
   useEffect(() => {
     const loadData = async () => {
@@ -128,6 +139,36 @@ export default function SalesRevenuePage() {
       setFilteredMonths(slicerData.months);
     }
   }, [slicerData]);
+
+  // Calculate daily averages for ALL KPIs when KPI data changes
+  useEffect(() => {
+    const calculateDailyAverages = async () => {
+      if (kpiData && selectedYear && selectedMonth) {
+        try {
+          console.log('🔄 [Sales Revenue] Using Central Daily Average function...');
+          
+          // Use central function - sama seperti getAllKPIsWithMoM
+          const result = await getAllKPIsWithDailyAverage(kpiData, selectedYear, selectedMonth);
+          
+          setDailyAverages({
+            depositAmount: result.dailyAverage.depositAmount || 0,
+            withdrawAmount: result.dailyAverage.withdrawAmount || 0,
+            grossGamingRevenue: result.dailyAverage.grossGamingRevenue || 0,
+            activeMember: result.dailyAverage.activeMember || 0,
+            newDepositor: result.dailyAverage.newDepositor || 0,
+            conversionRate: result.dailyAverage.conversionRate || 0
+          });
+          
+          console.log('✅ [Sales Revenue] Central Daily Average applied to ALL KPIs');
+          
+        } catch (error) {
+          console.error('❌ [Sales Revenue] Error with central Daily Average:', error);
+        }
+      }
+    };
+
+    calculateDailyAverages();
+  }, [kpiData, selectedYear, selectedMonth]);
 
   const formatCurrency = (value: number | null | undefined, currency: string): string => {
     if (value === null || value === undefined) return '0';
@@ -405,6 +446,10 @@ export default function SalesRevenuePage() {
             title="DEPOSIT AMOUNT"
             value={formatCurrency(kpiData?.depositAmount || 0, selectedCurrency)}
             icon="Deposit Amount"
+            additionalKpi={{
+              label: "DAILY AVERAGE",
+              value: formatCurrency(dailyAverages.depositAmount, selectedCurrency)
+            }}
             comparison={{
               percentage: formatMoM(momData?.depositAmount || 0),
               isPositive: Boolean(momData?.depositAmount && momData.depositAmount > 0)
@@ -414,6 +459,10 @@ export default function SalesRevenuePage() {
             title="WITHDRAW AMOUNT"
             value={formatCurrency(kpiData?.withdrawAmount || 0, selectedCurrency)}
             icon="Withdraw Amount"
+            additionalKpi={{
+              label: "DAILY AVERAGE",
+              value: formatCurrency(dailyAverages.withdrawAmount, selectedCurrency)
+            }}
             comparison={{
               percentage: formatMoM(momData?.withdrawAmount || 0),
               isPositive: Boolean(momData?.withdrawAmount && momData.withdrawAmount > 0)
@@ -423,6 +472,10 @@ export default function SalesRevenuePage() {
             title="GROSS GAMING REVENUE"
             value={formatCurrency(kpiData?.grossGamingRevenue || 0, selectedCurrency)}
             icon="Gross Gaming Revenue"
+            additionalKpi={{
+              label: "DAILY AVERAGE",
+              value: formatCurrency(dailyAverages.grossGamingRevenue, selectedCurrency)
+            }}
             comparison={{
               percentage: formatMoM(momData?.grossGamingRevenue || 0),
               isPositive: Boolean(momData?.grossGamingRevenue && momData.grossGamingRevenue > 0)
@@ -432,6 +485,10 @@ export default function SalesRevenuePage() {
             title="ACTIVE MEMBER"
             value={formatNumber(kpiData?.activeMember || 0)}
             icon="Active Member"
+            additionalKpi={{
+              label: "DAILY AVERAGE",
+              value: formatNumber(Math.round(dailyAverages.activeMember))
+            }}
             comparison={{
               percentage: formatMoM(momData?.activeMember || 0),
               isPositive: Boolean(momData?.activeMember && momData.activeMember > 0)
@@ -441,6 +498,10 @@ export default function SalesRevenuePage() {
             title="NEW DEPOSITOR"
             value={formatNumber(kpiData?.newDepositor || 0)}
             icon="New Depositor"
+            additionalKpi={{
+              label: "DAILY AVERAGE",
+              value: formatNumber(Math.round(dailyAverages.newDepositor))
+            }}
             comparison={{
               percentage: formatMoM(momData?.newDepositor || 0),
               isPositive: Boolean(momData?.newDepositor && momData.newDepositor > 0)
@@ -450,6 +511,10 @@ export default function SalesRevenuePage() {
             title="CONVERSION RATE"
             value={`${(kpiData?.conversionRate || 0).toFixed(2)}%`}
             icon="Conversion Rate"
+            additionalKpi={{
+              label: "DAILY AVERAGE",
+              value: `${dailyAverages.conversionRate.toFixed(2)}%`
+            }}
             comparison={{
               percentage: formatMoM(momData?.conversionRate || 0),
               isPositive: Boolean(momData?.conversionRate && momData.conversionRate > 0)

@@ -11,6 +11,7 @@ import LineChart from '@/components/LineChart'
 import BarChart from '@/components/BarChart'
 import StatCard from '@/components/StatCard'
 import { getChartIcon } from '@/lib/CentralIcon'
+import { calculateDailyAverage, getMonthInfo, getAllKPIsWithDailyAverage } from '@/lib/dailyAverageHelper';
 
 export default function StrategicExecutive() {
   
@@ -79,6 +80,15 @@ export default function StrategicExecutive() {
   const [isLoading, setIsLoading] = useState(true)
   const [chartError, setChartError] = useState<string | null>(null)
 
+  // Add state for daily average calculations
+  const [dailyAverages, setDailyAverages] = useState({
+    netProfit: 0,
+    ggrPerUser: 0,
+    activeMember: 0,
+    pureUser: 0,
+    headcount: 0
+  });
+
   // Load data in background without blocking UI
   useEffect(() => {
     const loadData = async () => {
@@ -129,6 +139,35 @@ export default function StrategicExecutive() {
 
     loadData()
   }, [selectedYear, selectedMonth, selectedCurrency])
+
+  // Calculate daily averages for ALL KPIs when KPI data changes
+  useEffect(() => {
+    const calculateDailyAverages = async () => {
+      if (kpiData && selectedYear && selectedMonth) {
+        try {
+          console.log('🔄 [Strategic Executive] Using Central Daily Average function...');
+          
+          // Use central function - sama seperti getAllKPIsWithMoM
+          const result = await getAllKPIsWithDailyAverage(kpiData, selectedYear, selectedMonth);
+          
+          setDailyAverages({
+            netProfit: result.dailyAverage.netProfit || 0,
+            ggrPerUser: result.dailyAverage.ggrPerUser || 0,
+            activeMember: result.dailyAverage.activeMember || 0,
+            pureUser: result.dailyAverage.pureUser || 0,
+            headcount: result.dailyAverage.headcount || 0
+          });
+          
+          console.log('✅ [Strategic Executive] Central Daily Average applied to ALL KPIs');
+          
+        } catch (error) {
+          console.error('❌ [Strategic Executive] Error with central Daily Average:', error);
+        }
+      }
+    };
+
+    calculateDailyAverages();
+  }, [kpiData, selectedYear, selectedMonth]);
 
   const formatCurrency = (amount: number, currency?: string) => {
     const currentCurrency = currency || selectedCurrency
@@ -227,6 +266,10 @@ export default function StrategicExecutive() {
               title="NET PROFIT"
               value={formatCurrency(kpiData.netProfit)}
               icon="Net Profit"
+              additionalKpi={{
+                label: "DAILY AVERAGE",
+                value: formatCurrency(dailyAverages.netProfit)
+              }}
               comparison={{
                 percentage: formatMoM(momData.netProfit),
                 isPositive: momData.netProfit > 0
@@ -236,6 +279,10 @@ export default function StrategicExecutive() {
               title="GGR USER"
               value={formatCurrency(kpiData.ggrPerUser)}
               icon="GGR USER"
+              additionalKpi={{
+                label: "DAILY AVERAGE",
+                value: formatCurrency(dailyAverages.ggrPerUser)
+              }}
               comparison={{
                 percentage: formatMoM(momData.ggrPerUser),
                 isPositive: momData.ggrPerUser > 0
@@ -245,6 +292,10 @@ export default function StrategicExecutive() {
               title="ACTIVE MEMBER"
               value={formatNumber(kpiData.activeMember)}
               icon="Active Member"
+              additionalKpi={{
+                label: "DAILY AVERAGE",
+                value: formatNumber(Math.round(dailyAverages.activeMember))
+              }}
               comparison={{
                 percentage: formatMoM(momData.activeMember),
                 isPositive: momData.activeMember > 0
@@ -254,6 +305,10 @@ export default function StrategicExecutive() {
               title="PURE USER"
               value={formatNumber(kpiData.pureUser)}
               icon="Pure User"
+              additionalKpi={{
+                label: "DAILY AVERAGE",
+                value: formatNumber(Math.round(dailyAverages.pureUser))
+              }}
               comparison={{
                 percentage: formatMoM(momData.pureUser),
                 isPositive: momData.pureUser > 0
