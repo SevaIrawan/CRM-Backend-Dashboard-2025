@@ -10,65 +10,162 @@ import DonutChart from '@/components/DonutChart'
 import StandardChart from '@/components/StandardChart'
 import StandardChartGrid from '@/components/StandardChartGrid'
 import Frame from '@/components/Frame'
-import YearSlicer from '@/components/slicers/YearSlicer'
-import MonthSlicer from '@/components/slicers/MonthSlicer'
-import CurrencySlicer from '@/components/slicers/CurrencySlicer'
+
 import { getChartIcon } from '@/lib/CentralIcon'
+import { USCKPIData, USCKPIMoM } from '@/lib/USCLogic'
 
 export default function USCOverview() {
   const [sidebarExpanded, setSidebarExpanded] = useState(true)
   const [darkMode, setDarkMode] = useState(false)
   const [selectedYear, setSelectedYear] = useState('2025')
   const [selectedMonth, setSelectedMonth] = useState('January')
-  const [selectedCurrency, setSelectedCurrency] = useState('MYR')
+  const [selectedCurrency, setSelectedCurrency] = useState('MYR') // Hidden but active
+  const [selectedLine, setSelectedLine] = useState('All')
+  const [selectedStartDate, setSelectedStartDate] = useState('')
+  const [selectedEndDate, setSelectedEndDate] = useState('')
+  const [slicerMode, setSlicerMode] = useState<'month' | 'range'>('month') // 'month' or 'range'
   const [loading, setLoading] = useState(true)
+  const [yearOptions, setYearOptions] = useState<string[]>(['2025'])
+  const [monthOptions, setMonthOptions] = useState<string[]>(['January'])
+  const [currencyOptions, setCurrencyOptions] = useState<string[]>(['All'])
+  const [lineOptions, setLineOptions] = useState<string[]>(['All'])
 
-  // Mock data for USC KPIs (8 KPIs)
-  const [uscData, setUscData] = useState({
-    kpi1: 1250000,  // USC Revenue
-    kpi2: 850000,   // USC Profit
-    kpi3: 92.5,     // USC Conversion
-    kpi4: 1250,     // USC Customers
-    kpi5: 750000,   // USC Sales
-    kpi6: 85.2,     // USC Retention
-    kpi7: 3200,     // USC Transactions
-    kpi8: 15.8      // USC Growth Rate
+  // USC KPI Data from Supabase
+  const [uscData, setUscData] = useState<USCKPIData>({
+    depositAmount: 0,
+    depositCases: 0,
+    withdrawAmount: 0,
+    withdrawCases: 0,
+    addTransaction: 0,
+    deductTransaction: 0,
+    ggr: 0,
+    netProfit: 0,
+    activeMember: 0,
+    ggrUser: 0,
+    daUser: 0
   })
 
-  // Mock MoM data (8 KPIs)
-  const [momData, setMomData] = useState({
-    kpi1: 12.5,
-    kpi2: 8.3,
-    kpi3: 2.1,
-    kpi4: 15.2,
-    kpi5: 9.7,
-    kpi6: 1.8,
-    kpi7: 22.4,
-    kpi8: 3.5
+  // USC MoM Data from Supabase
+  const [momData, setMomData] = useState<USCKPIMoM>({
+    depositAmount: 0,
+    depositCases: 0,
+    withdrawAmount: 0,
+    withdrawCases: 0,
+    addTransaction: 0,
+    deductTransaction: 0,
+    ggr: 0,
+    netProfit: 0,
+    activeMember: 0,
+    ggrUser: 0,
+    daUser: 0
   })
 
-  // Mock Daily Average data (8 KPIs)
-  const [dailyAverages, setDailyAverages] = useState({
-    kpi1: 40322.58,
-    kpi2: 27419.35,
-    kpi3: 2.98,
-    kpi4: 40.32,
-    kpi5: 24193.55,
-    kpi6: 2.75,
-    kpi7: 103.23,
-    kpi8: 0.51
+  // USC Daily Average Data from Supabase
+  const [dailyAverages, setDailyAverages] = useState<USCKPIData>({
+    depositAmount: 0,
+    depositCases: 0,
+    withdrawAmount: 0,
+    withdrawCases: 0,
+    addTransaction: 0,
+    deductTransaction: 0,
+    ggr: 0,
+    netProfit: 0,
+    activeMember: 0,
+    ggrUser: 0,
+    daUser: 0
   })
 
   const handleLogout = () => {
     console.log('Logout clicked')
   }
 
-  useEffect(() => {
-    // Simulate data loading
-    setTimeout(() => {
+  // Fetch USC slicer options
+  const fetchUSCSlicerOptions = async () => {
+    try {
+      console.log('🔍 [USC Overview] Fetching slicer options')
+
+      // Fetch all slicer options from USC API
+      const slicerResponse = await fetch('/api/usc/slicer-options')
+      if (slicerResponse.ok) {
+        const slicerResult = await slicerResponse.json()
+        if (slicerResult.success) {
+          setYearOptions(slicerResult.data.years)
+          setMonthOptions(slicerResult.data.months)
+          setCurrencyOptions(slicerResult.data.currencies)
+        }
+      }
+
+      // Fetch line options
+      const lineResponse = await fetch('/api/usc/line-options')
+      if (lineResponse.ok) {
+        const lineResult = await lineResponse.json()
+        if (lineResult.success) {
+          setLineOptions(lineResult.data.lines)
+        }
+      }
+
+      console.log('✅ [USC Overview] Slicer options loaded')
+    } catch (error) {
+      console.error('❌ [USC Overview] Slicer options error:', error)
+    }
+  }
+
+  // Fetch USC data from API
+  const fetchUSCData = async () => {
+    try {
+      setLoading(true)
+             console.log('🔍 [USC Overview] Fetching data:', { 
+         selectedYear, 
+         selectedMonth, 
+         selectedCurrency, 
+         selectedLine, 
+         selectedStartDate, 
+         selectedEndDate, 
+         slicerMode 
+       })
+
+       // Build API URL based on slicer mode
+       let apiUrl = `/api/usc/data?year=${selectedYear}&currency=${selectedCurrency}&line=${selectedLine}`
+       
+       if (slicerMode === 'month') {
+         apiUrl += `&month=${selectedMonth}`
+       } else if (slicerMode === 'range' && selectedStartDate) {
+         apiUrl += `&startDate=${selectedStartDate}`
+         if (selectedEndDate) {
+           apiUrl += `&endDate=${selectedEndDate}`
+         }
+       }
+
+      const response = await fetch(apiUrl)
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch USC data')
+      }
+
+      const result = await response.json()
+
+      if (result.success) {
+        setUscData(result.data.kpi)
+        setMomData(result.data.mom)
+        setDailyAverages(result.data.dailyAverage)
+        console.log('✅ [USC Overview] Data loaded successfully')
+      } else {
+        console.error('❌ [USC Overview] API error:', result.error)
+      }
+    } catch (error) {
+      console.error('❌ [USC Overview] Fetch error:', error)
+    } finally {
       setLoading(false)
-    }, 1000)
+    }
+  }
+
+  useEffect(() => {
+    fetchUSCSlicerOptions()
   }, [])
+
+  useEffect(() => {
+    fetchUSCData()
+  }, [selectedYear, selectedMonth, selectedCurrency, selectedLine, selectedStartDate, selectedEndDate, slicerMode])
 
   // Format functions (standard like other pages)
   const formatCurrency = (value: number): string => {
@@ -131,36 +228,147 @@ export default function USCOverview() {
       customSubHeader={
         <div className="dashboard-subheader">
           <div className="subheader-title">
-            Customer
+            
           </div>
           
-          <div className="subheader-controls">
-            <div className="slicer-group">
-              <label className="slicer-label">YEAR:</label>
-              <YearSlicer 
-                value={selectedYear} 
-                onChange={setSelectedYear}
-              />
-            </div>
-            
-            <div className="slicer-group">
-              <label className="slicer-label">CURRENCY:</label>
-              <CurrencySlicer 
-                value={selectedCurrency} 
-                onChange={setSelectedCurrency}
-              />
-            </div>
-            
-            <div className="slicer-group">
-              <label className="slicer-label">MONTH:</label>
-              <MonthSlicer 
-                value={selectedMonth} 
-                onChange={setSelectedMonth}
-                selectedYear={selectedYear}
-                selectedCurrency={selectedCurrency}
-              />
-            </div>
-          </div>
+                     <div className="subheader-controls">
+             {/* Line Slicer */}
+             <div className="slicer-group">
+               <label className="slicer-label">LINE:</label>
+               <select 
+                 value={selectedLine} 
+                 onChange={(e) => setSelectedLine(e.target.value)}
+                 style={{
+                   padding: '8px 12px',
+                   border: '1px solid #d1d5db',
+                   borderRadius: '6px',
+                   fontSize: '14px',
+                   backgroundColor: 'white',
+                   minWidth: '120px'
+                 }}
+               >
+                 {lineOptions.map((line) => (
+                   <option key={line} value={line}>
+                     {line === 'All' ? 'All Lines' : line}
+                   </option>
+                 ))}
+               </select>
+             </div>
+             
+             {/* Year Slicer */}
+             <div className="slicer-group">
+               <label className="slicer-label">YEAR:</label>
+               <select 
+                 value={selectedYear} 
+                 onChange={(e) => setSelectedYear(e.target.value)}
+                 style={{
+                   padding: '8px 12px',
+                   border: '1px solid #d1d5db',
+                   borderRadius: '6px',
+                   fontSize: '14px',
+                   backgroundColor: 'white',
+                   minWidth: '120px'
+                 }}
+               >
+                 {yearOptions.map((year) => (
+                   <option key={year} value={year}>{year}</option>
+                 ))}
+               </select>
+             </div>
+             
+                           {/* Month Slicer */}
+              <div className="slicer-group">
+                <label className="slicer-label">MONTH:</label>
+                <select 
+                  value={selectedMonth} 
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  disabled={slicerMode === 'range'}
+                  style={{
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    backgroundColor: slicerMode === 'range' ? '#f3f4f6' : 'white',
+                    color: slicerMode === 'range' ? '#9ca3af' : '#374151',
+                    minWidth: '120px',
+                    cursor: slicerMode === 'range' ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {monthOptions.map((month) => (
+                    <option key={month} value={month}>{month}</option>
+                  ))}
+                </select>
+              </div>
+              
+              {/* Date Range Checkbox */}
+              <div className="slicer-group">
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={slicerMode === 'range'}
+                    onChange={(e) => setSlicerMode(e.target.checked ? 'range' : 'month')}
+                    style={{
+                      width: '16px',
+                      height: '16px',
+                      cursor: 'pointer'
+                    }}
+                  />
+                  <label style={{
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#374151',
+                    cursor: 'pointer',
+                    userSelect: 'none'
+                  }}>
+                    DATE RANGE
+                  </label>
+                </div>
+              </div>
+              
+              {/* Start Date Input */}
+              <div className="slicer-group">
+                <input 
+                  type="date" 
+                  value={selectedStartDate} 
+                  onChange={(e) => setSelectedStartDate(e.target.value)}
+                  disabled={slicerMode === 'month'}
+                  style={{
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    backgroundColor: slicerMode === 'month' ? '#f3f4f6' : 'white',
+                    color: slicerMode === 'month' ? '#9ca3af' : '#374151',
+                    minWidth: '120px',
+                    cursor: slicerMode === 'month' ? 'not-allowed' : 'pointer'
+                  }}
+                />
+              </div>
+              
+              {/* End Date Input */}
+              <div className="slicer-group">
+                <input 
+                  type="date" 
+                  value={selectedEndDate} 
+                  onChange={(e) => setSelectedEndDate(e.target.value)}
+                  disabled={slicerMode === 'month'}
+                  style={{
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    backgroundColor: slicerMode === 'month' ? '#f3f4f6' : 'white',
+                    color: slicerMode === 'month' ? '#9ca3af' : '#374151',
+                    minWidth: '120px',
+                    cursor: slicerMode === 'month' ? 'not-allowed' : 'pointer'
+                  }}
+                />
+              </div>
+           </div>
         </div>
       }
     >
@@ -212,69 +420,69 @@ export default function USCOverview() {
               flexDirection: 'column',
               gap: '20px'
             }}>
-              {/* Row 1: 4 KPI Cards */}
-              <div className="kpi-row">
-                <div className="usc-stat-card">
-                  <StatCard
-                    title="USC Revenue"
-                    value={formatCurrency(uscData.kpi1)}
-                    icon="USC Revenue"
-                    additionalKpi={{
-                      label: "DAILY AVERAGE",
-                      value: formatCurrency(dailyAverages.kpi1)
-                    }}
-                    comparison={{
-                      percentage: formatMoM(momData.kpi1),
-                      isPositive: momData.kpi1 > 0
-                    }}
-                  />
-                </div>
-                <div className="usc-stat-card">
-                  <StatCard
-                    title="USC Profit"
-                    value={formatCurrency(uscData.kpi2)}
-                    icon="USC Profit"
-                    additionalKpi={{
-                      label: "DAILY AVERAGE",
-                      value: formatCurrency(dailyAverages.kpi2)
-                    }}
-                    comparison={{
-                      percentage: formatMoM(momData.kpi2),
-                      isPositive: momData.kpi2 > 0
-                    }}
-                  />
-                </div>
-                <div className="usc-stat-card">
-                  <StatCard
-                    title="USC Conversion"
-                    value={`${uscData.kpi3.toFixed(2)}%`}
-                    icon="USC Conversion"
-                    additionalKpi={{
-                      label: "DAILY AVERAGE",
-                      value: `${dailyAverages.kpi3.toFixed(2)}%`
-                    }}
-                    comparison={{
-                      percentage: formatMoM(momData.kpi3),
-                      isPositive: momData.kpi3 > 0
-                    }}
-                  />
-                </div>
-                <div className="usc-stat-card">
-                  <StatCard
-                    title="USC Customers"
-                    value={formatNumber(uscData.kpi4)}
-                    icon="USC Customers"
-                    additionalKpi={{
-                      label: "DAILY AVERAGE",
-                      value: formatNumber(Math.round(dailyAverages.kpi4))
-                    }}
-                    comparison={{
-                      percentage: formatMoM(momData.kpi4),
-                      isPositive: momData.kpi4 > 0
-                    }}
-                  />
-                </div>
-              </div>
+                             {/* Row 1: 4 KPI Cards */}
+               <div className="kpi-row">
+                 <div className="usc-stat-card">
+                   <StatCard
+                     title="Deposit Amount"
+                     value={formatCurrency(uscData.depositAmount)}
+                     icon="Deposit Amount"
+                     additionalKpi={{
+                       label: "DAILY AVERAGE",
+                       value: formatCurrency(dailyAverages.depositAmount)
+                     }}
+                     comparison={{
+                       percentage: formatMoM(momData.depositAmount),
+                       isPositive: momData.depositAmount > 0
+                     }}
+                   />
+                 </div>
+                 <div className="usc-stat-card">
+                   <StatCard
+                     title="Net Profit"
+                     value={formatCurrency(uscData.netProfit)}
+                     icon="Net Profit"
+                     additionalKpi={{
+                       label: "DAILY AVERAGE",
+                       value: formatCurrency(dailyAverages.netProfit)
+                     }}
+                     comparison={{
+                       percentage: formatMoM(momData.netProfit),
+                       isPositive: momData.netProfit > 0
+                     }}
+                   />
+                 </div>
+                 <div className="usc-stat-card">
+                   <StatCard
+                     title="GGR"
+                     value={formatCurrency(uscData.ggr)}
+                     icon="GGR"
+                     additionalKpi={{
+                       label: "DAILY AVERAGE",
+                       value: formatCurrency(dailyAverages.ggr)
+                     }}
+                     comparison={{
+                       percentage: formatMoM(momData.ggr),
+                       isPositive: momData.ggr > 0
+                     }}
+                   />
+                 </div>
+                 <div className="usc-stat-card">
+                   <StatCard
+                     title="Active Member"
+                     value={formatNumber(uscData.activeMember)}
+                     icon="Active Member"
+                     additionalKpi={{
+                       label: "DAILY AVERAGE",
+                       value: "-"
+                     }}
+                     comparison={{
+                       percentage: formatMoM(momData.activeMember),
+                       isPositive: momData.activeMember > 0
+                     }}
+                   />
+                 </div>
+               </div>
 
               {/* Row 2: 2 Line Charts */}
               <div className="chart-row">
@@ -362,69 +570,69 @@ export default function USCOverview() {
               gap: '20px'
             }}>
 
-          {/* Row 1: 4 KPI Cards */}
-          <div className="kpi-row">
-            <div className="usc-stat-card">
-              <StatCard
-                title="USC Sales"
-                value={formatCurrency(uscData.kpi5)}
-                icon="USC Sales"
-                additionalKpi={{
-                  label: "DAILY AVERAGE",
-                  value: formatCurrency(dailyAverages.kpi5)
-                }}
-                comparison={{
-                  percentage: formatMoM(momData.kpi5),
-                  isPositive: momData.kpi5 > 0
-                }}
-              />
-            </div>
-            <div className="usc-stat-card">
-              <StatCard
-                title="USC Retention"
-                value={`${uscData.kpi6.toFixed(1)}%`}
-                icon="USC Retention"
-                additionalKpi={{
-                  label: "DAILY AVERAGE",
-                  value: `${dailyAverages.kpi6.toFixed(2)}%`
-                }}
-                comparison={{
-                  percentage: formatMoM(momData.kpi6),
-                  isPositive: momData.kpi6 > 0
-                }}
-              />
-            </div>
-            <div className="usc-stat-card">
-              <StatCard
-                title="USC Transactions"
-                value={formatNumber(uscData.kpi7)}
-                icon="USC Transactions"
-                additionalKpi={{
-                  label: "DAILY AVERAGE",
-                  value: formatNumber(Math.round(dailyAverages.kpi7))
-                }}
-                comparison={{
-                  percentage: formatMoM(momData.kpi7),
-                  isPositive: momData.kpi7 > 0
-                }}
-              />
-            </div>
-            <div className="usc-stat-card">
-              <StatCard
-                title="USC Growth Rate"
-                value={`${uscData.kpi8.toFixed(1)}%`}
-                icon="USC Growth Rate"
-                additionalKpi={{
-                  label: "DAILY AVERAGE",
-                  value: `${dailyAverages.kpi8.toFixed(2)}%`
-                }}
-                comparison={{
-                  percentage: formatMoM(momData.kpi8),
-                  isPositive: momData.kpi8 > 0
-                }}
-              />
-            </div>
-          </div>
+                     {/* Row 1: 4 KPI Cards */}
+           <div className="kpi-row">
+             <div className="usc-stat-card">
+               <StatCard
+                 title="Deposit Cases"
+                 value={formatNumber(uscData.depositCases)}
+                 icon="Deposit Cases"
+                 additionalKpi={{
+                   label: "DAILY AVERAGE",
+                   value: formatNumber(Math.round(dailyAverages.depositCases))
+                 }}
+                 comparison={{
+                   percentage: formatMoM(momData.depositCases),
+                   isPositive: momData.depositCases > 0
+                 }}
+               />
+             </div>
+             <div className="usc-stat-card">
+               <StatCard
+                 title="GGR User"
+                 value={formatCurrency(uscData.ggrUser)}
+                 icon="GGR User"
+                 additionalKpi={{
+                   label: "DAILY AVERAGE",
+                   value: formatCurrency(dailyAverages.ggrUser)
+                 }}
+                 comparison={{
+                   percentage: formatMoM(momData.ggrUser),
+                   isPositive: momData.ggrUser > 0
+                 }}
+               />
+             </div>
+             <div className="usc-stat-card">
+               <StatCard
+                 title="DA User"
+                 value={formatCurrency(uscData.daUser)}
+                 icon="DA User"
+                 additionalKpi={{
+                   label: "DAILY AVERAGE",
+                   value: formatCurrency(dailyAverages.daUser)
+                 }}
+                 comparison={{
+                   percentage: formatMoM(momData.daUser),
+                   isPositive: momData.daUser > 0
+                 }}
+               />
+             </div>
+             <div className="usc-stat-card">
+               <StatCard
+                 title="Withdraw Amount"
+                 value={formatCurrency(uscData.withdrawAmount)}
+                 icon="Withdraw Amount"
+                 additionalKpi={{
+                   label: "DAILY AVERAGE",
+                   value: formatCurrency(dailyAverages.withdrawAmount)
+                 }}
+                 comparison={{
+                   percentage: formatMoM(momData.withdrawAmount),
+                   isPositive: momData.withdrawAmount > 0
+                 }}
+               />
+             </div>
+           </div>
 
           {/* Row 2: 1 Pie Chart + 1 Bar Chart */}
           <div className="chart-row">
@@ -704,10 +912,14 @@ export default function USCOverview() {
                        </div>
           </div>
 
-          {/* Slicer Info */}
-          <div className="slicer-info">
-            <p>Showing data for: {selectedYear} | {selectedMonth} | {selectedCurrency}</p>
-          </div>
+                                  {/* Slicer Info */}
+             <div className="slicer-info">
+                               <p>
+                  Showing data for: {selectedYear} | {selectedLine} | {selectedCurrency} | 
+                  {slicerMode === 'month' ? ` ${selectedMonth}` : ` Range: ${selectedStartDate}${selectedEndDate ? ` - ${selectedEndDate}` : ''}`} 
+                  | Mode: {slicerMode === 'month' ? 'Monthly' : 'Daily'}
+                </p>
+             </div>
         </Frame>
 
        <style jsx>{`
