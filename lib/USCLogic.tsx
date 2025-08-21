@@ -18,6 +18,7 @@ export interface USCKPIData {
   newMember: number
   averageTransactionValue: number
   purchaseFrequency: number
+  churnMember: number
 }
 
 export interface USCKPIMoM {
@@ -35,6 +36,42 @@ export interface USCKPIMoM {
   newMember: number
   averageTransactionValue: number
   purchaseFrequency: number
+  churnMember: number
+}
+
+// New interfaces for Churn Member and Retention Day
+export interface ChurnMemberData {
+  churnCount: number
+  previousPeriodActiveMembers: string[] // userkey list
+  currentPeriodActiveMembers: string[] // userkey list
+  churnedMembers: string[] // userkey list
+}
+
+export interface RetentionDayData {
+  retention7Days: number
+  retention6Days: number
+  retention5Days: number
+  retention4Days: number
+  retention3Days: number
+  retention2Days: number
+  retention1Day: number
+  retention0Days: number
+  totalMembers: number
+  memberDetails: RetentionMemberDetail[]
+}
+
+export interface RetentionMemberDetail {
+  userkey: string
+  userName: string
+  uniqueCode: string
+  activeDays: number
+  depositAmount: number
+  withdrawAmount: number
+  ggr: number
+  bonus: number
+  lastActiveDate: string
+  depositCases: number
+  withdrawCases: number
 }
 
 // Get USC KPI Data from member_report_usc table
@@ -52,7 +89,7 @@ export async function getUSCKPIData(
     // Build query for member_report_usc table
     let query = supabase
       .from('member_report_usc')
-      .select('deposit_amount, deposit_cases, withdraw_amount, withdraw_cases, add_transaction, deduct_transaction, userkey, currency, line, date')
+      .select('deposit_amount, deposit_cases, withdraw_amount, withdraw_cases, add_transaction, deduct_transaction, bonus, userkey, user_name, unique_code, currency, line, date')
 
     // Apply date filter based on mode
     if (startDate) {
@@ -243,7 +280,8 @@ function calculateUSCKPIs(data: any[], newMemberData: any[], currency: string): 
     daUser,
     newMember,
     averageTransactionValue,
-    purchaseFrequency
+    purchaseFrequency,
+    churnMember: 0 // Temporary placeholder
   }
 }
 
@@ -287,7 +325,8 @@ export async function getUSCMoMData(
       daUser: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.daUser, previousData.daUser),
       newMember: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.newMember, previousData.newMember),
       averageTransactionValue: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.averageTransactionValue, previousData.averageTransactionValue),
-      purchaseFrequency: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.purchaseFrequency, previousData.purchaseFrequency)
+      purchaseFrequency: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.purchaseFrequency, previousData.purchaseFrequency),
+      churnMember: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.churnMember, previousData.churnMember)
     }
 
     console.log('✅ [USCLogic] MoM calculation completed:', momData)
@@ -328,7 +367,8 @@ export async function getUSCDailyAverageData(
       daUser: await calculateDailyAverage(kpiData.daUser, year, month),
       newMember: await calculateDailyAverage(kpiData.newMember, year, month),
       averageTransactionValue: await calculateDailyAverage(kpiData.averageTransactionValue, year, month),
-      purchaseFrequency: await calculateDailyAverage(kpiData.purchaseFrequency, year, month)
+      purchaseFrequency: await calculateDailyAverage(kpiData.purchaseFrequency, year, month),
+      churnMember: await calculateDailyAverage(kpiData.churnMember, year, month)
     }
 
     console.log('✅ [USCLogic] Daily Average calculation completed:', dailyAverage)
@@ -592,7 +632,8 @@ function getDefaultUSCData(): USCKPIData {
     daUser: 0,
     newMember: 0,
     averageTransactionValue: 0,
-    purchaseFrequency: 0
+    purchaseFrequency: 0,
+    churnMember: 0
   }
 }
 
@@ -611,7 +652,8 @@ function getDefaultUSCMoM(): USCKPIMoM {
     daUser: 0,
     newMember: 0,
     averageTransactionValue: 0,
-    purchaseFrequency: 0
+    purchaseFrequency: 0,
+    churnMember: 0
   }
 }
 
@@ -655,7 +697,8 @@ export async function getAllUSCKPIsWithMoM(
       daUser: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.daUser, previousData.daUser),
       newMember: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.newMember, previousData.newMember),
       averageTransactionValue: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.averageTransactionValue, previousData.averageTransactionValue),
-      purchaseFrequency: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.purchaseFrequency, previousData.purchaseFrequency)
+      purchaseFrequency: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.purchaseFrequency, previousData.purchaseFrequency),
+      churnMember: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.churnMember, previousData.churnMember)
     }
 
     console.log('✅ [USCLogic] All USC KPIs with MoM completed:', { current: currentData, mom: momData })
@@ -693,7 +736,8 @@ export async function getAllUSCKPIsWithDailyAverage(
       daUser: await calculateDailyAverage(kpiData.daUser, year, month),
       newMember: await calculateDailyAverage(kpiData.newMember, year, month),
       averageTransactionValue: await calculateDailyAverage(kpiData.averageTransactionValue, year, month),
-      purchaseFrequency: await calculateDailyAverage(kpiData.purchaseFrequency, year, month)
+      purchaseFrequency: await calculateDailyAverage(kpiData.purchaseFrequency, year, month),
+      churnMember: await calculateDailyAverage(kpiData.churnMember, year, month)
     }
 
     console.log('✅ [USCLogic] Daily Average calculation completed:', dailyAverage)
@@ -723,5 +767,335 @@ function getDefaultUSCChartData() {
       series: [{ name: 'Purchase Frequency Trend', data: [0, 0, 0, 0, 0, 0] }],
       categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
     }
+  }
+}
+
+// ===== NEW FUNCTIONS FOR CHURN MEMBER AND RETENTION DAY =====
+
+// Get Churn Member Data
+export async function getChurnMemberData(
+  year: string,
+  month: string,
+  currency: string = 'MYR',
+  line: string = 'All',
+  startDate?: string | null,
+  endDate?: string | null,
+  periodType: 'yearly' | 'monthly' | 'weekly' | 'daily' = 'monthly'
+): Promise<ChurnMemberData> {
+  try {
+    console.log('🔍 [USCLogic] Fetching Churn Member data:', { year, month, currency, line, startDate, endDate, periodType })
+
+    // Get current period active members (deposit > 0)
+    const currentPeriodMembers = await getActiveMembersInPeriod(year, month, currency, line, startDate, endDate, periodType)
+    
+    // Get previous period active members
+    const previousPeriodMembers = await getActiveMembersInPreviousPeriod(year, month, currency, line, startDate, endDate, periodType)
+
+    // Find churned members (active in previous period but not in current period)
+    const churnedMembers = previousPeriodMembers.filter(userkey => !currentPeriodMembers.includes(userkey))
+
+    const churnData: ChurnMemberData = {
+      churnCount: churnedMembers.length,
+      previousPeriodActiveMembers: previousPeriodMembers,
+      currentPeriodActiveMembers: currentPeriodMembers,
+      churnedMembers: churnedMembers
+    }
+
+    console.log('✅ [USCLogic] Churn Member calculation completed:', churnData)
+    return churnData
+
+  } catch (error) {
+    console.error('❌ [USCLogic] Error in getChurnMemberData:', error)
+    return {
+      churnCount: 0,
+      previousPeriodActiveMembers: [],
+      currentPeriodActiveMembers: [],
+      churnedMembers: []
+    }
+  }
+}
+
+// Get Retention Day Data (7-day retention analysis)
+export async function getRetentionDayData(
+  year: string,
+  month: string,
+  currency: string = 'MYR',
+  line: string = 'All',
+  startDate?: string | null,
+  endDate?: string | null
+): Promise<RetentionDayData> {
+  try {
+    console.log('🔍 [USCLogic] Fetching Retention Day data:', { year, month, currency, line, startDate, endDate })
+
+    // Get 7-day period data
+    const sevenDayData = await getSevenDayMemberData(year, month, currency, line, startDate, endDate)
+    
+    // Calculate retention categories
+    const retentionCategories = calculateRetentionCategories(sevenDayData)
+    
+    // Get detailed member information
+    const memberDetails = await getRetentionMemberDetails(sevenDayData, currency, line)
+
+    const retentionData: RetentionDayData = {
+      retention7Days: retentionCategories[7] || 0,
+      retention6Days: retentionCategories[6] || 0,
+      retention5Days: retentionCategories[5] || 0,
+      retention4Days: retentionCategories[4] || 0,
+      retention3Days: retentionCategories[3] || 0,
+      retention2Days: retentionCategories[2] || 0,
+      retention1Day: retentionCategories[1] || 0,
+      retention0Days: retentionCategories[0] || 0,
+      totalMembers: Object.values(retentionCategories).reduce((sum, count) => sum + count, 0),
+      memberDetails: memberDetails
+    }
+
+    console.log('✅ [USCLogic] Retention Day calculation completed:', retentionData)
+    return retentionData
+
+  } catch (error) {
+    console.error('❌ [USCLogic] Error in getRetentionDayData:', error)
+    return {
+      retention7Days: 0,
+      retention6Days: 0,
+      retention5Days: 0,
+      retention4Days: 0,
+      retention3Days: 0,
+      retention2Days: 0,
+      retention1Day: 0,
+      retention0Days: 0,
+      totalMembers: 0,
+      memberDetails: []
+    }
+  }
+}
+
+// Helper function to get active members in a period
+async function getActiveMembersInPeriod(
+  year: string,
+  month: string,
+  currency: string,
+  line: string,
+  startDate?: string | null,
+  endDate?: string | null,
+  periodType: 'yearly' | 'monthly' | 'weekly' | 'daily' = 'monthly'
+): Promise<string[]> {
+  try {
+    let query = supabase
+      .from('member_report_usc')
+      .select('userkey, deposit_amount, date')
+      .gt('deposit_amount', 0)
+
+    // Apply date filter based on period type
+    if (startDate && endDate) {
+      query = query.gte('date', startDate).lte('date', endDate)
+    } else {
+      const monthIndex = getMonthIndex(month)
+      const yearInt = parseInt(year)
+      query = query
+        .gte('date', `${yearInt}-${monthIndex.toString().padStart(2, '0')}-01`)
+        .lt('date', `${yearInt}-${(monthIndex + 1).toString().padStart(2, '0')}-01`)
+    }
+
+    // Apply filters
+    if (currency !== 'All') query = query.eq('currency', currency)
+    if (line !== 'All') query = query.eq('line', line)
+
+    const { data } = await query
+    const activeUserkeys = Array.from(new Set(data?.map(row => row.userkey as string) || []))
+    
+    return activeUserkeys
+  } catch (error) {
+    console.error('❌ [USCLogic] Error in getActiveMembersInPeriod:', error)
+    return []
+  }
+}
+
+// Helper function to get active members in previous period
+async function getActiveMembersInPreviousPeriod(
+  year: string,
+  month: string,
+  currency: string,
+  line: string,
+  startDate?: string | null,
+  endDate?: string | null,
+  periodType: 'yearly' | 'monthly' | 'weekly' | 'daily' = 'monthly'
+): Promise<string[]> {
+  try {
+    // Calculate previous period dates
+    let previousStartDate: string
+    let previousEndDate: string
+
+    if (startDate && endDate) {
+      // For range mode, calculate previous period
+      const start = new Date(startDate)
+      const end = new Date(endDate)
+      const periodDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+      
+      const previousStart = new Date(start.getTime() - (periodDays * 24 * 60 * 60 * 1000))
+      const previousEnd = new Date(start.getTime() - (24 * 60 * 60 * 1000))
+      
+      previousStartDate = previousStart.toISOString().split('T')[0]
+      previousEndDate = previousEnd.toISOString().split('T')[0]
+    } else {
+      // For month mode, get previous month
+      const previousMonth = getPreviousMonth(month)
+      const previousYear = previousMonth === 'December' ? (parseInt(year) - 1).toString() : year
+      const previousMonthIndex = getMonthIndex(previousMonth)
+      const previousYearInt = parseInt(previousYear)
+      
+      previousStartDate = `${previousYearInt}-${previousMonthIndex.toString().padStart(2, '0')}-01`
+      previousEndDate = `${previousYearInt}-${(previousMonthIndex + 1).toString().padStart(2, '0')}-01`
+    }
+
+    return await getActiveMembersInPeriod(year, month, currency, line, previousStartDate, previousEndDate, periodType)
+  } catch (error) {
+    console.error('❌ [USCLogic] Error in getActiveMembersInPreviousPeriod:', error)
+    return []
+  }
+}
+
+// Helper function to get 7-day member data
+async function getSevenDayMemberData(
+  year: string,
+  month: string,
+  currency: string,
+  line: string,
+  startDate?: string | null,
+  endDate?: string | null
+): Promise<any[]> {
+  try {
+    console.log('🔍 [USCLogic] getSevenDayMemberData called with:', { year, month, currency, line, startDate, endDate })
+    
+    let query = supabase
+      .from('member_report_usc')
+      .select('userkey, user_name, unique_code, deposit_amount, deposit_cases, withdraw_amount, withdraw_cases, bonus, date')
+      .gt('deposit_amount', 0)
+
+    // Apply date filter
+    if (startDate && endDate) {
+      query = query.gte('date', startDate).lte('date', endDate)
+    } else {
+      const monthIndex = getMonthIndex(month)
+      const yearInt = parseInt(year)
+      query = query
+        .gte('date', `${yearInt}-${monthIndex.toString().padStart(2, '0')}-01`)
+        .lt('date', `${yearInt}-${(monthIndex + 1).toString().padStart(2, '0')}-01`)
+    }
+
+    // Apply filters
+    if (currency !== 'All') query = query.eq('currency', currency)
+    if (line !== 'All') query = query.eq('line', line)
+
+    const { data } = await query
+    console.log('🔍 [USCLogic] getSevenDayMemberData raw data:', data?.slice(0, 3)) // Log first 3 records
+    console.log('🔍 [USCLogic] getSevenDayMemberData total records:', data?.length || 0)
+    return data || []
+  } catch (error) {
+    console.error('❌ [USCLogic] Error in getSevenDayMemberData:', error)
+    return []
+  }
+}
+
+// Helper function to calculate retention categories
+function calculateRetentionCategories(memberData: any[]): { [key: number]: number } {
+  const memberDays: { [userkey: string]: Set<string> } = {}
+  
+  // Group by userkey and count unique days
+  memberData.forEach(row => {
+    const userkey = row.userkey
+    const date = row.date.split('T')[0] // Get date part only
+    
+    if (!memberDays[userkey]) {
+      memberDays[userkey] = new Set()
+    }
+    memberDays[userkey].add(date)
+  })
+
+  // Count members by active days (0-7 days only)
+  const retentionCategories: { [key: number]: number } = {
+    0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0
+  }
+  
+  Object.values(memberDays).forEach(days => {
+    const activeDays = days.size
+    if (activeDays <= 7) {
+      retentionCategories[activeDays] = (retentionCategories[activeDays] || 0) + 1
+    } else {
+      // For more than 7 days, count as 7 days
+      retentionCategories[7] = (retentionCategories[7] || 0) + 1
+    }
+  })
+
+  console.log('📊 [USCLogic] Retention categories calculated:', retentionCategories)
+  console.log('📊 [USCLogic] Total members in retention:', Object.values(retentionCategories).reduce((sum, count) => sum + count, 0))
+
+  return retentionCategories
+}
+
+// Helper function to get detailed member information
+async function getRetentionMemberDetails(
+  memberData: any[],
+  currency: string,
+  line: string
+): Promise<RetentionMemberDetail[]> {
+  try {
+    console.log('🔍 [USCLogic] getRetentionMemberDetails called with:', { memberDataLength: memberData.length, currency, line })
+    console.log('🔍 [USCLogic] Sample member data:', memberData.slice(0, 2))
+    
+    const memberDays: { [userkey: string]: Set<string> } = {}
+    const memberTotals: { [userkey: string]: { deposit: number; withdraw: number; ggr: number; bonus: number; lastDate: string; depositCases: number; withdrawCases: number; userName: string; uniqueCode: string } } = {}
+    
+    // Process member data
+    memberData.forEach(row => {
+      const userkey = row.userkey
+      const date = row.date.split('T')[0]
+      
+      if (!memberDays[userkey]) {
+        memberDays[userkey] = new Set()
+        memberTotals[userkey] = { 
+          deposit: 0, 
+          withdraw: 0, 
+          ggr: 0, 
+          bonus: 0, 
+          lastDate: date, 
+          depositCases: 0, 
+          withdrawCases: 0,
+          userName: row.user_name || userkey,
+          uniqueCode: row.unique_code || userkey
+        }
+      }
+      
+      memberDays[userkey].add(date)
+      memberTotals[userkey].deposit += row.deposit_amount || 0
+      memberTotals[userkey].withdraw += row.withdraw_amount || 0
+      memberTotals[userkey].ggr += (row.deposit_amount || 0) - (row.withdraw_amount || 0)
+      memberTotals[userkey].bonus += row.bonus || 0
+      memberTotals[userkey].depositCases += row.deposit_cases || 0
+      memberTotals[userkey].withdrawCases += row.withdraw_cases || 0
+      memberTotals[userkey].lastDate = date > memberTotals[userkey].lastDate ? date : memberTotals[userkey].lastDate
+    })
+
+    // Convert to RetentionMemberDetail array
+    const details: RetentionMemberDetail[] = Object.keys(memberDays).map(userkey => ({
+      userkey,
+      userName: memberTotals[userkey].userName,
+      uniqueCode: memberTotals[userkey].uniqueCode,
+      activeDays: memberDays[userkey].size,
+      depositAmount: memberTotals[userkey].deposit,
+      withdrawAmount: memberTotals[userkey].withdraw,
+      ggr: memberTotals[userkey].ggr,
+      bonus: memberTotals[userkey].bonus,
+      lastActiveDate: memberTotals[userkey].lastDate,
+      depositCases: memberTotals[userkey].depositCases,
+      withdrawCases: memberTotals[userkey].withdrawCases
+    }))
+
+    console.log('🔍 [USCLogic] Final retention details sample:', details.slice(0, 2))
+    console.log('🔍 [USCLogic] Total retention details:', details.length)
+
+    return details
+  } catch (error) {
+    console.error('❌ [USCLogic] Error in getRetentionMemberDetails:', error)
+    return []
   }
 }

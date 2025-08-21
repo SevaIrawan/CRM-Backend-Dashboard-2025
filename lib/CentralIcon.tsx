@@ -147,7 +147,7 @@ export const KPI_ICONS = {
   // Additional Icons for Dashboard
   holdPercentage: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><!--!Font Awesome Free v7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path d="M192 160L192 144C192 99.8 278 64 384 64C490 64 576 99.8 576 144L576 160C576 190.6 534.7 217.2 474 230.7C471.6 227.9 469.1 225.2 466.6 222.7C451.1 207.4 431.1 195.8 410.2 187.2C368.3 169.7 313.7 160.1 256 160.1C234.1 160.1 212.7 161.5 192.2 164.2C192 162.9 192 161.5 192 160.1zM496 417L496 370.8C511.1 366.9 525.3 362.3 538.2 356.9C551.4 351.4 564.3 344.7 576 336.6L576 352C576 378.8 544.5 402.5 496 417zM496 321L496 288C496 283.5 495.6 279.2 495 275C510.5 271.1 525 266.4 538.2 260.8C551.4 255.2 564.3 248.6 576 240.5L576 255.9C576 282.7 544.5 306.4 496 320.9zM64 304L64 288C64 243.8 150 208 256 208C362 208 448 243.8 448 288L448 304C448 348.2 362 384 256 384C150 384 64 348.2 64 304zM448 400C448 444.2 362 480 256 480C150 480 64 444.2 64 400L64 384.6C75.6 392.7 88.5 399.3 101.8 404.9C143.7 422.4 198.3 432 256 432C313.7 432 368.3 422.3 410.2 404.9C423.4 399.4 436.3 392.7 448 384.6L448 400zM448 480.6L448 496C448 540.2 362 576 256 576C150 576 64 540.2 64 496L64 480.6C75.6 488.7 88.5 495.3 101.8 500.9C143.7 518.4 198.3 528 256 528C313.7 528 368.3 518.3 410.2 500.9C423.4 495.4 436.3 488.7 448 480.6z"/></svg>`,
 
-  churnRate: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><!--!Font Awesome Free v7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path d="M136 192C136 125.7 189.7 72 256 72C322.3 72 376 125.7 376 192C376 258.3 322.3 312 256 312C189.7 312 136 258.3 136 192zM48 546.3C48 447.8 127.8 368 226.3 368L285.7 368C384.2 368 464 447.8 464 546.3C464 562.7 450.7 576 434.3 576L77.7 576C61.3 576 48 562.7 48 546.3zM472 232L616 232C629.3 232 640 242.7 640 256C640 269.3 629.3 280 616 280L472 280C458.7 280 448 269.3 448 256C448 242.7 458.7 232 472 232z"/></svg>`
+  churnRate: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><!--!Font Awesome Free v7.0.0 by @fontawesome - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path d="M136 192C136 125.7 189.7 72 256 72C322.3 72 376 125.7 376 192C376 258.3 322.3 312 256 312C189.7 312 136 258.3 136 192zM48 546.3C48 447.8 127.8 368 226.3 368L285.7 368C384.2 368 464 447.8 464 546.3C464 562.7 450.7 576 434.3 576L77.7 576C61.3 576 48 562.7 48 546.3zM472 232L616 232C629.3 232 640 242.7 640 256C640 269.3 629.3 280 616 280L472 280C458.7 280 448 269.3 448 256C448 242.7 458.7 232 472 232z"/></svg>`
 }
 
 // Helper function to get icon by KPI name
@@ -220,7 +220,10 @@ export function getKpiIcon(kpiName: string): string {
     'Deposit Amount User': KPI_ICONS.depositAmount,
     'Average Transaction Value': KPI_ICONS.averageTransactionValueTrend,
     'Purchase Frequency': KPI_ICONS.purchaseFrequencyTrend,
-    'New Customer': KPI_ICONS.newCustomers
+    'New Customer': KPI_ICONS.newCustomers,
+    'USC Performance Summary': KPI_ICONS.operationalEfficiencyChart,
+    'Member Engagement Analysis': KPI_ICONS.operationalEfficiencyChart,
+    'USC Market Share': KPI_ICONS.averageTransactionValueTrend,
   }
   
   return iconMap[kpiName] || KPI_ICONS.depositAmount // Default fallback
@@ -268,12 +271,13 @@ export function getChartIcon(chartName: string): string {
     'USC Product Performance': KPI_ICONS.growthProfitabilityChart,
     'USC Customer List': KPI_ICONS.customerMetricsChart,
     'USC Monthly Sales': KPI_ICONS.ggrUser,
-    'USC Customer Retention': KPI_ICONS.depositAmount,
+    'USC Customer Retention': KPI_ICONS.operationalEfficiencyChart,
     'USC Performance Summary': KPI_ICONS.operationalEfficiencyChart,
+    'Member Engagement Analysis': KPI_ICONS.operationalEfficiencyChart,
     'USC Market Share': KPI_ICONS.averageTransactionValueTrend,
     'USC Growth Rate': KPI_ICONS.purchaseFrequencyTrend,
     'USC Regional Performance': KPI_ICONS.ggrUser,
-    'USC Seasonal Trends': KPI_ICONS.depositAmount,
+    'USC Seasonal Trends': KPI_ICONS.operationalEfficiencyChart,
     
     // Default fallback
     'default': KPI_ICONS.retentionChurnChart
