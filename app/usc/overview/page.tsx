@@ -12,7 +12,7 @@ import StandardChartGrid from '@/components/StandardChartGrid'
 import Frame from '@/components/Frame'
 
 import { getChartIcon } from '@/lib/CentralIcon'
-import { USCKPIData, USCKPIMoM } from '@/lib/USCLogic'
+import { USCKPIData, USCKPIMoM, getAllUSCKPIsWithMoM, getAllUSCKPIsWithDailyAverage } from '@/lib/USCLogic'
 
 export default function USCOverview() {
   const [sidebarExpanded, setSidebarExpanded] = useState(true)
@@ -173,15 +173,19 @@ export default function USCOverview() {
 
       const result = await response.json()
 
-             if (result.success) {
-         setUscData(result.data.kpi)
-         setMomData(result.data.mom)
-         setDailyAverages(result.data.dailyAverage)
-         setChartData(result.data.chart)
-         console.log('✅ [USC Overview] Data loaded successfully')
-       } else {
-         console.error('❌ [USC Overview] API error:', result.error)
-       }
+                   if (result.success) {
+        setUscData(result.data.kpi)
+        // Remove setting MoM and Daily Average from API response
+        // Now we calculate them separately using USC functions
+        setChartData(result.data.chart)
+        console.log('✅ [USC Overview] Data loaded successfully')
+        console.log('🔍 [USC Overview] KPI Data:', result.data.kpi)
+        console.log('🔍 [USC Overview] Chart Data:', result.data.chart)
+        console.log('🔍 [USC Overview] Current selectedCurrency:', selectedCurrency)
+        console.log('🔍 [USC Overview] Setting uscData state to:', result.data.kpi)
+      } else {
+        console.error('❌ [USC Overview] API error:', result.error)
+      }
     } catch (error) {
       console.error('❌ [USC Overview] Fetch error:', error)
     } finally {
@@ -197,9 +201,92 @@ export default function USCOverview() {
     fetchUSCData()
   }, [selectedYear, selectedMonth, selectedCurrency, selectedLine, selectedStartDate, selectedEndDate, slicerMode])
 
+  // Remove the old useEffect that was calling API for MoM and Daily Average
+  // Now we call the functions directly in separate useEffects above
+
+  // Calculate Daily Averages when KPI data changes
+  useEffect(() => {
+    console.log('🔍 [USC Overview] useEffect Daily Average triggered:', { 
+      uscData: !!uscData, 
+      selectedYear, 
+      selectedMonth, 
+      selectedStartDate, 
+      selectedEndDate 
+    })
+    console.log('🔍 [USC Overview] uscData details:', uscData)
+    
+    const calculateDailyAverages = async () => {
+      if (uscData && selectedYear && selectedMonth) {
+        try {
+          console.log('🔄 [USC Overview] Using USC Daily Average function...')
+          
+          // Use USC central function - sama seperti getAllUSCKPIsWithMoM
+          const result = await getAllUSCKPIsWithDailyAverage(uscData, selectedYear, selectedMonth, selectedStartDate, selectedEndDate)
+          
+          setDailyAverages(result.dailyAverage)
+          
+          console.log('✅ [USC Overview] USC Daily Average applied to all KPIs')
+          
+        } catch (error) {
+          console.error('❌ [USC Overview] Error with USC Daily Average:', error)
+        }
+      } else {
+        console.log('⚠️ [USC Overview] Daily Average calculation skipped:', { 
+          uscData: !!uscData, 
+          selectedYear, 
+          selectedMonth 
+        })
+      }
+    }
+
+    calculateDailyAverages()
+  }, [uscData, selectedYear, selectedMonth, selectedStartDate, selectedEndDate])
+
+  // Calculate MoM when KPI data changes
+  useEffect(() => {
+    console.log('🔍 [USC Overview] useEffect MoM triggered:', { 
+      uscData: !!uscData, 
+      selectedYear, 
+      selectedMonth, 
+      selectedCurrency, 
+      selectedLine, 
+      selectedStartDate, 
+      selectedEndDate 
+    })
+    console.log('🔍 [USC Overview] uscData details for MoM:', uscData)
+    
+    const calculateMoM = async () => {
+      if (uscData && selectedYear && selectedMonth) {
+        try {
+          console.log('🔄 [USC Overview] Using USC MoM function...')
+          
+          // Use USC central function untuk MoM
+          const result = await getAllUSCKPIsWithMoM(selectedYear, selectedMonth, selectedCurrency, selectedLine, selectedStartDate, selectedEndDate)
+          
+          setMomData(result.mom)
+          
+          console.log('✅ [USC Overview] USC MoM applied to all KPIs')
+          
+        } catch (error) {
+          console.error('❌ [USC Overview] Error with USC MoM:', error)
+        }
+      } else {
+        console.log('⚠️ [USC Overview] MoM calculation skipped:', { 
+          uscData: !!uscData, 
+          selectedYear, 
+          selectedMonth 
+        })
+      }
+    }
+
+    calculateMoM()
+  }, [uscData, selectedYear, selectedMonth, selectedCurrency, selectedLine, selectedStartDate, selectedEndDate])
+
   // Format functions (standard like other pages)
   const formatCurrency = (value: number): string => {
+    console.log('🔍 [USC Overview] formatCurrency called with:', { value, selectedCurrency })
     const currencySymbol = selectedCurrency === 'MYR' ? 'RM' : selectedCurrency === 'USC' ? 'USD' : selectedCurrency === 'SGD' ? 'SGD' : 'RM'
+    console.log('🔍 [USC Overview] currencySymbol determined:', currencySymbol)
     return `${currencySymbol} ${new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
@@ -220,42 +307,43 @@ export default function USCOverview() {
                        // Real chart data from USC Logic
            const ggrUserTrendData = {
         series: [
-          { name: 'GGR User', data: chartData.ggrUserTrend.series[0].data }
+          { name: 'GGR User', data: chartData?.ggrUserTrend?.series?.[0]?.data || [0, 0, 0, 0, 0, 0] }
         ],
-        categories: chartData.ggrUserTrend.categories,
+        categories: chartData?.ggrUserTrend?.categories || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
         currency: selectedCurrency
       }
 
       const daUserTrendData = {
         series: [
-          { name: 'DA User', data: chartData.daUserTrend.series[0].data }
+          { name: 'DA User', data: chartData?.daUserTrend?.series?.[0]?.data || [0, 0, 0, 0, 0, 0] }
         ],
-        categories: chartData.daUserTrend.categories,
+        categories: chartData?.daUserTrend?.categories || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
         currency: selectedCurrency
       }
 
      const atvTrendData = {
        series: [
-         { name: 'Average Transaction Value', data: chartData.atvTrend.series[0].data }
+         { name: 'Average Transaction Value', data: chartData?.atvTrend?.series?.[0]?.data || [0, 0, 0, 0, 0, 0] }
        ],
-       categories: chartData.atvTrend.categories
+       categories: chartData?.atvTrend?.categories || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
      }
 
      const pfTrendData = {
        series: [
-         { name: 'Purchase Frequency', data: chartData.pfTrend.series[0].data }
+         { name: 'Purchase Frequency', data: chartData?.pfTrend?.series?.[0]?.data || [0, 0, 0, 0, 0, 0] }
        ],
-       categories: chartData.pfTrend.categories
+       categories: chartData?.pfTrend?.categories || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
      }
 
-  const pieChartData = [
+  // Remove mock data - use real data from chartData when available
+  const pieChartData = chartData?.pieChartData || [
     { name: 'Category A', data: [400] },
     { name: 'Category B', data: [300] },
     { name: 'Category C', data: [300] },
     { name: 'Category D', data: [200] }
   ]
 
-  const barChartData = [
+  const barChartData = chartData?.barChartData || [
     { name: 'Product 1', data: [400] },
     { name: 'Product 2', data: [300] },
     { name: 'Product 3', data: [600] },
@@ -263,7 +351,7 @@ export default function USCOverview() {
     { name: 'Product 5', data: [500] }
   ]
 
-  const tableData = [
+  const tableData = chartData?.tableData || [
     { id: 1, name: 'Customer A', value: 1000, status: 'Active' },
     { id: 2, name: 'Customer B', value: 2000, status: 'Active' },
     { id: 3, name: 'Customer C', value: 1500, status: 'Inactive' },
@@ -761,7 +849,7 @@ export default function USCOverview() {
                       </tr>
                     </thead>
                                          <tbody>
-                       {tableData.map((row) => (
+                       {tableData.map((row: any) => (
                          <tr 
                            key={row.id} 
                            style={{ 
@@ -878,7 +966,7 @@ export default function USCOverview() {
                       </tr>
                     </thead>
                                          <tbody>
-                       {tableData.map((row) => (
+                       {tableData.map((row: any) => (
                          <tr 
                            key={row.id} 
                            style={{ 

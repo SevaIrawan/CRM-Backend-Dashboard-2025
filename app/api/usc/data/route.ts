@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getUSCKPIData, getUSCMoMData, getUSCDailyAverageData, getUSCChartData } from '@/lib/USCLogic'
+import { getUSCKPIData, getUSCChartData } from '@/lib/USCLogic'
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,21 +14,18 @@ export async function GET(request: NextRequest) {
     console.log('🔍 [USC API] Fetching data with params:', { year, month, currency, line, startDate, endDate })
 
     console.log('🔍 [USC API] About to call getUSCKPIData...')
-    // Fetch all USC data in parallel
-    const [kpiData, momData, dailyAverageData, chartData] = await Promise.all([
+    // Fetch only KPI and Chart data from API
+    // MoM and Daily Average will be calculated separately in the frontend
+    const [kpiData, chartData] = await Promise.all([
       getUSCKPIData(year, month, currency, line, startDate, endDate),
-      getUSCMoMData(year, month, currency, line, startDate, endDate),
-      getUSCDailyAverageData(year, month, currency, line, startDate, endDate),
       getUSCChartData(year, month, currency, line, startDate, endDate)
     ])
-    console.log('🔍 [USC API] All data fetched, kpiData:', kpiData)
+    console.log('🔍 [USC API] KPI and Chart data fetched, kpiData:', kpiData)
 
     const response = {
       success: true,
       data: {
         kpi: kpiData,
-        mom: momData,
-        dailyAverage: dailyAverageData,
         chart: chartData
       },
       params: { year, month, currency }

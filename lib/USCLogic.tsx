@@ -52,7 +52,7 @@ export async function getUSCKPIData(
     // Build query for member_report_usc table
     let query = supabase
       .from('member_report_usc')
-      .select('deposit_amount, deposit_cases, withdraw_amount, withdraw_cases, add_transaction, deduct_transaction, userkey, currency, line')
+      .select('deposit_amount, deposit_cases, withdraw_amount, withdraw_cases, add_transaction, deduct_transaction, userkey, currency, line, date')
 
     // Apply date filter based on mode
     if (startDate) {
@@ -73,11 +73,17 @@ export async function getUSCKPIData(
     // Apply currency filter (if not "All")
     if (currency !== 'All') {
       query = query.eq('currency', currency)
+      console.log('🔍 [USCLogic] Applied currency filter:', currency)
+    } else {
+      console.log('🔍 [USCLogic] No currency filter applied (All currencies)')
     }
 
     // Apply line filter (if not "All")
     if (line !== 'All') {
       query = query.eq('line', line)
+      console.log('🔍 [USCLogic] Applied line filter:', line)
+    } else {
+      console.log('🔍 [USCLogic] No line filter applied (All lines)')
     }
 
     // Debug: Check what lines are available
@@ -105,6 +111,18 @@ export async function getUSCKPIData(
     if (error) {
       console.error('❌ [USCLogic] Database error:', error)
       throw error
+    }
+
+    // Debug: Check filtered data and currency values
+    if (data && data.length > 0) {
+      const currenciesInData = Array.from(new Set(data.map(row => row.currency)))
+      console.log('🔍 [USCLogic] Currencies found in filtered data:', currenciesInData)
+      console.log('🔍 [USCLogic] First few rows of filtered data:', data.slice(0, 3).map(row => ({
+        currency: row.currency,
+        line: row.line,
+        date: row.date,
+        deposit_amount: row.deposit_amount
+      })))
     }
 
     // Fetch new member data from new_depositor table
@@ -594,6 +612,96 @@ function getDefaultUSCMoM(): USCKPIMoM {
     newMember: 0,
     averageTransactionValue: 0,
     purchaseFrequency: 0
+  }
+}
+
+// Get All USC KPIs with MoM (Month over Month) comparison
+export async function getAllUSCKPIsWithMoM(
+  year: string,
+  month: string,
+  currency: string = 'MYR',
+  line: string = 'All',
+  startDate?: string | null,
+  endDate?: string | null
+): Promise<{ current: USCKPIData; mom: USCKPIMoM }> {
+  try {
+    console.log('🔍 [USCLogic] Fetching All USC KPIs with MoM:', { year, month, currency, line, startDate, endDate })
+
+    // Get current month data
+    const currentData = await getUSCKPIData(year, month, currency, line, startDate, endDate)
+    
+    // Get previous month data
+    const previousMonth = getPreviousMonth(month)
+    const previousYear = previousMonth === 'December' ? (parseInt(year) - 1).toString() : year
+    const previousData = await getUSCKPIData(previousYear, previousMonth, currency, line)
+
+    console.log('🔍 [USCLogic] Current vs Previous data:', {
+      current: { year, month, depositAmount: currentData.depositAmount },
+      previous: { year: previousYear, month: previousMonth, depositAmount: previousData.depositAmount }
+    })
+
+    // Calculate MoM using standard KPI_FORMULAS.PERCENTAGE_CHANGE
+    const momData: USCKPIMoM = {
+      depositAmount: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.depositAmount, previousData.depositAmount),
+      depositCases: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.depositCases, previousData.depositCases),
+      withdrawAmount: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.withdrawAmount, previousData.withdrawAmount),
+      withdrawCases: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.withdrawCases, previousData.withdrawCases),
+      addTransaction: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.addTransaction, previousData.addTransaction),
+      deductTransaction: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.deductTransaction, previousData.deductTransaction),
+      ggr: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.ggr, previousData.ggr),
+      netProfit: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.netProfit, previousData.netProfit),
+      activeMember: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.activeMember, previousData.activeMember),
+      ggrUser: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.ggrUser, previousData.ggrUser),
+      daUser: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.daUser, previousData.daUser),
+      newMember: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.newMember, previousData.newMember),
+      averageTransactionValue: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.averageTransactionValue, previousData.averageTransactionValue),
+      purchaseFrequency: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.purchaseFrequency, previousData.purchaseFrequency)
+    }
+
+    console.log('✅ [USCLogic] All USC KPIs with MoM completed:', { current: currentData, mom: momData })
+    return { current: currentData, mom: momData }
+
+  } catch (error) {
+    console.error('❌ [USCLogic] Error in getAllUSCKPIsWithMoM:', error)
+    return { current: getDefaultUSCData(), mom: getDefaultUSCMoM() }
+  }
+}
+
+// Get All USC KPIs with Daily Average
+export async function getAllUSCKPIsWithDailyAverage(
+  kpiData: USCKPIData,
+  year: string,
+  month: string,
+  startDate?: string | null,
+  endDate?: string | null
+): Promise<{ dailyAverage: USCKPIData }> {
+  try {
+    console.log('🔍 [USCLogic] Calculating Daily Average for USC KPIs:', { year, month, startDate, endDate })
+
+    // Calculate daily average using standard calculateDailyAverage function
+    const dailyAverage: USCKPIData = {
+      depositAmount: await calculateDailyAverage(kpiData.depositAmount, year, month),
+      depositCases: await calculateDailyAverage(kpiData.depositCases, year, month),
+      withdrawAmount: await calculateDailyAverage(kpiData.withdrawAmount, year, month),
+      withdrawCases: await calculateDailyAverage(kpiData.withdrawCases, year, month),
+      addTransaction: await calculateDailyAverage(kpiData.addTransaction, year, month),
+      deductTransaction: await calculateDailyAverage(kpiData.deductTransaction, year, month),
+      ggr: await calculateDailyAverage(kpiData.ggr, year, month),
+      netProfit: await calculateDailyAverage(kpiData.netProfit, year, month),
+      activeMember: await calculateDailyAverage(kpiData.activeMember, year, month),
+      ggrUser: await calculateDailyAverage(kpiData.ggrUser, year, month),
+      daUser: await calculateDailyAverage(kpiData.daUser, year, month),
+      newMember: await calculateDailyAverage(kpiData.newMember, year, month),
+      averageTransactionValue: await calculateDailyAverage(kpiData.averageTransactionValue, year, month),
+      purchaseFrequency: await calculateDailyAverage(kpiData.purchaseFrequency, year, month)
+    }
+
+    console.log('✅ [USCLogic] Daily Average calculation completed:', dailyAverage)
+    return { dailyAverage }
+
+  } catch (error) {
+    console.error('❌ [USCLogic] Error in getAllUSCKPIsWithDailyAverage:', error)
+    return { dailyAverage: getDefaultUSCData() }
   }
 }
 

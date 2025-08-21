@@ -213,7 +213,14 @@ export function getKpiIcon(kpiName: string): string {
     'GGR PURE USER': KPI_ICONS.ggrPureUser,
     'CUSTOMER VALUE PER HEADCOUNT': KPI_ICONS.customerValue,
     'HEADCOUNT BY DEPARTMENT': KPI_ICONS.headcountByDepartment,
-    'CUSTOMER COUNT VS HEADCOUNT': KPI_ICONS.customerCount
+    'CUSTOMER COUNT VS HEADCOUNT': KPI_ICONS.customerCount,
+    
+    // USC Page KPI mappings
+    'GGR User': KPI_ICONS.ggrUser,
+    'Deposit Amount User': KPI_ICONS.depositAmount,
+    'Average Transaction Value': KPI_ICONS.averageTransactionValueTrend,
+    'Purchase Frequency': KPI_ICONS.purchaseFrequencyTrend,
+    'New Customer': KPI_ICONS.newCustomers
   }
   
   return iconMap[kpiName] || KPI_ICONS.depositAmount // Default fallback
@@ -252,6 +259,21 @@ export function getChartIcon(chartName: string): string {
     'Customer Value': KPI_ICONS.customerValue,
     'Customer Count': KPI_ICONS.customerCount,
     'HEADCOUNT BY DEPARTMENT': KPI_ICONS.headcountByDepartment,
+    
+    // USC Page Chart Icons
+    'GGR User Trend': KPI_ICONS.ggrUser,
+    'DA User Trend': KPI_ICONS.depositAmount,
+    'Average Transaction Value Trend': KPI_ICONS.averageTransactionValueTrend,
+    'USC Category Distribution': KPI_ICONS.customerMetricsChart,
+    'USC Product Performance': KPI_ICONS.growthProfitabilityChart,
+    'USC Customer List': KPI_ICONS.customerMetricsChart,
+    'USC Monthly Sales': KPI_ICONS.ggrUser,
+    'USC Customer Retention': KPI_ICONS.depositAmount,
+    'USC Performance Summary': KPI_ICONS.operationalEfficiencyChart,
+    'USC Market Share': KPI_ICONS.averageTransactionValueTrend,
+    'USC Growth Rate': KPI_ICONS.purchaseFrequencyTrend,
+    'USC Regional Performance': KPI_ICONS.ggrUser,
+    'USC Seasonal Trends': KPI_ICONS.depositAmount,
     
     // Default fallback
     'default': KPI_ICONS.retentionChurnChart
