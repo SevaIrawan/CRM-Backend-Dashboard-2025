@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     // Extract unique years
     const uniqueYears = Array.from(new Set(
       yearData?.map(row => row.year?.toString()) || []
-    )).filter(Boolean)
+    )).filter(Boolean) as string[]
     const years = uniqueYears.sort((a, b) => parseInt(b) - parseInt(a))
 
     // Get unique months from member_report_monthly table (filtered by SGD currency)

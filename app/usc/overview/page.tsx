@@ -46,7 +46,19 @@ export default function USCOverview() {
     newMember: 0,
     averageTransactionValue: 0,
     purchaseFrequency: 0,
-    churnMember: 0
+    churnMember: 0,
+    // New KPI fields
+    validAmount: 0,
+    newRegister: 0,
+    pureMember: 0,
+    pureUser: 0,
+    churnRate: 0,
+    growthRate: 0,
+    retentionRate: 0,
+    averageCustomerLifespan: 0,
+    customerLifetimeValue: 0,
+    customerMaturityIndex: 0,
+    newCustomerConversionRate: 0
   })
 
     // USC MoM Data from Supabase
@@ -65,7 +77,19 @@ export default function USCOverview() {
     newMember: 0,
     averageTransactionValue: 0,
     purchaseFrequency: 0,
-    churnMember: 0
+    churnMember: 0,
+    // New KPI fields
+    validAmount: 0,
+    newRegister: 0,
+    pureMember: 0,
+    pureUser: 0,
+    churnRate: 0,
+    growthRate: 0,
+    retentionRate: 0,
+    averageCustomerLifespan: 0,
+    customerLifetimeValue: 0,
+    customerMaturityIndex: 0,
+    newCustomerConversionRate: 0
   })
 
       // USC Daily Average Data from Supabase
@@ -84,7 +108,19 @@ export default function USCOverview() {
       newMember: 0,
       averageTransactionValue: 0,
       purchaseFrequency: 0,
-      churnMember: 0
+      churnMember: 0,
+      // New KPI fields
+      validAmount: 0,
+      newRegister: 0,
+      pureMember: 0,
+      pureUser: 0,
+      churnRate: 0,
+      growthRate: 0,
+      retentionRate: 0,
+      averageCustomerLifespan: 0,
+      customerLifetimeValue: 0,
+      customerMaturityIndex: 0,
+      newCustomerConversionRate: 0
     })
 
        // USC Chart Data from Supabase
