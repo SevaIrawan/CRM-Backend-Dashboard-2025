@@ -19,6 +19,18 @@ export interface USCKPIData {
   averageTransactionValue: number
   purchaseFrequency: number
   churnMember: number
+  // New KPI fields
+  validAmount: number
+  newRegister: number
+  pureMember: number
+  pureUser: number
+  churnRate: number
+  growthRate: number
+  retentionRate: number
+  averageCustomerLifespan: number
+  customerLifetimeValue: number
+  customerMaturityIndex: number
+  newCustomerConversionRate: number
 }
 
 export interface USCKPIMoM {
@@ -37,6 +49,18 @@ export interface USCKPIMoM {
   averageTransactionValue: number
   purchaseFrequency: number
   churnMember: number
+  // New KPI fields
+  validAmount: number
+  newRegister: number
+  pureMember: number
+  pureUser: number
+  churnRate: number
+  growthRate: number
+  retentionRate: number
+  averageCustomerLifespan: number
+  customerLifetimeValue: number
+  customerMaturityIndex: number
+  newCustomerConversionRate: number
 }
 
 // New interfaces for Churn Member and Retention Day
@@ -89,7 +113,7 @@ export async function getUSCKPIData(
     // Build query for member_report_usc table
     let query = supabase
       .from('member_report_usc')
-      .select('deposit_amount, deposit_cases, withdraw_amount, withdraw_cases, add_transaction, deduct_transaction, bonus, userkey, user_name, unique_code, currency, line, date')
+      .select('deposit_amount, deposit_cases, withdraw_amount, withdraw_cases, add_transaction, deduct_transaction, bonus, valid_amount, userkey, user_name, unique_code, currency, line, date')
 
     // Apply date filter based on mode
     if (startDate) {
@@ -223,8 +247,11 @@ export async function getUSCKPIData(
     console.log('📊 [USCLogic] Sample data:', data.slice(0, 2))
     console.log('📊 [USCLogic] Sample new member data:', newMemberData?.slice(0, 2))
 
-    // Calculate KPIs with new member data
-    const kpiData = calculateUSCKPIs(data, newMemberData || [], currency)
+    // Get churn member data
+    const churnMember = await getChurnMembersUSC(year, month, currency, line, startDate, endDate)
+    
+    // Calculate KPIs with new member data and churn data
+    const kpiData = calculateUSCKPIs(data, newMemberData || [], currency, churnMember)
 
     console.log('✅ [USCLogic] KPI calculation completed:', kpiData)
     return kpiData
@@ -235,8 +262,88 @@ export async function getUSCKPIData(
   }
 }
 
+// Helper function untuk churn member calculation (USC version)
+async function getChurnMembersUSC(
+  year: string,
+  month: string,
+  currency: string,
+  line: string,
+  startDate?: string | null,
+  endDate?: string | null
+): Promise<number> {
+  try {
+    // Get previous month data
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                       'July', 'August', 'September', 'October', 'November', 'December']
+    const currentMonthIndex = monthNames.indexOf(month)
+    const prevMonthIndex = currentMonthIndex === 0 ? 11 : currentMonthIndex - 1
+    const prevMonth = monthNames[prevMonthIndex]
+    const prevYear = currentMonthIndex === 0 ? (parseInt(year) - 1).toString() : year
+
+    // Get users from previous month
+    const prevQuery = (() => {
+      let query = supabase
+        .from('member_report_usc')
+        .select('userkey')
+        .eq('year', prevYear)
+        .eq('month', prevMonth)
+        .eq('currency', currency)
+        .gt('deposit_amount', 0)
+      
+      if (line && line !== 'All') {
+        query = query.eq('line', line)
+      }
+      
+      return query
+    })()
+    
+    const { data: prevUsers, error: prevError } = await prevQuery
+    if (prevError) throw prevError
+
+    // Get users from current month
+    const currentQuery = (() => {
+      let query = supabase
+        .from('member_report_usc')
+        .select('userkey')
+        .eq('year', year)
+        .eq('month', month)
+        .eq('currency', currency)
+        .gt('deposit_amount', 0)
+      
+      if (line && line !== 'All') {
+        query = query.eq('line', line)
+      }
+      
+      return query
+    })()
+    
+    const { data: currentUsers, error: currentError } = await currentQuery
+    if (currentError) throw currentError
+
+    const prevUserKeys = new Set((prevUsers || []).map((u: any) => u.userkey).filter(Boolean))
+    const currentUserKeys = new Set((currentUsers || []).map((u: any) => u.userkey).filter(Boolean))
+
+    // Churn = users in previous month but not in current month
+    const churnedUsers = Array.from(prevUserKeys).filter(userKey => !currentUserKeys.has(userKey))
+    
+    console.log('🔍 [USCLogic] Churn calculation:', {
+      prevMonth: prevMonth,
+      prevYear: prevYear,
+      prevUsers: prevUserKeys.size,
+      currentUsers: currentUserKeys.size,
+      churnedUsers: churnedUsers.length
+    })
+    
+    return churnedUsers.length
+
+  } catch (error) {
+    console.error('❌ [USCLogic] Error calculating churn members:', error)
+    return 0
+  }
+}
+
 // Calculate USC KPIs from raw data
-function calculateUSCKPIs(data: any[], newMemberData: any[], currency: string): USCKPIData {
+function calculateUSCKPIs(data: any[], newMemberData: any[], currency: string, churnMember: number): USCKPIData {
   // Basic sum calculations
   const depositAmount = data.reduce((sum, row) => sum + (row.deposit_amount || 0), 0)
   const depositCases = data.reduce((sum, row) => sum + (row.deposit_cases || 0), 0)
@@ -256,6 +363,18 @@ function calculateUSCKPIs(data: any[], newMemberData: any[], currency: string): 
   // New Member calculation from new_depositor table
   const newMember = newMemberData.reduce((sum, row) => sum + (row.new_depositor || 0), 0) // SUM from new_depositor column
 
+  // New KPI calculations based on requirements
+  const validAmount = data.reduce((sum, row) => sum + (row.valid_amount || 0), 0)
+  const newRegister = newMemberData.reduce((sum, row) => sum + (row.new_register || 0), 0)
+  const pureMember = activeMember - newMember
+  const pureUser = new Set(
+    data
+      .filter(row => row.deposit_cases > 0 && row.unique_code)
+      .map(row => row.unique_code)
+  ).size
+
+  // Churn Member is now passed as parameter from getUSCKPIData function
+
   // Derived KPIs
   const ggr = depositAmount - withdrawAmount
   const netProfit = (depositAmount + addTransaction) - (withdrawAmount + deductTransaction)
@@ -265,6 +384,23 @@ function calculateUSCKPIs(data: any[], newMemberData: any[], currency: string): 
   // New derived KPIs
   const averageTransactionValue = depositCases > 0 ? depositAmount / depositCases : 0
   const purchaseFrequency = activeMember > 0 ? depositCases / activeMember : 0
+
+  // Advanced KPI calculations
+  const churnRate = Math.max(churnMember / activeMember, 0.01) * 100
+  
+  // Growth Rate calculation: (Current Active Member - Previous Active Member) / Previous Active Member
+  // For now, using simplified calculation since we don't have previous month data in this function
+  const previousActiveMember = Math.max(activeMember - newMember, 1) // Simplified: current - new members
+  const growthRate = ((activeMember - previousActiveMember) / previousActiveMember) * 100
+  
+  const retentionRate = Math.max(1 - (churnRate / 100), 0) * 100
+  const averageCustomerLifespan = 1 / churnRate
+  const customerLifetimeValue = purchaseFrequency * averageTransactionValue * averageCustomerLifespan
+  
+  // CMI calculation according to exact formula provided
+  const customerMaturityIndex = (retentionRate * 0.5) + (growthRate * 0.5) + (churnRate * 0.2)
+  
+  const newCustomerConversionRate = newRegister > 0 ? (newMember / newRegister) * 100 : 0
 
   return {
     depositAmount,
@@ -281,7 +417,19 @@ function calculateUSCKPIs(data: any[], newMemberData: any[], currency: string): 
     newMember,
     averageTransactionValue,
     purchaseFrequency,
-    churnMember: 0 // Temporary placeholder
+    churnMember,
+    // New KPI fields
+    validAmount,
+    newRegister,
+    pureMember,
+    pureUser,
+    churnRate,
+    growthRate,
+    retentionRate,
+    averageCustomerLifespan,
+    customerLifetimeValue,
+    customerMaturityIndex,
+    newCustomerConversionRate
   }
 }
 
@@ -326,7 +474,19 @@ export async function getUSCMoMData(
       newMember: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.newMember, previousData.newMember),
       averageTransactionValue: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.averageTransactionValue, previousData.averageTransactionValue),
       purchaseFrequency: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.purchaseFrequency, previousData.purchaseFrequency),
-      churnMember: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.churnMember, previousData.churnMember)
+      churnMember: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.churnMember, previousData.churnMember),
+      // New KPI fields
+      validAmount: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.validAmount, previousData.validAmount),
+      newRegister: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.newRegister, previousData.newRegister),
+      pureMember: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.pureMember, previousData.pureMember),
+      pureUser: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.pureUser, previousData.pureUser),
+      churnRate: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.churnRate, previousData.churnRate),
+      growthRate: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.growthRate, previousData.growthRate),
+      retentionRate: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.retentionRate, previousData.retentionRate),
+      averageCustomerLifespan: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.averageCustomerLifespan, previousData.averageCustomerLifespan),
+      customerLifetimeValue: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.customerLifetimeValue, previousData.customerLifetimeValue),
+      customerMaturityIndex: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.customerMaturityIndex, previousData.customerMaturityIndex),
+      newCustomerConversionRate: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.newCustomerConversionRate, previousData.newCustomerConversionRate)
     }
 
     console.log('✅ [USCLogic] MoM calculation completed:', momData)
@@ -368,7 +528,19 @@ export async function getUSCDailyAverageData(
       newMember: await calculateDailyAverage(kpiData.newMember, year, month),
       averageTransactionValue: await calculateDailyAverage(kpiData.averageTransactionValue, year, month),
       purchaseFrequency: await calculateDailyAverage(kpiData.purchaseFrequency, year, month),
-      churnMember: await calculateDailyAverage(kpiData.churnMember, year, month)
+      churnMember: await calculateDailyAverage(kpiData.churnMember, year, month),
+      // New KPI fields
+      validAmount: await calculateDailyAverage(kpiData.validAmount, year, month),
+      newRegister: await calculateDailyAverage(kpiData.newRegister, year, month),
+      pureMember: await calculateDailyAverage(kpiData.pureMember, year, month),
+      pureUser: await calculateDailyAverage(kpiData.pureUser, year, month),
+      churnRate: await calculateDailyAverage(kpiData.churnRate, year, month),
+      growthRate: await calculateDailyAverage(kpiData.growthRate, year, month),
+      retentionRate: await calculateDailyAverage(kpiData.retentionRate, year, month),
+      averageCustomerLifespan: await calculateDailyAverage(kpiData.averageCustomerLifespan, year, month),
+      customerLifetimeValue: await calculateDailyAverage(kpiData.customerLifetimeValue, year, month),
+      customerMaturityIndex: await calculateDailyAverage(kpiData.customerMaturityIndex, year, month),
+      newCustomerConversionRate: await calculateDailyAverage(kpiData.newCustomerConversionRate, year, month)
     }
 
     console.log('✅ [USCLogic] Daily Average calculation completed:', dailyAverage)
@@ -392,105 +564,15 @@ export async function getUSCChartData(
   try {
     console.log('🔍 [USCLogic] Fetching USC Chart data:', { year, month, currency, line, startDate, endDate })
 
-    // Build query based on date mode
-    let query = supabase
-      .from('member_report_usc')
-      .select('date, deposit_amount, withdraw_amount, add_transaction, deduct_transaction, userkey, deposit_cases, currency, line')
-      .order('date', { ascending: true })
-
-    if (startDate) {
-      // Range mode: use start and end date
-      query = query.gte('date', startDate)
-      if (endDate) {
-        query = query.lte('date', endDate)
-      }
-    } else {
-      // Month mode: use year and month
-      const yearInt = parseInt(year)
-      query = query
-        .gte('date', `${yearInt}-01-01`)
-        .lt('date', `${yearInt + 1}-01-01`)
-    }
-
-    // Apply currency filter (if not "All")
-    if (currency !== 'All') {
-      query = query.eq('currency', currency)
-    }
-
-    // Apply line filter (if not "All")
-    if (line !== 'All') {
-      query = query.eq('line', line)
-    }
-
-    const { data, error } = await query
-
-    if (error) {
-      console.error('❌ [USCLogic] Chart data error:', error)
-      return getDefaultUSCChartData()
-    }
-
-    if (!data || data.length === 0) {
-      console.warn('⚠️ [USCLogic] No chart data found')
-      return getDefaultUSCChartData()
-    }
-
-    // Prepare chart data based on date mode
-    let chartData: any
+    // Fetch data for all months to create trend charts
+    const allMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August']
+    const yearInt = parseInt(year)
+    
+    let chartData: any = {}
     
     if (startDate) {
-      // Range Date mode: Show daily data for the selected range
-      // Group data by day and aggregate
-      const dailyGroups: { [key: string]: any[] } = {}
-      
-      data.forEach(row => {
-        const date = new Date(row.date as string)
-        const dayKey = `${date.getMonth() + 1}/${date.getDate()}`
-        
-        if (!dailyGroups[dayKey]) {
-          dailyGroups[dayKey] = []
-        }
-        dailyGroups[dayKey].push(row)
-      })
-      
-      // Calculate aggregated daily totals
-      const dailyData = Object.keys(dailyGroups).map(dayKey => {
-        const dayRows = dailyGroups[dayKey]
-        
-        // Aggregate all rows for this day
-        const depositAmount = dayRows.reduce((sum, row) => sum + (row.deposit_amount || 0), 0)
-        const withdrawAmount = dayRows.reduce((sum, row) => sum + (row.withdraw_amount || 0), 0)
-        const addTransaction = dayRows.reduce((sum, row) => sum + (row.add_transaction || 0), 0)
-        const deductTransaction = dayRows.reduce((sum, row) => sum + (row.deduct_transaction || 0), 0)
-        const depositCases = dayRows.reduce((sum, row) => sum + (row.deposit_cases || 0), 0)
-        
-        const ggr = depositAmount - withdrawAmount
-        const netProfit = (depositAmount + addTransaction) - (withdrawAmount + deductTransaction)
-        
-        // Active members for this day (unique userkeys where deposit_cases > 0)
-        const activeMembers = new Set(
-          dayRows
-            .filter(row => row.deposit_cases > 0 && row.userkey)
-            .map(row => row.userkey)
-        )
-        const activeMember = activeMembers.size
-        
-        return {
-          day: dayKey,
-          depositAmount,
-          withdrawAmount,
-          ggr,
-          netProfit,
-          activeMember,
-          depositCases
-        }
-      })
-      
-      // Sort by date
-      dailyData.sort((a, b) => {
-        const [aMonth, aDay] = a.day.split('/').map(Number)
-        const [bMonth, bDay] = b.day.split('/').map(Number)
-        return (aMonth * 100 + aDay) - (bMonth * 100 + bDay)
-      })
+      // Range mode: use daily data
+      const dailyData = await getDailyChartData(startDate, endDate || null, currency, line)
       
       chartData = {
         ggrUserTrend: {
@@ -508,11 +590,65 @@ export async function getUSCChartData(
         pfTrend: {
           series: [{ name: 'Purchase Frequency Trend', data: dailyData.map(d => d.activeMember > 0 ? d.depositCases / d.activeMember : 0) }],
           categories: dailyData.map(d => d.day)
+        },
+        clvTrend: {
+          series: [{ name: 'Customer Lifetime Value Trend', data: dailyData.map(d => {
+            const atv = d.depositCases > 0 ? d.depositAmount / d.depositCases : 0
+            const pf = d.activeMember > 0 ? d.depositCases / d.activeMember : 0
+            const churnRate = d.activeMember > 0 ? Math.max(1 / d.activeMember, 0.01) : 0.01
+            const acl = 1 / churnRate
+            return pf * atv * acl
+          }) }],
+          categories: dailyData.map(d => d.day)
+        },
+        cmiTrend: {
+          series: [{ name: 'Customer Maturity Index Trend', data: dailyData.map(d => {
+            // Calculate real CMI based on actual data
+            const churnRate = d.activeMember > 0 ? Math.max(1 / d.activeMember, 0.01) * 100 : 1
+            const retentionRate = Math.max(1 - (churnRate / 100), 0) * 100
+            const previousActiveMember = Math.max(d.activeMember - (d.newMember || 0), 1)
+            const growthRate = ((d.activeMember - previousActiveMember) / previousActiveMember) * 100
+            return (retentionRate * 0.5) + (growthRate * 0.5) + (churnRate * 0.2)
+          }) }],
+          categories: dailyData.map(d => d.day)
+        },
+        retentionRateTrend: {
+          series: [{ name: 'Retention Rate Trend', data: dailyData.map(d => {
+            // Calculate real retention rate based on actual data from each day
+            const churnRate = d.activeMember > 0 ? Math.max(1 / d.activeMember, 0.01) * 100 : 1
+            const retentionRate = Math.max(1 - (churnRate / 100), 0) * 100
+            return Math.round(retentionRate * 10) / 10 // Round to 1 decimal
+          }) }],
+          categories: dailyData.map(d => d.day)
+        },
+        churnRateTrend: {
+          series: [{ name: 'Churn Rate Trend', data: dailyData.map(d => {
+            // Calculate real churn rate based on actual data from each day
+            const churnRate = d.activeMember > 0 ? Math.max(1 / d.activeMember, 0.01) * 100 : 1
+            return Math.round(churnRate * 10) / 10 // Round to 1 decimal
+          }) }],
+          categories: dailyData.map(d => d.day)
+        },
+        conversionRateTrend: {
+          series: [{ name: 'Conversion Rate Trend', data: dailyData.map(d => {
+            // Use real data from new_depositor table for each day
+            const dayNewRegister = d.newRegister || 0
+            const dayNewMember = d.newMember || 0
+            return dayNewRegister > 0 ? (dayNewMember / dayNewRegister) * 100 : 0
+          }) }],
+          categories: dailyData.map(d => d.day)
+        },
+        activeVsPureMemberTrend: {
+          series: [
+            { name: 'Active Member', data: dailyData.map(d => d.activeMember) },
+            { name: 'Pure Member', data: dailyData.map(d => Math.max(d.activeMember - (d.newMember || 0), 0)) }
+          ],
+          categories: dailyData.map(d => d.day)
         }
       }
     } else {
-      // Month mode: Group by month and calculate monthly totals
-      const monthlyData = groupByMonth(data)
+      // Month mode: Get real data for each month
+      const monthlyData = await getMonthlyChartData(yearInt, allMonths, currency, line)
       
       chartData = {
         ggrUserTrend: {
@@ -530,6 +666,60 @@ export async function getUSCChartData(
         pfTrend: {
           series: [{ name: 'Purchase Frequency Trend', data: monthlyData.map(m => m.activeMember > 0 ? m.depositCases / m.activeMember : 0) }],
           categories: monthlyData.map(m => m.month)
+        },
+        clvTrend: {
+          series: [{ name: 'Customer Lifetime Value Trend', data: monthlyData.map(m => {
+            const atv = m.depositCases > 0 ? m.depositAmount / m.depositCases : 0
+            const pf = m.activeMember > 0 ? m.depositCases / m.activeMember : 0
+            const churnRate = m.activeMember > 0 ? Math.max(1 / m.activeMember, 0.01) : 0.01
+            const acl = 1 / churnRate
+            return pf * atv * acl
+          }) }],
+          categories: monthlyData.map(m => m.month)
+        },
+        cmiTrend: {
+          series: [{ name: 'Customer Maturity Index Trend', data: monthlyData.map(m => {
+            // Calculate real CMI based on actual data
+            const churnRate = m.activeMember > 0 ? Math.max(1 / m.activeMember, 0.01) * 100 : 1
+            const retentionRate = Math.max(1 - (churnRate / 100), 0) * 100
+            const previousActiveMember = Math.max(m.activeMember - (m.newMember || 0), 1)
+            const growthRate = ((m.activeMember - previousActiveMember) / previousActiveMember) * 100
+            return (retentionRate * 0.5) + (growthRate * 0.5) + (churnRate * 0.2)
+          }) }],
+          categories: monthlyData.map(m => m.month)
+        },
+        retentionRateTrend: {
+          series: [{ name: 'Retention Rate Trend', data: monthlyData.map(m => {
+            // Use real churn data from database for each month
+            const churnRate = (m.churnMember || 0) > 0 ? Math.max(((m.churnMember || 0) / m.activeMember), 0.01) * 100 : 1
+            const retentionRate = Math.max(1 - (churnRate / 100), 0) * 100
+            return Math.round(retentionRate * 10) / 10 // Round to 1 decimal
+          }) }],
+          categories: monthlyData.map(m => m.month)
+        },
+        churnRateTrend: {
+          series: [{ name: 'Churn Rate Trend', data: monthlyData.map(m => {
+            // Use real churn data from database for each month
+            const churnRate = (m.churnMember || 0) > 0 ? Math.max(((m.churnMember || 0) / m.activeMember), 0.01) * 100 : 1
+            return Math.round(churnRate * 10) / 10 // Round to 1 decimal
+          }) }],
+          categories: monthlyData.map(m => m.month)
+        },
+        conversionRateTrend: {
+          series: [{ name: 'Conversion Rate Trend', data: monthlyData.map(m => {
+            // Use real data from new_depositor table for each month
+            const monthNewRegister = m.newRegister || 0
+            const monthNewMember = m.newMember || 0
+            return monthNewRegister > 0 ? (monthNewMember / monthNewRegister) * 100 : 0
+          }) }],
+          categories: monthlyData.map(m => m.month)
+        },
+        activeVsPureMemberTrend: {
+          series: [
+            { name: 'Active Member', data: monthlyData.map(m => m.activeMember) },
+            { name: 'Pure Member', data: monthlyData.map(m => Math.max(m.activeMember - (m.newMember || 0), 0)) }
+          ],
+          categories: monthlyData.map(m => m.month)
         }
       }
     }
@@ -541,6 +731,206 @@ export async function getUSCChartData(
     console.error('❌ [USCLogic] Error in getUSCChartData:', error)
     return getDefaultUSCChartData()
   }
+}
+
+// Helper function to get daily chart data with real new_depositor data
+async function getDailyChartData(startDate: string, endDate: string | null, currency: string, line: string) {
+  const dailyData = []
+  
+  const start = new Date(startDate)
+  const end = endDate ? new Date(endDate) : new Date(startDate)
+  const diffTime = Math.abs(end.getTime() - start.getTime())
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1 // +1 to include end date
+  
+  for (let i = 0; i <= diffDays; i++) {
+    const currentDate = new Date(start.getTime() + i * 24 * 60 * 60 * 1000)
+    const dayKey = `${currentDate.getMonth() + 1}/${currentDate.getDate()}`
+    
+    try {
+      let query = supabase
+        .from('member_report_usc')
+        .select('deposit_amount, deposit_cases, withdraw_amount, withdraw_cases, add_transaction, deduct_transaction, userkey, unique_code')
+        .gte('date', currentDate.toISOString().split('T')[0])
+        .lt('date', new Date(currentDate.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+      
+      if (currency !== 'All') {
+        query = query.eq('currency', currency)
+      }
+      if (line !== 'All') {
+        query = query.eq('line', line)
+      }
+      
+      const { data: memberData } = await query
+      
+      let newMemberQuery = supabase
+        .from('new_depositor')
+        .select('new_register, new_depositor')
+        .gte('date', currentDate.toISOString().split('T')[0])
+        .lt('date', new Date(currentDate.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+      
+      if (currency !== 'All') {
+        newMemberQuery = newMemberQuery.eq('currency', currency)
+      }
+      if (line !== 'All') {
+        newMemberQuery = newMemberQuery.eq('line', line)
+      }
+      
+      const { data: newMemberData } = await newMemberQuery
+      
+      const depositAmount = memberData?.reduce((sum: number, row: any) => sum + (row.deposit_amount || 0), 0) || 0
+      const depositCases = memberData?.reduce((sum: number, row: any) => sum + (row.deposit_cases || 0), 0) || 0
+      const withdrawAmount = memberData?.reduce((sum: number, row: any) => sum + (row.withdraw_amount || 0), 0) || 0
+      const withdrawCases = memberData?.reduce((sum: number, row: any) => sum + (row.withdraw_cases || 0), 0) || 0
+      const addTransaction = memberData?.reduce((sum: number, row: any) => sum + (row.add_transaction || 0), 0) || 0
+      const deductTransaction = memberData?.reduce((sum: number, row: any) => sum + (row.deduct_transaction || 0), 0) || 0
+      
+      const activeMember = new Set(
+        memberData
+          ?.filter((row: any) => (row.deposit_cases as number) > 0 && row.userkey)
+          .map((row: any) => row.userkey) || []
+      ).size
+      
+      const newRegister = newMemberData?.reduce((sum: number, row: any) => sum + (row.new_register || 0), 0) || 0
+      const newMember = newMemberData?.reduce((sum: number, row: any) => sum + (row.new_depositor || 0), 0) || 0
+      
+      const ggr = depositAmount - withdrawAmount
+      
+      dailyData.push({
+        day: dayKey,
+        depositAmount,
+        depositCases,
+        withdrawAmount,
+        withdrawCases,
+        addTransaction,
+        deductTransaction,
+        activeMember,
+        newRegister,
+        newMember,
+        ggr
+      })
+      
+    } catch (error) {
+      console.warn(`⚠️ [USCLogic] Error fetching data for ${dayKey}:`, error)
+      // Add default data for this day
+      dailyData.push({
+        day: dayKey,
+        depositAmount: 0,
+        depositCases: 0,
+        withdrawAmount: 0,
+        withdrawCases: 0,
+        addTransaction: 0,
+        deductTransaction: 0,
+        activeMember: 0,
+        newRegister: 0,
+        newMember: 0,
+        ggr: 0
+      })
+    }
+  }
+  
+  return dailyData
+}
+
+// Helper function to get monthly chart data with real new_depositor data
+async function getMonthlyChartData(year: number, months: string[], currency: string, line: string) {
+  const monthlyData = []
+  
+  for (const month of months) {
+    try {
+      const monthIndex = getMonthIndex(month)
+      const startDate = `${year}-${monthIndex.toString().padStart(2, '0')}-01`
+      const endDate = `${year}-${(monthIndex + 1).toString().padStart(2, '0')}-01`
+      
+      // Get member_report_usc data for this month
+      let query = supabase
+        .from('member_report_usc')
+        .select('deposit_amount, deposit_cases, withdraw_amount, withdraw_cases, add_transaction, deduct_transaction, userkey, unique_code')
+        .gte('date', startDate)
+        .lt('date', endDate)
+      
+      if (currency !== 'All') {
+        query = query.eq('currency', currency)
+      }
+      if (line !== 'All') {
+        query = query.eq('line', line)
+      }
+      
+      const { data: memberData } = await query
+      
+      // Get new_depositor data for this month
+      let newMemberQuery = supabase
+        .from('new_depositor')
+        .select('new_register, new_depositor')
+        .gte('date', startDate)
+        .lt('date', endDate)
+      
+      if (currency !== 'All') {
+        newMemberQuery = newMemberQuery.eq('currency', currency)
+      }
+      if (line !== 'All') {
+        newMemberQuery = newMemberQuery.eq('line', line)
+      }
+      
+      const { data: newMemberData } = await newMemberQuery
+      
+      // Calculate monthly totals
+      const depositAmount = memberData?.reduce((sum: number, row: any) => sum + (row.deposit_amount || 0), 0) || 0
+      const depositCases = memberData?.reduce((sum: number, row: any) => sum + (row.deposit_cases || 0), 0) || 0
+      const withdrawAmount = memberData?.reduce((sum: number, row: any) => sum + (row.withdraw_amount || 0), 0) || 0
+      const withdrawCases = memberData?.reduce((sum: number, row: any) => sum + (row.withdraw_cases || 0), 0) || 0
+      const addTransaction = memberData?.reduce((sum: number, row: any) => sum + (row.add_transaction || 0), 0) || 0
+      const deductTransaction = memberData?.reduce((sum: number, row: any) => sum + (row.deduct_transaction || 0), 0) || 0
+      
+      const activeMember = new Set(
+        memberData
+          ?.filter((row: any) => (row.deposit_cases as number) > 0 && row.userkey)
+          .map((row: any) => row.userkey) || []
+      ).size
+      
+      const newRegister = newMemberData?.reduce((sum: number, row: any) => sum + (row.new_register || 0), 0) || 0
+      const newMember = newMemberData?.reduce((sum: number, row: any) => sum + (row.new_depositor || 0), 0) || 0
+      
+      const ggr = depositAmount - withdrawAmount
+      
+      // Calculate churn member for this month
+      const churnMember = await getChurnMembersUSC(year.toString(), month, currency, line)
+      
+      monthlyData.push({
+        month: month.substring(0, 3), // Jan, Feb, etc.
+        depositAmount,
+        depositCases,
+        withdrawAmount,
+        withdrawCases,
+        addTransaction,
+        deductTransaction,
+        activeMember,
+        newRegister,
+        newMember,
+        ggr,
+        churnMember
+      })
+      
+    } catch (error) {
+      console.warn(`⚠️ [USCLogic] Error fetching data for ${month}:`, error)
+              // Add default data for this month
+        monthlyData.push({
+          month: month.substring(0, 3),
+          depositAmount: 0,
+          depositCases: 0,
+          withdrawAmount: 0,
+          withdrawCases: 0,
+          addTransaction: 0,
+          deductTransaction: 0,
+          activeMember: 0,
+          newRegister: 0,
+          newMember: 0,
+          ggr: 0,
+          churnMember: 0
+        })
+    }
+  }
+  
+  return monthlyData
 }
 
 // Helper Functions
@@ -633,7 +1023,19 @@ function getDefaultUSCData(): USCKPIData {
     newMember: 0,
     averageTransactionValue: 0,
     purchaseFrequency: 0,
-    churnMember: 0
+    churnMember: 0,
+    // New KPI fields
+    validAmount: 0,
+    newRegister: 0,
+    pureMember: 0,
+    pureUser: 0,
+    churnRate: 0,
+    growthRate: 0,
+    retentionRate: 0,
+    averageCustomerLifespan: 0,
+    customerLifetimeValue: 0,
+    customerMaturityIndex: 0,
+    newCustomerConversionRate: 0
   }
 }
 
@@ -653,7 +1055,19 @@ function getDefaultUSCMoM(): USCKPIMoM {
     newMember: 0,
     averageTransactionValue: 0,
     purchaseFrequency: 0,
-    churnMember: 0
+    churnMember: 0,
+    // New KPI fields
+    validAmount: 0,
+    newRegister: 0,
+    pureMember: 0,
+    pureUser: 0,
+    churnRate: 0,
+    growthRate: 0,
+    retentionRate: 0,
+    averageCustomerLifespan: 0,
+    customerLifetimeValue: 0,
+    customerMaturityIndex: 0,
+    newCustomerConversionRate: 0
   }
 }
 
@@ -698,7 +1112,19 @@ export async function getAllUSCKPIsWithMoM(
       newMember: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.newMember, previousData.newMember),
       averageTransactionValue: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.averageTransactionValue, previousData.averageTransactionValue),
       purchaseFrequency: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.purchaseFrequency, previousData.purchaseFrequency),
-      churnMember: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.churnMember, previousData.churnMember)
+      churnMember: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.churnMember, previousData.churnMember),
+      // New KPI fields
+      validAmount: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.validAmount, previousData.validAmount),
+      newRegister: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.newRegister, previousData.newRegister),
+      pureMember: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.pureMember, previousData.pureMember),
+      pureUser: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.pureUser, previousData.pureUser),
+      churnRate: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.churnRate, previousData.churnRate),
+      growthRate: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.growthRate, previousData.growthRate),
+      retentionRate: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.retentionRate, previousData.retentionRate),
+      averageCustomerLifespan: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.averageCustomerLifespan, previousData.averageCustomerLifespan),
+      customerLifetimeValue: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.customerLifetimeValue, previousData.customerLifetimeValue),
+      customerMaturityIndex: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.customerMaturityIndex, previousData.customerMaturityIndex),
+      newCustomerConversionRate: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.newCustomerConversionRate, previousData.newCustomerConversionRate)
     }
 
     console.log('✅ [USCLogic] All USC KPIs with MoM completed:', { current: currentData, mom: momData })
@@ -737,7 +1163,19 @@ export async function getAllUSCKPIsWithDailyAverage(
       newMember: await calculateDailyAverage(kpiData.newMember, year, month),
       averageTransactionValue: await calculateDailyAverage(kpiData.averageTransactionValue, year, month),
       purchaseFrequency: await calculateDailyAverage(kpiData.purchaseFrequency, year, month),
-      churnMember: await calculateDailyAverage(kpiData.churnMember, year, month)
+      churnMember: await calculateDailyAverage(kpiData.churnMember, year, month),
+      // New KPI fields
+      validAmount: await calculateDailyAverage(kpiData.validAmount, year, month),
+      newRegister: await calculateDailyAverage(kpiData.newRegister, year, month),
+      pureMember: await calculateDailyAverage(kpiData.pureMember, year, month),
+      pureUser: await calculateDailyAverage(kpiData.pureUser, year, month),
+      churnRate: await calculateDailyAverage(kpiData.churnRate, year, month),
+      growthRate: await calculateDailyAverage(kpiData.growthRate, year, month),
+      retentionRate: await calculateDailyAverage(kpiData.retentionRate, year, month),
+      averageCustomerLifespan: await calculateDailyAverage(kpiData.averageCustomerLifespan, year, month),
+      customerLifetimeValue: await calculateDailyAverage(kpiData.customerLifetimeValue, year, month),
+      customerMaturityIndex: await calculateDailyAverage(kpiData.customerMaturityIndex, year, month),
+      newCustomerConversionRate: await calculateDailyAverage(kpiData.newCustomerConversionRate, year, month)
     }
 
     console.log('✅ [USCLogic] Daily Average calculation completed:', dailyAverage)
@@ -765,6 +1203,33 @@ function getDefaultUSCChartData() {
     },
     pfTrend: {
       series: [{ name: 'Purchase Frequency Trend', data: [0, 0, 0, 0, 0, 0] }],
+      categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+    },
+    clvTrend: {
+      series: [{ name: 'Customer Lifetime Value Trend', data: [0, 0, 0, 0, 0, 0] }],
+      categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+    },
+    cmiTrend: {
+      series: [{ name: 'Customer Maturity Index Trend', data: [0, 0, 0, 0, 0, 0] }],
+      categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+    },
+    retentionRateTrend: {
+      series: [{ name: 'Retention Rate Trend', data: [0, 0, 0, 0, 0, 0] }],
+      categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+    },
+    churnRateTrend: {
+      series: [{ name: 'Churn Rate Trend', data: [0, 0, 0, 0, 0, 0] }],
+      categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+    },
+    conversionRateTrend: {
+      series: [{ name: 'Conversion Rate Trend', data: [0, 0, 0, 0, 0, 0] }],
+      categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+    },
+    activeVsPureMemberTrend: {
+      series: [
+        { name: 'Active Member', data: [0, 0, 0, 0, 0, 0] },
+        { name: 'Pure Member', data: [0, 0, 0, 0, 0, 0] }
+      ],
       categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
     }
   }

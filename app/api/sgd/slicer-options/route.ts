@@ -3,59 +3,57 @@ import { supabase } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔍 [USC Slicer API] Fetching slicer options')
+    console.log('🔍 [SGD Slicer API] Fetching slicer options for SGD currency only')
 
-    // Get unique years from member_report_usc table
+    // LOCK CURRENCY TO SGD - only show SGD data options
+    const currency = 'SGD'
+
+    // Get unique years from member_report_monthly table (filtered by SGD currency)
     const { data: yearData, error: yearError } = await supabase
-      .from('member_report_usc')
-      .select('date')
-      .order('date', { ascending: false })
+      .from('member_report_monthly')
+      .select('year')
+      .eq('currency', currency)
+      .order('year', { ascending: false })
 
     if (yearError) {
-      console.error('❌ [USC Slicer API] Year data error:', yearError)
+      console.error('❌ [SGD Slicer API] Year data error:', yearError)
       throw yearError
     }
 
     // Extract unique years
     const uniqueYears = Array.from(new Set(
-      yearData?.map(row => new Date(row.date as string).getFullYear().toString()) || []
-    ))
+      yearData?.map(row => row.year?.toString()) || []
+    )).filter(Boolean)
     const years = uniqueYears.sort((a, b) => parseInt(b) - parseInt(a))
 
-    // Get unique months from member_report_usc table
+    // Get unique months from member_report_monthly table (filtered by SGD currency)
     const { data: monthData, error: monthError } = await supabase
-      .from('member_report_usc')
-      .select('date')
-      .order('date', { ascending: true })
+      .from('member_report_monthly')
+      .select('month')
+      .eq('currency', currency)
+      .order('month', { ascending: true })
 
     if (monthError) {
-      console.error('❌ [USC Slicer API] Month data error:', monthError)
+      console.error('❌ [SGD Slicer API] Month data error:', monthError)
       throw monthError
     }
 
     // Extract unique months
     const uniqueMonths = Array.from(new Set(
-      monthData?.map(row => {
-        const date = new Date(row.date as string)
-        const monthNames = [
-          'January', 'February', 'March', 'April', 'May', 'June',
-          'July', 'August', 'September', 'October', 'November', 'December'
-        ]
-        return monthNames[date.getMonth()]
-      }) || []
-    ))
+      monthData?.map(row => row.month) || []
+    )).filter(Boolean)
     const months = uniqueMonths
 
-    // Get unique lines from member_report_usc table (currency locked to USC)
+    // Get unique lines from member_report_monthly table (filtered by SGD currency)
     const { data: lineData, error: lineError } = await supabase
-      .from('member_report_usc')
+      .from('member_report_monthly')
       .select('line')
-      .eq('currency', 'USC')
+      .eq('currency', currency)
       .not('line', 'is', null)
       .order('line')
 
     if (lineError) {
-      console.error('❌ [USC Slicer API] Line data error:', lineError)
+      console.error('❌ [SGD Slicer API] Line data error:', lineError)
       throw lineError
     }
 
@@ -74,7 +72,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    console.log('✅ [USC Slicer API] Slicer options fetched:', {
+    console.log('✅ [SGD Slicer API] Slicer options fetched for SGD currency:', {
       yearsCount: years.length,
       monthsCount: months.length,
       linesCount: lines.length
@@ -83,11 +81,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(response)
 
   } catch (error) {
-    console.error('❌ [USC Slicer API] Error:', error)
+    console.error('❌ [SGD Slicer API] Error:', error)
     return NextResponse.json(
       { 
         success: false, 
-        error: 'Failed to fetch USC slicer options',
+        error: 'Failed to fetch SGD slicer options',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }

@@ -13,7 +13,7 @@ export default function USCSales() {
 
   return (
     <Layout
-      pageTitle="USC Sales"
+      pageTitle="Member Analytic USC"
 
       darkMode={darkMode}
       sidebarExpanded={sidebarExpanded}

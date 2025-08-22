@@ -58,10 +58,12 @@ export default function Sidebar({
   useEffect(() => {
     if (pathname.startsWith('/transaction/')) {
       setOpenSubmenu('Transaction')
+    } else if (pathname.startsWith('/myr/')) {
+      setOpenSubmenu('MYR')
+    } else if (pathname.startsWith('/sgd/')) {
+      setOpenSubmenu('SGD')
     } else if (pathname.startsWith('/usc/')) {
       setOpenSubmenu('USC')
-    } else if (pathname.startsWith('/member-analytics/')) {
-      setOpenSubmenu('Member Analytics')
     }
   }, [pathname])
 
@@ -204,38 +206,16 @@ export default function Sidebar({
         permission: 'business-flow'
       },
       {
-        title: 'USC',
-        icon: <USCIcon size={18} color="#ffffff" />,
-        permission: 'usc',
-        submenu: [
-          { title: 'Overview', path: '/usc/overview' },
-          { title: 'Sales', path: '/usc/sales' }
-        ]
-      },
-      {
-        title: 'BGO',
-        path: '/bgo',
-        icon: <GrowthIcon size={18} color="#ffffff" />,
-        permission: 'bgo'
-      },
-      {
         title: 'Sales & Revenue',
         path: '/sr',
         icon: <SalesIcon size={18} color="#ffffff" />,
         permission: 'sr'
       },
       {
-        title: 'Member Analytics',
+        title: 'BGO',
+        path: '/bgo',
         icon: <GrowthIcon size={18} color="#ffffff" />,
-        permission: 'member-analytics',
-        submenu: [
-          { title: 'Member Overview', path: '/member-analytics/overview' },
-          { title: 'Growth Analysis', path: '/member-analytics/growth' },
-          { title: 'Behavior Analysis', path: '/member-analytics/behavior' },
-          { title: 'Performance Metrics', path: '/member-analytics/performance' },
-          { title: 'Predictive Analytics', path: '/member-analytics/predictive' },
-          { title: 'Segmentation Analysis', path: '/member-analytics/segmentation' }
-        ]
+        permission: 'bgo'
       },
       {
         title: 'XOO',
@@ -248,6 +228,33 @@ export default function Sidebar({
         path: '/os',
         icon: <ManagementIcon size={18} color="#ffffff" />,
         permission: 'os'
+      },
+      {
+        title: 'MYR',
+        icon: <USCIcon size={18} color="#ffffff" />,
+        permission: 'myr',
+        submenu: [
+          { title: 'Overview MYR', path: '/myr/overview' },
+          { title: 'Member Analytic MYR', path: '/myr/member-analytic' }
+        ]
+      },
+      {
+        title: 'SGD',
+        icon: <USCIcon size={18} color="#ffffff" />,
+        permission: 'sgd',
+        submenu: [
+          { title: 'Overview SGD', path: '/sgd/overview' },
+          { title: 'Member Analytic SGD', path: '/sgd/member-analytic' }
+        ]
+      },
+      {
+        title: 'USC',
+        icon: <USCIcon size={18} color="#ffffff" />,
+        permission: 'usc',
+        submenu: [
+          { title: 'Overview USC', path: '/usc/overview' },
+          { title: 'Member Analytic USC', path: '/usc/sales' }
+        ]
       },
       {
         title: 'Transaction',
@@ -305,7 +312,7 @@ export default function Sidebar({
   // Helper function untuk mendeteksi sub menu secara dinamis
   // Tambahkan path baru di sini untuk menambah sub menu baru
   const isSubmenuPath = (path: string) => {
-    return path.startsWith('/transaction/') || path.startsWith('/usc/') || path.startsWith('/member-analytics/')
+    return path.startsWith('/transaction/') || path.startsWith('/usc/') || path.startsWith('/myr/') || path.startsWith('/sgd/')
   }
 
   // Helper function untuk mendapatkan parent menu dari path
@@ -313,7 +320,8 @@ export default function Sidebar({
   const getParentMenuFromPath = (path: string) => {
     if (path.startsWith('/transaction/')) return 'Transaction'
     if (path.startsWith('/usc/')) return 'USC'
-    if (path.startsWith('/member-analytics/')) return 'Member Analytics'
+    if (path.startsWith('/myr/')) return 'MYR'
+    if (path.startsWith('/sgd/')) return 'SGD'
     return null
   }
 
