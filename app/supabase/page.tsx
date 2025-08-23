@@ -28,7 +28,7 @@ export default function ConnectionTest() {
 
   // Semua table yang ada di database dengan title yang profesional
   const allTables = [
-    { source: 'member_report_monthly', title: 'Member Report Monthly' },
+            { source: 'member_report_daily', title: 'Member Report Daily' },
     { source: 'member_report_daily', title: 'Member Report Daily' },
     { source: 'deposit_monthly', title: 'Deposit Monthly' },
     { source: 'deposit_daily', title: 'Deposit Daily' },
@@ -63,11 +63,11 @@ export default function ConnectionTest() {
   const fetchLastUpdate = async () => {
     try {
       setIsLoading(true)
-      console.log('🔧 Supabase Page - Fetching MAX(date) from member_report_monthly...')
+      console.log('🔧 Supabase Page - Fetching MAX(date) from member_report_daily...')
       
-      // Mengambil MAX(date) dari kolom member_report_monthly
+      // Mengambil MAX(date) dari kolom member_report_daily
       const { data, error } = await supabase
-        .from('member_report_monthly')
+        .from('member_report_daily')
         .select('date')
         .order('date', { ascending: false })
         .limit(1)
@@ -138,7 +138,7 @@ export default function ConnectionTest() {
           setIsLoading(false)
         }
       } else {
-        console.log('⚠️ Supabase Page - No data found in member_report_monthly')
+        console.log('⚠️ Supabase Page - No data found in member_report_daily')
         setLastUpdate('No Data')
         setIsLoading(false)
       }
@@ -169,7 +169,7 @@ export default function ConnectionTest() {
       
       // Ambil hash dari data terbaru untuk comparison - SIMPLIFIED QUERY
       const { data: latestData, error } = await supabase
-        .from('member_report_monthly')
+        .from('member_report_daily')
         .select('count')
         .limit(1)
 
@@ -199,7 +199,7 @@ export default function ConnectionTest() {
       
       // Test basic connection - SIMPLIFIED QUERY
       const { data: testData, error: testError } = await supabase
-        .from('member_report_monthly')
+        .from('member_report_daily')
         .select('count')
         .limit(1)
 

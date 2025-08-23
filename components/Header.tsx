@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { getRoleDisplayName } from '@/utils/rolePermissions'
+import RealtimeTimestamp from './RealtimeTimestamp'
 
 interface HeaderProps {
   pageTitle?: string
@@ -143,18 +144,21 @@ export default function Header({
           >
             ☰
           </button>
-          <h1 style={{ 
-            fontSize: '20px', 
-            fontWeight: '600', 
-            color: '#ffffff',
-            margin: 0,
-            lineHeight: '1.2',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis'
-          }}>
-            {getPageTitle()}
-          </h1>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center' }}>
+            <h1 style={{ 
+              fontSize: '24px', 
+              fontWeight: '600', 
+              color: '#ffffff',
+              margin: 0,
+              lineHeight: '1.2',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}>
+              {getPageTitle()}
+            </h1>
+            <RealtimeTimestamp />
+          </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>

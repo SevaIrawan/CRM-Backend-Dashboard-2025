@@ -6,8 +6,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const year = searchParams.get('year') || '2025'
     const month = searchParams.get('month') || 'January'
-    // LOCK CURRENCY TO USC for USC pages
-    const currency = 'USC'
+    const currency = searchParams.get('currency') || 'USC'
     const line = searchParams.get('line') || 'All'
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')

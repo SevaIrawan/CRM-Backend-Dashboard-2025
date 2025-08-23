@@ -15,7 +15,7 @@ const config = {
   
   // Database Tables
   tables: {
-    memberReportMonthly: 'member_report_monthly',
+    memberReportDaily: 'member_report_daily',
     users: 'users',
     transactions: 'transactions'
   }

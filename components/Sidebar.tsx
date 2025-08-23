@@ -70,11 +70,11 @@ export default function Sidebar({
   const fetchLastUpdate = async () => {
     try {
       setIsLoading(true)
-      console.log('🔧 Sidebar - Fetching MAX(date) from member_report_monthly...')
+      console.log('🔧 Sidebar - Fetching MAX(date) from member_report_daily...')
       
-      // Mengambil MAX(date) dari kolom member_report_monthly
+      // Mengambil MAX(date) dari kolom member_report_daily
       const { data, error } = await supabase
-        .from('member_report_monthly')
+        .from('member_report_daily')
         .select('date')
         .order('date', { ascending: false })
         .limit(1)
@@ -148,7 +148,7 @@ export default function Sidebar({
           setIsLoading(false)
         }
       } else {
-        console.log('⚠️ Sidebar - No data found in member_report_monthly')
+        console.log('⚠️ Sidebar - No data found in member_report_daily')
         setLastUpdate('No Data')
         setIsConnected(false)
         setIsLoading(false)

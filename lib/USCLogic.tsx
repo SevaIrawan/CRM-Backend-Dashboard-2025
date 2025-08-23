@@ -98,11 +98,11 @@ export interface RetentionMemberDetail {
   withdrawCases: number
 }
 
-// Get USC KPI Data from member_report_usc table
+// Get USC KPI Data from member_report_daily table
 export async function getUSCKPIData(
   year: string,
   month: string,
-  currency: string = 'MYR',
+  currency: string = 'USC',
   line: string = 'All',
   startDate?: string | null,
   endDate?: string | null
@@ -110,9 +110,9 @@ export async function getUSCKPIData(
   try {
     console.log('🔍 [USCLogic] Fetching USC KPI data:', { year, month, currency, line, startDate, endDate })
 
-    // Build query for member_report_usc table
+    // Build query for member_report_daily table
     let query = supabase
-      .from('member_report_usc')
+      .from('member_report_daily')
       .select('deposit_amount, deposit_cases, withdraw_amount, withdraw_cases, add_transaction, deduct_transaction, bonus, valid_amount, userkey, user_name, unique_code, currency, line, date')
 
     // Apply date filter based on mode
@@ -149,20 +149,20 @@ export async function getUSCKPIData(
 
     // Debug: Check what lines are available
     const { data: availableLines } = await supabase
-      .from('member_report_usc')
+      .from('member_report_daily')
       .select('line')
       .limit(10)
     console.log('🔍 [USCLogic] Available lines in database:', Array.from(new Set(availableLines?.map(row => row.line) || [])))
     
     // Debug: Check total records in table
     const { count: totalRecords } = await supabase
-      .from('member_report_usc')
+      .from('member_report_daily')
       .select('*', { count: 'exact', head: true })
-    console.log('🔍 [USCLogic] Total records in member_report_usc:', totalRecords)
+    console.log('🔍 [USCLogic] Total records in member_report_daily:', totalRecords)
     
     // Debug: Check sample data without filters
     const { data: sampleData } = await supabase
-      .from('member_report_usc')
+      .from('member_report_daily')
       .select('*')
       .limit(3)
     console.log('🔍 [USCLogic] Sample data without filters:', sampleData)
@@ -283,7 +283,7 @@ async function getChurnMembersUSC(
     // Get users from previous month
     const prevQuery = (() => {
       let query = supabase
-        .from('member_report_usc')
+        .from('member_report_daily')
         .select('userkey')
         .eq('year', prevYear)
         .eq('month', prevMonth)
@@ -303,7 +303,7 @@ async function getChurnMembersUSC(
     // Get users from current month
     const currentQuery = (() => {
       let query = supabase
-        .from('member_report_usc')
+        .from('member_report_daily')
         .select('userkey')
         .eq('year', year)
         .eq('month', month)
@@ -437,7 +437,7 @@ function calculateUSCKPIs(data: any[], newMemberData: any[], currency: string, c
 export async function getUSCMoMData(
   year: string,
   month: string,
-  currency: string = 'MYR',
+  currency: string = 'USC',
   line: string = 'All',
   startDate?: string | null,
   endDate?: string | null
@@ -502,7 +502,7 @@ export async function getUSCMoMData(
 export async function getUSCDailyAverageData(
   year: string,
   month: string,
-  currency: string = 'MYR',
+  currency: string = 'USC',
   line: string = 'All',
   startDate?: string | null,
   endDate?: string | null
@@ -556,7 +556,7 @@ export async function getUSCDailyAverageData(
 export async function getUSCChartData(
   year: string,
   month: string,
-  currency: string = 'MYR',
+  currency: string = 'USC',
   line: string = 'All',
   startDate?: string | null,
   endDate?: string | null
@@ -748,7 +748,7 @@ async function getDailyChartData(startDate: string, endDate: string | null, curr
     
     try {
       let query = supabase
-        .from('member_report_usc')
+        .from('member_report_daily')
         .select('deposit_amount, deposit_cases, withdraw_amount, withdraw_cases, add_transaction, deduct_transaction, userkey, unique_code')
         .gte('date', currentDate.toISOString().split('T')[0])
         .lt('date', new Date(currentDate.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0])
@@ -841,9 +841,9 @@ async function getMonthlyChartData(year: number, months: string[], currency: str
       const startDate = `${year}-${monthIndex.toString().padStart(2, '0')}-01`
       const endDate = `${year}-${(monthIndex + 1).toString().padStart(2, '0')}-01`
       
-      // Get member_report_usc data for this month
+      // Get member_report_daily data for this month
       let query = supabase
-        .from('member_report_usc')
+        .from('member_report_daily')
         .select('deposit_amount, deposit_cases, withdraw_amount, withdraw_cases, add_transaction, deduct_transaction, userkey, unique_code')
         .gte('date', startDate)
         .lt('date', endDate)
@@ -1075,7 +1075,7 @@ function getDefaultUSCMoM(): USCKPIMoM {
 export async function getAllUSCKPIsWithMoM(
   year: string,
   month: string,
-  currency: string = 'MYR',
+  currency: string = 'USC',
   line: string = 'All',
   startDate?: string | null,
   endDate?: string | null
@@ -1241,7 +1241,7 @@ function getDefaultUSCChartData() {
 export async function getChurnMemberData(
   year: string,
   month: string,
-  currency: string = 'MYR',
+  currency: string = 'USC',
   line: string = 'All',
   startDate?: string | null,
   endDate?: string | null,
@@ -1284,7 +1284,7 @@ export async function getChurnMemberData(
 export async function getRetentionDayData(
   year: string,
   month: string,
-  currency: string = 'MYR',
+  currency: string = 'USC',
   line: string = 'All',
   startDate?: string | null,
   endDate?: string | null
@@ -1346,7 +1346,7 @@ async function getActiveMembersInPeriod(
 ): Promise<string[]> {
   try {
     let query = supabase
-      .from('member_report_usc')
+      .from('member_report_daily')
       .select('userkey, deposit_amount, date')
       .gt('deposit_amount', 0)
 
@@ -1432,7 +1432,7 @@ async function getSevenDayMemberData(
     console.log('🔍 [USCLogic] getSevenDayMemberData called with:', { year, month, currency, line, startDate, endDate })
     
     let query = supabase
-      .from('member_report_usc')
+      .from('member_report_daily')
       .select('userkey, user_name, unique_code, deposit_amount, deposit_cases, withdraw_amount, withdraw_cases, bonus, date')
       .gt('deposit_amount', 0)
 

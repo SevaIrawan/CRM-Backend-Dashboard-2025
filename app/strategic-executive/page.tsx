@@ -47,7 +47,8 @@ export default function StrategicExecutive() {
     deductBonus: 0,
     conversionRate: 0,
     holdPercentage: 0,
-    headcount: 0
+    headcount: 0,
+    depositAmountUser: 0
   })
 
   const [momData, setMomData] = useState({

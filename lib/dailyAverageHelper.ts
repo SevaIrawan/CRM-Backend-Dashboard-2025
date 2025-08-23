@@ -123,7 +123,7 @@ export const isCurrentMonth = (year: string, month: string): boolean => {
 };
 
 /**
- * Get last update date from member_report_monthly table
+ * Get last update date from member_report_daily table
  * This function queries the database to find the latest date available for the selected month
  */
 export const getLastUpdateDateFromDatabase = async (year: string, month: string): Promise<number> => {
@@ -132,7 +132,7 @@ export const getLastUpdateDateFromDatabase = async (year: string, month: string)
     
     // Query database untuk tanggal terakhir data tersedia
     const { data, error } = await supabase
-      .from('member_report_monthly')
+      .from('member_report_daily')
       .select('date')
       .eq('year', year)
       .eq('month', month)

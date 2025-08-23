@@ -5,10 +5,11 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔍 [USC Line API] Fetching line options')
 
-    // Get unique lines from member_report_usc table
+    // Get unique lines from member_report_daily table (currency locked to USC)
     const { data: lineData, error: lineError } = await supabase
-      .from('member_report_usc')
+      .from('member_report_daily')
       .select('line')
+      .eq('currency', 'USC')
       .not('line', 'is', null)
       .order('line', { ascending: true })
 
@@ -31,7 +32,8 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('✅ [USC Line API] Line options fetched:', {
-      linesCount: lines.length
+      linesCount: lines.length,
+      currency: 'USC'
     })
 
     return NextResponse.json(response)

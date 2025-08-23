@@ -5,10 +5,11 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔍 [USC Slicer API] Fetching slicer options')
 
-    // Get unique years from member_report_usc table
+    // Get unique years from member_report_daily table (currency locked to USC)
     const { data: yearData, error: yearError } = await supabase
-      .from('member_report_usc')
+      .from('member_report_daily')
       .select('date')
+      .eq('currency', 'USC')
       .order('date', { ascending: false })
 
     if (yearError) {
@@ -22,10 +23,11 @@ export async function GET(request: NextRequest) {
     ))
     const years = uniqueYears.sort((a, b) => parseInt(b) - parseInt(a))
 
-    // Get unique months from member_report_usc table
+    // Get unique months from member_report_daily table (currency locked to USC)
     const { data: monthData, error: monthError } = await supabase
-      .from('member_report_usc')
+      .from('member_report_daily')
       .select('date')
+      .eq('currency', 'USC')
       .order('date', { ascending: true })
 
     if (monthError) {
@@ -46,9 +48,9 @@ export async function GET(request: NextRequest) {
     ))
     const months = uniqueMonths
 
-    // Get unique lines from member_report_usc table (currency locked to USC)
+    // Get unique lines from member_report_daily table (currency locked to USC)
     const { data: lineData, error: lineError } = await supabase
-      .from('member_report_usc')
+      .from('member_report_daily')
       .select('line')
       .eq('currency', 'USC')
       .not('line', 'is', null)
@@ -77,7 +79,8 @@ export async function GET(request: NextRequest) {
     console.log('✅ [USC Slicer API] Slicer options fetched:', {
       yearsCount: years.length,
       monthsCount: months.length,
-      linesCount: lines.length
+      linesCount: lines.length,
+      currency: 'USC'
     })
 
     return NextResponse.json(response)

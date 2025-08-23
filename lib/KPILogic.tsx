@@ -52,6 +52,7 @@ export interface KPIData {
   conversionRate: number
   holdPercentage: number
   headcount: number
+  depositAmountUser: number
 }
 
 // ===========================================
@@ -99,7 +100,7 @@ export interface RawKPIData {
 export const KPI_FORMULAS = {
   // ✅ CORE BUSINESS FORMULAS - Updated sesuai Data Dictionary terbaru
   
-  // Net Profit from database = SUM(net_profit) dari member_report_monthly
+  // Net Profit from database = SUM(net_profit) dari member_report_daily
   NET_PROFIT_FROM_DB: (data: RawKPIData): number => {
     return data.member.net_profit
   },
@@ -186,23 +187,30 @@ export const KPI_FORMULAS = {
   },
 
   // ✅ NEW: Hold Percentage = GGR / Valid Amount * 100%
-  // Where: GGR = Deposit Amount - Withdraw Amount, Valid Amount = Sum(member_report_monthly[valid_amount])
+  // Where: GGR = Deposit Amount - Withdraw Amount, Valid Amount = Sum(member_report_daily[valid_amount])
   HOLD_PERCENTAGE: (ggr: number, validAmount: number): number => {
     return validAmount > 0 ? (ggr / validAmount) * 100 : 0
+  },
+
+  // ✅ NEW: Deposit Amount User = Deposit Amount / Active Member
+  // Where: Deposit Amount = SUM(member_report_daily[deposit_amount])
+  // Where: Active Member = COUNT(DISTINCT member_report_daily[userkey])
+  DEPOSIT_AMOUNT_USER: (depositAmount: number, activeMember: number): number => {
+    return activeMember > 0 ? depositAmount / activeMember : 0
   },
 
   // ✅ UTILITY FORMULAS
 
   // Gross Profit = Deposit Amount - Withdraw Amount
-  // Where: Deposit Amount = SUM(member_report_monthly[deposit_amount])
-  // Where: Withdraw Amount = SUM(member_report_monthly[withdraw_amount])
+  // Where: Deposit Amount = SUM(member_report_daily[deposit_amount])
+  // Where: Withdraw Amount = SUM(member_report_daily[withdraw_amount])
   GROSS_PROFIT: (depositAmount: number, withdrawAmount: number): number => {
     return depositAmount - withdrawAmount
   },
 
   // Net Profit = (Deposit Amount + Add Transaction) - (Withdraw Amount + Deduct Transaction)
-  // Where: Deposit Amount = SUM(member_report_monthly[deposit_amount])
-  // Where: Withdraw Amount = SUM(member_report_monthly[withdraw_amount])
+  // Where: Deposit Amount = SUM(member_report_daily[deposit_amount])
+  // Where: Withdraw Amount = SUM(member_report_daily[withdraw_amount])
   NET_PROFIT: (depositAmount: number, withdrawAmount: number, addTransaction: number, deductTransaction: number): number => {
     return (depositAmount + addTransaction) - (withdrawAmount + deductTransaction)
   },
@@ -309,10 +317,10 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
     // ✅ PARALLEL FETCH dengan DATABASE AGGREGATION - seperti PostgreSQL
     const [activeMemberResult, newDepositorResult, newRegisterResult, memberReportResult, churnResult] = await Promise.all([
       
-      // 1. ACTIVE MEMBER & PURE USER = SOURCE TABLE deposit_monthly[userkey, unique_code]
+      // 1. ACTIVE MEMBER & PURE USER = SOURCE TABLE member_report_daily[userkey, unique_code]
       (() => {
         let query = supabase
-          .from('deposit_monthly')
+          .from('member_report_daily')
           .select('userkey, unique_code')
           .eq('year', filters.year)
           .eq('month', filters.month)
@@ -341,10 +349,10 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
         return query
       })(),
 
-      // 3. NEW REGISTER = SOURCE TABLE new_register[new_register]
+      // 3. NEW REGISTER = SOURCE TABLE new_depositor[new_register]
       (() => {
         let query = supabase
-          .from('new_register')
+          .from('new_depositor')
           .select('new_register')
           .eq('year', filters.year)
           .eq('month', filters.month)
@@ -357,13 +365,13 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
         return query
       })(),
 
-      // 4-7. DEPOSIT AMOUNT, WITHDRAW AMOUNT, GROSS PROFIT, NET PROFIT, VALID AMOUNT = SOURCE TABLE member_report_monthly
-      // Withdraw Amount = SUM(member_report_monthly[withdraw_amount])
-      // Deposit Amount = SUM(member_report_monthly[deposit_amount])
-      // Valid Amount = SUM(member_report_monthly[valid_amount])
+      // 4-7. DEPOSIT AMOUNT, WITHDRAW AMOUNT, GROSS PROFIT, NET PROFIT, VALID AMOUNT = SOURCE TABLE member_report_daily
+      // Withdraw Amount = SUM(member_report_daily[withdraw_amount])
+      // Deposit Amount = SUM(member_report_daily[deposit_amount])
+      // Valid Amount = SUM(member_report_daily[valid_amount])
       (() => {
         let query = supabase
-          .from('member_report_monthly')
+          .from('member_report_daily')
           .select('deposit_amount, withdraw_amount, add_transaction, deduct_transaction, deposit_cases, withdraw_cases, valid_amount, userkey')
           .eq('year', filters.year)
           .eq('month', filters.month)
@@ -398,7 +406,7 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
       memberReportData: memberReportData.length
     })
 
-    // 1. ACTIVE MEMBER = unique count dari deposit_monthly[userkey]
+    // 1. ACTIVE MEMBER = unique count dari member_report_daily[userkey]
     const uniqueUserKeys = Array.from(new Set(activeMemberData.map((item: any) => item.userkey).filter(Boolean)))
     const activeMembersCount = uniqueUserKeys.length
 
@@ -406,26 +414,26 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
     const newDepositorAgg = newDepositorData.reduce((acc: any, item: any) => 
       acc + (Number(item.new_depositor) || 0), 0)
 
-    // 3. NEW REGISTER = sum dari new_register[new_register]
+    // 3. NEW REGISTER = sum dari new_depositor[new_register]
     const newRegisterAgg = newRegisterData.reduce((acc: any, item: any) => 
       acc + (Number(item.new_register) || 0), 0)
 
-    // 4. PURE USER = count unique dari deposit_monthly[unique_code]
+    // 4. PURE USER = count unique dari member_report_daily[unique_code]
     const uniqueCodes = Array.from(new Set(activeMemberData.map((item: any) => item.unique_code).filter(Boolean)))
     const pureUserCount = uniqueCodes.length
 
-    // 5-8. Aggregate member_report_monthly data
-    // Withdraw Amount = SUM(member_report_monthly[withdraw_amount])
-    // Deposit Amount = SUM(member_report_monthly[deposit_amount])
-    // Valid Amount = SUM(member_report_monthly[valid_amount])
+    // 5-8. Aggregate member_report_daily data
+    // Withdraw Amount = SUM(member_report_daily[withdraw_amount])
+    // Deposit Amount = SUM(member_report_daily[deposit_amount])
+    // Valid Amount = SUM(member_report_daily[valid_amount])
     const memberReportAgg = memberReportData.reduce((acc: any, item: any) => ({
-      deposit_amount: acc.deposit_amount + (Number(item.deposit_amount) || 0), // SUM(member_report_monthly[deposit_amount])
-      withdraw_amount: acc.withdraw_amount + (Number(item.withdraw_amount) || 0), // SUM(member_report_monthly[withdraw_amount])
+      deposit_amount: acc.deposit_amount + (Number(item.deposit_amount) || 0), // SUM(member_report_daily[deposit_amount])
+      withdraw_amount: acc.withdraw_amount + (Number(item.withdraw_amount) || 0), // SUM(member_report_daily[withdraw_amount])
       add_transaction: acc.add_transaction + (Number(item.add_transaction) || 0),
       deduct_transaction: acc.deduct_transaction + (Number(item.deduct_transaction) || 0),
       deposit_cases: acc.deposit_cases + (Number(item.deposit_cases) || 0), // SUM dari deposit_cases
       withdraw_cases: acc.withdraw_cases + (Number(item.withdraw_cases) || 0),
-      valid_amount: acc.valid_amount + (Number(item.valid_amount) || 0) // SUM(member_report_monthly[valid_amount])
+      valid_amount: acc.valid_amount + (Number(item.valid_amount) || 0) // SUM(member_report_daily[valid_amount])
     }), { deposit_amount: 0, withdraw_amount: 0, add_transaction: 0, deduct_transaction: 0, deposit_cases: 0, withdraw_cases: 0, valid_amount: 0 })
 
     console.log('📊 [KPILogic] Aggregated data:', {
@@ -445,8 +453,8 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
       deposit: {
         deposit_amount: depositAmount,
         add_transaction: Number(memberReportAgg.add_transaction) || 0,
-        active_members: activeMembersCount, // Active Member dari deposit_monthly[userkey]
-        deposit_cases: Number(memberReportAgg.deposit_cases) || 0 // Deposit cases dari member_report_monthly
+        active_members: activeMembersCount, // Active Member dari member_report_daily[userkey]
+        deposit_cases: Number(memberReportAgg.deposit_cases) || 0 // Deposit cases dari member_report_daily
       },
       withdraw: {
         withdraw_amount: withdrawAmount,
@@ -464,13 +472,13 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
         new_depositor: newDepositorAgg
       },
       newRegister: {
-        new_register: newRegisterAgg // New Register dari new_register[new_register]
+        new_register: newRegisterAgg // New Register dari new_depositor[new_register]
       },
       churn: {
         churn_members: churnResult
       },
       pureUser: {
-        unique_codes: pureUserCount // Pure User dari deposit_monthly[unique_code]
+        unique_codes: pureUserCount // Pure User dari member_report_daily[unique_code]
       }
     }
 
@@ -553,7 +561,7 @@ async function getChurnMembers(filters: SlicerFilters): Promise<number> {
     // Get users from previous month
     const prevQuery = (() => {
       let query = supabase
-        .from('deposit_monthly')
+        .from('member_report_daily')
         .select('userkey, unique_code')
         .eq('year', prevYear)
         .eq('month', prevMonth)
@@ -573,7 +581,7 @@ async function getChurnMembers(filters: SlicerFilters): Promise<number> {
     // Get users from current month
     const currentQuery = (() => {
       let query = supabase
-        .from('deposit_monthly')
+        .from('member_report_daily')
         .select('userkey, unique_code')
         .eq('year', filters.year)
         .eq('month', filters.month)
@@ -851,7 +859,8 @@ export async function calculateKPIs(filters: SlicerFilters): Promise<KPIData> {
       deductBonus: rawData.member.deduct_bonus,
       conversionRate: KPI_FORMULAS.ROUND(KPI_FORMULAS.NEW_CUSTOMER_CONVERSION_RATE(rawData)),
       holdPercentage: KPI_FORMULAS.ROUND(KPI_FORMULAS.HOLD_PERCENTAGE(rawData.member.ggr, rawData.member.valid_bet_amount)),
-      headcount: headcount
+      headcount: headcount,
+      depositAmountUser: KPI_FORMULAS.ROUND(KPI_FORMULAS.DEPOSIT_AMOUNT_USER(rawData.deposit.deposit_amount, rawData.deposit.active_members))
     }
 
     console.log('✅ [KPILogic] KPIs calculated successfully:', {
@@ -874,7 +883,7 @@ export async function calculateKPIs(filters: SlicerFilters): Promise<KPIData> {
       pureUser: 0, newRegister: 0, churnMember: 0, depositCases: 0, withdrawCases: 0, winrate: 0, churnRate: 0,
       retentionRate: 0, growthRate: 0, avgTransactionValue: 0, purchaseFrequency: 0,
       customerLifetimeValue: 0, avgCustomerLifespan: 0, customerMaturityIndex: 0, ggrPerUser: 0, ggrPerPureUser: 0,
-      addBonus: 0, deductBonus: 0, conversionRate: 0, holdPercentage: 0, headcount: 0
+      addBonus: 0, deductBonus: 0, conversionRate: 0, holdPercentage: 0, headcount: 0, depositAmountUser: 0
     }
   }
 }
@@ -934,7 +943,8 @@ export async function getAllKPIsWithMoM(filters: SlicerFilters): Promise<{ curre
       deductBonus: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.deductBonus, previousData.deductBonus),
       conversionRate: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.conversionRate, previousData.conversionRate),
       holdPercentage: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.holdPercentage, previousData.holdPercentage),
-      headcount: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.headcount, previousData.headcount)
+      headcount: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.headcount, previousData.headcount),
+      depositAmountUser: KPI_FORMULAS.PERCENTAGE_CHANGE(currentData.depositAmountUser, previousData.depositAmountUser)
     }
 
     // 🔍 DEBUG: Log raw MoM calculation untuk PURE USER
@@ -1015,7 +1025,7 @@ export async function getAllKPIsWithMoM(filters: SlicerFilters): Promise<{ curre
         pureUser: 0, newRegister: 0, churnMember: 0, depositCases: 0, withdrawCases: 0, winrate: 0, churnRate: 0,
         retentionRate: 0, growthRate: 0, avgTransactionValue: 0, purchaseFrequency: 0,
         customerLifetimeValue: 0, avgCustomerLifespan: 0, customerMaturityIndex: 0, ggrPerUser: 0, ggrPerPureUser: 0,
-        addBonus: 0, deductBonus: 0, conversionRate: 0, holdPercentage: 0, headcount: 0
+        addBonus: 0, deductBonus: 0, conversionRate: 0, holdPercentage: 0, headcount: 0, depositAmountUser: 0
       },
       mom: {
         activeMember: 0, newDepositor: 0, depositAmount: 0, grossGamingRevenue: 0, netProfit: 0,
@@ -1023,7 +1033,7 @@ export async function getAllKPIsWithMoM(filters: SlicerFilters): Promise<{ curre
         pureUser: 0, newRegister: 0, churnMember: 0, depositCases: 0, withdrawCases: 0, winrate: 0,
         churnRate: 0, retentionRate: 0, growthRate: 0, avgTransactionValue: 0, purchaseFrequency: 0,
         customerLifetimeValue: 0, avgCustomerLifespan: 0, customerMaturityIndex: 0, ggrPerUser: 0,
-        ggrPerPureUser: 0, addBonus: 0, deductBonus: 0, conversionRate: 0, holdPercentage: 0, headcount: 0
+        ggrPerPureUser: 0, addBonus: 0, deductBonus: 0, conversionRate: 0, holdPercentage: 0, headcount: 0, depositAmountUser: 0
       }
     }
   }
@@ -1038,10 +1048,10 @@ export async function getSlicerData(): Promise<SlicerData> {
     console.log('🔄 [KPILogic] Fetching slicer data...')
 
     const [yearsResult, monthsResult, currenciesResult, linesResult] = await Promise.all([
-      supabase.from('member_report_monthly').select('year'),
-      supabase.from('member_report_monthly').select('month'),
-      supabase.from('member_report_monthly').select('currency'),
-      supabase.from('member_report_monthly').select('line')
+      supabase.from('member_report_daily').select('year'),
+      supabase.from('member_report_daily').select('month'),
+      supabase.from('member_report_daily').select('currency'),
+      supabase.from('member_report_daily').select('line')
     ])
 
     const years = Array.from(new Set((yearsResult.data || []).map((item: any) => item.year).filter(Boolean))).sort()
@@ -1069,7 +1079,7 @@ export async function getSlicerData(): Promise<SlicerData> {
 export async function getMonthsForYear(year: string, currency?: string): Promise<string[]> {
   try {
     let query = supabase
-      .from('member_report_monthly')
+      .from('member_report_daily')
       .select('month')
       .eq('year', year)
     
@@ -1101,7 +1111,7 @@ export async function getMonthsForYear(year: string, currency?: string): Promise
 export async function getLinesForCurrency(currency: string, year?: string): Promise<string[]> {
   try {
     let query = supabase
-      .from('member_report_monthly')
+      .from('member_report_daily')
       .select('line')
       .eq('currency', currency)
     
@@ -1604,9 +1614,9 @@ export async function debugTableData(): Promise<void> {
   try {
     console.log('🔍 [KPILogic] Debugging table data...')
     
-    // Check all months in member_report_monthly
+    // Check all months in member_report_daily
     const { data: allMonths, error: monthsError } = await supabase
-      .from('member_report_monthly')
+      .from('member_report_daily')
       .select('month, year, currency')
     
     if (monthsError) throw monthsError
@@ -1615,13 +1625,13 @@ export async function debugTableData(): Promise<void> {
     const uniqueYears = Array.from(new Set(allMonths?.map((item: any) => item.year) || []))
     const uniqueCurrencies = Array.from(new Set(allMonths?.map((item: any) => item.currency) || []))
     
-    console.log('📊 [KPILogic] All months in member_report_monthly:', uniqueMonths)
-    console.log('📊 [KPILogic] All years in member_report_monthly:', uniqueYears)
-    console.log('📊 [KPILogic] All currencies in member_report_monthly:', uniqueCurrencies)
+    console.log('📊 [KPILogic] All months in member_report_daily:', uniqueMonths)
+    console.log('📊 [KPILogic] All years in member_report_daily:', uniqueYears)
+    console.log('📊 [KPILogic] All currencies in member_report_daily:', uniqueCurrencies)
     
     // Check months for year 2025 specifically
     const { data: year2025Data, error: year2025Error } = await supabase
-      .from('member_report_monthly')
+      .from('member_report_daily')
       .select('month, currency')
       .eq('year', '2025')
     
@@ -1634,7 +1644,7 @@ export async function debugTableData(): Promise<void> {
     
     // Check months for year 2025 with MYR currency
     const { data: year2025MYRData, error: year2025MYRError } = await supabase
-      .from('member_report_monthly')
+      .from('member_report_daily')
       .select('month')
       .eq('year', '2025')
       .eq('currency', 'MYR')
@@ -1646,7 +1656,7 @@ export async function debugTableData(): Promise<void> {
     
     // Check if July exists in any year
     const { data: julyData, error: julyError } = await supabase
-      .from('member_report_monthly')
+      .from('member_report_daily')
       .select('month, year, currency')
       .eq('month', 'July')
     
