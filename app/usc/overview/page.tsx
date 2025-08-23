@@ -20,7 +20,7 @@ export default function USCOverview() {
   const [selectedYear, setSelectedYear] = useState('2025')
   const [selectedMonth, setSelectedMonth] = useState('January')
   const [selectedCurrency, setSelectedCurrency] = useState('USC') // Hidden but active
-  const [selectedLine, setSelectedLine] = useState('All')
+  const [selectedLine, setSelectedLine] = useState('All Lines')
   const [selectedStartDate, setSelectedStartDate] = useState('')
   const [selectedEndDate, setSelectedEndDate] = useState('')
   const [slicerMode, setSlicerMode] = useState<'month' | 'range'>('month') // 'month' or 'range'

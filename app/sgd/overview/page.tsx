@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { getSlicerData, getAllKPIsWithMoM, getLineChartData, SlicerFilters, SlicerData, KPIData, getLinesForCurrency, calculateKPIs, getMonthsForYear } from '@/lib/KPILogic';
+import { supabase } from '@/lib/supabase';
 import Layout from '@/components/Layout';
 import Frame from '@/components/Frame';
 import { YearSlicer, MonthSlicer, CurrencySlicer, LineSlicer } from '@/components/slicers';
@@ -18,8 +19,8 @@ export default function SalesRevenuePage() {
   const [slicerData, setSlicerData] = useState<SlicerData | null>(null);
   const [selectedYear, setSelectedYear] = useState('2025');
   const [selectedMonth, setSelectedMonth] = useState('July');
-  const [selectedCurrency, setSelectedCurrency] = useState('MYR');
-  const [selectedLine, setSelectedLine] = useState('ALL');
+  const [selectedCurrency, setSelectedCurrency] = useState('SGD');
+  const [selectedLine, setSelectedLine] = useState('All');
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [filteredLines, setFilteredLines] = useState<string[]>([]);
@@ -45,25 +46,47 @@ export default function SalesRevenuePage() {
       try {
         setIsLoading(true);
         setLoadError(null);
-        console.log('🔄 [Sales Revenue] Starting data load...');
+        console.log('🔄 [SGD Sales Revenue] Starting data load with currency lock to SGD...');
 
-        // Fetch slicer data
-        const slicerDataResult = await getSlicerData();
-        console.log('📊 [Sales Revenue] Slicer data loaded:', slicerDataResult);
-        setSlicerData(slicerDataResult);
+        // Get REAL data from database for SGD currency
+        const { data: yearData } = await supabase
+          .from('member_report_daily')
+          .select('year')
+          .eq('currency', 'SGD')
+          .order('year', { ascending: false });
 
-        // Fetch filtered lines based on selected currency
-        const linesForCurrency = await getLinesForCurrency(selectedCurrency, selectedYear);
-        console.log('🔗 [Sales Revenue] Lines for currency loaded:', linesForCurrency);
-        setFilteredLines(linesForCurrency);
+        const { data: monthData } = await supabase
+          .from('member_report_daily')
+          .select('month')
+          .eq('currency', 'SGD')
+          .eq('year', selectedYear)
+          .order('month');
 
-        // Filter months based on selected year - use all available months for now
-        if (slicerDataResult.months) {
-          setFilteredMonths(slicerDataResult.months);
-        }
+        const { data: lineData } = await supabase
+          .from('member_report_daily')
+          .select('line')
+          .eq('currency', 'SGD')
+          .eq('year', selectedYear)
+          .eq('month', selectedMonth)
+          .order('line');
+
+        // Extract unique values from REAL data
+        const availableYears = Array.from(new Set(yearData?.map((row: any) => row.year?.toString()).filter(Boolean) || [])) as string[];
+        const availableMonths = Array.from(new Set(monthData?.map((row: any) => row.month).filter(Boolean) || [])) as string[];
+        const availableLines = Array.from(new Set(lineData?.map((row: any) => row.line).filter(Boolean) || [])) as string[];
+        
+        setSlicerData({
+          years: availableYears,
+          months: availableMonths,
+          currencies: ['SGD'],
+          lines: availableLines
+        });
+        
+        setFilteredLines(availableLines);
+        setFilteredMonths(availableMonths);
 
         // Fetch KPI data with current filters
-        console.log('📈 [Sales Revenue] Fetching KPI data with filters:', {
+        console.log('📈 [SGD Sales Revenue] Fetching KPI data with filters:', {
           year: selectedYear,
           month: selectedMonth,
           currency: selectedCurrency,
@@ -77,15 +100,15 @@ export default function SalesRevenuePage() {
           line: selectedLine
         });
         
-        console.log('📊 [Sales Revenue] KPI result received:', kpiResult);
-        console.log('📊 [Sales Revenue] Current KPI data:', kpiResult.current);
-        console.log('📊 [Sales Revenue] MoM data:', kpiResult.mom);
+        console.log('📊 [SGD Sales Revenue] KPI result received:', kpiResult);
+        console.log('📊 [SGD Sales Revenue] Current KPI data:', kpiResult.current);
+        console.log('📊 [SGD Sales Revenue] MoM data:', kpiResult.mom);
 
         setKpiData(kpiResult.current);
         setMomData(kpiResult.mom);
 
         // Fetch chart data
-        console.log('📈 [Sales Revenue] Fetching chart data...');
+        console.log('📈 [SGD Sales Revenue] Fetching chart data...');
         const chartFilters: SlicerFilters = {
           year: selectedYear,
           month: selectedMonth,
@@ -94,20 +117,20 @@ export default function SalesRevenuePage() {
         };
         
         const chartResult = await getLineChartData(chartFilters);
-        console.log('📊 [Sales Revenue] Chart data loaded:', chartResult);
+        console.log('📊 [SGD Sales Revenue] Chart data loaded:', chartResult);
         setLineChartData(chartResult);
         
         // Create Sales Revenue specific chart data using REAL KPI data
         const srData = await createSRChartData(chartFilters);
-        console.log('📈 [Sales Revenue] SR Chart data created with REAL data:', srData);
+        console.log('📈 [SGD Sales Revenue] SR Chart data created with REAL data:', srData);
         setSrChartData(srData);
 
       } catch (error) {
-        console.error('❌ [Sales Revenue] Error loading data:', error);
+        console.error('❌ [SGD Sales Revenue] Error loading data:', error);
         setLoadError('Failed to load data. Please try again.');
       } finally {
         setIsLoading(false);
-        console.log('✅ [Sales Revenue] Data loading completed');
+        console.log('✅ [SGD Sales Revenue] Data loading completed');
       }
     };
 
@@ -115,37 +138,20 @@ export default function SalesRevenuePage() {
     return () => clearTimeout(timeoutId);
   }, [selectedYear, selectedMonth, selectedCurrency, selectedLine]);
 
-  // Update filtered lines when currency changes
-  useEffect(() => {
-    const updateFilteredLines = async () => {
-      if (selectedCurrency) {
-        const linesForCurrency = await getLinesForCurrency(selectedCurrency, selectedYear);
-        setFilteredLines(linesForCurrency);
-        
-        // Reset line selection if current selection is not available in new currency
-        if (!linesForCurrency.includes(selectedLine)) {
-          setSelectedLine('ALL');
-        }
-      }
-    };
-
-    updateFilteredLines();
-  }, [selectedCurrency, selectedYear]);
-
-  // Update filtered months when year changes
-  useEffect(() => {
-    if (slicerData?.months) {
-      // For now, use all available months
-      setFilteredMonths(slicerData.months);
-    }
-  }, [slicerData]);
+     // Currency locked to SGD - no need to update filtered lines
+   useEffect(() => {
+     // Reset line selection if current selection is not available
+     if (!filteredLines.includes(selectedLine)) {
+       setSelectedLine('All');
+     }
+   }, [filteredLines, selectedLine]);
 
   // Calculate daily averages for ALL KPIs when KPI data changes
   useEffect(() => {
     const calculateDailyAverages = async () => {
       if (kpiData && selectedYear && selectedMonth) {
         try {
-          console.log('🔄 [Sales Revenue] Using Central Daily Average function...');
+          console.log('🔄 [SGD Sales Revenue] Using Central Daily Average function...');
           
           // Use central function - sama seperti getAllKPIsWithMoM
           const result = await getAllKPIsWithDailyAverage(kpiData, selectedYear, selectedMonth);
@@ -159,10 +165,10 @@ export default function SalesRevenuePage() {
             conversionRate: result.dailyAverage.conversionRate || 0
           });
           
-          console.log('✅ [Sales Revenue] Central Daily Average applied to ALL KPIs');
+          console.log('✅ [SGD Sales Revenue] Central Daily Average applied to ALL KPIs');
           
         } catch (error) {
-          console.error('❌ [Sales Revenue] Error with central Daily Average:', error);
+          console.error('❌ [SGD Sales Revenue] Error with central Daily Average:', error);
         }
       }
     };
@@ -377,13 +383,7 @@ export default function SalesRevenuePage() {
           />
         </div>
         
-        <div className="slicer-group">
-          <label className="slicer-label">CURRENCY:</label>
-          <CurrencySlicer 
-            value={selectedCurrency} 
-            onChange={setSelectedCurrency}
-          />
-        </div>
+                 {/* Currency locked to SGD - slicer hidden */}
         
         <div className="slicer-group">
           <label className="slicer-label">MONTH:</label>
@@ -411,7 +411,7 @@ export default function SalesRevenuePage() {
     return (
       <Layout>
         <div className="loading-container">
-          <p>Loading Sales Revenue data...</p>
+          <p>Loading SGD Sales Revenue data...</p>
         </div>
       </Layout>
     );

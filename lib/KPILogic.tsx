@@ -317,14 +317,15 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
     // ✅ PARALLEL FETCH dengan DATABASE AGGREGATION - seperti PostgreSQL
     const [activeMemberResult, newDepositorResult, newRegisterResult, memberReportResult, churnResult] = await Promise.all([
       
-      // 1. ACTIVE MEMBER & PURE USER = SOURCE TABLE member_report_daily[userkey, unique_code]
+      // 1. ACTIVE MEMBER & PURE USER = SOURCE TABLE member_report_daily[userkey, unique_code] WHERE deposit_cases > 0
       (() => {
         let query = supabase
           .from('member_report_daily')
-          .select('userkey, unique_code')
+          .select('userkey, unique_code, deposit_cases')
           .eq('year', filters.year)
           .eq('month', filters.month)
           .eq('currency', filters.currency)
+          .gt('deposit_cases', 0) // Only users with deposit_cases > 0
          
         if (filters.line && filters.line !== 'ALL') {
           query = query.eq('line', filters.line)
@@ -406,7 +407,7 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
       memberReportData: memberReportData.length
     })
 
-    // 1. ACTIVE MEMBER = unique count dari member_report_daily[userkey]
+    // 1. ACTIVE MEMBER = unique count dari member_report_daily[userkey] WHERE deposit_cases > 0
     const uniqueUserKeys = Array.from(new Set(activeMemberData.map((item: any) => item.userkey).filter(Boolean)))
     const activeMembersCount = uniqueUserKeys.length
 
@@ -558,7 +559,7 @@ async function getChurnMembers(filters: SlicerFilters): Promise<number> {
     const prevMonth = monthNames[prevMonthIndex]
     const prevYear = currentMonthIndex === 0 ? (parseInt(filters.year) - 1).toString() : filters.year
 
-    // Get users from previous month
+    // Get users from previous month (only active users with deposit_cases > 0)
     const prevQuery = (() => {
       let query = supabase
         .from('member_report_daily')
@@ -566,6 +567,7 @@ async function getChurnMembers(filters: SlicerFilters): Promise<number> {
         .eq('year', prevYear)
         .eq('month', prevMonth)
         .eq('currency', filters.currency)
+        .gt('deposit_cases', 0) // Only users with deposit_cases > 0
       
       if (filters.line && filters.line !== 'ALL') {
         query = query.eq('line', filters.line)
@@ -578,7 +580,7 @@ async function getChurnMembers(filters: SlicerFilters): Promise<number> {
 
     if (prevError) throw prevError
 
-    // Get users from current month
+    // Get users from current month (only active users with deposit_cases > 0)
     const currentQuery = (() => {
       let query = supabase
         .from('member_report_daily')
@@ -586,6 +588,7 @@ async function getChurnMembers(filters: SlicerFilters): Promise<number> {
         .eq('year', filters.year)
         .eq('month', filters.month)
         .eq('currency', filters.currency)
+        .gt('deposit_cases', 0) // Only users with deposit_cases > 0
       
       if (filters.line && filters.line !== 'ALL') {
         query = query.eq('line', filters.line)

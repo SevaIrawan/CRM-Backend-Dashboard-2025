@@ -139,12 +139,12 @@ export async function getUSCKPIData(
       console.log('🔍 [USCLogic] No currency filter applied (All currencies)')
     }
 
-    // Apply line filter (if not "All")
-    if (line !== 'All') {
+    // Apply line filter (if not "All Lines")
+    if (line !== 'All Lines') {
       query = query.eq('line', line)
       console.log('🔍 [USCLogic] Applied line filter:', line)
     } else {
-      console.log('🔍 [USCLogic] No line filter applied (All lines)')
+      console.log('🔍 [USCLogic] No line filter applied (All Lines)')
     }
 
     // Debug: Check what lines are available
@@ -215,8 +215,8 @@ export async function getUSCKPIData(
         newMemberQuery = newMemberQuery.eq('currency', currency)
       }
 
-      // Apply line filter (if not "All")
-      if (line !== 'All') {
+      // Apply line filter (if not "All Lines")
+      if (line !== 'All Lines') {
         newMemberQuery = newMemberQuery.eq('line', line)
       }
 

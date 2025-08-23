@@ -18,11 +18,11 @@ export async function GET(request: NextRequest) {
       throw lineError
     }
 
-    // Extract unique lines and add "All" option
+    // Extract unique lines and add "All Lines" option (only one, not double)
     const uniqueLines = Array.from(new Set(
       lineData?.map(row => row.line).filter(Boolean) || []
     ))
-    const lines = ['All', ...uniqueLines]
+    const lines = ['All Lines', ...uniqueLines]
 
     const response = {
       success: true,
