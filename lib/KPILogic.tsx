@@ -583,7 +583,8 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
       newDepositor: { new_depositor: 0 },
       newRegister: { new_register: 0 },
       churn: { churn_members: 0 },
-      pureUser: { unique_codes: 0 }
+      pureUser: { unique_codes: 0 },
+      customerValue: { high_value_customers: 0, low_value_customers: 0, total_customers: 0 }
     }
   }
 }
@@ -1072,7 +1073,8 @@ export async function getAllKPIsWithMoM(filters: SlicerFilters): Promise<{ curre
         pureUser: 0, newRegister: 0, churnMember: 0, depositCases: 0, withdrawCases: 0, winrate: 0, churnRate: 0,
         retentionRate: 0, growthRate: 0, avgTransactionValue: 0, purchaseFrequency: 0,
         customerLifetimeValue: 0, avgCustomerLifespan: 0, customerMaturityIndex: 0, ggrPerUser: 0, ggrPerPureUser: 0,
-        addBonus: 0, deductBonus: 0, conversionRate: 0, holdPercentage: 0, headcount: 0, depositAmountUser: 0
+        addBonus: 0, deductBonus: 0, conversionRate: 0, holdPercentage: 0, headcount: 0, depositAmountUser: 0,
+        highValueCustomers: 0, lowValueCustomers: 0, totalCustomers: 0
       },
       mom: {
         activeMember: 0, newDepositor: 0, depositAmount: 0, grossGamingRevenue: 0, netProfit: 0,
@@ -1080,7 +1082,8 @@ export async function getAllKPIsWithMoM(filters: SlicerFilters): Promise<{ curre
         pureUser: 0, newRegister: 0, churnMember: 0, depositCases: 0, withdrawCases: 0, winrate: 0,
         churnRate: 0, retentionRate: 0, growthRate: 0, avgTransactionValue: 0, purchaseFrequency: 0,
         customerLifetimeValue: 0, avgCustomerLifespan: 0, customerMaturityIndex: 0, ggrPerUser: 0,
-        ggrPerPureUser: 0, addBonus: 0, deductBonus: 0, conversionRate: 0, holdPercentage: 0, headcount: 0, depositAmountUser: 0
+        ggrPerPureUser: 0, addBonus: 0, deductBonus: 0, conversionRate: 0, holdPercentage: 0, headcount: 0, depositAmountUser: 0,
+        highValueCustomers: 0, lowValueCustomers: 0, totalCustomers: 0
       }
     }
   }
@@ -2294,17 +2297,17 @@ export async function getCustomerValueData(
     const customerTotals: { [key: string]: CustomerValueDetail } = {}
 
     data.forEach(row => {
-      const userkey = row.userkey
-      const depositAmount = row.deposit_amount || 0
+      const userkey = row.userkey as string
+      const depositAmount = (row.deposit_amount as number) || 0
       
       if (!customerTotals[userkey]) {
         customerTotals[userkey] = {
           userkey,
-          userName: row.user_name || '',
-          uniqueCode: row.unique_code || '',
+          userName: (row.user_name as string) || '',
+          uniqueCode: (row.unique_code as string) || '',
           depositAmount: 0,
           customerValue: '',
-          currency: row.currency || currency
+          currency: (row.currency as string) || currency
         }
       }
       

@@ -16,7 +16,7 @@ import { calculateDailyAverage, getMonthInfo, getAllKPIsWithDailyAverage } from 
 export default function StrategicExecutive() {
   
   // State untuk KPI data
-  const [kpiData, setKpiData] = useState<KPIData>({
+    const [kpiData, setKpiData] = useState<KPIData>({ 
     activeMember: 0,
     newDepositor: 0,
     depositAmount: 0,
@@ -48,7 +48,10 @@ export default function StrategicExecutive() {
     conversionRate: 0,
     holdPercentage: 0,
     headcount: 0,
-    depositAmountUser: 0
+    depositAmountUser: 0,
+    highValueCustomers: 0,
+    lowValueCustomers: 0,
+    totalCustomers: 0
   })
 
   const [momData, setMomData] = useState({
