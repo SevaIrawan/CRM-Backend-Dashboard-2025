@@ -1195,8 +1195,8 @@ export async function getLineChartData(filters: SlicerFilters): Promise<any> {
     console.log('📈 [KPILogic] Fetching line chart data with dynamic categories...')
     console.log('🔍 [KPILogic] Filters:', filters)
     
-    // Get dynamic months for the selected year
-    const months = await getMonthsForYear(filters.year)
+    // Get dynamic months for the selected year and currency
+    const months = await getMonthsForYear(filters.year, filters.currency)
     console.log('📅 [KPILogic] Dynamic months for chart:', months)
     
     if (!months || months.length === 0) {
@@ -1409,6 +1409,131 @@ export async function getLineChartData(filters: SlicerFilters): Promise<any> {
       categories: months.map(month => month.substring(0, 3))
     }
 
+    // Member Analytic Chart Data
+    // Row 2 - Chart 1: New Register vs New Depositor Trend
+    const newRegisterData = monthlyData.map(data => data.newRegister)
+    const newDepositorDataMember = monthlyData.map(data => data.newDepositor)
+    
+    const newRegisterTrend = {
+      series: [
+        { 
+          name: 'New Register', 
+          data: newRegisterData
+        }
+      ],
+      categories: months.map(month => month.substring(0, 3))
+    }
+    
+    const newDepositorTrend = {
+      series: [
+        { 
+          name: 'New Depositor', 
+          data: newDepositorDataMember
+        }
+      ],
+      categories: months.map(month => month.substring(0, 3))
+    }
+    
+    // Row 2 - Chart 2: Active Member vs Pure Member Trend
+    const activeMemberTrendData = monthlyData.map(data => data.activeMember)
+    const pureMemberTrendData = monthlyData.map(data => data.pureMember)
+    
+    const activeMemberTrend = {
+      series: [
+        { 
+          name: 'Active Member', 
+          data: activeMemberTrendData
+        }
+      ],
+      categories: months.map(month => month.substring(0, 3))
+    }
+    
+    const pureMemberTrend = {
+      series: [
+        { 
+          name: 'Pure Member', 
+          data: pureMemberTrendData
+        }
+      ],
+      categories: months.map(month => month.substring(0, 3))
+    }
+
+    // Row 3 - Chart 1: GGR User Trend
+    const ggrUserDataMember = monthlyData.map(data => 
+      data.activeMember > 0 ? data.netProfit / data.activeMember : 0
+    )
+    const ggrUserTrendMember = {
+      series: [
+        {
+          name: 'GGR User',
+          data: ggrUserDataMember
+        }
+      ],
+      categories: months.map(month => month.substring(0, 3))
+    }
+
+    // Row 3 - Chart 2: Deposit Amount User
+    const depositAmountUserData = monthlyData.map(data => 
+      data.activeMember > 0 ? data.depositAmount / data.activeMember : 0
+    )
+    const depositAmountUserTrend = {
+      series: [
+        {
+          name: 'Deposit Amount User',
+          data: depositAmountUserData
+        }
+      ],
+      categories: months.map(month => month.substring(0, 3))
+    }
+
+    // Row 4 - Chart 1: Retention Rate Trend
+    const retentionRateData = monthlyData.map(data => data.retentionRate || 0)
+    const retentionRateTrend = {
+      series: [
+        {
+          name: 'Retention Rate',
+          data: retentionRateData
+        }
+      ],
+      categories: months.map(month => month.substring(0, 3))
+    }
+
+    // Row 4 - Chart 1: Churn Rate Trend
+    const churnRateData = monthlyData.map(data => data.churnRate || 0)
+    const churnRateTrend = {
+      series: [
+        {
+          name: 'Churn Rate',
+          data: churnRateData
+        }
+      ],
+      categories: months.map(month => month.substring(0, 3))
+    }
+
+    // Row 4 - Chart 2: Customer Lifetime Value Trend
+    const customerLifetimeValueData = monthlyData.map(data => data.customerLifetimeValue || 0)
+    const customerLifetimeValueTrend = {
+      series: [
+        {
+          name: 'Customer Lifetime Value',
+          data: customerLifetimeValueData
+        }
+      ],
+      categories: months.map(month => month.substring(0, 3))
+    }
+
+    // Row 4 - Chart 2: Purchase Frequency Trend
+    const purchaseFrequencyData = monthlyData.map(data => data.purchaseFrequency || 0)
+    const purchaseFrequencyTrend = {
+      series: [
+        {
+          name: 'Purchase Frequency',
+          data: purchaseFrequencyData
+        }
+      ],
+      categories: months.map(month => month.substring(0, 3))
+    }
+
     return {
       success: true,
       retentionChurnTrend,
@@ -1418,7 +1543,18 @@ export async function getLineChartData(filters: SlicerFilters): Promise<any> {
       ggrUserTrend,
       ggrPureUserTrend,
       customerValuePerHeadcount,
-      customerCountVsHeadcount
+      customerCountVsHeadcount,
+      // Member Analytic trends
+      newRegisterTrend,
+      newDepositorTrend,
+      activeMemberTrend,
+      pureMemberTrend,
+      ggrUserTrendMember,
+      depositAmountUserTrend,
+      retentionRateTrend,
+      churnRateTrend,
+      customerLifetimeValueTrend,
+      purchaseFrequencyTrend
     }
 
   } catch (error) {
@@ -1481,6 +1617,67 @@ export async function getLineChartData(filters: SlicerFilters): Promise<any> {
           { name: 'Headcount', data: [500, 520, 540, 560, 580, 600] }
         ],
         categories: fallbackMonths
+      },
+      // Member Analytic fallback trends
+      newRegisterTrend: {
+        series: [
+          { name: 'New Register', data: [] }
+        ],
+        categories: []
+      },
+      newDepositorTrend: {
+        series: [
+          { name: 'New Depositor', data: [] }
+        ],
+        categories: []
+      },
+      activeMemberTrend: {
+        series: [
+          { name: 'Active Member', data: [] }
+        ],
+        categories: []
+      },
+      pureMemberTrend: {
+        series: [
+          { name: 'Pure Member', data: [] }
+        ],
+        categories: []
+      },
+      ggrUserTrendMember: {
+        series: [
+          { name: 'GGR User', data: [] }
+        ],
+        categories: []
+      },
+      depositAmountUserTrend: {
+        series: [
+          { name: 'Deposit Amount User', data: [] }
+        ],
+        categories: []
+      },
+      retentionRateTrend: {
+        series: [
+          { name: 'Retention Rate', data: [] }
+        ],
+        categories: []
+      },
+      churnRateTrend: {
+        series: [
+          { name: 'Churn Rate', data: [] }
+        ],
+        categories: []
+      },
+      customerLifetimeValueTrend: {
+        series: [
+          { name: 'Customer Lifetime Value', data: [] }
+        ],
+        categories: []
+      },
+      purchaseFrequencyTrend: {
+        series: [
+          { name: 'Purchase Frequency', data: [] }
+        ],
+        categories: []
       }
     }
   }
@@ -1815,12 +2012,45 @@ export async function getDashboardChartData(filters: SlicerFilters): Promise<any
       categories: months.map(month => month.substring(0, 3))
     }
     
-    const newDepositorData = monthlyData.map(data => data.newDepositor)
+    const newDepositorDataDashboard = monthlyData.map(data => data.newDepositor)
     const newDepositorTrend = {
       series: [
         { 
           name: 'New Depositor', 
-          data: newDepositorData
+          data: newDepositorDataDashboard
+        }
+      ],
+      categories: months.map(month => month.substring(0, 3))
+    }
+    
+    const newRegisterData = monthlyData.map(data => data.newRegister)
+    const newRegisterTrend = {
+      series: [
+        { 
+          name: 'New Register', 
+          data: newRegisterData
+        }
+      ],
+      categories: months.map(month => month.substring(0, 3))
+    }
+    
+    const activeMemberData = monthlyData.map(data => data.activeMember)
+    const activeMemberTrend = {
+      series: [
+        { 
+          name: 'Active Member', 
+          data: activeMemberData
+        }
+      ],
+      categories: months.map(month => month.substring(0, 3))
+    }
+    
+    const pureMemberData = monthlyData.map(data => data.pureMember)
+    const pureMemberTrend = {
+      series: [
+        { 
+          name: 'Pure Member', 
+          data: pureMemberData
         }
       ],
       categories: months.map(month => month.substring(0, 3))
@@ -1855,6 +2085,9 @@ export async function getDashboardChartData(filters: SlicerFilters): Promise<any
       purchaseFrequencyTrend,
       netProfitTrend,
       newDepositorTrend,
+      newRegisterTrend,
+      activeMemberTrend,
+      pureMemberTrend,
       incomeTrend,
       costTrend
     })
@@ -1867,6 +2100,9 @@ export async function getDashboardChartData(filters: SlicerFilters): Promise<any
       purchaseFrequencyTrend,
       netProfitTrend,
       newDepositorTrend,
+      newRegisterTrend,
+      activeMemberTrend,
+      pureMemberTrend,
       incomeTrend,
       costTrend
     }
@@ -1874,59 +2110,19 @@ export async function getDashboardChartData(filters: SlicerFilters): Promise<any
   } catch (error) {
     console.error('❌ [KPILogic] Error fetching Dashboard chart data:', error)
     
-    // Fallback data with realistic trends
-    const fallbackMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
-    
     return {
       success: false,
-      retentionRateTrend: {
-        series: [
-          { name: 'Retention Rate', data: [85, 87, 89, 91, 93, 95] }
-        ],
-        categories: fallbackMonths
-      },
-      churnRateTrend: {
-        series: [
-          { name: 'Churn Rate', data: [15, 13, 11, 9, 7, 5] }
-        ],
-        categories: fallbackMonths
-      },
-      customerLifetimeValueTrend: {
-        series: [
-          { name: 'Customer Lifetime Value', data: [1200, 1350, 1500, 1650, 1800, 1950] }
-        ],
-        categories: fallbackMonths
-      },
-      purchaseFrequencyTrend: {
-        series: [
-          { name: 'Purchase Frequency', data: [6, 7, 8, 9, 10, 11] }
-        ],
-        categories: fallbackMonths
-      },
-      netProfitTrend: {
-        series: [
-          { name: 'Net Profit', data: [450000, 520000, 580000, 650000, 720000, 800000] }
-        ],
-        categories: fallbackMonths
-      },
-      newDepositorTrend: {
-        series: [
-          { name: 'New Depositor', data: [120, 135, 150, 165, 180, 195] }
-        ],
-        categories: fallbackMonths
-      },
-      incomeTrend: {
-        series: [
-          { name: 'Income', data: [800000, 850000, 900000, 950000, 1000000, 1050000] }
-        ],
-        categories: fallbackMonths
-      },
-      costTrend: {
-        series: [
-          { name: 'Cost', data: [500000, 520000, 540000, 560000, 580000, 600000] }
-        ],
-        categories: fallbackMonths
-      }
+      retentionRateTrend: { series: [], categories: [] },
+      churnRateTrend: { series: [], categories: [] },
+      customerLifetimeValueTrend: { series: [], categories: [] },
+      purchaseFrequencyTrend: { series: [], categories: [] },
+      netProfitTrend: { series: [], categories: [] },
+      newDepositorTrend: { series: [], categories: [] },
+      newRegisterTrend: { series: [], categories: [] },
+      activeMemberTrend: { series: [], categories: [] },
+      pureMemberTrend: { series: [], categories: [] },
+      incomeTrend: { series: [], categories: [] },
+      costTrend: { series: [], categories: [] }
     }
   }
 }

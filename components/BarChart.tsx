@@ -39,12 +39,12 @@ interface BarChartProps {
   horizontal?: boolean;
 }
 
-export default function BarChart({ 
-  series, 
-  categories, 
-  title, 
-  currency = 'MYR', 
-  type = 'bar', 
+export default function BarChart({
+  series,
+  categories,
+  title,
+  currency = 'MYR',
+  type = 'bar',
   color = '#3B82F6',
   chartIcon,
   horizontal = false
@@ -110,8 +110,8 @@ export default function BarChart({
     datasets: series.map((dataset, index) => ({
       label: dataset.name,
       data: dataset.data,
-      backgroundColor: index === 0 ? '#3b82f6' : '#10b981',
-      borderColor: index === 0 ? '#2563eb' : '#059669',
+      backgroundColor: index === 0 ? '#3b82f6' : '#f97316',
+      borderColor: index === 0 ? '#2563eb' : '#ea580c',
       borderWidth: 1,
       borderRadius: 4,
       borderSkipped: false,

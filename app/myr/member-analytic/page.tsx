@@ -117,9 +117,15 @@ export default function MemberAnalyticPage() {
           line: selectedLine === 'All' ? undefined : selectedLine // Jika All, tidak filter line
         };
         
-        const chartResult = await getLineChartData(chartFilters);
-        console.log('📊 [MYR Member Analytic] Chart data loaded:', chartResult);
-        setLineChartData(chartResult);
+                 const chartResult = await getLineChartData(chartFilters);
+         console.log('📊 [MYR Member Analytic] Chart data loaded:', chartResult);
+         console.log('🔍 [MYR Member Analytic] Row 4 Data Check:', {
+           retentionRateTrend: chartResult?.retentionRateTrend,
+           churnRateTrend: chartResult?.churnRateTrend,
+           customerLifetimeValueTrend: chartResult?.customerLifetimeValueTrend,
+           purchaseFrequencyTrend: chartResult?.purchaseFrequencyTrend
+         });
+         setLineChartData(chartResult);
 
       } catch (error) {
         console.error('❌ [MYR Member Analytic] Error loading data:', error);
@@ -370,76 +376,172 @@ export default function MemberAnalyticPage() {
             />
           </div>
 
-          {/* Row 2: Bar Charts (Coming Soon) */}
+          {/* Row 2: Bar Charts */}
           <div className="chart-row">
-            <div className="chart-container">
-              <div className="chart-header">
-                <h3>BAR CHART 1</h3>
-                <p>Coming Soon - 2 Bar Chart</p>
+            {lineChartData?.newRegisterTrend?.series?.[0]?.data && lineChartData?.newRegisterTrend?.categories ? (
+                                            <BarChart
+                 series={[
+                   { name: 'New Register', data: lineChartData.newRegisterTrend.series[0].data },
+                   { name: 'New Depositor', data: lineChartData.newDepositorTrend?.series?.[0]?.data || [] }
+                 ]}
+                 categories={lineChartData.newRegisterTrend.categories}
+                 title="NEW REGISTER VS NEW DEPOSITOR TREND"
+                 currency={selectedCurrency}
+                 chartIcon={getChartIcon('New Register vs New Depositor')}
+               />
+            ) : (
+              <div className="chart-container">
+                <div className="chart-header">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                    <div dangerouslySetInnerHTML={{ __html: getChartIcon('New Register vs New Depositor') }} />
+                    <h3>NEW REGISTER VS NEW DEPOSITOR TREND</h3>
+                  </div>
+                  <p>Loading chart data...</p>
+                </div>
+                <div className="chart-placeholder">
+                  📊 Loading New Register vs New Depositor data...
+                </div>
               </div>
-              <div className="chart-placeholder">
-                📊 Bar Chart 1 - Coming Soon
-              </div>
-            </div>
+            )}
             
-            <div className="chart-container">
-              <div className="chart-header">
-                <h3>BAR CHART 2</h3>
-                <p>Coming Soon - 2 Bar Chart</p>
+            {lineChartData?.activeMemberTrend?.series?.[0]?.data && lineChartData?.activeMemberTrend?.categories ? (
+              <BarChart
+                series={[
+                  { name: 'Active Member', data: lineChartData.activeMemberTrend.series[0].data },
+                  { name: 'Pure Member', data: lineChartData.pureMemberTrend?.series?.[0]?.data || [] }
+                ]}
+                categories={lineChartData.activeMemberTrend.categories}
+                title="ACTIVE MEMBER VS PURE MEMBER TREND"
+                currency={selectedCurrency}
+                chartIcon={getChartIcon('Active Member vs Pure Member')}
+              />
+            ) : (
+              <div className="chart-container">
+                <div className="chart-header">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                    <div dangerouslySetInnerHTML={{ __html: getChartIcon('Active Member vs Pure Member') }} />
+                    <h3>ACTIVE MEMBER VS PURE MEMBER TREND</h3>
+                  </div>
+                  <p>Loading chart data...</p>
+                </div>
+                <div className="chart-placeholder">
+                  📊 Loading Active Member vs Pure Member data...
+                </div>
               </div>
-              <div className="chart-placeholder">
-                📊 Bar Chart 2 - Coming Soon
-              </div>
-            </div>
+            )}
           </div>
 
-          {/* Row 2.5: Single Line Charts (NEW) */}
+          {/* Row 3: Single Line Charts */}
           <div className="chart-row">
-            <div className="chart-container">
-              <div className="chart-header">
-                <h3>SINGLE LINE CHART 1</h3>
-                <p>Coming Soon - Single Line</p>
+            {lineChartData?.ggrUserTrendMember?.series?.[0]?.data && lineChartData?.ggrUserTrendMember?.categories ? (
+              <LineChart
+                series={[
+                  { name: 'GGR User', data: lineChartData.ggrUserTrendMember.series[0].data }
+                ]}
+                categories={lineChartData.ggrUserTrendMember.categories}
+                title="GGR USER TREND"
+                currency={selectedCurrency}
+                chartIcon={getChartIcon('GGR User')}
+              />
+            ) : (
+              <div className="chart-container">
+                <div className="chart-header">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                    <div dangerouslySetInnerHTML={{ __html: getChartIcon('GGR User') }} />
+                    <h3>GGR USER TREND</h3>
+                  </div>
+                  <p>Loading chart data...</p>
+                </div>
+                <div className="chart-placeholder">
+                  📊 Loading GGR User data...
+                </div>
               </div>
-              <div className="chart-placeholder">
-                📈 Single Line Chart 1 - Coming Soon
-              </div>
-            </div>
+            )}
             
-            <div className="chart-container">
-              <div className="chart-header">
-                <h3>SINGLE LINE CHART 2</h3>
-                <p>Coming Soon - Single Line</p>
+            {lineChartData?.depositAmountUserTrend?.series?.[0]?.data && lineChartData?.depositAmountUserTrend?.categories ? (
+              <LineChart
+                series={[
+                  { name: 'Deposit Amount User', data: lineChartData.depositAmountUserTrend.series[0].data }
+                ]}
+                categories={lineChartData.depositAmountUserTrend.categories}
+                title="DEPOSIT AMOUNT USER"
+                currency={selectedCurrency}
+                chartIcon={getChartIcon('Deposit Amount User')}
+              />
+            ) : (
+              <div className="chart-container">
+                <div className="chart-header">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                    <div dangerouslySetInnerHTML={{ __html: getChartIcon('Deposit Amount User') }} />
+                    <h3>DEPOSIT AMOUNT USER</h3>
+                  </div>
+                  <p>Loading chart data...</p>
+                </div>
+                <div className="chart-placeholder">
+                  📊 Loading Deposit Amount User data...
+                </div>
               </div>
-              <div className="chart-placeholder">
-                📈 Single Line Chart 2 - Coming Soon
-              </div>
-            </div>
+            )}
           </div>
 
-          {/* Row 3: Line Charts (Coming Soon) */}
+
+
+          {/* Row 4: 2 Line Charts (2 lines each) */}
           <div className="chart-row">
-            <div className="chart-container">
-              <div className="chart-header">
-                <h3>LINE CHART 1</h3>
-                <p>Coming Soon - 2 Line Chart</p>
+            {lineChartData?.retentionRateTrend?.series?.[0]?.data && lineChartData?.retentionRateTrend?.categories ? (
+            <LineChart
+                series={[
+                  { name: 'RETENTION RATE', data: lineChartData.retentionRateTrend.series[0].data },
+                  { name: 'CHURN RATE', data: lineChartData.churnRateTrend?.series?.[0]?.data || [] }
+                ]}
+                categories={lineChartData.retentionRateTrend.categories}
+                title="RETENTION VS CHURN RATE"
+              currency={selectedCurrency}
+                chartIcon={getChartIcon('RETENTION VS CHURN RATE')}
+              />
+            ) : (
+              <div className="chart-container">
+                <div className="chart-header">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                    <div dangerouslySetInnerHTML={{ __html: getChartIcon('RETENTION VS CHURN RATE') }} />
+                    <h3>RETENTION VS CHURN RATE</h3>
+                  </div>
+                  <p>Loading chart data...</p>
+                </div>
+                <div className="chart-placeholder">
+                  📈 Loading Retention vs Churn Rate data...
+                </div>
               </div>
-              <div className="chart-placeholder">
-                📈 Line Chart 1 - Coming Soon
-              </div>
-            </div>
+            )}
             
-            <div className="chart-container">
-              <div className="chart-header">
-                <h3>LINE CHART 2</h3>
-                <p>Coming Soon - 2 Line Chart</p>
+            {lineChartData?.customerLifetimeValueTrend?.series?.[0]?.data && lineChartData?.customerLifetimeValueTrend?.categories ? (
+            <LineChart
+                series={[
+                  { name: 'CUSTOMER LIFETIME VALUE', data: lineChartData.customerLifetimeValueTrend.series[0].data },
+                  { name: 'PURCHASE FREQUENCY', data: lineChartData.purchaseFrequencyTrend?.series?.[0]?.data || [] }
+                ]}
+                categories={lineChartData.customerLifetimeValueTrend.categories}
+                title="CLV VS PURCHASE FREQUENCY"
+              currency={selectedCurrency}
+                chartIcon={getChartIcon('CLV VS PURCHASE FREQUENCY')}
+              />
+            ) : (
+              <div className="chart-container">
+                <div className="chart-header">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                    <div dangerouslySetInnerHTML={{ __html: getChartIcon('CLV VS PURCHASE FREQUENCY') }} />
+                    <h3>CLV VS PURCHASE FREQUENCY</h3>
+                  </div>
+                  <p>Loading chart data...</p>
+                </div>
+                <div className="chart-placeholder">
+                  📈 Loading CLV vs Purchase Frequency data...
+                </div>
               </div>
-              <div className="chart-placeholder">
-                📈 Line Chart 2 - Coming Soon
-              </div>
-            </div>
+            )}
           </div>
 
-          {/* Row 4: 3 Charts in 1 Row (Table Chart 1, Table Chart 2, Pie Chart) */}
+          {/* Row 5: 3 Charts in 1 Row (Table Chart 1, Table Chart 2, Pie Chart) */}
           <div className="chart-row-three">
             <div className="chart-container">
               <div className="chart-header">
@@ -472,7 +574,7 @@ export default function MemberAnalyticPage() {
             </div>
           </div>
 
-          {/* Row 5: Retention Table Full Frame */}
+          {/* Row 6: Retention Table Full Frame */}
           <div className="chart-row-full">
             <div className="chart-container">
               <div className="chart-header">
@@ -550,7 +652,28 @@ export default function MemberAnalyticPage() {
           padding: 24px;
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
           border: 1px solid #e5e7eb;
-          min-height: 300px;
+          min-height: 400px;
+          height: 400px;
+        }
+
+        /* Standard chart height for all chart components */
+        .chart-container > div {
+          height: 350px !important;
+        }
+
+        /* Ensure chart components have consistent height */
+        .chart-container canvas {
+          height: 350px !important;
+        }
+
+        /* Ensure all chart components have same height */
+        .chart-container > div > div {
+          height: 350px !important;
+        }
+
+        /* Specific height for chart.js containers */
+        .chart-container > div > div > div {
+          height: 350px !important;
         }
 
         .chart-header {
@@ -575,13 +698,10 @@ export default function MemberAnalyticPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          height: 200px;
+          height: 350px;
           color: #6b7280;
           font-size: 16px;
           text-align: center;
-          background: #f9fafb;
-          border-radius: 8px;
-          border: 2px dashed #d1d5db;
         }
 
         .slicer-info {
