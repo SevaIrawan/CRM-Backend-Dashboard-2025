@@ -53,6 +53,9 @@ export interface KPIData {
   holdPercentage: number
   headcount: number
   depositAmountUser: number
+  highValueCustomers: number
+  lowValueCustomers: number
+  totalCustomers: number
 }
 
 // ===========================================
@@ -89,6 +92,11 @@ export interface RawKPIData {
   }
   pureUser: {
     unique_codes: number
+  }
+  customerValue: {
+    high_value_customers: number
+    low_value_customers: number
+    total_customers: number
   }
 }
 
@@ -197,6 +205,30 @@ export const KPI_FORMULAS = {
   // Where: Active Member = COUNT(DISTINCT member_report_daily[userkey])
   DEPOSIT_AMOUNT_USER: (depositAmount: number, activeMember: number): number => {
     return activeMember > 0 ? depositAmount / activeMember : 0
+  },
+
+  // ✅ NEW: Customer Value Classification based on Currency
+  // MYR: deposit amount >= 2,000 → "High Value", < 2,000 → "Low Value"
+  // SGD: deposit amount >= 700 → "High Value", < 700 → "Low Value"
+  // USC: deposit amount >= 500 → "High Value", < 500 → "Low Value"
+  CUSTOMER_VALUE: (depositAmount: number, currency: string): string => {
+    let threshold = 0
+    
+    switch (currency) {
+      case 'MYR':
+        threshold = 2000
+        break
+      case 'SGD':
+        threshold = 700
+        break
+      case 'USC':
+        threshold = 500
+        break
+      default:
+        threshold = 2000 // Default to MYR threshold
+    }
+    
+    return depositAmount >= threshold ? 'High Value' : 'Low Value'
   },
 
   // ✅ UTILITY FORMULAS
@@ -315,7 +347,7 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
     console.log('🔍 [KPILogic] Filters:', filters)
 
     // ✅ PARALLEL FETCH dengan DATABASE AGGREGATION - seperti PostgreSQL
-    const [activeMemberResult, newDepositorResult, newRegisterResult, memberReportResult, churnResult] = await Promise.all([
+    const [activeMemberResult, newDepositorResult, newRegisterResult, memberReportResult, churnResult, customerValueResult] = await Promise.all([
       
       // 1. ACTIVE MEMBER & PURE USER = SOURCE TABLE member_report_daily[userkey, unique_code] WHERE deposit_cases > 0
       (() => {
@@ -386,7 +418,10 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
       })(),
 
       // Churn member calculation - members who played last month but not this month
-      getChurnMembers(filters)
+      getChurnMembers(filters),
+
+      // Customer Value calculation - based on 2 months deposit amount
+      getCustomerValueData(filters.year, filters.month, filters.currency, filters.line || 'All')
     ])
 
     if (activeMemberResult.error) throw activeMemberResult.error
@@ -480,6 +515,11 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
       },
       pureUser: {
         unique_codes: pureUserCount // Pure User dari member_report_daily[unique_code]
+      },
+      customerValue: {
+        high_value_customers: customerValueResult.highValueCustomers,
+        low_value_customers: customerValueResult.lowValueCustomers,
+        total_customers: customerValueResult.totalCustomers
       }
     }
 
@@ -863,7 +903,10 @@ export async function calculateKPIs(filters: SlicerFilters): Promise<KPIData> {
       conversionRate: KPI_FORMULAS.ROUND(KPI_FORMULAS.NEW_CUSTOMER_CONVERSION_RATE(rawData)),
       holdPercentage: KPI_FORMULAS.ROUND(KPI_FORMULAS.HOLD_PERCENTAGE(rawData.member.ggr, rawData.member.valid_bet_amount)),
       headcount: headcount,
-      depositAmountUser: KPI_FORMULAS.ROUND(KPI_FORMULAS.DEPOSIT_AMOUNT_USER(rawData.deposit.deposit_amount, rawData.deposit.active_members))
+      depositAmountUser: KPI_FORMULAS.ROUND(KPI_FORMULAS.DEPOSIT_AMOUNT_USER(rawData.deposit.deposit_amount, rawData.deposit.active_members)),
+      highValueCustomers: rawData.customerValue.high_value_customers,
+      lowValueCustomers: rawData.customerValue.low_value_customers,
+      totalCustomers: rawData.customerValue.total_customers
     }
 
     console.log('✅ [KPILogic] KPIs calculated successfully:', {
@@ -886,7 +929,8 @@ export async function calculateKPIs(filters: SlicerFilters): Promise<KPIData> {
       pureUser: 0, newRegister: 0, churnMember: 0, depositCases: 0, withdrawCases: 0, winrate: 0, churnRate: 0,
       retentionRate: 0, growthRate: 0, avgTransactionValue: 0, purchaseFrequency: 0,
       customerLifetimeValue: 0, avgCustomerLifespan: 0, customerMaturityIndex: 0, ggrPerUser: 0, ggrPerPureUser: 0,
-      addBonus: 0, deductBonus: 0, conversionRate: 0, holdPercentage: 0, headcount: 0, depositAmountUser: 0
+      addBonus: 0, deductBonus: 0, conversionRate: 0, holdPercentage: 0, headcount: 0, depositAmountUser: 0,
+      highValueCustomers: 0, lowValueCustomers: 0, totalCustomers: 0
     }
   }
 }
@@ -1915,6 +1959,15 @@ export interface RetentionMemberDetail {
   withdrawCases: number
 }
 
+export interface CustomerValueDetail {
+  userkey: string
+  userName: string
+  uniqueCode: string
+  depositAmount: number
+  customerValue: string
+  currency: string
+}
+
 // ===========================================
 // RETENTION DAY HELPER FUNCTIONS
 // ===========================================
@@ -2161,6 +2214,136 @@ async function getRetentionMemberDetails(
   } catch (error) {
     console.error('❌ [KPILogic] Error in getRetentionMemberDetails:', error)
     return []
+  }
+}
+
+// ===========================================
+// CUSTOMER VALUE FUNCTIONS
+// ===========================================
+
+// Get Customer Value Data based on 2 months deposit amount
+export async function getCustomerValueData(
+  year: string,
+  month: string,
+  currency: string = 'MYR',
+  line: string = 'All'
+): Promise<{
+  highValueCustomers: number
+  lowValueCustomers: number
+  totalCustomers: number
+  customerDetails: CustomerValueDetail[]
+}> {
+  try {
+    console.log('🔍 [KPILogic] Fetching Customer Value data:', { year, month, currency, line })
+
+    // Calculate 2 months period
+    const currentDate = new Date(parseInt(year), parseInt(month) - 1, 1)
+    const previousMonth = new Date(currentDate)
+    previousMonth.setMonth(previousMonth.getMonth() - 1)
+    
+    const currentYear = currentDate.getFullYear().toString()
+    const currentMonth = (currentDate.getMonth() + 1).toString().padStart(2, '0')
+    const previousYear = previousMonth.getFullYear().toString()
+    const previousMonthStr = (previousMonth.getMonth() + 1).toString().padStart(2, '0')
+
+    console.log('🔍 [KPILogic] Customer Value period:', {
+      currentPeriod: `${currentYear}-${currentMonth}`,
+      previousPeriod: `${previousYear}-${previousMonthStr}`
+    })
+
+    // Build query for 2 months data
+    let query = supabase
+      .from('member_report_daily')
+      .select('userkey, user_name, unique_code, deposit_amount, currency')
+      .or(`year.eq.${currentYear},year.eq.${previousYear}`)
+      .or(`month.eq.${currentMonth},month.eq.${previousMonthStr}`)
+
+    // Apply currency filter
+    if (currency !== 'All') {
+      query = query.eq('currency', currency)
+    }
+
+    // Apply line filter if specified
+    if (line && line !== 'All') {
+      query = query.eq('line', line)
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error('❌ [KPILogic] Error fetching customer value data:', error)
+      return {
+        highValueCustomers: 0,
+        lowValueCustomers: 0,
+        totalCustomers: 0,
+        customerDetails: []
+      }
+    }
+
+    if (!data || data.length === 0) {
+      console.log('⚠️ [KPILogic] No customer value data found')
+      return {
+        highValueCustomers: 0,
+        lowValueCustomers: 0,
+        totalCustomers: 0,
+        customerDetails: []
+      }
+    }
+
+    // Group by userkey and sum deposit amounts for 2 months
+    const customerTotals: { [key: string]: CustomerValueDetail } = {}
+
+    data.forEach(row => {
+      const userkey = row.userkey
+      const depositAmount = row.deposit_amount || 0
+      
+      if (!customerTotals[userkey]) {
+        customerTotals[userkey] = {
+          userkey,
+          userName: row.user_name || '',
+          uniqueCode: row.unique_code || '',
+          depositAmount: 0,
+          customerValue: '',
+          currency: row.currency || currency
+        }
+      }
+      
+      customerTotals[userkey].depositAmount += depositAmount
+    })
+
+    // Calculate customer value for each customer
+    const customerDetails: CustomerValueDetail[] = Object.values(customerTotals).map(customer => ({
+      ...customer,
+      customerValue: KPI_FORMULAS.CUSTOMER_VALUE(customer.depositAmount, customer.currency)
+    }))
+
+    // Count high and low value customers
+    const highValueCustomers = customerDetails.filter(c => c.customerValue === 'High Value').length
+    const lowValueCustomers = customerDetails.filter(c => c.customerValue === 'Low Value').length
+    const totalCustomers = customerDetails.length
+
+    console.log('✅ [KPILogic] Customer Value calculation completed:', {
+      highValueCustomers,
+      lowValueCustomers,
+      totalCustomers,
+      sampleDetails: customerDetails.slice(0, 3)
+    })
+
+    return {
+      highValueCustomers,
+      lowValueCustomers,
+      totalCustomers,
+      customerDetails
+    }
+
+  } catch (error) {
+    console.error('❌ [KPILogic] Error in getCustomerValueData:', error)
+    return {
+      highValueCustomers: 0,
+      lowValueCustomers: 0,
+      totalCustomers: 0,
+      customerDetails: []
+    }
   }
 }
 

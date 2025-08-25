@@ -393,6 +393,29 @@ export default function MemberAnalyticPage() {
             </div>
           </div>
 
+          {/* Row 2.5: Single Line Charts (NEW) */}
+          <div className="chart-row">
+            <div className="chart-container">
+              <div className="chart-header">
+                <h3>SINGLE LINE CHART 1</h3>
+                <p>Coming Soon - Single Line</p>
+              </div>
+              <div className="chart-placeholder">
+                📈 Single Line Chart 1 - Coming Soon
+              </div>
+            </div>
+            
+            <div className="chart-container">
+              <div className="chart-header">
+                <h3>SINGLE LINE CHART 2</h3>
+                <p>Coming Soon - Single Line</p>
+              </div>
+              <div className="chart-placeholder">
+                📈 Single Line Chart 2 - Coming Soon
+              </div>
+            </div>
+          </div>
+
           {/* Row 3: Line Charts (Coming Soon) */}
           <div className="chart-row">
             <div className="chart-container">
@@ -416,8 +439,8 @@ export default function MemberAnalyticPage() {
             </div>
           </div>
 
-          {/* Row 4: Table Charts (Coming Soon) */}
-          <div className="chart-row">
+          {/* Row 4: 3 Charts in 1 Row (Table Chart 1, Table Chart 2, Pie Chart) */}
+          <div className="chart-row-three">
             <div className="chart-container">
               <div className="chart-header">
                 <h3>TABLE CHART 1</h3>
@@ -437,19 +460,6 @@ export default function MemberAnalyticPage() {
                 📋 Table Chart 2 - Coming Soon
               </div>
             </div>
-          </div>
-
-          {/* Row 5: Table Chart and Pie Chart (Coming Soon) */}
-          <div className="chart-row">
-            <div className="chart-container">
-              <div className="chart-header">
-                <h3>RETENTION TABLE</h3>
-                <p>Coming Soon - Ready Popup Modal</p>
-              </div>
-              <div className="chart-placeholder">
-                📋 Retention Table - Coming Soon
-              </div>
-            </div>
             
             <div className="chart-container">
               <div className="chart-header">
@@ -462,28 +472,20 @@ export default function MemberAnalyticPage() {
             </div>
           </div>
 
-          {/* Row 6: Single Line Charts (Coming Soon) */}
-          <div className="chart-row">
+          {/* Row 5: Retention Table Full Frame */}
+          <div className="chart-row-full">
             <div className="chart-container">
               <div className="chart-header">
-                <h3>SINGLE LINE CHART 1</h3>
-                <p>Coming Soon - Single Line</p>
+                <h3>RETENTION TABLE</h3>
+                <p>Coming Soon - Ready Popup Modal</p>
               </div>
               <div className="chart-placeholder">
-                📈 Single Line Chart 1 - Coming Soon
-              </div>
-            </div>
-            
-            <div className="chart-container">
-              <div className="chart-header">
-                <h3>SINGLE LINE CHART 2</h3>
-                <p>Coming Soon - Single Line</p>
-              </div>
-              <div className="chart-placeholder">
-                📈 Single Line Chart 2 - Coming Soon
+                📋 Retention Table - Coming Soon (Full Frame)
               </div>
             </div>
           </div>
+
+
 
           {/* Slicer Info */}
           <div className="slicer-info">
@@ -524,6 +526,20 @@ export default function MemberAnalyticPage() {
           margin-bottom: 20px;
         }
 
+        .chart-row-three {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 20px;
+          margin-bottom: 20px;
+        }
+
+        .chart-row-full {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 20px;
+          margin-bottom: 20px;
+        }
+
         .chart-row:last-of-type {
           margin-bottom: 0;
         }
@@ -539,7 +555,7 @@ export default function MemberAnalyticPage() {
 
         .chart-header {
           margin-bottom: 20px;
-          text-align: center;
+          text-align: left;
         }
 
         .chart-header h3 {
@@ -595,6 +611,14 @@ export default function MemberAnalyticPage() {
           }
           
           .chart-row {
+            grid-template-columns: 1fr;
+          }
+          
+          .chart-row-three {
+            grid-template-columns: 1fr;
+          }
+          
+          .chart-row-full {
             grid-template-columns: 1fr;
           }
         }
