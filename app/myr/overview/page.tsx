@@ -93,13 +93,15 @@ export default function SalesRevenuePage() {
           line: selectedLine
         });
         
-        const kpiResult = await getAllKPIsWithMoM({
+        // Jika Line = "All", maka tampilkan semua data berdasarkan currency MYR
+        const kpiFilters = {
           year: selectedYear,
           month: selectedMonth,
           currency: selectedCurrency,
-          line: selectedLine
-        });
+          line: selectedLine === 'All' ? undefined : selectedLine // Jika All, tidak filter line
+        };
         
+        const kpiResult = await getAllKPIsWithMoM(kpiFilters);
         console.log('📊 [MYR Sales Revenue] KPI result received:', kpiResult);
         console.log('📊 [MYR Sales Revenue] Current KPI data:', kpiResult.current);
         console.log('📊 [MYR Sales Revenue] MoM data:', kpiResult.mom);
@@ -113,7 +115,7 @@ export default function SalesRevenuePage() {
           year: selectedYear,
           month: selectedMonth,
           currency: selectedCurrency,
-          line: selectedLine
+          line: selectedLine === 'All' ? undefined : selectedLine // Jika All, tidak filter line
         };
         
         const chartResult = await getLineChartData(chartFilters);
