@@ -8,7 +8,10 @@ export const metadata: Metadata = {
   title: 'NexMax Dashboard',
   description: 'Interactive Dashboard with Username-based Authentication',
   icons: {
-    icon: '/favicon.ico',
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/lightning-favicon.svg', type: 'image/svg+xml' },
+    ],
   },
 }
 
