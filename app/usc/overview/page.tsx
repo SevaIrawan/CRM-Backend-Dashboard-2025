@@ -19,7 +19,7 @@ export default function SalesRevenuePage() {
   const [slicerData, setSlicerData] = useState<SlicerData | null>(null);
   const [selectedYear, setSelectedYear] = useState('2025');
   const [selectedMonth, setSelectedMonth] = useState('July');
-  const [selectedCurrency, setSelectedCurrency] = useState('USC');
+  const [selectedCurrency] = useState('USC'); // Locked to USC
   const [selectedLine, setSelectedLine] = useState('All');
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -46,7 +46,6 @@ export default function SalesRevenuePage() {
       try {
         setIsLoading(true);
         setLoadError(null);
-        console.log('🔄 [USC Sales Revenue] Starting data load with currency lock to USC...');
 
         // Get REAL data from database for USC currency
         const { data: yearData } = await supabase
@@ -85,60 +84,55 @@ export default function SalesRevenuePage() {
         setFilteredLines(availableLines);
         setFilteredMonths(availableMonths);
 
-        // Fetch KPI data with current filters
-        console.log('📈 [USC Sales Revenue] Fetching KPI data with filters:', {
-          year: selectedYear,
-          month: selectedMonth,
-          currency: selectedCurrency,
-          line: selectedLine
-        });
+        if (availableYears.length > 0 && !availableYears.includes(selectedYear)) {
+          setSelectedYear(availableYears[0]);
+          return;
+        }
         
-        // Jika Line = "All", maka tampilkan semua data berdasarkan currency USC
+        if (availableMonths.length > 0 && !availableMonths.includes(selectedMonth)) {
+          setSelectedMonth(availableMonths[0]);
+          return;
+        }
+        
+        if (availableLines.length > 0 && selectedLine !== 'All' && !availableLines.includes(selectedLine)) {
+          setSelectedLine('All');
+          return;
+        }
+
         const kpiFilters = {
           year: selectedYear,
           month: selectedMonth,
-          currency: selectedCurrency,
-          line: selectedLine === 'All' ? undefined : selectedLine // Jika All, tidak filter line
+          currency: 'USC',
+          line: selectedLine === 'All' ? undefined : selectedLine
         };
         
         const kpiResult = await getAllKPIsWithMoM(kpiFilters);
-        console.log('📊 [USC Sales Revenue] KPI result received:', kpiResult);
-        console.log('📊 [USC Sales Revenue] Current KPI data:', kpiResult.current);
-        console.log('📊 [USC Sales Revenue] MoM data:', kpiResult.mom);
-
         setKpiData(kpiResult.current);
         setMomData(kpiResult.mom);
 
-        // Fetch chart data
-        console.log('📈 [USC Sales Revenue] Fetching chart data...');
         const chartFilters: SlicerFilters = {
           year: selectedYear,
           month: selectedMonth,
-          currency: selectedCurrency,
-          line: selectedLine === 'All' ? undefined : selectedLine // Jika All, tidak filter line
+          currency: 'USC',
+          line: selectedLine === 'All' ? undefined : selectedLine
         };
         
         const chartResult = await getLineChartData(chartFilters);
-        console.log('📊 [USC Sales Revenue] Chart data loaded:', chartResult);
         setLineChartData(chartResult);
         
-        // Create Sales Revenue specific chart data using REAL KPI data
         const srData = await createSRChartData(chartFilters);
-        console.log('📈 [USC Sales Revenue] SR Chart data created with REAL data:', srData);
         setSrChartData(srData);
 
              } catch (error) {
-         console.error('❌ [USC Sales Revenue] Error loading data:', error);
          setLoadError('Failed to load data. Please try again.');
        } finally {
          setIsLoading(false);
-         console.log('✅ [USC Sales Revenue] Data loading completed');
        }
     };
 
     const timeoutId = setTimeout(loadData, 100);
     return () => clearTimeout(timeoutId);
-  }, [selectedYear, selectedMonth, selectedCurrency, selectedLine]);
+  }, [selectedYear, selectedMonth, selectedLine]);
 
            // Currency locked to USC - no need to update filtered lines
    useEffect(() => {
@@ -153,12 +147,9 @@ export default function SalesRevenuePage() {
     const calculateDailyAverages = async () => {
       if (kpiData && selectedYear && selectedMonth) {
                  try {
-           console.log('🔄 [USC Sales Revenue] Using Central Daily Average function...');
-          
-          // Use central function - sama seperti getAllKPIsWithMoM
           const result = await getAllKPIsWithDailyAverage(kpiData, selectedYear, selectedMonth);
           
-                     setDailyAverages({
+          setDailyAverages({
              depositAmount: result.dailyAverage.depositAmount || 0,
              withdrawAmount: result.dailyAverage.withdrawAmount || 0,
              grossGamingRevenue: result.dailyAverage.grossGamingRevenue || 0,
@@ -166,11 +157,9 @@ export default function SalesRevenuePage() {
              purchaseFrequency: result.dailyAverage.purchaseFrequency || 0,
              customerMaturityIndex: result.dailyAverage.customerMaturityIndex || 0
            });
-          
-                     console.log('✅ [USC Sales Revenue] Central Daily Average applied to ALL KPIs');
            
          } catch (error) {
-           console.error('❌ [USC Sales Revenue] Error with central Daily Average:', error);
+           // Silent error handling
          }
       }
     };
@@ -219,35 +208,24 @@ export default function SalesRevenuePage() {
   // Function to create Sales Revenue specific chart data using REAL monthly KPI data
   const createSRChartData = async (filters: SlicerFilters) => {
     try {
-      console.log('📈 [Sales Revenue] Creating chart data with REAL KPIs...');
-      console.log('🔍 [Sales Revenue] Filters:', filters);
-      
-      // Get dynamic months for the selected year (same as getLineChartData line 1139)
-      const months = await getMonthsForYear(filters.year);
-      console.log('📅 [Sales Revenue] Dynamic months for chart:', months);
+      const months = await getMonthsForYear(filters.year, 'USC');
       
       if (!months || months.length === 0) {
-        console.error('❌ [Sales Revenue] No months data available');
         return null;
       }
       
-      // Get REAL monthly KPI data by calling calculateKPIs for each month
-      // This follows the EXACT same pattern as getLineChartData line 1149-1175
       const monthlyKPIData = await Promise.all(
         months.map(async (month) => {
           const monthFilters = {
             year: filters.year,
-            currency: filters.currency,
+            currency: 'USC',
             month: month,
-            line: filters.line // Include line filter for active slicer
+            line: filters.line
           };
           
-          console.log(`📊 [Sales Revenue] Calculating KPIs for ${month}...`);
           return await calculateKPIs(monthFilters);
         })
       );
-      
-      console.log('✅ [Sales Revenue] Monthly KPI data calculated:', monthlyKPIData.length, 'months');
     
       return {
         // Row 2 - Financial Performance Single Line Charts (REAL DATA dari KPILogic)
@@ -370,7 +348,6 @@ export default function SalesRevenuePage() {
       };
       
     } catch (error) {
-      console.error('❌ [Sales Revenue] Error creating chart data:', error);
       return null;
     }
   };
@@ -387,6 +364,8 @@ export default function SalesRevenuePage() {
           <YearSlicer 
             value={selectedYear} 
             onChange={setSelectedYear}
+            selectedCurrency="USC"
+            years={slicerData?.years}
           />
         </div>
         
@@ -398,7 +377,7 @@ export default function SalesRevenuePage() {
             value={selectedMonth} 
             onChange={setSelectedMonth}
             selectedYear={selectedYear}
-            selectedCurrency={selectedCurrency}
+            selectedCurrency="USC"
           />
         </div>
 

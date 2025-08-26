@@ -1,16 +1,17 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { getSlicerData } from '@/lib/KPILogic'
+import { supabase } from '@/lib/supabase'
 
 interface YearSlicerProps {
   value: string
   onChange: (value: string) => void
   className?: string
   years?: string[]
+  selectedCurrency?: string
 }
 
-export default function YearSlicer({ value, onChange, className = '', years: propYears }: YearSlicerProps) {
+export default function YearSlicer({ value, onChange, className = '', years: propYears, selectedCurrency = 'USC' }: YearSlicerProps) {
   const [years, setYears] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -22,14 +23,17 @@ export default function YearSlicer({ value, onChange, className = '', years: pro
       const fetchYears = async () => {
         try {
           setLoading(true)
-          console.log('📅 [YearSlicer] Fetching years from Supabase...')
           
-          const slicerData = await getSlicerData()
-          setYears(slicerData.years)
+          const { data: yearData } = await supabase
+            .from('member_report_daily')
+            .select('year')
+            .eq('currency', selectedCurrency)
+            .order('year', { ascending: false })
           
-          console.log('✅ [YearSlicer] Years loaded:', slicerData.years)
+          const availableYears = Array.from(new Set(yearData?.map((row: any) => row.year?.toString()).filter(Boolean) || [])) as string[]
+          setYears(availableYears)
+          
         } catch (error) {
-          console.error('❌ [YearSlicer] Error:', error)
           setYears([])
         } finally {
           setLoading(false)
@@ -38,7 +42,7 @@ export default function YearSlicer({ value, onChange, className = '', years: pro
 
       fetchYears()
     }
-  }, [propYears])
+  }, [propYears, selectedCurrency])
 
   if (loading) {
     return (
@@ -85,7 +89,6 @@ export default function YearSlicer({ value, onChange, className = '', years: pro
         boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
       }}
     >
-      <option value="All">All</option>
       {years.map((year) => (
         <option key={year} value={year}>
           {year}
