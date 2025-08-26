@@ -13,6 +13,11 @@ import DonutChart from '@/components/DonutChart';
 import { getChartIcon } from '@/lib/CentralIcon';
 import { calculateDailyAverage, getMonthInfo, getAllKPIsWithDailyAverage } from '@/lib/dailyAverageHelper';
 
+// Helper functions
+const formatNumber = (num: number) => {
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+};
+
 // Export functions
 const exportToCSV = (data: any[], title: string) => {
   if (!data || data.length === 0) return '';
@@ -1513,7 +1518,7 @@ export default function MemberAnalyticPage() {
                     textAlign: 'center'
                   }}>
                     <div style={{ fontSize: '11px', color: '#1d4ed8', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Members</div>
-                    <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#1e40af', marginTop: '2px' }}>{modalMembers.length}</div>
+                    <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#1e40af', marginTop: '2px' }}>{formatNumber(modalMembers.length)}</div>
                   </div>
                   <div style={{
                     backgroundColor: '#f0fdf4',
