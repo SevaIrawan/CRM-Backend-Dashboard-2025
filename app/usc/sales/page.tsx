@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { getSlicerData, getAllKPIsWithMoM, getLineChartData, SlicerFilters, SlicerData, KPIData, getLinesForCurrency, calculateKPIs, getMonthsForYear, RetentionDayData, RetentionMemberDetail, getRetentionDayData } from '@/lib/KPILogic';
+import { getSlicerData, getAllKPIsWithMoM, getLineChartData, SlicerFilters, SlicerData, KPIData, getLinesForCurrency, calculateKPIs, getMonthsForYear, RetentionDayData, RetentionMemberDetail, getRetentionDayData, getCustomerValueData } from '@/lib/KPILogic';
 import { supabase } from '@/lib/supabase';
 import Layout from '@/components/Layout';
 import Frame from '@/components/Frame';
@@ -101,6 +101,9 @@ export default function MemberAnalyticPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
   const [modalMembers, setModalMembers] = useState<RetentionMemberDetail[]>([]);
+
+  // Customer Value data state
+  const [customerValueData, setCustomerValueData] = useState<any>(null);
 
   // Add state for daily average calculations
   const [dailyAverages, setDailyAverages] = useState({
@@ -204,6 +207,12 @@ export default function MemberAnalyticPage() {
          const retentionResult = await getRetentionDayData(selectedYear, selectedMonth, selectedCurrency, selectedLine);
          setRetentionData(retentionResult);
                    console.log('✅ [USC Member Analytic] Retention data loaded successfully');
+
+         // Fetch customer value data
+         console.log('🔄 [USC Member Analytic] Fetching customer value data...');
+         const customerValueResult = await getCustomerValueData(selectedYear, selectedMonth, selectedCurrency, selectedLine);
+         setCustomerValueData(customerValueResult);
+         console.log('✅ [USC Member Analytic] Customer value data loaded successfully');
 
               } catch (error) {
           console.error('❌ [USC Member Analytic] Error loading data:', error);
@@ -691,16 +700,314 @@ export default function MemberAnalyticPage() {
 
           {/* Row 5: 3 Charts in 1 Row (Table Chart 1, Table Chart 2, Pie Chart) */}
           <div className="chart-row-three">
-            <div className="chart-container">
-              <div className="chart-header">
-                <h3>TABLE CHART 1</h3>
-                <p>Coming Soon - Ready Popup Modal</p>
+            {/* Table Chart 1: Customer Value Analysis */}
+            <div style={{
+              background: '#ffffff',
+              borderRadius: '12px',
+              padding: '16px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+              border: '1px solid #e5e7eb',
+              transition: 'all 0.3s ease',
+              cursor: 'pointer',
+              minHeight: '400px',
+              height: '400px'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-3px)';
+              e.currentTarget.style.boxShadow = '0 8px 25px 0 rgba(0, 0, 0, 0.12), 0 4px 10px 0 rgba(0, 0, 0, 0.08)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginBottom: '16px'
+              }}>
+                <div style={{
+                  width: '20px',
+                  height: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }} dangerouslySetInnerHTML={{ __html: getChartIcon('Customer Value Analysis') }} />
+                <h3 style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#1f2937',
+                  margin: 0
+                }}>CUSTOMER VALUE ANALYSIS</h3>
               </div>
-              <div className="chart-placeholder">
-                📋 Table Chart 1 - Coming Soon
+              <div style={{ overflowX: 'auto', maxHeight: '320px', overflowY: 'auto' }}>
+                <table style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  fontSize: '11px'
+                }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#374151' }}>
+                      <th style={{ 
+                        padding: '8px 12px', 
+                        textAlign: 'left', 
+                        borderBottom: '1px solid #4b5563',
+                        color: '#ffffff',
+                        fontWeight: '600',
+                        fontSize: '10px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>Metrics</th>
+                      <th style={{ 
+                        padding: '8px 12px', 
+                        textAlign: 'right', 
+                        borderBottom: '1px solid #4b5563',
+                        color: '#ffffff',
+                        fontWeight: '600',
+                        fontSize: '10px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>High Value</th>
+                      <th style={{ 
+                        padding: '8px 12px', 
+                        textAlign: 'right', 
+                        borderBottom: '1px solid #4b5563',
+                        color: '#ffffff',
+                        fontWeight: '600',
+                        fontSize: '10px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>Low Value</th>
+                      <th style={{ 
+                        padding: '8px 12px', 
+                        textAlign: 'right', 
+                        borderBottom: '1px solid #4b5563',
+                        color: '#ffffff',
+                        fontWeight: '600',
+                        fontSize: '10px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>Total</th>
+                      <th style={{ 
+                        padding: '8px 12px', 
+                        textAlign: 'center', 
+                        borderBottom: '1px solid #4b5563',
+                        color: '#ffffff',
+                        fontWeight: '600',
+                        fontSize: '10px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>HV %</th>
+                      <th style={{ 
+                        padding: '8px 12px', 
+                        textAlign: 'center', 
+                        borderBottom: '1px solid #4b5563',
+                        color: '#ffffff',
+                        fontWeight: '600',
+                        fontSize: '10px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>LV %</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* Active Member */}
+                    <tr style={{ 
+                      borderBottom: '1px solid #e5e7eb', 
+                      transition: 'all 0.2s ease', 
+                      cursor: 'pointer', 
+                      backgroundColor: '#ffffff',
+                      height: '28px'
+                    }}
+                    onMouseEnter={(e) => { 
+                      e.currentTarget.style.backgroundColor = '#f3f4f6';
+                      e.currentTarget.style.transform = 'scale(1.01)';
+                    }}
+                    onMouseLeave={(e) => { 
+                      e.currentTarget.style.backgroundColor = '#ffffff';
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }}>
+                      <td style={{ padding: '8px 12px', fontWeight: '600', fontSize: '10px' }}>Active Member</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '10px' }}>{formatNumber(customerValueData?.highValueCustomers || 0)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '10px' }}>{formatNumber(customerValueData?.lowValueCustomers || 0)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '10px' }}>{formatNumber(customerValueData?.totalCustomers || 0)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#059669', fontWeight: '600', fontSize: '10px' }}>{calculatePercentage(customerValueData?.highValueCustomers || 0, customerValueData?.totalCustomers || 0)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#dc2626', fontWeight: '600', fontSize: '10px' }}>{calculatePercentage(customerValueData?.lowValueCustomers || 0, customerValueData?.totalCustomers || 0)}</td>
+                    </tr>
+                    
+                    {/* Deposit Amount */}
+                    <tr style={{ 
+                      borderBottom: '1px solid #e5e7eb', 
+                      transition: 'all 0.2s ease', 
+                      cursor: 'pointer', 
+                      backgroundColor: '#f9fafb',
+                      height: '28px'
+                    }}
+                    onMouseEnter={(e) => { 
+                      e.currentTarget.style.backgroundColor = '#f3f4f6';
+                      e.currentTarget.style.transform = 'scale(1.01)';
+                    }}
+                    onMouseLeave={(e) => { 
+                      e.currentTarget.style.backgroundColor = '#f9fafb';
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }}>
+                      <td style={{ padding: '8px 12px', fontWeight: '600', fontSize: '10px' }}>Deposit Amount</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '10px' }}>{formatCurrency(customerValueData?.highValueDepositAmount || 0, selectedCurrency)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '10px' }}>{formatCurrency(customerValueData?.lowValueDepositAmount || 0, selectedCurrency)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '10px' }}>{formatCurrency(customerValueData?.totalDepositAmount || 0, selectedCurrency)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#059669', fontWeight: '600', fontSize: '10px' }}>{calculatePercentage(customerValueData?.highValueDepositAmount || 0, (customerValueData?.highValueDepositAmount || 0) + (customerValueData?.lowValueDepositAmount || 0))}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#dc2626', fontWeight: '600', fontSize: '10px' }}>{calculatePercentage(customerValueData?.lowValueDepositAmount || 0, (customerValueData?.highValueDepositAmount || 0) + (customerValueData?.lowValueDepositAmount || 0))}</td>
+                    </tr>
+                    
+                    {/* Deposit Cases */}
+                    <tr style={{ 
+                      borderBottom: '1px solid #e5e7eb', 
+                      transition: 'all 0.2s ease', 
+                      cursor: 'pointer', 
+                      backgroundColor: '#ffffff',
+                      height: '28px'
+                    }}
+                    onMouseEnter={(e) => { 
+                      e.currentTarget.style.backgroundColor = '#f3f4f6';
+                      e.currentTarget.style.transform = 'scale(1.01)';
+                    }}
+                    onMouseLeave={(e) => { 
+                      e.currentTarget.style.backgroundColor = '#ffffff';
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }}>
+                      <td style={{ padding: '8px 12px', fontWeight: '600', fontSize: '10px' }}>Deposit Cases</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '10px' }}>{formatNumber(customerValueData?.highValueDepositCases || 0)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '10px' }}>{formatNumber(customerValueData?.lowValueDepositCases || 0)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '10px' }}>{formatNumber(customerValueData?.totalDepositCases || 0)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#059669', fontWeight: '600', fontSize: '10px' }}>{calculatePercentage(customerValueData?.highValueDepositCases || 0, (customerValueData?.highValueDepositCases || 0) + (customerValueData?.lowValueDepositCases || 0))}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#dc2626', fontWeight: '600', fontSize: '10px' }}>{calculatePercentage(customerValueData?.lowValueDepositCases || 0, (customerValueData?.highValueDepositCases || 0) + (customerValueData?.lowValueDepositCases || 0))}</td>
+                    </tr>
+                    
+                    {/* Withdraw Amount */}
+                    <tr style={{ 
+                      borderBottom: '1px solid #e5e7eb', 
+                      transition: 'all 0.2s ease', 
+                      cursor: 'pointer', 
+                      backgroundColor: '#f9fafb',
+                      height: '28px'
+                    }}
+                    onMouseEnter={(e) => { 
+                      e.currentTarget.style.backgroundColor = '#f3f4f6';
+                      e.currentTarget.style.transform = 'scale(1.01)';
+                    }}
+                    onMouseLeave={(e) => { 
+                      e.currentTarget.style.backgroundColor = '#f9fafb';
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }}>
+                      <td style={{ padding: '8px 12px', fontWeight: '600', fontSize: '10px' }}>Withdraw Amount</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '10px' }}>{formatCurrency(customerValueData?.highValueWithdrawAmount || 0, selectedCurrency)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '10px' }}>{formatCurrency(customerValueData?.lowValueWithdrawAmount || 0, selectedCurrency)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '10px' }}>{formatCurrency(customerValueData?.totalWithdrawAmount || 0, selectedCurrency)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#059669', fontWeight: '600', fontSize: '10px' }}>{calculatePercentage(customerValueData?.highValueWithdrawAmount || 0, (customerValueData?.highValueWithdrawAmount || 0) + (customerValueData?.lowValueWithdrawAmount || 0))}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#dc2626', fontWeight: '600', fontSize: '10px' }}>{calculatePercentage(customerValueData?.lowValueWithdrawAmount || 0, (customerValueData?.highValueWithdrawAmount || 0) + (customerValueData?.lowValueWithdrawAmount || 0))}</td>
+                    </tr>
+                    
+                    {/* Withdraw Cases */}
+                    <tr style={{ 
+                      borderBottom: '1px solid #e5e7eb', 
+                      transition: 'all 0.2s ease', 
+                      cursor: 'pointer', 
+                      backgroundColor: '#ffffff',
+                      height: '28px'
+                    }}
+                    onMouseEnter={(e) => { 
+                      e.currentTarget.style.backgroundColor = '#f3f4f6';
+                      e.currentTarget.style.transform = 'scale(1.01)';
+                    }}
+                    onMouseLeave={(e) => { 
+                      e.currentTarget.style.backgroundColor = '#ffffff';
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }}>
+                      <td style={{ padding: '8px 12px', fontWeight: '600', fontSize: '10px' }}>Withdraw Cases</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '10px' }}>{formatNumber(customerValueData?.highValueWithdrawCases || 0)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '10px' }}>{formatNumber(customerValueData?.lowValueWithdrawCases || 0)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '10px' }}>{formatNumber(customerValueData?.totalWithdrawCases || 0)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#059669', fontWeight: '600', fontSize: '10px' }}>{calculatePercentage(customerValueData?.highValueWithdrawCases || 0, (customerValueData?.highValueWithdrawCases || 0) + (customerValueData?.lowValueWithdrawCases || 0))}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#dc2626', fontWeight: '600', fontSize: '10px' }}>{calculatePercentage(customerValueData?.lowValueWithdrawCases || 0, (customerValueData?.highValueWithdrawCases || 0) + (customerValueData?.lowValueWithdrawCases || 0))}</td>
+                    </tr>
+                    
+                    {/* Promotion Cost */}
+                    <tr style={{ 
+                      borderBottom: '1px solid #e5e7eb', 
+                      transition: 'all 0.2s ease', 
+                      cursor: 'pointer', 
+                      backgroundColor: '#f9fafb',
+                      height: '28px'
+                    }}
+                    onMouseEnter={(e) => { 
+                      e.currentTarget.style.backgroundColor = '#f3f4f6';
+                      e.currentTarget.style.transform = 'scale(1.01)';
+                    }}
+                    onMouseLeave={(e) => { 
+                      e.currentTarget.style.backgroundColor = '#f9fafb';
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }}>
+                      <td style={{ padding: '8px 12px', fontWeight: '600', fontSize: '10px' }}>Promotion Cost</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '10px' }}>{formatCurrency(customerValueData?.highValuePromotionCost || 0, selectedCurrency)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '10px' }}>{formatCurrency(customerValueData?.lowValuePromotionCost || 0, selectedCurrency)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '10px' }}>{formatCurrency(customerValueData?.totalPromotionCost || 0, selectedCurrency)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#059669', fontWeight: '600', fontSize: '10px' }}>{calculatePercentage(customerValueData?.highValuePromotionCost || 0, (customerValueData?.highValuePromotionCost || 0) + (customerValueData?.lowValuePromotionCost || 0))}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#dc2626', fontWeight: '600', fontSize: '10px' }}>{calculatePercentage(customerValueData?.lowValuePromotionCost || 0, (customerValueData?.highValuePromotionCost || 0) + (customerValueData?.lowValuePromotionCost || 0))}</td>
+                    </tr>
+                    
+                    {/* Net Profit */}
+                    <tr style={{ 
+                      borderBottom: '1px solid #e5e7eb', 
+                      transition: 'all 0.2s ease', 
+                      cursor: 'pointer', 
+                      backgroundColor: '#ffffff',
+                      height: '28px'
+                    }}
+                    onMouseEnter={(e) => { 
+                      e.currentTarget.style.backgroundColor = '#f3f4f6';
+                      e.currentTarget.style.transform = 'scale(1.01)';
+                    }}
+                    onMouseLeave={(e) => { 
+                      e.currentTarget.style.backgroundColor = '#ffffff';
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }}>
+                      <td style={{ padding: '8px 12px', fontWeight: '600', fontSize: '10px' }}>Net Profit</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '10px' }}>{formatCurrency(customerValueData?.highValueNetProfit || 0, selectedCurrency)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '10px' }}>{formatCurrency(customerValueData?.lowValueNetProfit || 0, selectedCurrency)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '10px' }}>{formatCurrency(customerValueData?.totalNetProfit || 0, selectedCurrency)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#059669', fontWeight: '600', fontSize: '10px' }}>{calculatePercentage(customerValueData?.highValueNetProfit || 0, (customerValueData?.highValueNetProfit || 0) + (customerValueData?.lowValueNetProfit || 0))}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#dc2626', fontWeight: '600', fontSize: '10px' }}>{calculatePercentage(customerValueData?.lowValueNetProfit || 0, (customerValueData?.highValueNetProfit || 0) + (customerValueData?.lowValueNetProfit || 0))}</td>
+                    </tr>
+                    
+                    {/* GGR User */}
+                    <tr style={{ 
+                      borderBottom: '1px solid #e5e7eb', 
+                      transition: 'all 0.2s ease', 
+                      cursor: 'pointer', 
+                      backgroundColor: '#f9fafb',
+                      height: '28px'
+                    }}
+                    onMouseEnter={(e) => { 
+                      e.currentTarget.style.backgroundColor = '#f3f4f6';
+                      e.currentTarget.style.transform = 'scale(1.01)';
+                    }}
+                    onMouseLeave={(e) => { 
+                      e.currentTarget.style.backgroundColor = '#f9fafb';
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }}>
+                      <td style={{ padding: '8px 12px', fontWeight: '600', fontSize: '10px' }}>GGR User</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '10px' }}>{formatCurrency(customerValueData?.highValueGGRUser || 0, selectedCurrency)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '10px' }}>{formatCurrency(customerValueData?.lowValueGGRUser || 0, selectedCurrency)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontSize: '10px' }}>{formatCurrency(customerValueData?.totalGGRUser || 0, selectedCurrency)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#059669', fontWeight: '600', fontSize: '10px' }}>{calculatePercentage(customerValueData?.highValueGGRUser || 0, (customerValueData?.highValueGGRUser || 0) + (customerValueData?.lowValueGGRUser || 0))}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#dc2626', fontWeight: '600', fontSize: '10px' }}>{calculatePercentage(customerValueData?.lowValueGGRUser || 0, (customerValueData?.highValueGGRUser || 0) + (customerValueData?.lowValueGGRUser || 0))}</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
             
+            {/* Table Chart 2: Coming Soon */}
             <div className="chart-container">
               <div className="chart-header">
                 <h3>TABLE CHART 2</h3>
@@ -711,6 +1018,7 @@ export default function MemberAnalyticPage() {
               </div>
             </div>
             
+            {/* Pie Chart: Coming Soon */}
             <div className="chart-container">
               <div className="chart-header">
                 <h3>PIE CHART</h3>
