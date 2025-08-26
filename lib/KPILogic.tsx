@@ -2285,7 +2285,7 @@ async function getSevenDayMemberData(
     let query = supabase
       .from('member_report_daily')
       .select('userkey, user_name, unique_code, deposit_amount, deposit_cases, withdraw_amount, withdraw_cases, bonus, date')
-      .gt('deposit_amount', 0)
+      .gt('deposit_cases', 0)
 
     // Apply date filter
     if (startDate && endDate) {

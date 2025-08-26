@@ -1593,7 +1593,7 @@ export default function MemberAnalyticPage() {
                             borderRight: '1px solid #e5e7eb',
                             whiteSpace: 'nowrap'
                           }}>
-                            {formatCurrency((member.depositAmount || 0) - (member.withdrawAmount || 0), selectedCurrency)}
+                            {formatCurrency(member.depositAmount - (member.withdrawAmount || 0), selectedCurrency)}
                           </td>
                           <td style={{ 
                             textAlign: 'right', 
@@ -1695,7 +1695,7 @@ export default function MemberAnalyticPage() {
                     <div style={{ fontSize: '11px', color: '#7c3aed', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total GGR</div>
                     <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#5b21b6', marginTop: '2px' }}>
                       {formatCurrency(
-                        modalMembers.reduce((sum, member) => sum + ((member.depositAmount || 0) - (member.withdrawAmount || 0)), 0),
+                        modalMembers.reduce((sum, member) => sum + (member.depositAmount - (member.withdrawAmount || 0)), 0),
                         selectedCurrency
                       )}
                     </div>
