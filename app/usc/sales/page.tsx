@@ -1010,18 +1010,18 @@ export default function MemberAnalyticPage() {
             {/* Table Chart 2: Coming Soon */}
             <div className="chart-container">
               <div className="chart-header">
-                <h3>TABLE CHART 2</h3>
+                <h3>VIP Program</h3>
                 <p>Coming Soon - Ready Popup Modal</p>
               </div>
               <div className="chart-placeholder">
-                📋 Table Chart 2 - Coming Soon
+                Coming Soon
               </div>
             </div>
             
             {/* Pie Chart: Coming Soon */}
             <div className="chart-container">
               <div className="chart-header">
-                <h3>PIE CHART</h3>
+                <h3>VIP Program</h3>
                 <p>Coming Soon</p>
               </div>
               <div className="chart-placeholder">
@@ -1070,7 +1070,7 @@ export default function MemberAnalyticPage() {
                                margin: 0
                              }}>MEMBER ENGAGEMENT ANALYSIS</h3>
                            </div>
-                           <div style={{ overflowX: 'auto' }}>
+                           <div>
                              <table style={{
                                width: '100%',
                                borderCollapse: 'collapse',
