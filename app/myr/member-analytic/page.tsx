@@ -13,6 +13,54 @@ import DonutChart from '@/components/DonutChart';
 import { getChartIcon } from '@/lib/CentralIcon';
 import { calculateDailyAverage, getMonthInfo, getAllKPIsWithDailyAverage } from '@/lib/dailyAverageHelper';
 
+// Export functions
+const exportToCSV = (data: any[], title: string) => {
+  if (!data || data.length === 0) return '';
+  
+  const headers = [
+    'USER NAME',
+    'UNIQUE CODE', 
+    'ACTIVE DAYS',
+    'DEPOSIT CASES',
+    'DEPOSIT AMOUNT',
+    'WITHDRAW CASES',
+    'WITHDRAW AMOUNT',
+    'GGR',
+    'BONUS',
+    'LAST ACTIVE'
+  ];
+  
+  const csvRows = [
+    headers.join(','),
+    ...data.map(member => [
+      `"${member.userName || member.userkey || ''}"`,
+      `"${member.uniqueCode || member.userkey || ''}"`,
+      member.activeDays || 0,
+      member.depositCases || 0,
+      member.depositAmount || 0,
+      member.withdrawCases || 0,
+      member.withdrawAmount || 0,
+      (member.depositAmount || 0) - (member.withdrawAmount || 0),
+      member.bonus || 0,
+      `"${member.lastActiveDate || ''}"`
+    ].join(','))
+  ];
+  
+  return csvRows.join('\n');
+};
+
+const downloadCSV = (csvContent: string, filename: string) => {
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 export default function MemberAnalyticPage() {
   const [kpiData, setKpiData] = useState<KPIData | null>(null);
   const [momData, setMomData] = useState<KPIData | null>(null);
@@ -1108,9 +1156,9 @@ export default function MemberAnalyticPage() {
             backgroundColor: '#ffffff',
             borderRadius: '12px',
             boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-            maxWidth: '95vw',
-            maxHeight: '80vh',
-            width: '1400px',
+            maxWidth: '98vw',
+            maxHeight: '90vh',
+            width: '1600px',
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column'
@@ -1183,10 +1231,11 @@ export default function MemberAnalyticPage() {
                     width: '100%',
                     borderCollapse: 'collapse',
                     fontSize: '13px',
-                    backgroundColor: '#ffffff'
+                    backgroundColor: '#ffffff',
+                    tableLayout: 'auto'
                   }}>
-                    <thead>
-                      <tr style={{ backgroundColor: '#f9fafb' }}>
+                    <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
+                      <tr style={{ backgroundColor: '#374151' }}>
                         <th style={{ 
                           padding: '12px 16px', 
                           textAlign: 'left', 
@@ -1196,8 +1245,8 @@ export default function MemberAnalyticPage() {
                           textTransform: 'uppercase',
                           letterSpacing: '0.5px',
                           borderRight: '1px solid #4b5563',
-                          width: '15%',
-                          backgroundColor: '#374151'
+                          backgroundColor: '#374151',
+                          whiteSpace: 'nowrap'
                         }}>USER NAME</th>
                         <th style={{ 
                           padding: '12px 16px', 
@@ -1208,8 +1257,8 @@ export default function MemberAnalyticPage() {
                           textTransform: 'uppercase',
                           letterSpacing: '0.5px',
                           borderRight: '1px solid #4b5563',
-                          width: '12%',
-                          backgroundColor: '#374151'
+                          backgroundColor: '#374151',
+                          whiteSpace: 'nowrap'
                         }}>UNIQUE CODE</th>
                         <th style={{ 
                           padding: '12px 16px', 
@@ -1220,8 +1269,8 @@ export default function MemberAnalyticPage() {
                           textTransform: 'uppercase',
                           letterSpacing: '0.5px',
                           borderRight: '1px solid #4b5563',
-                          width: '10%',
-                          backgroundColor: '#374151'
+                          backgroundColor: '#374151',
+                          whiteSpace: 'nowrap'
                         }}>ACTIVE DAYS</th>
                         <th style={{ 
                           padding: '12px 16px', 
@@ -1232,8 +1281,8 @@ export default function MemberAnalyticPage() {
                           textTransform: 'uppercase',
                           letterSpacing: '0.5px',
                           borderRight: '1px solid #4b5563',
-                          width: '10%',
-                          backgroundColor: '#374151'
+                          backgroundColor: '#374151',
+                          whiteSpace: 'nowrap'
                         }}>DEPOSIT CASES</th>
                         <th style={{ 
                           padding: '12px 16px', 
@@ -1244,8 +1293,8 @@ export default function MemberAnalyticPage() {
                           textTransform: 'uppercase',
                           letterSpacing: '0.5px',
                           borderRight: '1px solid #4b5563',
-                          width: '12%',
-                          backgroundColor: '#374151'
+                          backgroundColor: '#374151',
+                          whiteSpace: 'nowrap'
                         }}>DEPOSIT AMOUNT</th>
                         <th style={{ 
                           padding: '12px 16px', 
@@ -1256,8 +1305,8 @@ export default function MemberAnalyticPage() {
                           textTransform: 'uppercase',
                           letterSpacing: '0.5px',
                           borderRight: '1px solid #4b5563',
-                          width: '10%',
-                          backgroundColor: '#374151'
+                          backgroundColor: '#374151',
+                          whiteSpace: 'nowrap'
                         }}>WITHDRAW CASES</th>
                         <th style={{ 
                           padding: '12px 16px', 
@@ -1268,8 +1317,8 @@ export default function MemberAnalyticPage() {
                           textTransform: 'uppercase',
                           letterSpacing: '0.5px',
                           borderRight: '1px solid #4b5563',
-                          width: '12%',
-                          backgroundColor: '#374151'
+                          backgroundColor: '#374151',
+                          whiteSpace: 'nowrap'
                         }}>WITHDRAW AMOUNT</th>
                         <th style={{ 
                           padding: '12px 16px', 
@@ -1280,8 +1329,8 @@ export default function MemberAnalyticPage() {
                           textTransform: 'uppercase',
                           letterSpacing: '0.5px',
                           borderRight: '1px solid #4b5563',
-                          width: '10%',
-                          backgroundColor: '#374151'
+                          backgroundColor: '#374151',
+                          whiteSpace: 'nowrap'
                         }}>GGR</th>
                         <th style={{ 
                           padding: '12px 16px', 
@@ -1292,8 +1341,8 @@ export default function MemberAnalyticPage() {
                           textTransform: 'uppercase',
                           letterSpacing: '0.5px',
                           borderRight: '1px solid #4b5563',
-                          width: '8%',
-                          backgroundColor: '#374151'
+                          backgroundColor: '#374151',
+                          whiteSpace: 'nowrap'
                         }}>BONUS</th>
                         <th style={{ 
                           padding: '12px 16px', 
@@ -1303,8 +1352,8 @@ export default function MemberAnalyticPage() {
                           fontSize: '12px',
                           textTransform: 'uppercase',
                           letterSpacing: '0.5px',
-                          width: '13%',
-                          backgroundColor: '#374151'
+                          backgroundColor: '#374151',
+                          whiteSpace: 'nowrap'
                         }}>LAST ACTIVE</th>
                       </tr>
                     </thead>
@@ -1351,7 +1400,8 @@ export default function MemberAnalyticPage() {
                             padding: '10px 16px',
                             fontWeight: '600',
                             color: '#1f2937',
-                            borderRight: '1px solid #e5e7eb'
+                            borderRight: '1px solid #e5e7eb',
+                            whiteSpace: 'nowrap'
                           }}>
                             {formatInteger(member.activeDays)}
                           </td>
@@ -1360,7 +1410,8 @@ export default function MemberAnalyticPage() {
                             padding: '10px 16px',
                             fontWeight: '600',
                             color: '#1f2937',
-                            borderRight: '1px solid #e5e7eb'
+                            borderRight: '1px solid #e5e7eb',
+                            whiteSpace: 'nowrap'
                           }}>
                             {formatInteger(member.depositCases || 0)}
                           </td>
@@ -1369,7 +1420,8 @@ export default function MemberAnalyticPage() {
                             padding: '10px 16px',
                             fontWeight: '600',
                             color: '#1f2937',
-                            borderRight: '1px solid #e5e7eb'
+                            borderRight: '1px solid #e5e7eb',
+                            whiteSpace: 'nowrap'
                           }}>
                             {formatCurrency(member.depositAmount, selectedCurrency)}
                           </td>
@@ -1378,7 +1430,8 @@ export default function MemberAnalyticPage() {
                             padding: '10px 16px',
                             fontWeight: '600',
                             color: '#1f2937',
-                            borderRight: '1px solid #e5e7eb'
+                            borderRight: '1px solid #e5e7eb',
+                            whiteSpace: 'nowrap'
                           }}>
                             {formatInteger(member.withdrawCases || 0)}
                           </td>
@@ -1387,7 +1440,8 @@ export default function MemberAnalyticPage() {
                             padding: '10px 16px',
                             fontWeight: '600',
                             color: '#1f2937',
-                            borderRight: '1px solid #e5e7eb'
+                            borderRight: '1px solid #e5e7eb',
+                            whiteSpace: 'nowrap'
                           }}>
                             {formatCurrency(member.withdrawAmount || 0, selectedCurrency)}
                           </td>
@@ -1396,7 +1450,8 @@ export default function MemberAnalyticPage() {
                             padding: '10px 16px',
                             fontWeight: '600',
                             color: '#1f2937',
-                            borderRight: '1px solid #e5e7eb'
+                            borderRight: '1px solid #e5e7eb',
+                            whiteSpace: 'nowrap'
                           }}>
                             {formatCurrency((member.depositAmount || 0) - (member.withdrawAmount || 0), selectedCurrency)}
                           </td>
@@ -1405,7 +1460,8 @@ export default function MemberAnalyticPage() {
                             padding: '10px 16px',
                             fontWeight: '600',
                             color: '#1f2937',
-                            borderRight: '1px solid #e5e7eb'
+                            borderRight: '1px solid #e5e7eb',
+                            whiteSpace: 'nowrap'
                           }}>
                             {formatCurrency(member.bonus || 0, selectedCurrency)}
                           </td>
@@ -1413,7 +1469,8 @@ export default function MemberAnalyticPage() {
                             textAlign: 'center', 
                             padding: '10px 16px',
                             fontWeight: '500',
-                            color: '#6b7280'
+                            color: '#6b7280',
+                            whiteSpace: 'nowrap'
                           }}>
                             {member.lastActiveDate || '-'}
                           </td>
@@ -1554,8 +1611,11 @@ export default function MemberAnalyticPage() {
                     e.currentTarget.style.transform = 'scale(1)';
                   }}
                   onClick={() => {
-                    // Export functionality would go here
-                    console.log('Exporting data...');
+                    // Export data to CSV
+                    if (modalMembers.length > 0) {
+                      const csvContent = exportToCSV(modalMembers, modalTitle);
+                      downloadCSV(csvContent, `${modalTitle.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
+                    }
                   }}
                 >
                   📊 Export Data
