@@ -746,7 +746,7 @@ export default function MemberAnalyticPage() {
                                justifyContent: 'center'
                              }} dangerouslySetInnerHTML={{ __html: getChartIcon('MEMBER ENGAGEMENT ANALYSIS') }} />
                              <h3 style={{
-                               fontSize: '16px',
+                               fontSize: '12px',
                                fontWeight: '600',
                                color: '#1f2937',
                                margin: 0
