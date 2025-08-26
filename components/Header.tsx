@@ -95,7 +95,7 @@ export default function Header({
       case '/usc/overview':
         return 'USC Overview'
       case '/usc/sales':
-        return 'USC Sales'
+        return 'Member Analytic USC'
       case '/usc/churn-member':
         return 'USC Churn Member'
       case '/usc/retention-day':

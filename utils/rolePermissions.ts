@@ -77,10 +77,8 @@ export const USER_ROLES: { [key: string]: UserRole } = {
     name: 'usc_dep',
     displayName: 'USC Department',
     permissions: [
-      'myr',
-      'sgd',
       'usc',
-      'dashboard'  // Allow access to dashboard as well to prevent redirect loops
+      'transaction'
     ],
     canAccessUserManagement: false,
     isReadOnly: true
