@@ -730,7 +730,17 @@ export default function MemberAnalyticPage() {
                            borderRadius: '12px',
                            padding: '16px',
                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-                           border: '1px solid #e5e7eb'
+                           border: '1px solid #e5e7eb',
+                           transition: 'all 0.3s ease',
+                           cursor: 'pointer'
+                         }}
+                         onMouseEnter={(e) => {
+                           e.currentTarget.style.transform = 'translateY(-3px)';
+                           e.currentTarget.style.boxShadow = '0 8px 25px 0 rgba(0, 0, 0, 0.12), 0 4px 10px 0 rgba(0, 0, 0, 0.08)';
+                         }}
+                         onMouseLeave={(e) => {
+                           e.currentTarget.style.transform = 'translateY(0)';
+                           e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
                          }}>
                            <div style={{
                              display: 'flex',
