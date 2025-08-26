@@ -37,8 +37,8 @@ export default function SalesRevenuePage() {
     withdrawAmount: 0,
     grossGamingRevenue: 0,
     activeMember: 0,
-    newDepositor: 0,
-    conversionRate: 0
+    purchaseFrequency: 0,
+    customerMaturityIndex: 0
   });
 
   useEffect(() => {
@@ -158,14 +158,14 @@ export default function SalesRevenuePage() {
           // Use central function - sama seperti getAllKPIsWithMoM
           const result = await getAllKPIsWithDailyAverage(kpiData, selectedYear, selectedMonth);
           
-          setDailyAverages({
-            depositAmount: result.dailyAverage.depositAmount || 0,
-            withdrawAmount: result.dailyAverage.withdrawAmount || 0,
-            grossGamingRevenue: result.dailyAverage.grossGamingRevenue || 0,
-            activeMember: result.dailyAverage.activeMember || 0,
-            newDepositor: result.dailyAverage.newDepositor || 0,
-            conversionRate: result.dailyAverage.conversionRate || 0
-          });
+                     setDailyAverages({
+             depositAmount: result.dailyAverage.depositAmount || 0,
+             withdrawAmount: result.dailyAverage.withdrawAmount || 0,
+             grossGamingRevenue: result.dailyAverage.grossGamingRevenue || 0,
+             activeMember: result.dailyAverage.activeMember || 0,
+             purchaseFrequency: result.dailyAverage.purchaseFrequency || 0,
+             customerMaturityIndex: result.dailyAverage.customerMaturityIndex || 0
+           });
           
           console.log('✅ [MYR Sales Revenue] Central Daily Average applied to ALL KPIs');
           
@@ -278,34 +278,30 @@ export default function SalesRevenuePage() {
           ],
           categories: months.map(month => month.substring(0, 3)) // Short month names
         },
-        // Row 3 - User Acquisition Charts (REAL DATA with correct chart types)
-        newDepositorBarChart: {
+        // Row 3 - Transaction Cases Charts (REAL DATA with correct chart types)
+        depositCasesBarChart: {
           series: [
             {
-              name: 'New Depositor',
-              data: monthlyKPIData.map(kpi => kpi.newDepositor) // REAL dari calculateKPIs line 825
+              name: 'Deposit Cases',
+              data: monthlyKPIData.map(kpi => kpi.depositCases) // REAL dari calculateKPIs
             }
           ],
           categories: months.map(month => month.substring(0, 3)) // Short month names
         },
-        conversionRateLineChart: {
+        withdrawCasesLineChart: {
           series: [
             {
-              name: 'Conversion Rate',
-              data: monthlyKPIData.map(kpi => kpi.conversionRate) // REAL dari calculateKPIs line 852
+              name: 'Withdraw Cases',
+              data: monthlyKPIData.map(kpi => kpi.withdrawCases) // REAL dari calculateKPIs
             }
           ],
           categories: months.map(month => month.substring(0, 3)) // Short month names
         },
-        activeMemberPureMemberLineChart: {
+        netProfitTrend: {
           series: [
             {
-              name: 'Active Member',
-              data: monthlyKPIData.map(kpi => kpi.activeMember) // REAL dari calculateKPIs
-            },
-            {
-              name: 'Pure Member',
-              data: monthlyKPIData.map(kpi => kpi.pureMember) // REAL dari calculateKPIs
+              name: 'Net Profit',
+              data: monthlyKPIData.map(kpi => kpi.netProfit) // REAL dari calculateKPIs
             }
           ],
           categories: months.map(month => month.substring(0, 3)) // Short month names
@@ -320,15 +316,24 @@ export default function SalesRevenuePage() {
           ],
           categories: months.map(month => month.substring(0, 3)) // Short month names
         },
-        purchaseFrequencyTrend: {
-          series: [
-            {
-              name: 'Purchase Frequency',
-              data: monthlyKPIData.map(kpi => kpi.purchaseFrequency) // REAL dari calculateKPIs line 844
-            }
-          ],
-          categories: months.map(month => month.substring(0, 3)) // Short month names
-        },
+                 purchaseFrequencyTrend: {
+           series: [
+             {
+               name: 'Purchase Frequency',
+               data: monthlyKPIData.map(kpi => kpi.purchaseFrequency) // REAL dari calculateKPIs line 844
+             }
+           ],
+           categories: months.map(month => month.substring(0, 3)) // Short month names
+         },
+         avgCustomerLifespanTrend: {
+           series: [
+             {
+               name: 'Average Customer Lifespan',
+               data: monthlyKPIData.map(kpi => kpi.avgCustomerLifespan) // REAL dari calculateKPIs
+             }
+           ],
+           categories: months.map(month => month.substring(0, 3)) // Short month names
+         },
         // Row 5 - Advanced Analytics Single Line Charts (REAL DATA)
         customerLifetimeValueTrend: {
           series: [
@@ -496,32 +501,32 @@ export default function SalesRevenuePage() {
               isPositive: Boolean(momData?.activeMember && momData.activeMember > 0)
             }}
           />
-          <StatCard
-            title="NEW DEPOSITOR"
-            value={formatNumber(kpiData?.newDepositor || 0)}
-            icon="New Depositor"
-            additionalKpi={{
-              label: "DAILY AVERAGE",
-              value: formatNumber(Math.round(dailyAverages.newDepositor))
-            }}
-            comparison={{
-              percentage: formatMoM(momData?.newDepositor || 0),
-              isPositive: Boolean(momData?.newDepositor && momData.newDepositor > 0)
-            }}
-          />
-          <StatCard
-            title="CONVERSION RATE"
-            value={`${(kpiData?.conversionRate || 0).toFixed(2)}%`}
-            icon="Conversion Rate"
-            additionalKpi={{
-              label: "DAILY AVERAGE",
-              value: `${dailyAverages.conversionRate.toFixed(2)}%`
-            }}
-            comparison={{
-              percentage: formatMoM(momData?.conversionRate || 0),
-              isPositive: Boolean(momData?.conversionRate && momData.conversionRate > 0)
-            }}
-          />
+                     <StatCard
+             title="PURCHASE FREQUENCY"
+             value={`${(kpiData?.purchaseFrequency || 0).toFixed(2)}`}
+             icon="Purchase Frequency"
+             additionalKpi={{
+               label: "DAILY AVERAGE",
+               value: `${dailyAverages.purchaseFrequency.toFixed(2)}`
+             }}
+             comparison={{
+               percentage: formatMoM(momData?.purchaseFrequency || 0),
+               isPositive: Boolean(momData?.purchaseFrequency && momData.purchaseFrequency > 0)
+             }}
+           />
+           <StatCard
+             title="CUSTOMER MATURITY INDEX"
+             value={`${(kpiData?.customerMaturityIndex || 0).toFixed(2)}`}
+             icon="Customer Maturity Index"
+             additionalKpi={{
+               label: "DAILY AVERAGE",
+               value: `${dailyAverages.customerMaturityIndex.toFixed(2)}`
+             }}
+             comparison={{
+               percentage: formatMoM(momData?.customerMaturityIndex || 0),
+               isPositive: Boolean(momData?.customerMaturityIndex && momData.customerMaturityIndex > 0)
+             }}
+           />
         </div>
 
         {/* Row 2: Financial Performance Charts */}
@@ -552,31 +557,31 @@ export default function SalesRevenuePage() {
           />
         </div>
 
-        {/* Row 3: User Acquisition Charts */}
+        {/* Row 3: Transaction Cases Charts */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <BarChart
-            series={srChartData?.newDepositorBarChart?.series || []}
-            categories={srChartData?.newDepositorBarChart?.categories || []}
-            title="NEW DEPOSITOR TREND"
+            series={srChartData?.depositCasesBarChart?.series || []}
+            categories={srChartData?.depositCasesBarChart?.categories || []}
+            title="DEPOSIT CASES TREND"
             currency={selectedCurrency}
-            chartIcon={getChartIcon('New Depositor')}
+            chartIcon={getChartIcon('deposits')}
           />
           <LineChart
-            series={srChartData?.conversionRateLineChart?.series || []}
-            categories={srChartData?.conversionRateLineChart?.categories || []}
-            title="CONVERSION RATE TREND"
+            series={srChartData?.withdrawCasesLineChart?.series || []}
+            categories={srChartData?.withdrawCasesLineChart?.categories || []}
+            title="WITHDRAW CASES TREND"
             currency={selectedCurrency}
             hideLegend={true}
-            chartIcon={getChartIcon('Conversion Rate')}
+            chartIcon={getChartIcon('Withdraw Amount')}
           />
-                     <LineChart
-             series={srChartData?.activeMemberPureMemberLineChart?.series || []}
-             categories={srChartData?.activeMemberPureMemberLineChart?.categories || []}
-             title="ACTIVE MEMBER VS PURE MEMBER TREND"
-             currency={selectedCurrency}
-             hideLegend={true}
-             chartIcon={getChartIcon('Active Member')}
-           />
+          <LineChart
+            series={srChartData?.netProfitTrend?.series || []}
+            categories={srChartData?.netProfitTrend?.categories || []}
+            title="NET PROFIT TREND"
+            currency={selectedCurrency}
+            hideLegend={true}
+            chartIcon={getChartIcon('Net Profit')}
+          />
         </div>
 
         {/* Row 4: User Behavior Analytics */}
@@ -597,22 +602,14 @@ export default function SalesRevenuePage() {
             hideLegend={true}
             chartIcon={getChartIcon('Purchase Frequency')}
           />
-          <DonutChart
-            series={[
-              {
-                name: 'Retention Rate',
-                data: [kpiData?.retentionRate || 0]  // ✅ Data sesuai slicer bulan yang dipilih
-              },
-              {
-                name: 'Churn Rate', 
-                data: [kpiData?.churnRate || 0]      // ✅ Data sesuai slicer bulan yang dipilih
-              }
-            ]}
-            title="RETENTION VS CHURN RATE"
-            currency={selectedCurrency}
-            colors={['#3B82F6', '#F97316']}
-            chartIcon={getChartIcon('Retention vs Churn Rate')}
-          />
+                     <LineChart
+             series={srChartData?.avgCustomerLifespanTrend?.series || []}
+             categories={srChartData?.avgCustomerLifespanTrend?.categories || []}
+             title="AVERAGE CUSTOMER LIFESPAN TREND (ACL)"
+             currency={selectedCurrency}
+             hideLegend={true}
+             chartIcon={getChartIcon('Average Customer Lifespan')}
+           />
         </div>
 
         {/* Row 5: Advanced Analytics Charts */}
