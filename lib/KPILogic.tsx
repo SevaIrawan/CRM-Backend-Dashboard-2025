@@ -2156,6 +2156,7 @@ export interface RetentionMemberDetail {
   lastActiveDate: string
   depositCases: number
   withdrawCases: number
+  atv: number // ✅ Average Transaction Value
 }
 
 export interface CustomerValueDetail {
@@ -2282,30 +2283,57 @@ async function getSevenDayMemberData(
   try {
     console.log('🔍 [KPILogic] getSevenDayMemberData called with:', { year, month, currency, line, startDate, endDate })
     
-    let query = supabase
+    // ✅ STEP 1: Get member retention (userkey dengan deposit_cases > 0)
+    let retentionQuery = supabase
       .from('member_report_daily')
-      .select('userkey, user_name, unique_code, deposit_amount, deposit_cases, withdraw_amount, withdraw_cases, bonus, date')
+      .select('userkey')
       .gt('deposit_cases', 0)
 
     // Apply date filter
     if (startDate && endDate) {
-      query = query.gte('date', startDate).lte('date', endDate)
+      retentionQuery = retentionQuery.gte('date', startDate).lte('date', endDate)
     } else {
       const monthIndex = getMonthIndex(month)
       const yearInt = parseInt(year)
-      query = query
+      retentionQuery = retentionQuery
         .gte('date', `${yearInt}-${monthIndex.toString().padStart(2, '0')}-01`)
         .lt('date', `${yearInt}-${(monthIndex + 1).toString().padStart(2, '0')}-01`)
     }
 
     // Apply filters
-    if (currency !== 'All') query = query.eq('currency', currency)
-    if (line !== 'All') query = query.eq('line', line)
+    if (currency !== 'All') retentionQuery = retentionQuery.eq('currency', currency)
+    if (line && line !== 'All') retentionQuery = retentionQuery.eq('line', line)
 
-    const { data } = await query
-    console.log('🔍 [KPILogic] getSevenDayMemberData raw data:', data?.slice(0, 3)) // Log first 3 records
-    console.log('🔍 [KPILogic] getSevenDayMemberData total records:', data?.length || 0)
-    return data || []
+    const { data: retentionData } = await retentionQuery
+    const retentionUserkeys = Array.from(new Set(retentionData?.map((row: any) => row.userkey) || []))
+    console.log('🔍 [KPILogic] Retention userkeys found:', retentionUserkeys.length)
+    
+    // ✅ STEP 2: Get SEMUA transaction untuk userkey retention (tanpa filter deposit_cases)
+    let allTransactionsQuery = supabase
+      .from('member_report_daily')
+      .select('userkey, user_name, unique_code, deposit_amount, deposit_cases, withdraw_amount, withdraw_cases, bonus, date')
+      .in('userkey', retentionUserkeys)
+
+    // Apply date filter
+    if (startDate && endDate) {
+      allTransactionsQuery = allTransactionsQuery.gte('date', startDate).lte('date', endDate)
+    } else {
+      const monthIndex = getMonthIndex(month)
+      const yearInt = parseInt(year)
+      allTransactionsQuery = allTransactionsQuery
+        .gte('date', `${yearInt}-${monthIndex.toString().padStart(2, '0')}-01`)
+        .lt('date', `${yearInt}-${(monthIndex + 1).toString().padStart(2, '0')}-01`)
+    }
+
+    // Apply filters
+    if (currency !== 'All') allTransactionsQuery = allTransactionsQuery.eq('currency', currency)
+    if (line && line !== 'All') allTransactionsQuery = allTransactionsQuery.eq('line', line)
+
+    const { data: allTransactions } = await allTransactionsQuery
+    console.log('🔍 [KPILogic] All transactions for retention members:', allTransactions?.length || 0)
+    console.log('🔍 [KPILogic] Sample transactions:', allTransactions?.slice(0, 3))
+    
+    return allTransactions || []
   } catch (error) {
     console.error('❌ [KPILogic] Error in getSevenDayMemberData:', error)
     return []
@@ -2392,19 +2420,25 @@ async function getRetentionMemberDetails(
     })
 
     // Convert to RetentionMemberDetail array
-    const details: RetentionMemberDetail[] = Object.keys(memberDays).map(userkey => ({
-      userkey,
-      userName: memberTotals[userkey].userName,
-      uniqueCode: memberTotals[userkey].uniqueCode,
-      activeDays: memberDays[userkey].size,
-      depositAmount: memberTotals[userkey].deposit,
-      withdrawAmount: memberTotals[userkey].withdraw,
-      ggr: memberTotals[userkey].ggr,
-      bonus: memberTotals[userkey].bonus,
-      lastActiveDate: memberTotals[userkey].lastDate,
-      depositCases: memberTotals[userkey].depositCases,
-      withdrawCases: memberTotals[userkey].withdrawCases
-    }))
+    const details: RetentionMemberDetail[] = Object.keys(memberDays).map(userkey => {
+      const member = memberTotals[userkey]
+      const atv = member.depositCases > 0 ? member.deposit / member.depositCases : 0
+      
+      return {
+        userkey,
+        userName: member.userName,
+        uniqueCode: member.uniqueCode,
+        activeDays: memberDays[userkey].size,
+        depositAmount: member.deposit,
+        withdrawAmount: member.withdraw,
+        ggr: member.ggr,
+        bonus: member.bonus,
+        lastActiveDate: member.lastDate,
+        depositCases: member.depositCases,
+        withdrawCases: member.withdrawCases,
+        atv: atv // ✅ Average Transaction Value per userkey
+      }
+    })
 
     console.log('🔍 [KPILogic] Final retention details sample:', details.slice(0, 2))
     console.log('🔍 [KPILogic] Total retention details:', details.length)

@@ -61,12 +61,11 @@ export default function SalesRevenuePage() {
           .eq('year', selectedYear)
           .order('month');
 
+        // ✅ FIXED: Line Slicer hanya berdasarkan currency active saja
         const { data: lineData } = await supabase
           .from('member_report_daily')
           .select('line')
           .eq('currency', 'USC')
-          .eq('year', selectedYear)
-          .eq('month', selectedMonth)
           .order('line');
 
         // Extract unique values from REAL data

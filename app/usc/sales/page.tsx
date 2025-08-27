@@ -146,8 +146,6 @@ export default function MemberAnalyticPage() {
           .from('member_report_daily')
           .select('line')
           .eq('currency', 'USC')
-          .eq('year', selectedYear)
-          .eq('month', selectedMonth)
           .order('line');
 
         const availableYears = Array.from(new Set(yearData?.map((row: any) => row.year?.toString()).filter(Boolean) || [])) as string[];
