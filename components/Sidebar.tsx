@@ -70,7 +70,6 @@ export default function Sidebar({
   const fetchLastUpdate = async () => {
     try {
       setIsLoading(true)
-      console.log('🔧 Sidebar - Fetching MAX(date) from member_report_daily...')
       
       // Mengambil MAX(date) dari kolom member_report_daily
       const { data, error } = await supabase
@@ -89,7 +88,6 @@ export default function Sidebar({
 
       if (data && data.length > 0) {
         const maxDate = data[0].date
-        console.log('📅 Raw MAX(date) from database:', maxDate)
         
         // Handle different date formats
         let date: Date | null = null
@@ -140,7 +138,6 @@ export default function Sidebar({
           setLastUpdate(formattedDate)
           setIsConnected(true)
           setIsLoading(false)
-          console.log('✅ Sidebar - MAX(date) updated:', formattedDate)
         } else {
           console.error('❌ Sidebar - Invalid date format:', maxDate)
           setLastUpdate('Invalid Date')
@@ -165,18 +162,19 @@ export default function Sidebar({
   const getUserRole = () => {
     try {
       if (typeof window === 'undefined') {
-        return 'admin' // Default for server-side rendering
+        return 'user' // Default for server-side rendering
       }
       
       const session = localStorage.getItem('nexmax_session')
       if (session) {
         const sessionData = JSON.parse(session)
-        return sessionData.role || 'admin'
+        const role = sessionData.role || 'user'
+        return role
       }
     } catch (error) {
       console.error('Error getting user role:', error)
     }
-    return 'admin' // Default to admin for development
+    return 'user' // Default to user instead of admin
   }
 
   const userRole = getUserRole()

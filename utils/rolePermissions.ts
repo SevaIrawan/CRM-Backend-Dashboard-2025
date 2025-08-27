@@ -72,6 +72,17 @@ export const USER_ROLES: { [key: string]: UserRole } = {
     canAccessUserManagement: false,
     isReadOnly: true
   },
+  'manager_usc': {
+    id: 'manager_usc',
+    name: 'manager_usc',
+    displayName: 'USC Manager',
+    permissions: [
+      'usc',
+      'transaction'
+    ],
+    canAccessUserManagement: false,
+    isReadOnly: true
+  },
   'usc_dep': {
     id: 'usc_dep',
     name: 'usc_dep',
