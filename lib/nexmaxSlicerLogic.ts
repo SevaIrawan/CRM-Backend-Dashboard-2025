@@ -44,6 +44,10 @@ const VALID_MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
+// Type guard functions
+const isString = (value: any): value is string => typeof value === 'string' && value.length > 0;
+const isNumber = (value: any): value is number => typeof value === 'number' && !isNaN(value);
+
 /**
  * 1. SLICER CURRENCY - Set Active Source data dari member_report_daily
  * 🚨 UNLIMITED DATA - TIDAK ADA BATAS
@@ -70,7 +74,8 @@ export const getCurrencyData = async (): Promise<string[]> => {
     
     // Extract unique currencies dan tambahkan "All" option
     const typedData = data as MemberReportDailyRow[];
-    const uniqueCurrencies = Array.from(new Set(typedData.map(row => row.currency).filter(Boolean)));
+    const validCurrencies = typedData.map(row => row.currency).filter(isString);
+    const uniqueCurrencies = Array.from(new Set(validCurrencies));
     const currenciesWithAll = ['All', ...uniqueCurrencies];
     
     console.log(`✅ [NEXMAX Slicer] UNLIMITED currency data loaded: ${currenciesWithAll.length} currencies`);
@@ -100,7 +105,8 @@ export const getLineData = async (currency: string): Promise<string[]> => {
       if (error) throw error;
       
       const typedData = data as MemberReportDailyRow[];
-      const uniqueLines = Array.from(new Set(typedData?.map(row => row.line).filter(Boolean) || []));
+      const validLines = typedData?.map(row => row.line).filter(isString) || [];
+      const uniqueLines = Array.from(new Set(validLines));
       const linesWithAll = ['All', ...uniqueLines];
       
       console.log(`✅ [NEXMAX Slicer] UNLIMITED all lines loaded: ${linesWithAll.length} lines`);
@@ -116,7 +122,8 @@ export const getLineData = async (currency: string): Promise<string[]> => {
       if (error) throw error;
       
       const typedData = data as MemberReportDailyRow[];
-      const uniqueLines = Array.from(new Set(typedData?.map(row => row.line).filter(Boolean) || []));
+      const validLines = typedData?.map(row => row.line).filter(isString) || [];
+      const uniqueLines = Array.from(new Set(validLines));
       const linesWithAll = ['All', ...uniqueLines];
       
       console.log(`✅ [NEXMAX Slicer] UNLIMITED lines for ${currency}: ${linesWithAll.length} lines`);
@@ -147,7 +154,8 @@ export const getYearData = async (currency: string): Promise<string[]> => {
       if (error) throw error;
       
       const typedData = data as MemberReportDailyRow[];
-      const uniqueYears = Array.from(new Set(typedData?.map(row => row.year?.toString()).filter(Boolean) || []));
+      const validYears = typedData?.map(row => row.year).filter(isNumber).map(year => year.toString()) || [];
+      const uniqueYears = Array.from(new Set(validYears));
       const yearsWithAll = ['All', ...uniqueYears];
       
       console.log(`✅ [NEXMAX Slicer] UNLIMITED all years loaded: ${yearsWithAll.length} years`);
@@ -163,7 +171,8 @@ export const getYearData = async (currency: string): Promise<string[]> => {
       if (error) throw error;
       
       const typedData = data as MemberReportDailyRow[];
-      const uniqueYears = Array.from(new Set(typedData?.map(row => row.year?.toString()).filter(Boolean) || []));
+      const validYears = typedData?.map(row => row.year).filter(isNumber).map(year => year.toString()) || [];
+      const uniqueYears = Array.from(new Set(validYears));
       const yearsWithAll = ['All', ...uniqueYears];
       
       console.log(`✅ [NEXMAX Slicer] UNLIMITED years for ${currency}: ${yearsWithAll.length} years`);
@@ -195,10 +204,11 @@ export const getMonthData = async (currency: string, year: string): Promise<stri
       if (error) throw error;
       
       const typedData = data as MemberReportDailyRow[];
-      const uniqueMonths = Array.from(new Set(typedData?.map(row => row.month).filter(Boolean) || []));
+      const validMonths = typedData?.map(row => row.month).filter(isString) || [];
+      const uniqueMonths = Array.from(new Set(validMonths));
       const monthsWithAll = ['All', ...uniqueMonths];
       
-      console.log(`✅ [NEXMAX Slicer] UNLIMITED all months for ${currency}: ${monthsWithAll.length} months`);
+      console.log(`✅ [NEXMAX Slicer] UNLIMITED all months for ${currency}: ${uniqueMonths.length} months`);
       return monthsWithAll;
     } else {
       // Filter berdasarkan year yang dipilih - SEMUA data
@@ -212,10 +222,11 @@ export const getMonthData = async (currency: string, year: string): Promise<stri
       if (error) throw error;
       
       const typedData = data as MemberReportDailyRow[];
-      const uniqueMonths = Array.from(new Set(typedData?.map(row => row.month).filter(Boolean) || []));
+      const validMonths = typedData?.map(row => row.month).filter(isString) || [];
+      const uniqueMonths = Array.from(new Set(validMonths));
       const monthsWithAll = ['All', ...uniqueMonths];
       
-      console.log(`✅ [NEXMAX Slicer] UNLIMITED months for ${currency} ${year}: ${monthsWithAll.length} months`);
+      console.log(`✅ [NEXMAX Slicer] UNLIMITED months for ${currency} ${year}: ${uniqueMonths.length} months`);
       return monthsWithAll;
     }
     
