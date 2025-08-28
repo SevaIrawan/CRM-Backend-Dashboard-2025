@@ -27,6 +27,14 @@ export interface SlicerFilters {
   dateRange?: string;
 }
 
+// Supabase row types
+interface MemberReportDailyRow {
+  currency?: string;
+  line?: string;
+  year?: number;
+  month?: string;
+}
+
 // Constants
 const VALID_CURRENCIES = ['USD', 'SGD', 'MYR'];
 const VALID_LINES = ['Line1', 'Line2', 'Line3', 'Line4', 'Line5'];
@@ -61,7 +69,8 @@ export const getCurrencyData = async (): Promise<string[]> => {
     }
     
     // Extract unique currencies dan tambahkan "All" option
-    const uniqueCurrencies = Array.from(new Set(data.map(row => row.currency).filter(Boolean)));
+    const typedData = data as MemberReportDailyRow[];
+    const uniqueCurrencies = Array.from(new Set(typedData.map(row => row.currency).filter(Boolean)));
     const currenciesWithAll = ['All', ...uniqueCurrencies];
     
     console.log(`✅ [NEXMAX Slicer] UNLIMITED currency data loaded: ${currenciesWithAll.length} currencies`);
@@ -90,7 +99,8 @@ export const getLineData = async (currency: string): Promise<string[]> => {
       
       if (error) throw error;
       
-      const uniqueLines = Array.from(new Set(data?.map(row => row.line).filter(Boolean) || []));
+      const typedData = data as MemberReportDailyRow[];
+      const uniqueLines = Array.from(new Set(typedData?.map(row => row.line).filter(Boolean) || []));
       const linesWithAll = ['All', ...uniqueLines];
       
       console.log(`✅ [NEXMAX Slicer] UNLIMITED all lines loaded: ${linesWithAll.length} lines`);
@@ -105,7 +115,8 @@ export const getLineData = async (currency: string): Promise<string[]> => {
       
       if (error) throw error;
       
-      const uniqueLines = Array.from(new Set(data?.map(row => row.line).filter(Boolean) || []));
+      const typedData = data as MemberReportDailyRow[];
+      const uniqueLines = Array.from(new Set(typedData?.map(row => row.line).filter(Boolean) || []));
       const linesWithAll = ['All', ...uniqueLines];
       
       console.log(`✅ [NEXMAX Slicer] UNLIMITED lines for ${currency}: ${linesWithAll.length} lines`);
@@ -135,7 +146,8 @@ export const getYearData = async (currency: string): Promise<string[]> => {
       
       if (error) throw error;
       
-      const uniqueYears = Array.from(new Set(data?.map(row => row.year?.toString()).filter(Boolean) || []));
+      const typedData = data as MemberReportDailyRow[];
+      const uniqueYears = Array.from(new Set(typedData?.map(row => row.year?.toString()).filter(Boolean) || []));
       const yearsWithAll = ['All', ...uniqueYears];
       
       console.log(`✅ [NEXMAX Slicer] UNLIMITED all years loaded: ${yearsWithAll.length} years`);
@@ -150,7 +162,8 @@ export const getYearData = async (currency: string): Promise<string[]> => {
       
       if (error) throw error;
       
-      const uniqueYears = Array.from(new Set(data?.map(row => row.year?.toString()).filter(Boolean) || []));
+      const typedData = data as MemberReportDailyRow[];
+      const uniqueYears = Array.from(new Set(typedData?.map(row => row.year?.toString()).filter(Boolean) || []));
       const yearsWithAll = ['All', ...uniqueYears];
       
       console.log(`✅ [NEXMAX Slicer] UNLIMITED years for ${currency}: ${yearsWithAll.length} years`);
@@ -181,7 +194,8 @@ export const getMonthData = async (currency: string, year: string): Promise<stri
       
       if (error) throw error;
       
-      const uniqueMonths = Array.from(new Set(data?.map(row => row.month).filter(Boolean) || []));
+      const typedData = data as MemberReportDailyRow[];
+      const uniqueMonths = Array.from(new Set(typedData?.map(row => row.month).filter(Boolean) || []));
       const monthsWithAll = ['All', ...uniqueMonths];
       
       console.log(`✅ [NEXMAX Slicer] UNLIMITED all months for ${currency}: ${monthsWithAll.length} months`);
@@ -197,7 +211,8 @@ export const getMonthData = async (currency: string, year: string): Promise<stri
       
       if (error) throw error;
       
-      const uniqueMonths = Array.from(new Set(data?.map(row => row.month).filter(Boolean) || []));
+      const typedData = data as MemberReportDailyRow[];
+      const uniqueMonths = Array.from(new Set(typedData?.map(row => row.month).filter(Boolean) || []));
       const monthsWithAll = ['All', ...uniqueMonths];
       
       console.log(`✅ [NEXMAX Slicer] UNLIMITED months for ${currency} ${year}: ${monthsWithAll.length} months`);
