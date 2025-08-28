@@ -291,7 +291,7 @@ export const handleAllSelection = async (
       query = query.eq('year', filters.year);
     }
     
-    if (filters.month !== 'All') {
+    if (filters.month && filters.month !== 'All') {
       query = query.eq('month', filters.month);
     }
     
@@ -496,7 +496,7 @@ export const getUnlimitedDataForComponent = async (
       query = query.eq('year', filters.year);
     }
     
-    if (filters.month !== 'All') {
+    if (filters.month && filters.month !== 'All') {
       query = query.eq('month', filters.month);
     }
     
