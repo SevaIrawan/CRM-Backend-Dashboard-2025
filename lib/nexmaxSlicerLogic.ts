@@ -23,7 +23,7 @@ export interface SlicerFilters {
   currency: string;
   line: string;
   year: string;
-  month: string;
+  month: string | undefined; // Bisa undefined untuk chart components
   dateRange?: string;
 }
 
