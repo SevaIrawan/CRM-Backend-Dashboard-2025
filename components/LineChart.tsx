@@ -11,6 +11,7 @@ import {
   Filler
 } from 'chart.js';
 import { getChartIcon } from '../lib/CentralIcon';
+import { formatNumericKPI, formatIntegerKPI, formatCurrencyKPI, formatPercentageKPI } from '../lib/formatHelpers';
 
 ChartJS.register(
   CategoryScale,
@@ -199,7 +200,7 @@ export default function LineChart({
     }
   };
 
-  // Full value formatter for tooltip (no abbreviation)
+  // Full value formatter for tooltip using standard KPI format
   const formatFullValue = (value: number, datasetLabel?: string): string => {
     // Check if this is a percentage type (Retention Rate, Churn Rate, Winrate)
     const isPercentageType = datasetLabel && (
@@ -253,24 +254,23 @@ export default function LineChart({
     );
     
     if (isPercentageType) {
-      // For percentage - show as percentage with 2 decimal places, formatted with commas
-      return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+      // For percentage - using standard format: 0,000.00%
+      return formatPercentageKPI(value);
     } else if (isFrequencyType) {
-      // For frequency - show as decimal number with 2 decimal places, formatted with commas
-      return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      // For frequency - using standard format: 0,000.00
+      return formatNumericKPI(value);
     } else if (isCountType) {
-      // For count/integer - no currency symbol, formatted number with commas
-      return value.toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' persons';
+      // For count/integer - using standard format: 0,000
+      return formatIntegerKPI(value) + ' persons';
     } else if (isMaturityIndex) {
-      // For maturity index - show as percentage with 2 decimal places
-      return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+      // For maturity index - using standard format: 0,000.00%
+      return formatPercentageKPI(value);
     } else if (isAmountType) {
-      // For amount/currency - with currency symbol, formatted number with 2 decimal places
-      const symbol = getCurrencySymbol(currency);
-      return `${symbol} ${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      // For amount/currency - using standard format: RM 0,000.00
+      return formatCurrencyKPI(value, currency);
     } else {
-      // Default - formatted number without currency, with commas
-      return value.toLocaleString('en-US', { maximumFractionDigits: 0 });
+      // Default - using standard format: 0,000
+      return formatIntegerKPI(value);
     }
   };
 

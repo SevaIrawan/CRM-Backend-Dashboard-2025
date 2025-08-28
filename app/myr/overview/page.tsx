@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { getSlicerData, getAllKPIsWithMoM, getLineChartData, SlicerFilters, SlicerData, KPIData, getLinesForCurrency, calculateKPIs, getMonthsForYear } from '@/lib/KPILogic';
+import { formatCurrencyKPI, formatIntegerKPI, formatMoMChange } from '@/lib/formatHelpers';
 import { supabase } from '@/lib/supabase';
 import Layout from '@/components/Layout';
 import Frame from '@/components/Frame';
@@ -178,43 +179,10 @@ export default function SalesRevenuePage() {
     calculateDailyAverages();
   }, [kpiData, selectedYear, selectedMonth]);
 
-  const formatCurrency = (value: number | null | undefined, currency: string): string => {
-    if (value === null || value === undefined) return '0';
-    
-    let symbol: string
-    
-    switch (currency) {
-      case 'MYR':
-        symbol = 'RM'
-        break
-      case 'SGD':
-        symbol = 'SGD'
-        break
-      case 'USC':
-        symbol = 'USD'
-        break
-      case 'ALL':
-        symbol = 'RM'
-        break
-      default:
-        symbol = 'RM'
-    }
-    
-    return `${symbol} ${new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value)}`
-  };
-
-  const formatNumber = (value: number | null | undefined): string => {
-    if (value === null || value === undefined) return '0';
-    return new Intl.NumberFormat('en-US').format(value);
-  };
-
-  const formatMoM = (value: number | null | undefined): string => {
-    if (value === null || value === undefined) return '0%';
-    return `${value > 0 ? '+' : ''}${value.toFixed(1)}%`;
-  };
+  // Using standard format helpers
+  const formatCurrency = formatCurrencyKPI;
+  const formatNumber = formatIntegerKPI;
+  const formatMoM = formatMoMChange;
 
   // Function to create Sales Revenue specific chart data using REAL monthly KPI data
   const createSRChartData = async (filters: SlicerFilters) => {

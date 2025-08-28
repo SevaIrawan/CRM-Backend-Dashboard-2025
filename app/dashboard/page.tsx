@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { getSlicerData, getAllKPIsWithMoM, getDashboardChartData, SlicerFilters, SlicerData, KPIData } from '@/lib/KPILogic'
+import { formatCurrencyKPI, formatIntegerKPI, formatMoMChange } from '@/lib/formatHelpers'
 import Layout from '@/components/Layout'
 import Frame from '@/components/Frame'
 import YearSlicer from '@/components/slicers/YearSlicer'
@@ -303,40 +304,10 @@ export default function Dashboard() {
     )
   }
 
-  const formatCurrency = (amount: number, currency?: string) => {
-    const currentCurrency = currency || selectedCurrency
-    let symbol: string
-    
-    switch (currentCurrency) {
-      case 'MYR':
-        symbol = 'RM'
-        break
-      case 'SGD':
-        symbol = 'SGD'
-        break
-      case 'USC':
-        symbol = 'USD'
-        break
-      case 'ALL':
-        symbol = 'RM'
-        break
-      default:
-        symbol = 'RM'
-    }
-    
-    return `${symbol} ${new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount)}`
-  }
-
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat('en-US').format(num)
-  }
-
-  const formatMoM = (value: number) => {
-    return value > 0 ? `+${value.toFixed(1)}%` : `${value.toFixed(1)}%`
-  }
+  // Using standard format helpers
+  const formatCurrency = (amount: number, currency?: string) => formatCurrencyKPI(amount, currency || selectedCurrency);
+  const formatNumber = formatIntegerKPI;
+  const formatMoM = formatMoMChange;
 
   return (
     <Layout

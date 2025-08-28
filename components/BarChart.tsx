@@ -11,6 +11,7 @@ import {
 } from 'chart.js';
 import { Bar, Line } from 'react-chartjs-2';
 import { getChartIcon } from '../lib/CentralIcon';
+import { formatNumericKPI, formatIntegerKPI, formatCurrencyKPI } from '../lib/formatHelpers';
 
 ChartJS.register(
   CategoryScale,
@@ -86,7 +87,7 @@ export default function BarChart({
     }
   };
 
-  // Full value formatter for tooltip (no abbreviation)
+  // Full value formatter for tooltip using standard KPI format
   const formatFullValue = (value: number, datasetLabel?: string): string => {
     const isCountType = datasetLabel && (
       datasetLabel.toLowerCase().includes('depositor') || 
@@ -96,11 +97,11 @@ export default function BarChart({
     );
     
     if (isCountType) {
-      // For count/integer - no currency symbol, full number
-      return value.toLocaleString() + ' persons';
+      // For count/integer - using standard format: 0,000
+      return formatIntegerKPI(value) + ' persons';
     } else {
-      // For amount/numeric - with currency symbol, full number
-      return getCurrencySymbol(currency) + ' ' + value.toLocaleString();
+      // For amount/numeric - using standard format: RM 0,000.00
+      return formatCurrencyKPI(value, currency);
     }
   };
 

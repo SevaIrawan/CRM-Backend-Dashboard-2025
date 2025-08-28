@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { getSlicerData, getAllKPIsWithMoM, getLineChartData, SlicerFilters, SlicerData, KPIData, getLinesForCurrency, calculateKPIs, getMonthsForYear, RetentionDayData, RetentionMemberDetail, getRetentionDayData } from '@/lib/KPILogic';
+import { formatCurrencyKPI, formatIntegerKPI, formatMoMChange, formatPercentageKPI } from '@/lib/formatHelpers';
 import { supabase } from '@/lib/supabase';
 import Layout from '@/components/Layout';
 import Frame from '@/components/Frame';
@@ -13,10 +14,8 @@ import DonutChart from '@/components/DonutChart';
 import { getChartIcon } from '@/lib/CentralIcon';
 import { calculateDailyAverage, getMonthInfo, getAllKPIsWithDailyAverage } from '@/lib/dailyAverageHelper';
 
-// Helper functions
-const formatNumber = (num: number) => {
-  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-};
+// Helper functions - using standard format
+const formatNumber = formatIntegerKPI;
 
 // Export functions
 const exportToCSV = (data: any[], title: string) => {
@@ -262,53 +261,17 @@ export default function MemberAnalyticPage() {
     console.log('🔄 [MYR Member Analytic] Line changed to:', line);
   };
 
-  const formatCurrency = (value: number | null | undefined, currency: string): string => {
-    if (value === null || value === undefined) return '0';
-    
-    let symbol: string
-    
-    switch (currency) {
-      case 'MYR':
-        symbol = 'RM'
-        break
-      case 'SGD':
-        symbol = 'SGD'
-        break
-      case 'USC':
-        symbol = 'USD'
-        break
-      case 'ALL':
-        symbol = 'RM'
-        break
-      default:
-        symbol = 'RM'
-    }
-    
-    return `${symbol} ${new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value)}`
-  };
+  // Using standard format helpers
+  const formatCurrency = formatCurrencyKPI;
+  const formatNumber = formatIntegerKPI;
+  const formatMoM = formatMoMChange;
 
-  const formatNumber = (value: number | null | undefined): string => {
-    if (value === null || value === undefined) return '0';
-    return new Intl.NumberFormat('en-US').format(value);
-  };
-
-  const formatMoM = (value: number | null | undefined): string => {
-    if (value === null || value === undefined) return '0%';
-    return `${value > 0 ? '+' : ''}${value.toFixed(1)}%`;
-  };
-
-   // Helper functions for retention table
-   const formatInteger = (value: number | null | undefined): string => {
-     if (value === null || value === undefined) return '0';
-     return new Intl.NumberFormat('en-US').format(Math.round(value));
-   };
-
+   // Helper functions for retention table - using standard format
+   const formatInteger = formatIntegerKPI;
+   
    const calculatePercentage = (value: number, total: number): string => {
      if (total === 0) return '0.00%';
-     return `${((value / total) * 100).toFixed(2)}%`;
+     return formatPercentageKPI((value / total) * 100);
    };
 
    // Calculate totals for retention table

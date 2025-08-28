@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { getSlicerData, getAllKPIsWithMoM, getLineChartData, getBarChartData, SlicerFilters, SlicerData, KPIData } from '@/lib/KPILogic'
+import { formatCurrencyKPI, formatIntegerKPI, formatMoMChange } from '@/lib/formatHelpers'
 import Layout from '@/components/Layout'
 import Frame from '@/components/Frame'
 import YearSlicer from '@/components/slicers/YearSlicer'
@@ -173,41 +174,7 @@ export default function StrategicExecutive() {
     calculateDailyAverages();
   }, [kpiData, selectedYear, selectedMonth]);
 
-  const formatCurrency = (amount: number, currency?: string) => {
-    const currentCurrency = currency || selectedCurrency
-    let symbol: string
-    
-    switch (currentCurrency) {
-      case 'MYR':
-        symbol = 'RM'
-        break
-      case 'SGD':
-        symbol = 'SGD'
-        break
-      case 'USC':
-        symbol = 'USD'
-        break
-      case 'ALL':
-        symbol = 'RM'
-        break
-      default:
-        symbol = 'RM'
-    }
-    
-    return `${symbol} ${new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount)}`
-  }
 
-  const formatNumber = (num: number) => {
-    return num.toLocaleString()
-  }
-
-  const formatMoM = (value: number) => {
-    const sign = value >= 0 ? '+' : ''
-    return `${sign}${value.toFixed(1)}%`
-  }
 
   return (
     <Layout
@@ -266,67 +233,67 @@ export default function StrategicExecutive() {
             gap: '16px',
             marginBottom: '20px'
           }}>
-            <StatCard
-              title="NET PROFIT"
-              value={formatCurrency(kpiData.netProfit)}
-              icon="Net Profit"
-              additionalKpi={{
-                label: "DAILY AVERAGE",
-                value: formatCurrency(dailyAverages.netProfit)
-              }}
-              comparison={{
-                percentage: formatMoM(momData.netProfit),
-                isPositive: momData.netProfit > 0
-              }}
-            />
-            <StatCard
-              title="GGR USER"
-              value={formatCurrency(kpiData.ggrPerUser)}
-              icon="GGR USER"
-              additionalKpi={{
-                label: "DAILY AVERAGE",
-                value: formatCurrency(dailyAverages.ggrPerUser)
-              }}
-              comparison={{
-                percentage: formatMoM(momData.ggrPerUser),
-                isPositive: momData.ggrPerUser > 0
-              }}
-            />
-            <StatCard
-              title="ACTIVE MEMBER"
-              value={formatNumber(kpiData.activeMember)}
-              icon="Active Member"
-              additionalKpi={{
-                label: "DAILY AVERAGE",
-                value: formatNumber(Math.round(dailyAverages.activeMember))
-              }}
-              comparison={{
-                percentage: formatMoM(momData.activeMember),
-                isPositive: momData.activeMember > 0
-              }}
-            />
-            <StatCard
-              title="PURE USER"
-              value={formatNumber(kpiData.pureUser)}
-              icon="Pure User"
-              additionalKpi={{
-                label: "DAILY AVERAGE",
-                value: formatNumber(Math.round(dailyAverages.pureUser))
-              }}
-              comparison={{
-                percentage: formatMoM(momData.pureUser),
-                isPositive: momData.pureUser > 0
-              }}
-            />
-            <StatCard
-              title="HEADCOUNT"
-              value={formatNumber(kpiData.headcount || 0)}
-              icon="Headcount"
-              comparison={{
-                percentage: formatMoM(momData.headcount || 0),
-                isPositive: (momData.headcount || 0) > 0
-              }}
-            />
+                          <StatCard
+                title="NET PROFIT"
+                value={formatCurrencyKPI(kpiData.netProfit, selectedCurrency)}
+                icon="Net Profit"
+                additionalKpi={{
+                  label: "DAILY AVERAGE",
+                  value: formatCurrencyKPI(dailyAverages.netProfit, selectedCurrency)
+                }}
+                comparison={{
+                  percentage: formatMoMChange(momData.netProfit),
+                  isPositive: momData.netProfit > 0
+                }}
+              />
+              <StatCard
+                title="GGR USER"
+                value={formatCurrencyKPI(kpiData.ggrPerUser, selectedCurrency)}
+                icon="GGR USER"
+                additionalKpi={{
+                  label: "DAILY AVERAGE",
+                  value: formatCurrencyKPI(dailyAverages.ggrPerUser, selectedCurrency)
+                }}
+                comparison={{
+                  percentage: formatMoMChange(momData.ggrPerUser),
+                  isPositive: momData.ggrPerUser > 0
+                }}
+              />
+              <StatCard
+                title="ACTIVE MEMBER"
+                value={formatIntegerKPI(kpiData.activeMember)}
+                icon="Active Member"
+                additionalKpi={{
+                  label: "DAILY AVERAGE",
+                  value: formatIntegerKPI(Math.round(dailyAverages.activeMember))
+                }}
+                comparison={{
+                  percentage: formatMoMChange(momData.activeMember),
+                  isPositive: momData.activeMember > 0
+                }}
+              />
+              <StatCard
+                title="PURE USER"
+                value={formatIntegerKPI(kpiData.pureUser)}
+                icon="Pure User"
+                additionalKpi={{
+                  label: "DAILY AVERAGE",
+                  value: formatIntegerKPI(Math.round(dailyAverages.pureUser))
+                }}
+                comparison={{
+                  percentage: formatMoMChange(momData.pureUser),
+                  isPositive: momData.pureUser > 0
+                }}
+              />
+              <StatCard
+                title="HEADCOUNT"
+                value={formatIntegerKPI(kpiData.headcount || 0)}
+                icon="Headcount"
+                comparison={{
+                  percentage: formatMoMChange(momData.headcount || 0),
+                  isPositive: (momData.headcount || 0) > 0
+                }}
+              />
           </div>
 
           {/* Row 2: 2 Line Charts */}

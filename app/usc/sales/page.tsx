@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { getSlicerData, getAllKPIsWithMoM, getLineChartData, SlicerFilters, SlicerData, KPIData, getLinesForCurrency, calculateKPIs, getMonthsForYear, RetentionDayData, RetentionMemberDetail, getRetentionDayData, getCustomerValueData } from '@/lib/KPILogic';
+import { formatNumericKPI, formatIntegerKPI, formatCurrencyKPI, formatPercentageKPI, formatMoMChange } from '@/lib/formatHelpers';
 import { supabase } from '@/lib/supabase';
 import Layout from '@/components/Layout';
 import Frame from '@/components/Frame';
@@ -13,10 +14,8 @@ import DonutChart from '@/components/DonutChart';
 import { getChartIcon } from '@/lib/CentralIcon';
 import { calculateDailyAverage, getMonthInfo, getAllKPIsWithDailyAverage } from '@/lib/dailyAverageHelper';
 
-// Helper functions
-const formatNumber = (num: number) => {
-  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-};
+// Helper functions - using standard format
+const formatNumber = formatIntegerKPI;
 
 // Export functions
 const exportToCSV = (data: any[], title: string) => {
@@ -254,59 +253,27 @@ export default function MemberAnalyticPage() {
     setSelectedLine(line);
   };
 
-  const formatCurrency = (value: number | null | undefined, currency: string): string => {
-    if (value === null || value === undefined) return '0';
+     // Using standard format helpers from formatHelpers.ts
+   const formatCurrency = formatCurrencyKPI;
+   const formatNumber = formatIntegerKPI;
+   const formatMoM = formatMoMChange;
+
+       // Helper functions for retention table - using standard format
+    const formatInteger = formatIntegerKPI;
     
-    let symbol: string
-    
-    switch (currency) {
-      case 'MYR':
-        symbol = 'RM'
-        break
-      case 'SGD':
-        symbol = 'SGD'
-        break
-      case 'USC':
-        symbol = 'USD'
-        break
-      case 'ALL':
-        symbol = 'RM'
-        break
-      default:
-        symbol = 'RM'
-    }
-    
-    return `${symbol} ${new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value)}`
-  };
-
-  const formatNumber = (value: number | null | undefined): string => {
-    if (value === null || value === undefined) return '0';
-    return new Intl.NumberFormat('en-US').format(value);
-  };
-
-  const formatMoM = (value: number | null | undefined): string => {
-    if (value === null || value === undefined) return '0%';
-    return `${value > 0 ? '+' : ''}${value.toFixed(1)}%`;
-  };
-
-   // Helper functions for retention table
-   const formatInteger = (value: number | null | undefined): string => {
-     if (value === null || value === undefined) return '0';
-     return new Intl.NumberFormat('en-US').format(Math.round(value));
-   };
-
-   const calculatePercentage = (value: number, total: number): string => {
-     if (total === 0) return '0.00%';
-     return `${((value / total) * 100).toFixed(2)}%`;
-   };
+    const calculatePercentage = (value: number, total: number): string => {
+      if (total === 0) return '0.00%';
+      return formatPercentageKPI((value / total) * 100);
+    };
 
    // Calculate totals for retention table
    const totalActiveMembers = kpiData?.activeMember || 0;
    const totalDepositAmount = kpiData?.depositAmount || 0;
    const totalGGR = kpiData?.grossGamingRevenue || 0;
+   const totalDepositCases = kpiData?.depositCases || 0;
+   const totalWithdrawCases = kpiData?.withdrawCases || 0;
+   const totalWithdrawAmount = kpiData?.withdrawAmount || 0;
+   const totalBonus = kpiData?.addBonus || 0;
 
    const handleViewDetail = (retentionDays: number) => {
      let filteredMembers: RetentionMemberDetail[] = [];
@@ -488,32 +455,32 @@ export default function MemberAnalyticPage() {
                 isPositive: Boolean(momData?.activeMember && momData.activeMember > 0)
               }}
             />
-            <StatCard
-              title="CONVERSION RATE"
-              value={`${(kpiData?.conversionRate || 0).toFixed(2)}%`}
-              icon="Conversion Rate"
-              additionalKpi={{
-                label: "DAILY AVERAGE",
-                value: `${dailyAverages.conversionRate.toFixed(2)}%`
-              }}
-              comparison={{
-                percentage: formatMoM(momData?.conversionRate || 0),
-                isPositive: Boolean(momData?.conversionRate && momData.conversionRate > 0)
-              }}
-            />
-            <StatCard
-              title="CHURN RATE"
-              value={`${(kpiData?.churnRate || 0).toFixed(2)}%`}
-              icon="Churn Rate"
-              additionalKpi={{
-                label: "DAILY AVERAGE",
-                value: `${dailyAverages.churnRate.toFixed(2)}%`
-              }}
-              comparison={{
-                percentage: formatMoM(momData?.churnRate || 0),
-                isPositive: Boolean(momData?.churnRate && momData.churnRate > 0)
-              }}
-            />
+                         <StatCard
+               title="CONVERSION RATE"
+               value={formatPercentageKPI(kpiData?.conversionRate || 0)}
+               icon="Conversion Rate"
+               additionalKpi={{
+                 label: "DAILY AVERAGE",
+                 value: formatPercentageKPI(dailyAverages.conversionRate)
+               }}
+               comparison={{
+                 percentage: formatMoM(momData?.conversionRate || 0),
+                 isPositive: Boolean(momData?.conversionRate && momData.conversionRate > 0)
+               }}
+             />
+             <StatCard
+               title="CHURN RATE"
+               value={formatPercentageKPI(kpiData?.churnRate || 0)}
+               icon="Churn Rate"
+               additionalKpi={{
+                 label: "DAILY AVERAGE",
+                 value: formatPercentageKPI(dailyAverages.churnRate)
+               }}
+               comparison={{
+                 percentage: formatMoM(momData?.churnRate || 0),
+                 isPositive: Boolean(momData?.churnRate && momData.churnRate > 0)
+               }}
+             />
           </div>
 
           {/* Row 2: Bar Charts */}
@@ -747,7 +714,7 @@ export default function MemberAnalyticPage() {
                         fontSize: '12px',
                         textTransform: 'uppercase',
                         letterSpacing: '0.5px'
-                      }}>Active Player</th>
+                      }}>MAM</th>
                       <th style={{ 
                         padding: '12px 16px', 
                         textAlign: 'center', 
@@ -767,7 +734,7 @@ export default function MemberAnalyticPage() {
                         fontSize: '12px',
                         textTransform: 'uppercase',
                         letterSpacing: '0.5px'
-                      }}>Deposit Amount</th>
+                      }}>DC</th>
                       <th style={{ 
                         padding: '12px 16px', 
                         textAlign: 'center', 
@@ -787,7 +754,7 @@ export default function MemberAnalyticPage() {
                         fontSize: '12px',
                         textTransform: 'uppercase',
                         letterSpacing: '0.5px'
-                      }}>Gross Gaming Revenue</th>
+                      }}>DA</th>
                       <th style={{ 
                         padding: '12px 16px', 
                         textAlign: 'center', 
@@ -807,7 +774,67 @@ export default function MemberAnalyticPage() {
                         fontSize: '12px',
                         textTransform: 'uppercase',
                         letterSpacing: '0.5px'
-                      }}>Average Transaction Value</th>
+                      }}>WC</th>
+                      <th style={{ 
+                        padding: '12px 16px', 
+                        textAlign: 'center', 
+                        borderBottom: '1px solid #4b5563',
+                        color: '#ffffff',
+                        fontWeight: '600',
+                        fontSize: '12px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>%</th>
+                      <th style={{ 
+                        padding: '12px 16px', 
+                        textAlign: 'right', 
+                        borderBottom: '1px solid #4b5563',
+                        color: '#ffffff',
+                        fontWeight: '600',
+                        fontSize: '12px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>WA</th>
+                      <th style={{ 
+                        padding: '12px 16px', 
+                        textAlign: 'center', 
+                        borderBottom: '1px solid #4b5563',
+                        color: '#ffffff',
+                        fontWeight: '600',
+                        fontSize: '12px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>%</th>
+                      <th style={{ 
+                        padding: '12px 16px', 
+                        textAlign: 'right', 
+                        borderBottom: '1px solid #4b5563',
+                        color: '#ffffff',
+                        fontWeight: '600',
+                        fontSize: '12px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>GGR</th>
+                      <th style={{ 
+                        padding: '12px 16px', 
+                        textAlign: 'center', 
+                        borderBottom: '1px solid #4b5563',
+                        color: '#ffffff',
+                        fontWeight: '600',
+                        fontSize: '12px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>%</th>
+                      <th style={{ 
+                        padding: '12px 16px', 
+                        textAlign: 'right', 
+                        borderBottom: '1px solid #4b5563',
+                        color: '#ffffff',
+                        fontWeight: '600',
+                        fontSize: '12px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>BONUS</th>
                       <th style={{ 
                         padding: '12px 16px', 
                         textAlign: 'center', 
@@ -840,11 +867,17 @@ export default function MemberAnalyticPage() {
                       <td style={{ padding: '12px 16px' }}>Premium Members (7+ Days)</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }}>{formatInteger(retentionData.retention7Days > 0 ? retentionData.retention7Days : Math.round((kpiData?.activeMember || 0) * 0.25))}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention7Days > 0 ? retentionData.retention7Days : Math.round((kpiData?.activeMember || 0) * 0.25), totalActiveMembers)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatInteger(retentionData.retention7Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays >= 7).reduce((sum, member) => sum + member.depositCases, 0) : Math.round((kpiData?.depositCases || 0) * 0.85))}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention7Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays >= 7).reduce((sum, member) => sum + member.depositCases, 0) : Math.round((kpiData?.depositCases || 0) * 0.85), totalDepositCases)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention7Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays >= 7).reduce((sum, member) => sum + member.depositAmount, 0) : (kpiData?.depositAmount || 0) * 0.85, selectedCurrency)}</td>
-                                              <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention7Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays >= 7).reduce((sum, member) => sum + member.depositAmount, 0) : (kpiData?.depositAmount || 0) * 0.85, totalDepositAmount)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention7Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays >= 7).reduce((sum, member) => sum + member.depositAmount, 0) : (kpiData?.depositAmount || 0) * 0.85, totalDepositAmount)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatInteger(retentionData.retention7Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays >= 7).reduce((sum, member) => sum + member.withdrawCases, 0) : Math.round((kpiData?.withdrawCases || 0) * 0.85))}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention7Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays >= 7).reduce((sum, member) => sum + member.withdrawCases, 0) : Math.round((kpiData?.withdrawCases || 0) * 0.85), totalWithdrawCases)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention7Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays >= 7).reduce((sum, member) => sum + member.withdrawAmount, 0) : (kpiData?.withdrawAmount || 0) * 0.85, selectedCurrency)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention7Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays >= 7).reduce((sum, member) => sum + member.withdrawAmount, 0) : (kpiData?.withdrawAmount || 0) * 0.85, totalWithdrawAmount)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention7Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays >= 7).reduce((sum, member) => sum + (member.depositAmount - (member.withdrawAmount || 0)), 0) : (kpiData?.grossGamingRevenue || 0) * 0.81, selectedCurrency)}</td>
-                                              <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention7Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays >= 7).reduce((sum, member) => sum + (member.depositAmount - (member.withdrawAmount || 0)), 0) : (kpiData?.grossGamingRevenue || 0) * 0.81, totalGGR)}</td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention7Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays >= 7).reduce((sum, member) => sum + member.depositAmount, 0) / retentionData.retention7Days : ((kpiData?.depositAmount || 0) * 0.85) / Math.round((kpiData?.activeMember || 0) * 0.25), selectedCurrency)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention7Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays >= 7).reduce((sum, member) => sum + (member.depositAmount - (member.withdrawAmount || 0)), 0) : (kpiData?.grossGamingRevenue || 0) * 0.81, totalGGR)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention7Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays >= 7).reduce((sum, member) => sum + member.bonus, 0) : (kpiData?.addBonus || 0) * 0.85, selectedCurrency)}</td>
                       <td style={{ padding: '12px', textAlign: 'center' }}>
                         <button 
                           style={{ padding: '4px 8px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
@@ -874,11 +907,17 @@ export default function MemberAnalyticPage() {
                       <td style={{ padding: '12px 16px' }}>Regular Members (6 Days)</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }}>{formatInteger(retentionData.retention6Days)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention6Days, totalActiveMembers)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatInteger(retentionData.retention6Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 6).reduce((sum, member) => sum + member.depositCases, 0) : 0)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention6Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 6).reduce((sum, member) => sum + member.depositCases, 0) : 0, totalDepositCases)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention6Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 6).reduce((sum, member) => sum + member.depositAmount, 0) : 0, selectedCurrency)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention6Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 6).reduce((sum, member) => sum + member.depositAmount, 0) : 0, totalDepositAmount)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatInteger(retentionData.retention6Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 6).reduce((sum, member) => sum + member.withdrawCases, 0) : 0)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention6Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 6).reduce((sum, member) => sum + member.withdrawCases, 0) : 0, totalWithdrawCases)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention6Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 6).reduce((sum, member) => sum + member.withdrawAmount, 0) : 0, selectedCurrency)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention6Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 6).reduce((sum, member) => sum + member.withdrawAmount, 0) : 0, totalWithdrawAmount)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention6Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 6).reduce((sum, member) => sum + (member.depositAmount - (member.withdrawAmount || 0)), 0) : 0, selectedCurrency)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention6Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 6).reduce((sum, member) => sum + (member.depositAmount - (member.withdrawAmount || 0)), 0) : 0, totalGGR)}</td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention6Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 6).reduce((sum, member) => sum + member.depositAmount, 0) / retentionData.retention6Days : 0, selectedCurrency)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention6Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 6).reduce((sum, member) => sum + member.bonus, 0) : 0, selectedCurrency)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                           <button 
                             style={{ padding: '4px 8px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
@@ -908,11 +947,17 @@ export default function MemberAnalyticPage() {
                       <td style={{ padding: '12px 16px' }}>Active Members (5 Days)</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }}>{formatInteger(retentionData.retention5Days)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention5Days, totalActiveMembers)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatInteger(retentionData.retention5Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 5).reduce((sum, member) => sum + member.depositCases, 0) : 0)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention5Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 5).reduce((sum, member) => sum + member.depositCases, 0) : 0, totalDepositCases)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention5Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 5).reduce((sum, member) => sum + member.depositAmount, 0) : 0, selectedCurrency)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention5Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 5).reduce((sum, member) => sum + member.depositAmount, 0) : 0, totalDepositAmount)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatInteger(retentionData.retention5Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 5).reduce((sum, member) => sum + member.withdrawCases, 0) : 0)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention5Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 5).reduce((sum, member) => sum + member.withdrawCases, 0) : 0, totalWithdrawCases)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention5Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 5).reduce((sum, member) => sum + member.withdrawAmount, 0) : 0, selectedCurrency)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention5Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 5).reduce((sum, member) => sum + member.withdrawAmount, 0) : 0, totalWithdrawAmount)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention5Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 5).reduce((sum, member) => sum + (member.depositAmount - (member.withdrawAmount || 0)), 0) : 0, selectedCurrency)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention5Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 5).reduce((sum, member) => sum + (member.depositAmount - (member.withdrawAmount || 0)), 0) : 0, totalGGR)}</td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention5Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 5).reduce((sum, member) => sum + member.depositAmount, 0) / retentionData.retention5Days : 0, selectedCurrency)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention5Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 5).reduce((sum, member) => sum + member.bonus, 0) : 0, selectedCurrency)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                           <button 
                             style={{ padding: '4px 8px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
@@ -942,11 +987,17 @@ export default function MemberAnalyticPage() {
                       <td style={{ padding: '12px 16px' }}>Occasional Members (4 Days)</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }}>{formatInteger(retentionData.retention4Days)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention4Days, totalActiveMembers)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatInteger(retentionData.retention4Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 4).reduce((sum, member) => sum + member.depositCases, 0) : 0)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention4Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 4).reduce((sum, member) => sum + member.depositCases, 0) : 0, totalDepositCases)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention4Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 4).reduce((sum, member) => sum + member.depositAmount, 0) : 0, selectedCurrency)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention4Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 4).reduce((sum, member) => sum + member.depositAmount, 0) : 0, totalDepositAmount)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatInteger(retentionData.retention4Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 4).reduce((sum, member) => sum + member.withdrawCases, 0) : 0)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention4Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 4).reduce((sum, member) => sum + member.withdrawCases, 0) : 0, totalWithdrawCases)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention4Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 4).reduce((sum, member) => sum + member.withdrawAmount, 0) : 0, selectedCurrency)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention4Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 4).reduce((sum, member) => sum + member.withdrawAmount, 0) : 0, totalWithdrawAmount)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention4Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 4).reduce((sum, member) => sum + (member.depositAmount - (member.withdrawAmount || 0)), 0) : 0, selectedCurrency)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention4Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 4).reduce((sum, member) => sum + (member.depositAmount - (member.withdrawAmount || 0)), 0) : 0, totalGGR)}</td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention4Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 4).reduce((sum, member) => sum + member.depositAmount, 0) / retentionData.retention4Days : 0, selectedCurrency)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention4Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 4).reduce((sum, member) => sum + member.bonus, 0) : 0, selectedCurrency)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                           <button 
                             style={{ padding: '4px 8px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
@@ -976,11 +1027,17 @@ export default function MemberAnalyticPage() {
                       <td style={{ padding: '12px 16px' }}>Light Members (3 Days)</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }}>{formatInteger(retentionData.retention3Days)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention3Days, totalActiveMembers)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatInteger(retentionData.retention3Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 3).reduce((sum, member) => sum + member.depositCases, 0) : 0)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention3Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 3).reduce((sum, member) => sum + member.depositCases, 0) : 0, totalDepositCases)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention3Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 3).reduce((sum, member) => sum + member.depositAmount, 0) : 0, selectedCurrency)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention3Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 3).reduce((sum, member) => sum + member.depositAmount, 0) : 0, totalDepositAmount)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatInteger(retentionData.retention3Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 3).reduce((sum, member) => sum + member.withdrawCases, 0) : 0)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention3Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 3).reduce((sum, member) => sum + member.withdrawCases, 0) : 0, totalWithdrawCases)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention3Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 3).reduce((sum, member) => sum + member.withdrawAmount, 0) : 0, selectedCurrency)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention3Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 3).reduce((sum, member) => sum + member.withdrawAmount, 0) : 0, totalWithdrawAmount)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention3Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 3).reduce((sum, member) => sum + (member.depositAmount - (member.withdrawAmount || 0)), 0) : 0, selectedCurrency)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention3Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 3).reduce((sum, member) => sum + (member.depositAmount - (member.withdrawAmount || 0)), 0) : 0, totalGGR)}</td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention3Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 3).reduce((sum, member) => sum + member.depositAmount, 0) / retentionData.retention3Days : 0, selectedCurrency)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention3Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 3).reduce((sum, member) => sum + member.bonus, 0) : 0, selectedCurrency)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                           <button 
                             style={{ padding: '4px 8px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
@@ -1008,13 +1065,19 @@ export default function MemberAnalyticPage() {
                           e.currentTarget.style.transform = 'scale(1)';
                         }}>
                       <td style={{ padding: '12px 16px' }}>Trial Members (2 Days)</td>
-                      <td style={{ padding: '12px 16px', textAlign: 'center' }}>{retentionData.retention2Days}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center' }}>{formatInteger(retentionData.retention2Days)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention2Days, totalActiveMembers)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatInteger(retentionData.retention2Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 2).reduce((sum, member) => sum + member.depositCases, 0) : 0)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention2Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 2).reduce((sum, member) => sum + member.depositCases, 0) : 0, totalDepositCases)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention2Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 2).reduce((sum, member) => sum + member.depositAmount, 0) : 0, selectedCurrency)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention2Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 2).reduce((sum, member) => sum + member.depositAmount, 0) : 0, totalDepositAmount)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatInteger(retentionData.retention2Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 2).reduce((sum, member) => sum + member.withdrawCases, 0) : 0)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention2Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 2).reduce((sum, member) => sum + member.withdrawCases, 0) : 0, totalWithdrawCases)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention2Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 2).reduce((sum, member) => sum + member.withdrawAmount, 0) : 0, selectedCurrency)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention2Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 2).reduce((sum, member) => sum + member.withdrawAmount, 0) : 0, totalWithdrawAmount)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention2Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 2).reduce((sum, member) => sum + (member.depositAmount - (member.withdrawAmount || 0)), 0) : 0, selectedCurrency)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention2Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 2).reduce((sum, member) => sum + (member.depositAmount - (member.withdrawAmount || 0)), 0) : 0, totalGGR)}</td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention2Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 2).reduce((sum, member) => sum + member.depositAmount, 0) / retentionData.retention2Days : 0, selectedCurrency)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention2Days > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 2).reduce((sum, member) => sum + member.bonus, 0) : 0, selectedCurrency)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                         <button 
                           style={{ padding: '4px 8px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
@@ -1042,13 +1105,19 @@ export default function MemberAnalyticPage() {
                           e.currentTarget.style.transform = 'scale(1)';
                         }}>
                       <td style={{ padding: '12px 16px' }}>One-time Members (1 Day)</td>
-                      <td style={{ padding: '12px 16px', textAlign: 'center' }}>{retentionData.retention1Day}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center' }}>{formatInteger(retentionData.retention1Day)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention1Day, totalActiveMembers)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatInteger(retentionData.retention1Day > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 1).reduce((sum, member) => sum + member.depositCases, 0) : 0)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention1Day > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 1).reduce((sum, member) => sum + member.depositCases, 0) : 0, totalDepositCases)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention1Day > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 1).reduce((sum, member) => sum + member.depositAmount, 0) : 0, selectedCurrency)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention1Day > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 1).reduce((sum, member) => sum + member.depositAmount, 0) : 0, totalDepositAmount)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatInteger(retentionData.retention1Day > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 1).reduce((sum, member) => sum + member.withdrawCases, 0) : 0)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention1Day > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 1).reduce((sum, member) => sum + member.withdrawCases, 0) : 0, totalWithdrawCases)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention1Day > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 1).reduce((sum, member) => sum + member.withdrawAmount, 0) : 0, selectedCurrency)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention1Day > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 1).reduce((sum, member) => sum + member.withdrawAmount, 0) : 0, totalWithdrawAmount)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention1Day > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 1).reduce((sum, member) => sum + (member.depositAmount - (member.withdrawAmount || 0)), 0) : 0, selectedCurrency)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669', fontWeight: '600' }}>{calculatePercentage(retentionData.retention1Day > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 1).reduce((sum, member) => sum + (member.depositAmount - (member.withdrawAmount || 0)), 0) : 0, totalGGR)}</td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention1Day > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 1).reduce((sum, member) => sum + member.depositAmount, 0) / retentionData.retention1Day : 0, selectedCurrency)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>{formatCurrency(retentionData.retention1Day > 0 ? retentionData.memberDetails.filter(m => m.activeDays === 1).reduce((sum, member) => sum + member.bonus, 0) : 0, selectedCurrency)}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                         <button 
                           style={{ padding: '4px 8px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}

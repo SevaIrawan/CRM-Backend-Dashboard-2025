@@ -7,6 +7,7 @@ import {
   Legend,
   Title
 } from 'chart.js';
+import { formatPercentageKPI } from '../lib/formatHelpers';
 
 ChartJS.register(ArcElement, Tooltip, Legend, Title);
 
@@ -79,7 +80,7 @@ export default function DonutChart({
           label: function(context: any) {
             const label = context.label || '';
             const value = context.parsed;
-            return `${label}: ${value}%`;
+            return `${label}: ${formatPercentageKPI(value)}`;
           }
         }
       }

@@ -12,8 +12,9 @@ import BarChart from '@/components/BarChart';
 import DonutChart from '@/components/DonutChart';
 import { getChartIcon } from '@/lib/CentralIcon';
 import { calculateDailyAverage, getMonthInfo, getAllKPIsWithDailyAverage } from '@/lib/dailyAverageHelper';
+import { formatCurrencyKPI, formatIntegerKPI, formatMoMChange } from '@/lib/formatHelpers';
 
-export default function SalesRevenuePage() {
+export default function USCOverviewPage() {
   const [kpiData, setKpiData] = useState<KPIData | null>(null);
   const [momData, setMomData] = useState<KPIData | null>(null);
   const [slicerData, setSlicerData] = useState<SlicerData | null>(null);
@@ -166,43 +167,7 @@ export default function SalesRevenuePage() {
     calculateDailyAverages();
   }, [kpiData, selectedYear, selectedMonth]);
 
-  const formatCurrency = (value: number | null | undefined, currency: string): string => {
-    if (value === null || value === undefined) return '0';
-    
-    let symbol: string
-    
-    switch (currency) {
-      case 'MYR':
-        symbol = 'RM'
-        break
-      case 'SGD':
-        symbol = 'SGD'
-        break
-      case 'USC':
-        symbol = 'USD'
-        break
-      case 'ALL':
-        symbol = 'RM'
-        break
-      default:
-        symbol = 'RM'
-    }
-    
-    return `${symbol} ${new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value)}`
-  };
 
-  const formatNumber = (value: number | null | undefined): string => {
-    if (value === null || value === undefined) return '0';
-    return new Intl.NumberFormat('en-US').format(value);
-  };
-
-  const formatMoM = (value: number | null | undefined): string => {
-    if (value === null || value === undefined) return '0%';
-    return `${value > 0 ? '+' : ''}${value.toFixed(1)}%`;
-  };
 
   // Function to create Sales Revenue specific chart data using REAL monthly KPI data
   const createSRChartData = async (filters: SlicerFilters) => {
@@ -429,53 +394,53 @@ export default function SalesRevenuePage() {
           <div className="kpi-row">
           <StatCard
             title="DEPOSIT AMOUNT"
-            value={formatCurrency(kpiData?.depositAmount || 0, selectedCurrency)}
+            value={formatCurrencyKPI(kpiData?.depositAmount || 0, selectedCurrency)}
             icon="Deposit Amount"
             additionalKpi={{
               label: "DAILY AVERAGE",
-              value: formatCurrency(dailyAverages.depositAmount, selectedCurrency)
+              value: formatCurrencyKPI(dailyAverages.depositAmount, selectedCurrency)
             }}
             comparison={{
-              percentage: formatMoM(momData?.depositAmount || 0),
+              percentage: formatMoMChange(momData?.depositAmount || 0),
               isPositive: Boolean(momData?.depositAmount && momData.depositAmount > 0)
             }}
           />
           <StatCard
             title="WITHDRAW AMOUNT"
-            value={formatCurrency(kpiData?.withdrawAmount || 0, selectedCurrency)}
+            value={formatCurrencyKPI(kpiData?.withdrawAmount || 0, selectedCurrency)}
             icon="Withdraw Amount"
             additionalKpi={{
               label: "DAILY AVERAGE",
-              value: formatCurrency(dailyAverages.withdrawAmount, selectedCurrency)
+              value: formatCurrencyKPI(dailyAverages.withdrawAmount, selectedCurrency)
             }}
             comparison={{
-              percentage: formatMoM(momData?.withdrawAmount || 0),
+              percentage: formatMoMChange(momData?.withdrawAmount || 0),
               isPositive: Boolean(momData?.withdrawAmount && momData.withdrawAmount > 0)
             }}
           />
           <StatCard
             title="GROSS GAMING REVENUE"
-            value={formatCurrency(kpiData?.grossGamingRevenue || 0, selectedCurrency)}
+            value={formatCurrencyKPI(kpiData?.grossGamingRevenue || 0, selectedCurrency)}
             icon="Gross Gaming Revenue"
             additionalKpi={{
               label: "DAILY AVERAGE",
-              value: formatCurrency(dailyAverages.grossGamingRevenue, selectedCurrency)
+              value: formatCurrencyKPI(dailyAverages.grossGamingRevenue, selectedCurrency)
             }}
             comparison={{
-              percentage: formatMoM(momData?.grossGamingRevenue || 0),
+              percentage: formatMoMChange(momData?.grossGamingRevenue || 0),
               isPositive: Boolean(momData?.grossGamingRevenue && momData.grossGamingRevenue > 0)
             }}
           />
           <StatCard
             title="ACTIVE MEMBER"
-            value={formatNumber(kpiData?.activeMember || 0)}
+            value={formatIntegerKPI(kpiData?.activeMember || 0)}
             icon="Active Member"
             additionalKpi={{
               label: "DAILY AVERAGE",
-              value: formatNumber(Math.round(dailyAverages.activeMember))
+              value: formatIntegerKPI(Math.round(dailyAverages.activeMember))
             }}
             comparison={{
-              percentage: formatMoM(momData?.activeMember || 0),
+              percentage: formatMoMChange(momData?.activeMember || 0),
               isPositive: Boolean(momData?.activeMember && momData.activeMember > 0)
             }}
           />
@@ -488,7 +453,7 @@ export default function SalesRevenuePage() {
                value: `${dailyAverages.purchaseFrequency.toFixed(2)}`
              }}
              comparison={{
-               percentage: formatMoM(momData?.purchaseFrequency || 0),
+               percentage: formatMoMChange(momData?.purchaseFrequency || 0),
                isPositive: Boolean(momData?.purchaseFrequency && momData.purchaseFrequency > 0)
              }}
            />
@@ -501,7 +466,7 @@ export default function SalesRevenuePage() {
                value: `${dailyAverages.customerMaturityIndex.toFixed(2)}`
              }}
              comparison={{
-               percentage: formatMoM(momData?.customerMaturityIndex || 0),
+               percentage: formatMoMChange(momData?.customerMaturityIndex || 0),
                isPositive: Boolean(momData?.customerMaturityIndex && momData.customerMaturityIndex > 0)
              }}
            />
