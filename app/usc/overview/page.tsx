@@ -99,22 +99,24 @@ export default function USCOverviewPage() {
           return;
         }
 
+        // ✅ FIXED: Logic Line Slicer yang benar - tidak ada undefined
         const kpiFilters = {
           year: selectedYear,
           month: selectedMonth,
           currency: 'USC',
-          line: selectedLine === 'All' ? undefined : selectedLine
+          line: selectedLine // ✅ SELALU kirim selectedLine, jangan undefined
         };
         
         const kpiResult = await getAllKPIsWithMoM(kpiFilters);
         setKpiData(kpiResult.current);
         setMomData(kpiResult.mom);
 
+        // ✅ FIXED: Chart filters harus sama dengan KPI filters untuk konsistensi
         const chartFilters: SlicerFilters = {
           year: selectedYear,
           month: selectedMonth,
           currency: 'USC',
-          line: selectedLine === 'All' ? undefined : selectedLine
+          line: selectedLine // ✅ SELALU kirim selectedLine, jangan undefined
         };
         
         const chartResult = await getLineChartData(chartFilters);
@@ -123,11 +125,12 @@ export default function USCOverviewPage() {
         const srData = await createSRChartData(chartFilters);
         setSrChartData(srData);
 
-             } catch (error) {
-         setLoadError('Failed to load data. Please try again.');
-       } finally {
-         setIsLoading(false);
-       }
+      } catch (error) {
+        console.error('Error loading data:', error);
+        setLoadError('Failed to load data. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     const timeoutId = setTimeout(loadData, 100);

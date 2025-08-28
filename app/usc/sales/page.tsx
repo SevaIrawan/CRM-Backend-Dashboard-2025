@@ -197,11 +197,13 @@ export default function MemberAnalyticPage() {
         const chartResult = await getLineChartData(chartFilters);
         setLineChartData(chartResult);
 
-         const retentionResult = await getRetentionDayData(selectedYear, selectedMonth, 'USC', selectedLine === 'All' ? undefined : selectedLine);
-         setRetentionData(retentionResult);
+        // ✅ FIXED: Logic Line Slicer yang benar - tidak ada undefined
+        const retentionResult = await getRetentionDayData(selectedYear, selectedMonth, 'USC', selectedLine);
+        setRetentionData(retentionResult);
 
-         const customerValueResult = await getCustomerValueData(selectedYear, selectedMonth, 'USC', selectedLine === 'All' ? undefined : selectedLine);
-         setCustomerValueData(customerValueResult);
+        // ✅ FIXED: Logic Line Slicer yang benar - tidak ada undefined
+        const customerValueResult = await getCustomerValueData(selectedYear, selectedMonth, 'USC', selectedLine);
+        setCustomerValueData(customerValueResult);
 
               } catch (error) {
           setLoadError('Failed to load data. Please try again.');

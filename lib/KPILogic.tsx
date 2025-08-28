@@ -1211,7 +1211,8 @@ export async function getLineChartData(filters: SlicerFilters): Promise<any> {
         const chartFilters = { 
           year: filters.year, 
           currency: filters.currency,
-          month: month // Use each month for chart data
+          month: month,
+          line: filters.line // ✅ TAMBAHKAN LINE FILTER!
         }
         const kpiData = await calculateKPIs(chartFilters)
         
@@ -1940,10 +1941,12 @@ export async function getDashboardChartData(filters: SlicerFilters): Promise<any
     // Get data for each month to create realistic trends
     const monthlyData = await Promise.all(
       months.map(async (month) => {
+        // ✅ FIXED: LINE filter HARUS diteruskan ke chartFilters
         const chartFilters = { 
           year: filters.year, 
           currency: filters.currency,
-          month: month
+          month: month,
+          line: filters.line // ✅ TAMBAHKAN LINE FILTER!
         }
         const kpiData = await calculateKPIs(chartFilters)
         return kpiData
