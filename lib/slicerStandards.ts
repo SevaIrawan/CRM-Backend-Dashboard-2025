@@ -1,4 +1,4 @@
-import { SlicerFilters } from './KPILogic';
+import { SlicerFilters } from './nexmaxSlicerLogic';
 
 /**
  * SLICER STANDARDS - NEXMAX DASHBOARD
@@ -15,15 +15,13 @@ export const createFullSlicerFilters = (
   year: string,
   month: string,
   currency: string,
-  line: string,
-  dateRange?: string
+  line: string
 ): SlicerFilters => {
   return {
     year,
     month,        // ✅ AKTIF
     currency,
-    line,
-    dateRange
+    line
   };
 };
 
@@ -35,15 +33,13 @@ export const createChartSlicerFilters = (
   year: string,
   month: string,  // Akan di-set menjadi undefined
   currency: string,
-  line: string,
-  dateRange?: string
+  line: string
 ): SlicerFilters => {
   return {
     year,          // ✅ AKTIF - Tampilkan Period Month
     month: undefined, // ❌ TIDAK AKTIF
     currency,
-    line,
-    dateRange      // ✅ AKTIF - Tampilkan Period Date
+    line
   };
 };
 
