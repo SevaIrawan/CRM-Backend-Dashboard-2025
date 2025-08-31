@@ -359,7 +359,7 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
           .eq('currency', filters.currency)
           .gt('deposit_cases', 0) // Only users with deposit_cases > 0
          
-        if (filters.line && filters.line !== 'ALL') {
+        if (filters.line && filters.line !== 'All' && filters.line !== 'ALL') {
           query = query.eq('line', filters.line)
         }
          
@@ -375,7 +375,7 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
           .eq('month', filters.month)
           .eq('currency', filters.currency)
          
-        if (filters.line && filters.line !== 'ALL') {
+        if (filters.line && filters.line !== 'All' && filters.line !== 'ALL') {
           query = query.eq('line', filters.line)
         }
          
@@ -391,7 +391,7 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
           .eq('month', filters.month)
           .eq('currency', filters.currency)
          
-        if (filters.line && filters.line !== 'ALL') {
+        if (filters.line && filters.line !== 'All' && filters.line !== 'ALL') {
           query = query.eq('line', filters.line)
         }
          
@@ -410,7 +410,7 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
           .eq('month', filters.month)
           .eq('currency', filters.currency)
          
-        if (filters.line && filters.line !== 'ALL') {
+        if (filters.line && filters.line !== 'All' && filters.line !== 'ALL') {
           query = query.eq('line', filters.line)
         }
          
@@ -610,7 +610,7 @@ async function getChurnMembers(filters: SlicerFilters): Promise<number> {
         .eq('currency', filters.currency)
         .gt('deposit_cases', 0) // Only users with deposit_cases > 0
       
-      if (filters.line && filters.line !== 'ALL') {
+      if (filters.line && filters.line !== 'All' && filters.line !== 'ALL') {
         query = query.eq('line', filters.line)
       }
       
@@ -631,7 +631,7 @@ async function getChurnMembers(filters: SlicerFilters): Promise<number> {
         .eq('currency', filters.currency)
         .gt('deposit_cases', 0) // Only users with deposit_cases > 0
       
-      if (filters.line && filters.line !== 'ALL') {
+      if (filters.line && filters.line !== 'All' && filters.line !== 'ALL') {
         query = query.eq('line', filters.line)
       }
       
@@ -2218,7 +2218,7 @@ async function getActiveMembersInPeriod(
 
     // Apply filters
     if (currency !== 'All') query = query.eq('currency', currency)
-    if (line !== 'All') query = query.eq('line', line)
+    if (line && line !== 'All' && line !== 'ALL') query = query.eq('line', line)
 
     const { data } = await query
     const activeUserkeys = Array.from(new Set(data?.map(row => row.userkey as string) || []))
@@ -2305,7 +2305,7 @@ async function getSevenDayMemberData(
 
     // Apply filters
     if (currency !== 'All') retentionQuery = retentionQuery.eq('currency', currency)
-    if (line && line !== 'All') retentionQuery = retentionQuery.eq('line', line)
+    if (line && line !== 'All' && line !== 'ALL') retentionQuery = retentionQuery.eq('line', line)
 
     const { data: retentionData } = await retentionQuery
     const retentionUserkeys = Array.from(new Set(retentionData?.map((row: any) => row.userkey) || []))
@@ -2330,7 +2330,7 @@ async function getSevenDayMemberData(
 
     // Apply filters
     if (currency !== 'All') allTransactionsQuery = allTransactionsQuery.eq('currency', currency)
-    if (line && line !== 'All') allTransactionsQuery = allTransactionsQuery.eq('line', line)
+    if (line && line !== 'All' && line !== 'ALL') allTransactionsQuery = allTransactionsQuery.eq('line', line)
 
     const { data: allTransactions } = await allTransactionsQuery
     console.log('🔍 [KPILogic] All transactions for retention members:', allTransactions?.length || 0)

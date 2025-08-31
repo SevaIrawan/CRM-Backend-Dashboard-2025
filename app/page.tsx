@@ -16,8 +16,8 @@ export default function HomePage() {
     try {
       const session = localStorage.getItem('nexmax_session')
       if (session) {
-        // User is logged in, redirect to dashboard
-        router.push('/dashboard')
+        // User is logged in, redirect to USC overview (default page)
+        router.push('/usc/overview')
       } else {
         // User is not logged in, redirect to login
         router.push('/login')

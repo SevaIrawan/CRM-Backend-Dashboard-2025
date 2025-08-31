@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       currency, line, year, month, startDate, endDate, filterMode, page, limit 
     })
 
-    // Build base query for filtering
+    // Build base query for filtering - using actual table name with typo
     let baseQuery = supabase.from('adjusment_daily').select('*')
 
     // Add filters based on selections
@@ -37,12 +37,12 @@ export async function GET(request: NextRequest) {
 
     // Handle month vs date range filtering
     if (filterMode === 'month' && month && month !== 'ALL') {
-      baseQuery = baseQuery.filter('month', 'eq', month)
+      baseQuery = baseQuery.filter('month', 'eq', month) // month is text, not integer
     } else if (filterMode === 'daterange' && startDate && endDate) {
       baseQuery = baseQuery.filter('date', 'gte', startDate).filter('date', 'lte', endDate)
     }
 
-    // Get total count first (separate query)
+    // Get total count first (separate query) - FIXED TABLE NAME
     const countQuery = supabase.from('adjusment_daily').select('*', { count: 'exact', head: true })
     
     // Apply same filters to count query
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
       countQuery.filter('year', 'eq', parseInt(year))
     }
     if (filterMode === 'month' && month && month !== 'ALL') {
-      countQuery.filter('month', 'eq', month)
+      countQuery.filter('month', 'eq', month) // month is text, not integer
     } else if (filterMode === 'daterange' && startDate && endDate) {
       countQuery.filter('date', 'gte', startDate).filter('date', 'lte', endDate)
     }
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
       console.error('❌ Supabase query error:', result.error)
       return NextResponse.json({ 
         success: false, 
-        error: 'Database error while fetching adjusment_daily data',
+        error: 'Database error while fetching adjustment data',
         message: result.error.message 
       }, { status: 500 })
     }
@@ -111,8 +111,9 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('❌ Error fetching adjustment data:', error)
     return NextResponse.json({ 
-      success: false, 
-      error: 'Internal server error while fetching adjusment_daily data' 
+      success: false,
+      error: 'Database error while fetching adjustment data',
+      message: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }
 }

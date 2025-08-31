@@ -10,14 +10,11 @@ export default function NavPrefetch() {
   useEffect(() => {
     // Prefetch common routes untuk smooth navigation
     const commonRoutes = [
-      '/dashboard',
-      '/business-flow', 
-      '/strategic-executive',
       '/usc/overview',
       '/usc/sales',
-      '/bgo',
-      '/sr',
-      '/xoo',
+      '/transaction/adjustment',
+      '/transaction/deposit',
+      '/transaction/withdraw',
       '/os',
       '/users',
       '/supabase'

@@ -76,7 +76,7 @@ export default function UsersPage() {
     // Check if user has permission to access User Management
     if (!canAccessUserManagement(sessionData.role)) {
       console.log('❌ Access denied: User does not have permission to access User Management')
-      router.push('/dashboard')
+      router.push('/usc/overview')
       return
     }
 

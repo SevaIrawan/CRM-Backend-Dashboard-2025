@@ -30,7 +30,7 @@ export default function LoginPage() {
             if (userData.role === 'usc_dep') {
               router.push('/usc/overview')
             } else {
-              router.push('/dashboard')
+              router.push('/usc/overview')
             }
           } catch (error) {
             console.error('Invalid session data:', error)

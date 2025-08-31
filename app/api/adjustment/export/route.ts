@@ -5,13 +5,14 @@ export async function POST(request: NextRequest) {
   try {
     const { currency, line, year, month, startDate, endDate, filterMode } = await request.json()
 
-    console.log('📥 Exporting adjusment_daily data with filters:', { 
+    console.log('📊 Exporting adjustment data to CSV with filters:', { 
       currency, line, year, month, startDate, endDate, filterMode 
     })
 
-    // Build query with same filters as data endpoint
+    // Build query - same as data route
     let query = supabase.from('adjusment_daily').select('*')
 
+    // Add filters based on selections
     if (currency && currency !== 'ALL') {
       query = query.filter('currency', 'eq', currency)
     }
@@ -24,64 +25,85 @@ export async function POST(request: NextRequest) {
       query = query.filter('year', 'eq', parseInt(year))
     }
 
+    // Handle month vs date range filtering
     if (filterMode === 'month' && month && month !== 'ALL') {
-      query = query.filter('month', 'eq', month)
+      query = query.filter('month', 'eq', month) // month is text, not integer
     } else if (filterMode === 'daterange' && startDate && endDate) {
       query = query.filter('date', 'gte', startDate).filter('date', 'lte', endDate)
     }
 
-    const result = await query.order('date', { ascending: false })
+    // Order by date descending with improved sorting
+    query = query.order('date', { ascending: false })
+      .order('year', { ascending: false })
+      .order('month', { ascending: false })
+
+    console.log('🔍 Executing adjustment export query...')
+    const result = await query
 
     if (result.error) {
-      console.error('❌ Export query error:', result.error)
+      console.error('❌ Supabase query error:', result.error)
       return NextResponse.json({ 
-        error: 'Database error during export',
+        success: false, 
+        error: 'Database error while exporting adjustment data',
         message: result.error.message 
       }, { status: 500 })
     }
 
-    const data = result.data || []
-    console.log(`📊 Exporting ${data.length} adjusment_daily records`)
-
-    if (data.length === 0) {
-      return NextResponse.json({ 
-        error: 'No data found for the selected filters' 
-      }, { status: 404 })
+    if (!result.data || result.data.length === 0) {
+      return NextResponse.json({
+        success: false,
+        error: 'No adjustment data found for the selected filters'
+      }, { status: 400 })
     }
 
-    // Convert to CSV
-    const headers = Object.keys(data[0])
+    // Create CSV content
+    const headers = Object.keys(result.data[0])
     const csvContent = [
       headers.join(','),
-      ...data.map(row => 
+      ...result.data.map(row => 
         headers.map(header => {
           const value = row[header]
-          if (value === null || value === undefined) return ''
+          // Handle commas in string values
           if (typeof value === 'string' && value.includes(',')) {
-            return `"${value.replace(/"/g, '""')}"`
+            return `"${value}"`
           }
-          return value
+          return value || ''
         }).join(',')
       )
     ].join('\n')
 
-    // Generate filename
-    const timestamp = new Date().toISOString().slice(0, 10)
-    const filterStr = [currency, line, year, month].filter(f => f && f !== 'ALL').join('_') || 'all'
-    const filename = `adjusment_daily_data_${filterStr}_${timestamp}.csv`
+    // Create filename with timestamp and filters
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, '')
+    const filterSuffix = [
+      currency && currency !== 'ALL' ? currency : '',
+      line && line !== 'ALL' ? line : '',
+      year && year !== 'ALL' ? year : '',
+      filterMode === 'month' && month && month !== 'ALL' ? `Month${month}` : '',
+      filterMode === 'daterange' && startDate && endDate ? `${startDate}_${endDate}` : ''
+    ].filter(Boolean).join('_')
+    
+    const filename = `Adjustment_Daily_${timestamp}${filterSuffix ? '_' + filterSuffix : ''}.csv`
 
-    return new NextResponse(csvContent, {
+    console.log(`✅ CSV file generated: ${filename} with ${result.data.length} adjustment records`)
+
+    // Create and return CSV file
+    const csvBuffer = Buffer.from(csvContent, 'utf-8')
+    
+    return new NextResponse(csvBuffer, {
       status: 200,
       headers: {
-        'Content-Type': 'text/csv',
-        'Content-Disposition': `attachment; filename="${filename}"`
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Length': csvBuffer.length.toString()
       }
     })
 
   } catch (error) {
-    console.error('❌ Export error:', error)
+    console.error('❌ Error exporting adjustment data:', error)
     return NextResponse.json({ 
-      error: 'Internal server error during export' 
+      success: false,
+      error: 'Database error while exporting adjustment data',
+      message: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }
 }

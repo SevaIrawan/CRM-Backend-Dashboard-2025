@@ -99,12 +99,12 @@ export default function USCOverviewPage() {
           return;
         }
 
-        // ✅ FIXED: Logic Line Slicer yang benar - tidak ada undefined
+        // ✅ FIXED: Logic Line Slicer yang benar - konsisten dengan pattern
         const kpiFilters = {
           year: selectedYear,
           month: selectedMonth,
           currency: 'USC',
-          line: selectedLine // ✅ SELALU kirim selectedLine, jangan undefined
+          line: selectedLine === 'All' ? undefined : selectedLine
         };
         
         const kpiResult = await getAllKPIsWithMoM(kpiFilters);
@@ -116,7 +116,7 @@ export default function USCOverviewPage() {
           year: selectedYear,
           month: selectedMonth,
           currency: 'USC',
-          line: selectedLine // ✅ SELALU kirim selectedLine, jangan undefined
+          line: selectedLine === 'All' ? undefined : selectedLine
         };
         
         const chartResult = await getLineChartData(chartFilters);

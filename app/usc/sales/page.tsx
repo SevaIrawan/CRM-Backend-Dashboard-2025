@@ -197,12 +197,12 @@ export default function MemberAnalyticPage() {
         const chartResult = await getLineChartData(chartFilters);
         setLineChartData(chartResult);
 
-        // ✅ FIXED: Logic Line Slicer yang benar - tidak ada undefined
-        const retentionResult = await getRetentionDayData(selectedYear, selectedMonth, 'USC', selectedLine);
+        // ✅ FIXED: Logic Line Slicer yang benar - konsisten dengan pattern
+        const retentionResult = await getRetentionDayData(selectedYear, selectedMonth, 'USC', selectedLine === 'All' ? 'All' : selectedLine);
         setRetentionData(retentionResult);
 
-        // ✅ FIXED: Logic Line Slicer yang benar - tidak ada undefined
-        const customerValueResult = await getCustomerValueData(selectedYear, selectedMonth, 'USC', selectedLine);
+        // ✅ FIXED: Logic Line Slicer yang benar - konsisten dengan pattern  
+        const customerValueResult = await getCustomerValueData(selectedYear, selectedMonth, 'USC', selectedLine === 'All' ? 'All' : selectedLine);
         setCustomerValueData(customerValueResult);
 
               } catch (error) {

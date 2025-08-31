@@ -2,76 +2,147 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const selectedCurrency = searchParams.get('selectedCurrency')
+
   try {
-    const { searchParams } = new URL(request.url)
-    const year = searchParams.get('year') || '2025'
-    const month = searchParams.get('month') || 'January'
-    const currency = searchParams.get('currency') || 'All'
+    console.log('🔍 [Adjustment API] Fetching slicer options:', { selectedCurrency })
 
-    console.log('🔍 [Adjustment API] Fetching slicer options:', { year, month, currency })
+    // Get unique currencies
+    const { data: currencyData, error: currencyError } = await supabase
+      .from('adjusment_daily')
+      .select('currency')
+      .not('currency', 'is', null)
+      .order('currency')
 
-    // Fetch years
-    const { data: yearsData } = await supabase
-      .from('member_report_daily')
+    if (currencyError) {
+      console.error('❌ Error fetching currencies:', currencyError)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Database error while fetching currencies',
+        message: currencyError.message 
+      }, { status: 500 })
+    }
+
+    // Get unique lines - dependent on selected currency
+    let lineQuery = supabase
+      .from('adjusment_daily')
+      .select('line')
+      .not('line', 'is', null)
+      .order('line')
+    
+    if (selectedCurrency && selectedCurrency !== 'ALL') {
+      lineQuery = lineQuery.filter('currency', 'eq', selectedCurrency)
+    }
+
+    const { data: lineData, error: lineError } = await lineQuery
+
+    if (lineError) {
+      console.error('❌ Error fetching lines:', lineError)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Database error while fetching lines',
+        message: lineError.message 
+      }, { status: 500 })
+    }
+
+    // Get unique years
+    const { data: yearData, error: yearError } = await supabase
+      .from('adjusment_daily')
       .select('year')
+      .not('year', 'is', null)
       .order('year', { ascending: false })
 
-    // Fetch months
-    const { data: monthsData } = await supabase
-      .from('member_report_daily')
+    if (yearError) {
+      console.error('❌ Error fetching years:', yearError)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Database error while fetching years',
+        message: yearError.message 
+      }, { status: 500 })
+    }
+
+    // Get unique months - month is stored as text in database
+    const { data: monthData, error: monthError } = await supabase
+      .from('adjustment_daily')
       .select('month')
-      .eq('year', year)
+      .not('month', 'is', null)
       .order('month')
 
-    // Fetch currencies
-    const { data: currenciesData } = await supabase
-      .from('member_report_daily')
-      .select('currency')
-      .eq('year', year)
-      .eq('month', month)
-
-    // Fetch lines
-    const { data: linesData } = await supabase
-      .from('member_report_daily')
-      .select('line')
-      .eq('year', year)
-      .eq('month', month)
-      .eq('currency', currency)
-
-    const years = Array.from(new Set((yearsData || []).map(item => item.year).filter(Boolean))).sort()
-    const months = Array.from(new Set((monthsData || []).map(item => item.month).filter(Boolean))) as string[]
-    const currencies = Array.from(new Set((currenciesData || []).map(item => item.currency).filter(Boolean))) as string[]
-    const lines = Array.from(new Set((linesData || []).map(item => item.line).filter(Boolean))) as string[]
-
-    // Sort months chronologically
-    const monthOrder: { [key: string]: number } = {
-      'January': 1, 'February': 2, 'March': 3, 'April': 4, 'May': 5, 'June': 6,
-      'July': 7, 'August': 8, 'September': 9, 'October': 10, 'November': 11, 'December': 12
+    if (monthError) {
+      console.error('❌ Error fetching months:', monthError)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Database error while fetching months',
+        message: monthError.message 
+      }, { status: 500 })
     }
-    months.sort((a: string, b: string) => (monthOrder[a] || 0) - (monthOrder[b] || 0))
 
-    const response = {
-      success: true,
-      data: {
-        years,
-        months,
-        currencies,
-        lines
-      }
+    // Get date range (min and max dates)
+    const { data: dateRangeData, error: dateRangeError } = await supabase
+      .from('adjustment_daily')
+      .select('date')
+      .not('date', 'is', null)
+      .order('date', { ascending: true })
+      .limit(1)
+
+    const { data: maxDateData, error: maxDateError } = await supabase
+      .from('adjustment_daily')
+      .select('date')
+      .not('date', 'is', null)
+      .order('date', { ascending: false })
+      .limit(1)
+
+    if (dateRangeError || maxDateError) {
+      console.error('❌ Error fetching date range:', dateRangeError || maxDateError)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Database error while fetching date range',
+        message: (dateRangeError || maxDateError)?.message 
+      }, { status: 500 })
+    }
+
+    // Process data
+    const currencies = Array.from(new Set(currencyData?.map(row => row.currency).filter(Boolean) || [])) as string[]
+    const lines = Array.from(new Set(lineData?.map(row => row.line).filter(Boolean) || [])) as string[]
+    const years = Array.from(new Set(yearData?.map(row => row.year?.toString()).filter(Boolean) || [])) as string[]
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ]
+    
+    const rawMonths = Array.from(new Set(monthData?.map(row => row.month?.toString()).filter(Boolean) || [])) as string[]
+    const validMonths = rawMonths.filter((month: string) => monthNames.includes(month)) // Only valid month names
+    const sortedMonths = validMonths.sort((a: string, b: string) => monthNames.indexOf(a) - monthNames.indexOf(b)) // Sort by month order
+    const months = sortedMonths.map(month => ({
+      value: month,
+      label: month
+    })) as Array<{value: string, label: string}>
+
+    const dateRange = {
+      min: dateRangeData?.[0]?.date || '',
+      max: maxDateData?.[0]?.date || ''
     }
 
     console.log('✅ [Adjustment API] Slicer options fetched successfully')
-    return NextResponse.json(response)
+
+    return NextResponse.json({
+      success: true,
+      options: {
+        currencies,
+        lines,
+        years,
+        months,
+        dateRange
+      }
+    })
 
   } catch (error) {
-    console.error('❌ [Adjustment API] Error:', error)
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to fetch adjustment slicer options',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
+    console.error('❌ Error fetching adjustment slicer options:', error)
+    return NextResponse.json({ 
+      success: false,
+      error: 'Database error while fetching slicer options',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 }

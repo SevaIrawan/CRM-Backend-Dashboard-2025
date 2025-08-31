@@ -42,7 +42,7 @@ export default function NotFound() {
           Maaf, halaman yang Anda cari tidak ada.
         </p>
         <Link 
-          href="/"
+          href="/usc/overview"
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -64,7 +64,7 @@ export default function NotFound() {
             e.currentTarget.style.boxShadow = '0 4px 15px rgba(59, 130, 246, 0.3)'
           }}
         >
-          Kembali ke Dashboard
+          Kembali ke USC Overview
         </Link>
       </div>
     </div>
