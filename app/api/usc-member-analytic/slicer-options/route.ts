@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
     if (latestRecord && latestRecord.length > 0) {
       const latest = latestRecord[0]
       defaultYear = latest.year?.toString() || defaultYear
-      defaultMonth = latest.month || defaultMonth
+      defaultMonth = String(latest.month) || defaultMonth
     }
 
     // Add defaults for auto-setting slicers to latest data
