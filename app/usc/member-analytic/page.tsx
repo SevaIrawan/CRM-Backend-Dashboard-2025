@@ -251,7 +251,7 @@ export default function USCMemberAnalyticPage() {
           categories: months.map(month => month.substring(0, 3)) // Short month names
         },
         // Row 3 - Single Line Charts (REAL DATA)
-        ggrUserTrendMember: {
+        ggrUserTrend: {
           series: [
             {
               name: 'GGR User',
@@ -364,7 +364,7 @@ export default function USCMemberAnalyticPage() {
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto mb-6"></div>
             <div className="space-y-2">
-              <p className="text-lg font-semibold text-gray-800">Initializing USC MEMBER ANALYTIC DASHBOARD</p>
+              <p className="text-lg font-semibold text-gray-800">Initializing DASHBOARD</p>
               <p className="text-sm text-gray-500">Preparing client-side components...</p>
             </div>
           </div>
@@ -510,9 +510,8 @@ export default function USCMemberAnalyticPage() {
                 ]}
                 categories={lineChartData.newRegisterTrend.categories}
                 title="NEW REGISTER VS NEW DEPOSITOR TREND"
-                currency={null} // Member data, bukan currency
+                currency={undefined} // Member data, bukan currency
                 chartIcon={getChartIcon('New Register vs New Depositor')}
-                tooltipFormatter={(value: number, name: string) => `${name}: ${value} members`}
               />
             ) : (
               <div className="chart-container">
@@ -537,9 +536,8 @@ export default function USCMemberAnalyticPage() {
                 ]}
                 categories={lineChartData.activeMemberTrend.categories}
                 title="ACTIVE MEMBER VS PURE MEMBER TREND"
-                currency={null} // Member data, bukan currency
+                currency={undefined} // Member data, bukan currency
                 chartIcon={getChartIcon('Active Member vs Pure Member')}
-                tooltipFormatter={(value: number, name: string) => `${name}: ${value} members`}
               />
             ) : (
               <div className="chart-container">
@@ -559,58 +557,28 @@ export default function USCMemberAnalyticPage() {
 
           {/* Row 3: Single Line Charts */}
           <div className="chart-row">
-            {lineChartData?.ggrUserTrendMember?.series?.[0]?.data && lineChartData?.ggrUserTrendMember?.categories ? (
+            {lineChartData?.ggrUserTrend?.series?.[0]?.data && lineChartData?.ggrUserTrend?.categories ? (
               <LineChart
-                series={[
-                  { name: 'GGR User', data: lineChartData.ggrUserTrendMember.series[0].data }
-                ]}
-                categories={lineChartData.ggrUserTrendMember.categories}
+                series={lineChartData.ggrUserTrend.series}
+                categories={lineChartData.ggrUserTrend.categories}
                 title="GGR USER TREND"
                 currency={selectedCurrency}
-                chartIcon={getChartIcon('GGR User')}
+                chartIcon={getChartIcon('GGR User Trend')}
               />
-            ) : (
-              <div className="chart-container">
-                <div className="chart-header">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
-                    <div dangerouslySetInnerHTML={{ __html: getChartIcon('GGR User') }} />
-                    <h3>GGR USER TREND</h3>
-                  </div>
-                  <p>Loading chart data...</p>
-                </div>
-                <div className="chart-placeholder">
-                  📊 Loading GGR User data...
-                </div>
-              </div>
-            )}
+            ) : null}
             
             {lineChartData?.depositAmountUserTrend?.series?.[0]?.data && lineChartData?.depositAmountUserTrend?.categories ? (
               <LineChart
-                series={[
-                  { name: 'Deposit Amount User', data: lineChartData.depositAmountUserTrend.series[0].data }
-                ]}
+                series={lineChartData.depositAmountUserTrend.series}
                 categories={lineChartData.depositAmountUserTrend.categories}
-                title="DEPOSIT AMOUNT USER"
+                title="DEPOSIT AMOUNT USER TREND"
                 currency={selectedCurrency}
-                chartIcon={getChartIcon('Deposit Amount User')}
+                chartIcon={getChartIcon('Deposit Amount User Trend')}
               />
-            ) : (
-              <div className="chart-container">
-                <div className="chart-header">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
-                    <div dangerouslySetInnerHTML={{ __html: getChartIcon('Deposit Amount User') }} />
-                    <h3>DEPOSIT AMOUNT USER</h3>
-                  </div>
-                  <p>Loading chart data...</p>
-                </div>
-                <div className="chart-placeholder">
-                  📊 Loading Deposit Amount User data...
-                </div>
-              </div>
-            )}
+            ) : null}
           </div>
 
-          {/* Row 4: 2 Line Charts (2 lines each) */}
+          {/* Row 4: Multi-line Charts */}
           <div className="chart-row">
             {lineChartData?.retentionRateTrend?.series?.[0]?.data && lineChartData?.retentionRateTrend?.categories ? (
               <LineChart
