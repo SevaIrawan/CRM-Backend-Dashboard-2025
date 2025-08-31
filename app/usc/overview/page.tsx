@@ -1,16 +1,34 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { getAllKPIsWithMoM, calculateKPIs, getMonthsForYear, SlicerFilters, KPIData } from '@/lib/KPILogic';
 import Layout from '@/components/Layout';
 import Frame from '@/components/Frame';
 import { YearSlicer, MonthSlicer, LineSlicer } from '@/components/slicers';
 import StatCard from '@/components/StatCard';
-import LineChart from '@/components/LineChart';
-import BarChart from '@/components/BarChart';
 import { getChartIcon } from '@/lib/CentralIcon';
 import { getAllKPIsWithDailyAverage } from '@/lib/dailyAverageHelper';
 import { formatCurrencyKPI, formatIntegerKPI, formatMoMChange, formatNumericKPI, formatPercentageKPI } from '@/lib/formatHelpers';
+
+// ✅ FIX HYDRATION: Dynamic import untuk chart components
+const LineChart = dynamic(() => import('@/components/LineChart'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-64 bg-gray-50 rounded-lg animate-pulse">
+      <div className="text-sm text-gray-500">Loading Chart...</div>
+    </div>
+  )
+});
+
+const BarChart = dynamic(() => import('@/components/BarChart'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-64 bg-gray-50 rounded-lg animate-pulse">
+      <div className="text-sm text-gray-500">Loading Chart...</div>
+    </div>
+  )
+});
 
 // Types for slicer options API
 interface SlicerOptions {
@@ -26,6 +44,9 @@ interface SlicerOptions {
 }
 
 export default function USCOverviewPage() {
+  // ✅ FIX HYDRATION: Client-side only state
+  const [isMounted, setIsMounted] = useState(false);
+  
   const [kpiData, setKpiData] = useState<KPIData | null>(null);
   const [momData, setMomData] = useState<KPIData | null>(null);
   const [slicerOptions, setSlicerOptions] = useState<SlicerOptions | null>(null);
@@ -35,6 +56,11 @@ export default function USCOverviewPage() {
   const [selectedLine, setSelectedLine] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  // ✅ FIX HYDRATION: Ensure client-side only rendering
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
   
   // Chart data states
   const [srChartData, setSrChartData] = useState<any>(null);
@@ -341,6 +367,23 @@ export default function USCOverviewPage() {
       </div>
     </div>
   );
+
+  // ✅ FIX HYDRATION: Prevent hydration mismatch
+  if (!isMounted) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto mb-6"></div>
+            <div className="space-y-2">
+              <p className="text-lg font-semibold text-gray-800">Initializing Dashboard</p>
+              <p className="text-sm text-gray-500">Preparing client-side components...</p>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   if (isLoading) {
     return (
