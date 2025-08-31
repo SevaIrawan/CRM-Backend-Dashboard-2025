@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    const availableMonths = Array.from(new Set(monthData?.map(row => row.month).filter(Boolean) || []))
+    const availableMonths = Array.from(new Set(monthData?.map(row => String(row.month)).filter(Boolean) || []))
     
     if (availableMonths.length === 0) {
       console.log('⚠️ No months data found for USC Overview charts')
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get chart data for each month from REAL DATA ONLY
-    const chartDataPromises = availableMonths.map(async (month) => {
+    const chartDataPromises = availableMonths.map(async (month: string) => {
       let query = supabase
         .from('member_report_daily')
         .select('*')
