@@ -92,6 +92,7 @@ export interface RawKPIData {
   }
   churn: {
     churn_members: number
+    last_month_active_members: number
   }
   pureUser: {
     unique_codes: number
@@ -148,9 +149,10 @@ export const KPI_FORMULAS = {
     return result // Jangan round, biarkan nilai asli untuk CLV calculation
   },
 
-  // Churn Rate = MAX(Churn Members / Active Members, 0.01) * 100
+  // ✅ UPDATED: Churn Rate = MAX(Churn Members / Last Month Active Members, 0.01) * 100
   CHURN_RATE: (data: RawKPIData): number => {
-    return data.deposit.active_members > 0 ? Math.max((data.churn.churn_members / data.deposit.active_members), 0.01) * 100 : 1
+    return data.churn.last_month_active_members > 0 ? 
+      Math.max((data.churn.churn_members / data.churn.last_month_active_members), 0.01) * 100 : 1
   },
 
   // Retention Rate = (1 - Churn Rate) * 100
@@ -197,10 +199,10 @@ export const KPI_FORMULAS = {
     return data.newRegister.new_register > 0 ? (data.newDepositor.new_depositor / data.newRegister.new_register) * 100 : 0
   },
 
-  // ✅ NEW: Hold Percentage = GGR / Valid Amount * 100%
-  // Where: GGR = Deposit Amount - Withdraw Amount, Valid Amount = Sum(member_report_daily[valid_amount])
-  HOLD_PERCENTAGE: (ggr: number, validAmount: number): number => {
-    return validAmount > 0 ? (ggr / validAmount) * 100 : 0
+  // ✅ NEW: Hold Percentage = net profit / Valid Amount * 100%
+ // where:Net Profit = (Deposit Amount + Add Transaction) - (Withdraw Amount + Deduct Transaction), Valid Amount = Sum(member_report_daily[valid_amount])
+  HOLD_PERCENTAGE: (netProfit: number, validAmount: number): number => {
+    return validAmount > 0 ? (netProfit / validAmount) * 100 : 0
   },
 
   // ✅ NEW: Deposit Amount User = Deposit Amount / Active Member
@@ -519,7 +521,8 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
         new_register: newRegisterAgg // New Register dari new_depositor[new_register]
       },
       churn: {
-        churn_members: churnResult
+        churn_members: churnResult.churn_members,
+        last_month_active_members: churnResult.last_month_active_members
       },
       pureUser: {
         unique_codes: pureUserCount // Pure User dari member_report_daily[unique_code]
@@ -590,7 +593,7 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
       member: { net_profit: 0, ggr: 0, valid_bet_amount: 0, add_bonus: 0, deduct_bonus: 0 },
       newDepositor: { new_depositor: 0 },
       newRegister: { new_register: 0 },
-      churn: { churn_members: 0 },
+      churn: { churn_members: 0, last_month_active_members: 0 },
       pureUser: { unique_codes: 0 },
       customerValue: { high_value_customers: 0, low_value_customers: 0, total_customers: 0 }
     }
@@ -598,7 +601,7 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
 }
 
 // Helper function untuk churn member calculation
-async function getChurnMembers(filters: SlicerFilters): Promise<number> {
+async function getChurnMembers(filters: SlicerFilters): Promise<{ churn_members: number, last_month_active_members: number }> {
   try {
     // Get previous month data
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
@@ -656,11 +659,15 @@ async function getChurnMembers(filters: SlicerFilters): Promise<number> {
     // Churn = users in previous month but not in current month
     const churnedUsers = Array.from(prevUserKeys).filter(userKey => !currentUserKeys.has(userKey))
     
-    return churnedUsers.length
+    // ✅ RETURN: Object dengan churn members dan last month active members
+    return {
+      churn_members: churnedUsers.length,
+      last_month_active_members: prevUserKeys.size
+    }
 
   } catch (error) {
     console.error('❌ [KPILogic] Error calculating churn members:', error)
-    return 0
+    return { churn_members: 0, last_month_active_members: 0 }
   }
 }
 
@@ -910,7 +917,7 @@ export async function calculateKPIs(filters: SlicerFilters): Promise<KPIData> {
       addBonus: rawData.member.add_bonus,
       deductBonus: rawData.member.deduct_bonus,
       conversionRate: KPI_FORMULAS.ROUND(KPI_FORMULAS.NEW_CUSTOMER_CONVERSION_RATE(rawData)),
-      holdPercentage: KPI_FORMULAS.ROUND(KPI_FORMULAS.HOLD_PERCENTAGE(rawData.member.ggr, rawData.member.valid_bet_amount)),
+      holdPercentage: KPI_FORMULAS.ROUND(KPI_FORMULAS.HOLD_PERCENTAGE(rawData.member.net_profit, rawData.member.valid_bet_amount)),
       headcount: headcount,
       depositAmountUser: KPI_FORMULAS.ROUND(KPI_FORMULAS.DEPOSIT_AMOUNT_USER(rawData.deposit.deposit_amount, rawData.deposit.active_members)),
       highValueCustomers: rawData.customerValue.high_value_customers,
