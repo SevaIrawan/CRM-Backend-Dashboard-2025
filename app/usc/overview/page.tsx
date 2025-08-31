@@ -89,6 +89,8 @@ export default function USCOverviewPage() {
         setIsLoading(true);
         setLoadError(null);
         setChartError(null);
+        
+        console.log('🔄 [USC Overview] Loading ALL data (KPI + Charts)...');
 
         // ✅ FIXED: Logic Line Slicer yang benar - konsisten dengan pattern
         const kpiFilters: SlicerFilters = {
@@ -103,6 +105,8 @@ export default function USCOverviewPage() {
         setKpiData(kpiResult.current);
         setMomData(kpiResult.mom);
         
+        console.log('✅ [USC Overview] KPI data loaded successfully');
+        
         // ✅ FIXED: Chart filters harus sama dengan KPI filters untuk konsistensi
         const chartFilters: SlicerFilters = {
           year: selectedYear,
@@ -113,6 +117,8 @@ export default function USCOverviewPage() {
         
         const srData = await createSRChartData(chartFilters);
         setSrChartData(srData);
+        
+        console.log('✅ [USC Overview] ALL data loaded successfully - Ready to display!');
 
       } catch (error) {
         console.error('Error loading data:', error);
@@ -339,8 +345,19 @@ export default function USCOverviewPage() {
   if (isLoading) {
     return (
       <Layout>
-        <div className="loading-container">
-          <p>Loading USC Overview data...</p>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto mb-6"></div>
+            <div className="space-y-2">
+              <p className="text-lg font-semibold text-gray-800">Loading USC Overview</p>
+              <p className="text-sm text-gray-500">Fetching real-time data from database...</p>
+              <div className="flex items-center justify-center space-x-1 mt-4">
+                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+              </div>
+            </div>
+          </div>
         </div>
       </Layout>
     );
@@ -359,6 +376,8 @@ export default function USCOverviewPage() {
   return (
     <Layout customSubHeader={customSubHeader}>
       <Frame variant="standard">
+
+
         {/* Content Container with proper spacing and scroll */}
         <div style={{
           display: 'flex',
@@ -467,7 +486,7 @@ export default function USCOverviewPage() {
               title="WITHDRAW AMOUNT TREND"
               currency={selectedCurrency}
               hideLegend={true}
-              color="#EF4444"
+              color="#FF8C00"
               chartIcon={getChartIcon('Withdraw Amount')}
             />
             <LineChart
@@ -504,7 +523,6 @@ export default function USCOverviewPage() {
               title="NET PROFIT TREND"
               currency={selectedCurrency}
               hideLegend={true}
-              color="#10B981"
               chartIcon={getChartIcon('Net Profit')}
             />
           </div>
@@ -535,7 +553,6 @@ export default function USCOverviewPage() {
               title="AVERAGE CUSTOMER LIFESPAN TREND (ACL)"
               currency={selectedCurrency}
               hideLegend={true}
-              color="#10B981"
               chartIcon={getChartIcon('Average Customer Lifespan')}
             />
           </div>
@@ -548,7 +565,6 @@ export default function USCOverviewPage() {
               title="CUSTOMER LIFETIME VALUE TREND"
               currency={selectedCurrency}
               hideLegend={true}
-              color="#8B5CF6"
               chartIcon={getChartIcon('Customer Lifetime Value')}
             />
             <LineChart
@@ -557,7 +573,6 @@ export default function USCOverviewPage() {
               title="CUSTOMER MATURITY INDEX TREND"
               currency={selectedCurrency}
               hideLegend={true}
-              color="#06B6D4"
               chartIcon={getChartIcon('Customer Maturity Index')}
             />
             <LineChart
@@ -566,7 +581,7 @@ export default function USCOverviewPage() {
               title="WINRATE TREND"
               currency={selectedCurrency}
               hideLegend={true}
-              color="#EF4444"
+              color="#FF8C00"
               chartIcon={getChartIcon('Winrate')}
             />
           </div>

@@ -1136,6 +1136,8 @@ export async function getSlicerData(): Promise<SlicerData> {
 
 export async function getMonthsForYear(year: string, currency?: string, line?: string): Promise<string[]> {
   try {
+    console.log('🔍 [getMonthsForYear] DEBUGGING PARAMS:', { year, currency, line })
+    
     let query = supabase
       .from('member_report_daily')
       .select('month')
@@ -1143,18 +1145,24 @@ export async function getMonthsForYear(year: string, currency?: string, line?: s
     
     if (currency) {
       query = query.eq('currency', currency)
+      console.log('🔍 [getMonthsForYear] Adding currency filter:', currency)
     }
     
     // ✅ FIXED: Add line filter untuk consistent dengan KPI data
-    if (line) {
+    if (line && line !== 'ALL') {
       query = query.eq('line', line)
+      console.log('🔍 [getMonthsForYear] Adding line filter:', line)
     }
     
     const { data, error } = await query
 
     if (error) throw error
 
-    const months = Array.from(new Set((data || []).map((item: any) => item.month).filter(Boolean)))
+    const rawMonths = (data || []).map((item: any) => item.month).filter(Boolean)
+    console.log('🔍 [getMonthsForYear] Raw months from DB:', rawMonths)
+    
+    const months = Array.from(new Set(rawMonths))
+    console.log('🔍 [getMonthsForYear] Unique months:', months)
     
     // Sort months chronologically
     const monthOrder: { [key: string]: number } = {
@@ -1163,6 +1171,7 @@ export async function getMonthsForYear(year: string, currency?: string, line?: s
     }
     months.sort((a: string, b: string) => (monthOrder[a] || 0) - (monthOrder[b] || 0))
 
+    console.log('🔍 [getMonthsForYear] FINAL SORTED MONTHS:', months)
     return months
 
   } catch (error) {
@@ -1208,8 +1217,8 @@ export async function getLineChartData(filters: SlicerFilters): Promise<any> {
     console.log('📈 [KPILogic] Fetching line chart data with dynamic categories...')
     console.log('🔍 [KPILogic] Filters:', filters)
     
-    // Get dynamic months for the selected year and currency
-    const months = await getMonthsForYear(filters.year, filters.currency)
+    // Get dynamic months for the selected year, currency, and line
+    const months = await getMonthsForYear(filters.year, filters.currency, filters.line)
     console.log('📅 [KPILogic] Dynamic months for chart:', months)
     
     if (!months || months.length === 0) {
@@ -1704,8 +1713,8 @@ export async function getBarChartData(filters: SlicerFilters): Promise<any> {
     // Get current data for charts
     const currentData = await calculateKPIs(filters)
     
-    // Get dynamic months for the selected year
-    const months = await getMonthsForYear(filters.year)
+    // Get dynamic months for the selected year, currency, and line
+    const months = await getMonthsForYear(filters.year, filters.currency, filters.line)
     console.log('📅 [KPILogic] Dynamic months for bar chart:', months)
     
     // Calculate retention vs churn chart data with dynamic categories
@@ -1942,8 +1951,8 @@ export async function getDashboardChartData(filters: SlicerFilters): Promise<any
     console.log('📊 [KPILogic] Fetching Dashboard chart data...')
     console.log('🔍 [KPILogic] Dashboard filters:', filters)
     
-    // Get dynamic months for the selected year
-    const months = await getMonthsForYear(filters.year)
+    // Get dynamic months for the selected year, currency, and line
+    const months = await getMonthsForYear(filters.year, filters.currency, filters.line)
     console.log('📅 [KPILogic] Dynamic months for Dashboard:', months)
     
     if (!months || months.length === 0) {

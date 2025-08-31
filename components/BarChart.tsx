@@ -166,7 +166,7 @@ export default function BarChart({
         beginAtZero: true,
         grid: {
           display: true,
-          color: '#e5e7eb',
+          color: 'rgba(229, 231, 235, 0.5)', // ✅ IMPROVED: Softer grid lines
           lineWidth: 1,
           drawBorder: false
         },
@@ -184,13 +184,14 @@ export default function BarChart({
           font: {
             weight: 'bold' as const,
             size: 10
-          }
+          },
+          color: '#6b7280' // ✅ IMPROVED: Better text color
         }
       },
       y: {
         grid: {
           display: true,
-          color: '#e5e7eb',
+          color: 'rgba(229, 231, 235, 0.3)', // ✅ IMPROVED: Even softer grid lines
           lineWidth: 1,
           drawBorder: false
         },
@@ -198,7 +199,8 @@ export default function BarChart({
           font: {
             weight: 'bold' as const,
             size: 10
-          }
+          },
+          color: '#6b7280' // ✅ IMPROVED: Better text color
         }
       }
     } : {
@@ -206,7 +208,7 @@ export default function BarChart({
       x: {
         grid: {
           display: true,
-          color: '#e5e7eb',
+          color: 'rgba(229, 231, 235, 0.5)', // ✅ IMPROVED: Softer grid lines
           lineWidth: 1,
           drawBorder: false
         },
@@ -214,14 +216,15 @@ export default function BarChart({
           font: {
             weight: 'bold' as const,
             size: 10
-          }
+          },
+          color: '#6b7280' // ✅ IMPROVED: Better text color
         }
       },
       y: {
         beginAtZero: true,
         grid: {
           display: true,
-          color: '#e5e7eb',
+          color: 'rgba(229, 231, 235, 0.5)', // ✅ IMPROVED: Softer grid lines
           lineWidth: 1,
           drawBorder: false
         },
@@ -239,7 +242,8 @@ export default function BarChart({
           font: {
             weight: 'bold' as const,
             size: 10
-          }
+          },
+          color: '#6b7280' // ✅ IMPROVED: Better text color
         }
       }
     }
