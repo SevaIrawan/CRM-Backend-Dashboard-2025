@@ -287,9 +287,11 @@ export default function LineChart({
     datasets: series.map((item, index) => {
       // Use custom color if provided, otherwise use default colors
       const lineColor = index === 0 ? color : '#F97316'; // First series uses color prop, second uses orange
+      
+      // ✅ IMPROVED: Better background with gradient effect
       const bgColor = index === 0 
         ? `${color}20` // Add transparency to color prop (hex with alpha)
-        : 'rgba(249, 115, 22, 0.1)'; // Orange with transparency
+        : 'rgba(249, 115, 22, 0.15)'; // Orange with better transparency
       
       return {
         label: item.name,
@@ -394,16 +396,17 @@ export default function LineChart({
        x: {
          grid: {
            display: true,
-           color: '#e5e7eb',
+           color: 'rgba(229, 231, 235, 0.5)', // ✅ IMPROVED: Softer grid lines
            lineWidth: 1,
            drawBorder: false
          },
-                 ticks: {
+         ticks: {
            padding: 8,
            font: {
              weight: 'bold' as const,
              size: 10
-           }
+           },
+           color: '#6b7280' // ✅ IMPROVED: Better text color
          }
       },
              y: {
@@ -413,7 +416,7 @@ export default function LineChart({
          beginAtZero: false,
          grid: {
            display: true,
-           color: '#e5e7eb',
+           color: 'rgba(229, 231, 235, 0.3)', // ✅ IMPROVED: Even softer grid lines
            lineWidth: 1,
            drawBorder: false
          },

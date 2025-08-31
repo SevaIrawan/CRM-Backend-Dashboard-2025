@@ -467,7 +467,7 @@ export default function USCOverviewPage() {
               title="WITHDRAW AMOUNT TREND"
               currency={selectedCurrency}
               hideLegend={true}
-              color="#FF8C00"
+              color="#EF4444"
               chartIcon={getChartIcon('Withdraw Amount')}
             />
             <LineChart
@@ -504,6 +504,7 @@ export default function USCOverviewPage() {
               title="NET PROFIT TREND"
               currency={selectedCurrency}
               hideLegend={true}
+              color="#10B981"
               chartIcon={getChartIcon('Net Profit')}
             />
           </div>
@@ -516,6 +517,7 @@ export default function USCOverviewPage() {
               title="AVERAGE TRANSACTION VALUE TREND"
               currency={selectedCurrency}
               hideLegend={true}
+              color="#3B82F6"
               chartIcon={getChartIcon('Average Transaction Value')}
             />
             <LineChart
@@ -524,6 +526,7 @@ export default function USCOverviewPage() {
               title="PURCHASE FREQUENCY TREND"
               currency={selectedCurrency}
               hideLegend={true}
+              color="#FF8C00"
               chartIcon={getChartIcon('Purchase Frequency')}
             />
             <LineChart
@@ -532,6 +535,7 @@ export default function USCOverviewPage() {
               title="AVERAGE CUSTOMER LIFESPAN TREND (ACL)"
               currency={selectedCurrency}
               hideLegend={true}
+              color="#10B981"
               chartIcon={getChartIcon('Average Customer Lifespan')}
             />
           </div>
@@ -544,6 +548,7 @@ export default function USCOverviewPage() {
               title="CUSTOMER LIFETIME VALUE TREND"
               currency={selectedCurrency}
               hideLegend={true}
+              color="#8B5CF6"
               chartIcon={getChartIcon('Customer Lifetime Value')}
             />
             <LineChart
@@ -552,6 +557,7 @@ export default function USCOverviewPage() {
               title="CUSTOMER MATURITY INDEX TREND"
               currency={selectedCurrency}
               hideLegend={true}
+              color="#06B6D4"
               chartIcon={getChartIcon('Customer Maturity Index')}
             />
             <LineChart
@@ -560,6 +566,7 @@ export default function USCOverviewPage() {
               title="WINRATE TREND"
               currency={selectedCurrency}
               hideLegend={true}
+              color="#EF4444"
               chartIcon={getChartIcon('Winrate')}
             />
           </div>
