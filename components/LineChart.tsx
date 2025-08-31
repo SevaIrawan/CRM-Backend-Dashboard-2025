@@ -36,6 +36,7 @@ interface LineChartProps {
   currency?: string;
   chartIcon?: string;
   hideLegend?: boolean;
+  color?: string; // Add color prop for customizable line and area color
 }
 
 export default function LineChart({ 
@@ -44,7 +45,8 @@ export default function LineChart({
   title, 
   currency = 'MYR',
   chartIcon,
-  hideLegend = false
+  hideLegend = false,
+  color = '#3B82F6' // Default blue color
 }: LineChartProps) {
   
   console.log('📈 [LineChart] Rendering chart:', {
@@ -282,22 +284,30 @@ export default function LineChart({
 
   const data = {
     labels: categories,
-    datasets: series.map((item, index) => ({
-      label: item.name,
-      data: item.data,
-      borderColor: index === 0 ? '#3B82F6' : '#F97316', // Blue and Orange
-      backgroundColor: index === 0 ? 'rgba(59, 130, 246, 0.1)' : 'rgba(249, 115, 22, 0.1)', // Blue and Orange with transparency
-      borderWidth: 3,
-      pointBackgroundColor: index === 0 ? '#3B82F6' : '#F97316', // Blue and Orange
-      pointBorderColor: '#ffffff',
-      pointBorderWidth: 2,
-      pointRadius: 6,
-      pointHoverRadius: 8,
-      fill: true,
-      tension: 0.4,
-      // For dual Y-axis, assign yAxisID
-      yAxisID: needsDualYAxis ? (index === 0 ? 'y' : 'y1') : 'y'
-    }))
+    datasets: series.map((item, index) => {
+      // Use custom color if provided, otherwise use default colors
+      const lineColor = index === 0 ? color : '#F97316'; // First series uses color prop, second uses orange
+      const bgColor = index === 0 
+        ? `${color}20` // Add transparency to color prop (hex with alpha)
+        : 'rgba(249, 115, 22, 0.1)'; // Orange with transparency
+      
+      return {
+        label: item.name,
+        data: item.data,
+        borderColor: lineColor,
+        backgroundColor: bgColor,
+        borderWidth: 3,
+        pointBackgroundColor: lineColor,
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 2,
+        pointRadius: 6,
+        pointHoverRadius: 8,
+        fill: true,
+        tension: 0.4,
+        // For dual Y-axis, assign yAxisID
+        yAxisID: needsDualYAxis ? (index === 0 ? 'y' : 'y1') : 'y'
+      }
+    })
   };
 
   const options = {

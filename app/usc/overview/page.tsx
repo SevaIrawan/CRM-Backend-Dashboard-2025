@@ -467,6 +467,7 @@ export default function USCOverviewPage() {
               title="WITHDRAW AMOUNT TREND"
               currency={selectedCurrency}
               hideLegend={true}
+              color="#FF8C00"
               chartIcon={getChartIcon('Withdraw Amount')}
             />
             <LineChart
@@ -475,6 +476,7 @@ export default function USCOverviewPage() {
               title="GROSS GAMING REVENUE TREND"
               currency={selectedCurrency}
               hideLegend={true}
+              color="#FF8C00"
               chartIcon={getChartIcon('Gross Gaming Revenue')}
             />
           </div>
@@ -488,12 +490,12 @@ export default function USCOverviewPage() {
               currency={selectedCurrency}
               chartIcon={getChartIcon('deposits')}
             />
-            <LineChart
+            <BarChart
               series={srChartData?.withdrawCasesLineChart?.series || []}
               categories={srChartData?.withdrawCasesLineChart?.categories || []}
               title="WITHDRAW CASES TREND"
               currency={selectedCurrency}
-              hideLegend={true}
+              color="#FF8C00"
               chartIcon={getChartIcon('Withdraw Amount')}
             />
             <LineChart

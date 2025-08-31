@@ -111,8 +111,8 @@ export default function BarChart({
     datasets: series.map((dataset, index) => ({
       label: dataset.name,
       data: dataset.data,
-      backgroundColor: index === 0 ? '#3b82f6' : '#f97316',
-      borderColor: index === 0 ? '#2563eb' : '#ea580c',
+      backgroundColor: index === 0 ? color : '#f97316',
+      borderColor: index === 0 ? color : '#ea580c',
       borderWidth: 1,
       borderRadius: 4,
       borderSkipped: false,
@@ -133,16 +133,23 @@ export default function BarChart({
             const value = horizontal ? context.parsed.x : context.parsed.y;
             const datasetLabel = context.dataset.label;
             
+            // Check if this is a cases type (Deposit Cases, Withdraw Cases)
+            const isCasesType = datasetLabel && (
+              datasetLabel.toLowerCase().includes('cases')
+            );
+            
             // Check if this is a count/integer type (New Depositor, Active Member, etc.)
             const isCountType = datasetLabel && (
               datasetLabel.toLowerCase().includes('depositor') || 
               datasetLabel.toLowerCase().includes('member') ||
               datasetLabel.toLowerCase().includes('user') ||
-              datasetLabel.toLowerCase().includes('count') ||
-              datasetLabel.toLowerCase().includes('cases')
+              datasetLabel.toLowerCase().includes('count')
             );
             
-            if (isCountType) {
+            if (isCasesType) {
+              // For cases - using standard format: 0,000
+              return `${datasetLabel}: ${formatIntegerKPI(value)} cases`;
+            } else if (isCountType) {
               // For count/integer - using standard format: 0,000
               return `${datasetLabel}: ${formatIntegerKPI(value)} persons`;
             } else {
