@@ -187,7 +187,7 @@ export default function Sidebar({
         permission: 'usc',
         submenu: [
           { title: 'Overview USC', path: '/usc/overview' },
-          { title: 'Member Analytic USC', path: '/usc/sales' }
+          { title: 'Member Analytic USC', path: '/usc/member-analytic' }
         ]
       },
       {

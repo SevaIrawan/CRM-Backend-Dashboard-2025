@@ -86,7 +86,7 @@ export const hasPermission = (userRole: string, pagePath: string): boolean => {
   const pathToPermission: { [key: string]: string } = {
     '/usc': 'usc',
     '/usc/overview': 'usc',
-    '/usc/sales': 'usc',
+    '/usc/member-analytic': 'usc',
     '/transaction': 'transaction',
     '/transaction/adjustment': 'transaction',
     '/transaction/deposit': 'transaction',

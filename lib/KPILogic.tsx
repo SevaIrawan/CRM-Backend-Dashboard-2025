@@ -1,6 +1,9 @@
 'use client'
 
 import { supabase } from './supabase'
+// Import from dedicated logic files when needed:
+// import { getRetentionDayData, RetentionDayData, RetentionMemberDetail } from './retentionLogic'
+// import { getCustomerValueData } from './customerValueLogic'
 
 // ===========================================
 // TYPES & INTERFACES - POSTGRESQL PATTERN
@@ -420,8 +423,13 @@ export async function getRawKPIData(filters: SlicerFilters): Promise<RawKPIData>
       // Churn member calculation - members who played last month but not this month
       getChurnMembers(filters),
 
-      // Customer Value calculation - based on 2 months deposit amount
-      getCustomerValueData(filters.year, filters.month, filters.currency, filters.line || 'All')
+      // Customer Value calculation - MOVED TO lib/customerValueLogic.ts
+      Promise.resolve({ 
+        highValueCustomers: 0, 
+        lowValueCustomers: 0, 
+        totalCustomers: 0, 
+        customerDetails: [] 
+      })
     ])
 
     if (activeMemberResult.error) throw activeMemberResult.error
@@ -1205,14 +1213,14 @@ export async function getLineChartData(filters: SlicerFilters): Promise<any> {
     }
 
     // Get data for each month to create realistic trends
-    // Use only Year and Currency filters, ignore Month for chart data
+    // ✅ FIXED: Only use Year, Currency, and Line filters - NO month filter for overview charts
     const monthlyData = await Promise.all(
       months.map(async (month) => {
         const chartFilters = { 
           year: filters.year, 
           currency: filters.currency,
-          month: month,
-          line: filters.line // ✅ TAMBAHKAN LINE FILTER!
+          month: month, // Keep month untuk trend, tapi tidak filter by selected month
+          line: filters.line
         }
         const kpiData = await calculateKPIs(chartFilters)
         
@@ -2131,45 +2139,9 @@ export async function getDashboardChartData(filters: SlicerFilters): Promise<any
 }
 
 // ===========================================
-// RETENTION DAY INTERFACES & TYPES
+// RETENTION LOGIC MOVED TO: lib/retentionLogic.ts  
 // ===========================================
-
-export interface RetentionDayData {
-  retention7Days: number
-  retention6Days: number
-  retention5Days: number
-  retention4Days: number
-  retention3Days: number
-  retention2Days: number
-  retention1Day: number
-  retention0Days: number
-  totalMembers: number
-  memberDetails: RetentionMemberDetail[]
-}
-
-export interface RetentionMemberDetail {
-  userkey: string
-  userName: string
-  uniqueCode: string
-  activeDays: number
-  depositAmount: number
-  withdrawAmount: number
-  ggr: number
-  bonus: number
-  lastActiveDate: string
-  depositCases: number
-  withdrawCases: number
-  atv: number // ✅ Average Transaction Value
-}
-
-export interface CustomerValueDetail {
-  userkey: string
-  userName: string
-  uniqueCode: string
-  depositAmount: number
-  customerValue: string
-  currency: string
-}
+// Import from: import { getRetentionDayData, RetentionDayData, RetentionMemberDetail } from '@/lib/retentionLogic'
 
 // ===========================================
 // RETENTION DAY HELPER FUNCTIONS
@@ -2279,7 +2251,7 @@ async function getSevenDayMemberData(
   year: string,
   month: string,
   currency: string,
-  line: string,
+  line?: string,
   startDate?: string | null,
   endDate?: string | null
 ): Promise<any[]> {
@@ -2383,8 +2355,8 @@ function calculateRetentionCategories(memberData: any[]): { [key: number]: numbe
 async function getRetentionMemberDetails(
   memberData: any[],
   currency: string,
-  line: string
-): Promise<RetentionMemberDetail[]> {
+  line?: string
+): Promise<any[]> {
   try {
     console.log('🔍 [KPILogic] getRetentionMemberDetails called with:', { memberDataLength: memberData.length, currency, line })
     console.log('🔍 [KPILogic] Sample member data:', memberData.slice(0, 2))
@@ -2423,7 +2395,7 @@ async function getRetentionMemberDetails(
     })
 
     // Convert to RetentionMemberDetail array
-    const details: RetentionMemberDetail[] = Object.keys(memberDays).map(userkey => {
+    const details: any[] = Object.keys(memberDays).map(userkey => {
       const member = memberTotals[userkey]
       const atv = member.depositCases > 0 ? member.deposit / member.depositCases : 0
       
@@ -2454,148 +2426,27 @@ async function getRetentionMemberDetails(
 }
 
 // ===========================================
-// CUSTOMER VALUE FUNCTIONS
+// CUSTOMER VALUE LOGIC MOVED TO: lib/customerValueLogic.ts
 // ===========================================
+// Future: import { getCustomerValueData } from './customerValueLogic'
 
-// Get Customer Value Data based on 2 months deposit amount
-export async function getCustomerValueData(
-  year: string,
-  month: string,
-  currency: string = 'MYR',
-  line: string = 'All'
-): Promise<{
-  highValueCustomers: number
-  lowValueCustomers: number
-  totalCustomers: number
-  customerDetails: CustomerValueDetail[]
-}> {
-  try {
-    console.log('🔍 [KPILogic] Fetching Customer Value data:', { year, month, currency, line })
-
-    // Calculate 2 months period
-    const currentDate = new Date(parseInt(year), parseInt(month) - 1, 1)
-    const previousMonth = new Date(currentDate)
-    previousMonth.setMonth(previousMonth.getMonth() - 1)
-    
-    const currentYear = currentDate.getFullYear().toString()
-    const currentMonth = (currentDate.getMonth() + 1).toString().padStart(2, '0')
-    const previousYear = previousMonth.getFullYear().toString()
-    const previousMonthStr = (previousMonth.getMonth() + 1).toString().padStart(2, '0')
-
-    console.log('🔍 [KPILogic] Customer Value period:', {
-      currentPeriod: `${currentYear}-${currentMonth}`,
-      previousPeriod: `${previousYear}-${previousMonthStr}`
-    })
-
-    // Build query for 2 months data
-    let query = supabase
-      .from('member_report_daily')
-      .select('userkey, user_name, unique_code, deposit_amount, currency')
-      .or(`year.eq.${currentYear},year.eq.${previousYear}`)
-      .or(`month.eq.${currentMonth},month.eq.${previousMonthStr}`)
-
-    // Apply currency filter
-    if (currency !== 'All') {
-      query = query.eq('currency', currency)
-    }
-
-    // Apply line filter if specified
-    if (line && line !== 'All') {
-      query = query.eq('line', line)
-    }
-
-    const { data, error } = await query
-
-    if (error) {
-      console.error('❌ [KPILogic] Error fetching customer value data:', error)
-      return {
-        highValueCustomers: 0,
-        lowValueCustomers: 0,
-        totalCustomers: 0,
-        customerDetails: []
-      }
-    }
-
-    if (!data || data.length === 0) {
-      console.log('⚠️ [KPILogic] No customer value data found')
-      return {
-        highValueCustomers: 0,
-        lowValueCustomers: 0,
-        totalCustomers: 0,
-        customerDetails: []
-      }
-    }
-
-    // Group by userkey and sum deposit amounts for 2 months
-    const customerTotals: { [key: string]: CustomerValueDetail } = {}
-
-    data.forEach(row => {
-      const userkey = row.userkey as string
-      const depositAmount = (row.deposit_amount as number) || 0
-      
-      if (!customerTotals[userkey]) {
-        customerTotals[userkey] = {
-          userkey,
-          userName: (row.user_name as string) || '',
-          uniqueCode: (row.unique_code as string) || '',
-          depositAmount: 0,
-          customerValue: '',
-          currency: (row.currency as string) || currency
-        }
-      }
-      
-      customerTotals[userkey].depositAmount += depositAmount
-    })
-
-    // Calculate customer value for each customer
-    const customerDetails: CustomerValueDetail[] = Object.values(customerTotals).map(customer => ({
-      ...customer,
-      customerValue: KPI_FORMULAS.CUSTOMER_VALUE(customer.depositAmount, customer.currency)
-    }))
-
-    // Count high and low value customers
-    const highValueCustomers = customerDetails.filter(c => c.customerValue === 'High Value').length
-    const lowValueCustomers = customerDetails.filter(c => c.customerValue === 'Low Value').length
-    const totalCustomers = customerDetails.length
-
-    console.log('✅ [KPILogic] Customer Value calculation completed:', {
-      highValueCustomers,
-      lowValueCustomers,
-      totalCustomers,
-      sampleDetails: customerDetails.slice(0, 3)
-    })
-
-    return {
-      highValueCustomers,
-      lowValueCustomers,
-      totalCustomers,
-      customerDetails
-    }
-
-  } catch (error) {
-    console.error('❌ [KPILogic] Error in getCustomerValueData:', error)
-    return {
-      highValueCustomers: 0,
-      lowValueCustomers: 0,
-      totalCustomers: 0,
-      customerDetails: []
-    }
-  }
-}
+// ⚠️ CUSTOMER VALUE FUNCTION REMOVED - WILL BE CREATED IN lib/customerValueLogic.ts
+// ⚠️ FUNCTION BODY REMOVED - WILL BE RECREATED IN lib/customerValueLogic.ts
 
 // ===========================================
 // MAIN RETENTION DAY FUNCTION
 // ===========================================
 
 // Get Retention Day Data (7-day retention analysis) - Universal for all markets
-export async function getRetentionDayData(
+// MOVED TO lib/retentionLogic.ts - DO NOT USE  
+async function getRetentionDayData_DEPRECATED(
   year: string,
   month: string,
   currency: string = 'MYR',
-  line: string = 'All',
+  line?: string,
   startDate?: string | null,
   endDate?: string | null
-): Promise<RetentionDayData> {
+): Promise<any> {
   try {
     console.log('🔍 [KPILogic] Fetching Retention Day data:', { year, month, currency, line, startDate, endDate })
 
@@ -2608,7 +2459,7 @@ export async function getRetentionDayData(
     // Get detailed member information
     const memberDetails = await getRetentionMemberDetails(sevenDayData, currency, line)
 
-    const retentionData: RetentionDayData = {
+    const retentionData: any = {
       retention7Days: retentionCategories[7] || 0,
       retention6Days: retentionCategories[6] || 0,
       retention5Days: retentionCategories[5] || 0,
