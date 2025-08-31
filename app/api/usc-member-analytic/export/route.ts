@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
 
 // Helper function to calculate retention analysis from REAL DATA
 function calculateRetentionAnalysis(data: any[]) {
-  const userActivity = {}
+  const userActivity: { [key: string]: any } = {}
   
   // Calculate activity days per user from REAL DATA
   data.forEach(row => {

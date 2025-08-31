@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
       
       // Purchase behavior metrics
       purchaseFrequency: (() => {
-        const userTransactions = {}
+        const userTransactions: { [key: string]: number } = {}
         data.forEach(row => {
           const userkey = row.userkey
           if (!userTransactions[userkey]) userTransactions[userkey] = 0
@@ -121,7 +121,7 @@ export async function GET(request: NextRequest) {
           return totalCases > 0 ? totalDeposit / totalCases : 0
         })()
         const avgFrequency = (() => {
-          const userTransactions = {}
+          const userTransactions: { [key: string]: number } = {}
           data.forEach(row => {
             const userkey = row.userkey
             if (!userTransactions[userkey]) userTransactions[userkey] = 0
