@@ -207,13 +207,15 @@ export default function LineChart({
       datasetLabel.toLowerCase().includes('rate') ||
       datasetLabel.toLowerCase().includes('retention') ||
       datasetLabel.toLowerCase().includes('churn') ||
-      datasetLabel.toLowerCase().includes('winrate')
+      datasetLabel.toLowerCase().includes('winrate') ||
+      datasetLabel.toLowerCase().includes('win rate')
     );
     
-    // Check if this is a frequency/ratio type (Purchase Frequency)
+    // Check if this is a frequency/ratio/average type (Purchase Frequency, ACL)
     const isFrequencyType = datasetLabel && (
       datasetLabel.toLowerCase().includes('frequency') ||
-      datasetLabel.toLowerCase().includes('ratio')
+      datasetLabel.toLowerCase().includes('ratio') ||
+      datasetLabel.toLowerCase().includes('lifespan') // ACL adalah average
     );
     
     // Check if this is a count/integer type (New Depositor, Active Member, etc.)
@@ -223,8 +225,9 @@ export default function LineChart({
       datasetLabel.toLowerCase().includes('pure') ||
       datasetLabel.toLowerCase().includes('count') ||
       datasetLabel.toLowerCase().includes('depositor') ||
-      datasetLabel.toLowerCase().includes('headcount')
-    );
+      datasetLabel.toLowerCase().includes('headcount') ||
+      datasetLabel.toLowerCase().includes('cases')
+    ) && !datasetLabel.toLowerCase().includes('lifespan'); // EXCLUDE ACL karena itu average
     
     // Check if this is an amount/currency type (Deposit, Withdraw, Revenue, CLV, etc.)
     const isAmountType = datasetLabel && (
@@ -369,7 +372,7 @@ export default function LineChart({
             const datasetLabel = context.dataset.label;
             
             if (datasetLabel && datasetLabel.toLowerCase().includes('rate')) {
-              return `  ${datasetLabel}: ${value.toFixed(1)}%`;
+              return `  ${datasetLabel}: ${formatPercentageKPI(value)}`;
             }
             
             return `  ${datasetLabel}: ${formatFullValue(value, datasetLabel)}`;

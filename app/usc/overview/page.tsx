@@ -10,7 +10,7 @@ import LineChart from '@/components/LineChart';
 import BarChart from '@/components/BarChart';
 import { getChartIcon } from '@/lib/CentralIcon';
 import { getAllKPIsWithDailyAverage } from '@/lib/dailyAverageHelper';
-import { formatCurrencyKPI, formatIntegerKPI, formatMoMChange } from '@/lib/formatHelpers';
+import { formatCurrencyKPI, formatIntegerKPI, formatMoMChange, formatNumericKPI, formatPercentageKPI } from '@/lib/formatHelpers';
 
 // Types for slicer options API
 interface SlicerOptions {
@@ -154,7 +154,7 @@ export default function USCOverviewPage() {
   // Function to create Sales Revenue specific chart data using REAL monthly KPI data
   const createSRChartData = async (filters: SlicerFilters) => {
     try {
-      const months = await getMonthsForYear(filters.year, 'USC');
+      const months = await getMonthsForYear(filters.year, 'USC', filters.line);
       
       if (!months || months.length === 0) {
         return null;
@@ -425,11 +425,11 @@ export default function USCOverviewPage() {
             />
             <StatCard
               title="PURCHASE FREQUENCY"
-              value={`${(kpiData?.purchaseFrequency || 0).toFixed(2)}`}
+              value={formatNumericKPI(kpiData?.purchaseFrequency || 0)}
               icon="Purchase Frequency"
               additionalKpi={{
                 label: "DAILY AVERAGE",
-                value: `${dailyAverages.purchaseFrequency.toFixed(2)}`
+                value: formatNumericKPI(dailyAverages.purchaseFrequency)
               }}
               comparison={{
                 percentage: formatMoMChange(momData?.purchaseFrequency || 0),
@@ -438,11 +438,11 @@ export default function USCOverviewPage() {
             />
             <StatCard
               title="CUSTOMER MATURITY INDEX"
-              value={`${(kpiData?.customerMaturityIndex || 0).toFixed(2)}`}
+              value={formatPercentageKPI(kpiData?.customerMaturityIndex || 0)}
               icon="Customer Maturity Index"
               additionalKpi={{
                 label: "DAILY AVERAGE",
-                value: `${dailyAverages.customerMaturityIndex.toFixed(2)}`
+                value: formatPercentageKPI(dailyAverages.customerMaturityIndex)
               }}
               comparison={{
                 percentage: formatMoMChange(momData?.customerMaturityIndex || 0),

@@ -130,12 +130,13 @@ export const getLastUpdateDateFromDatabase = async (year: string, month: string)
   try {
     console.log(`🔍 [DailyAverage] Checking last update date for ${month} ${year}...`);
     
-    // Query database untuk tanggal terakhir data tersedia
+    // ✅ IMPROVED: More robust query with validation
     const { data, error } = await supabase
       .from('member_report_daily')
       .select('date')
       .eq('year', year)
       .eq('month', month)
+      .not('date', 'is', null)
       .order('date', { ascending: false })
       .limit(1);
     
@@ -145,13 +146,27 @@ export const getLastUpdateDateFromDatabase = async (year: string, month: string)
     }
     
     if (data && data.length > 0) {
-      // Fix type error: properly type the date field
       const dateValue = data[0]?.date;
       if (dateValue) {
+        // ✅ IMPROVED: Better date parsing with validation
         const lastUpdateDate = new Date(dateValue as string);
-        const lastUpdateDay = lastUpdateDate.getDate();
         
-        console.log(`✅ [DailyAverage] Last update date found: ${lastUpdateDate.toISOString().split('T')[0]} (day ${lastUpdateDay})`);
+        // Validate the parsed date
+        if (isNaN(lastUpdateDate.getTime())) {
+          console.error('❌ [DailyAverage] Invalid date format:', dateValue);
+          return getDaysInMonth(year, month);
+        }
+        
+        const lastUpdateDay = lastUpdateDate.getDate();
+        const totalDaysInMonth = getDaysInMonth(year, month);
+        
+        // ✅ VALIDATION: Ensure day is within valid range
+        if (lastUpdateDay < 1 || lastUpdateDay > totalDaysInMonth) {
+          console.error(`❌ [DailyAverage] Invalid day ${lastUpdateDay} for ${month} ${year} (max: ${totalDaysInMonth})`);
+          return totalDaysInMonth;
+        }
+        
+        console.log(`✅ [DailyAverage] Last update date found: ${lastUpdateDate.toISOString().split('T')[0]} (day ${lastUpdateDay}/${totalDaysInMonth})`);
         return lastUpdateDay;
       }
     }
@@ -167,19 +182,28 @@ export const getLastUpdateDateFromDatabase = async (year: string, month: string)
 
 /**
  * Get current month progress (days elapsed so far)
- * For current month: returns last update date from database
- * For past months: returns total days in month
+ * ✅ FIXED: Always use total days for completed months, only use database for current ongoing month
  */
 export const getCurrentMonthProgress = async (year: string, month: string): Promise<number> => {
-  if (isCurrentMonth(year, month)) {
-    console.log(`📅 [DailyAverage] Current month detected: ${month} ${year}, checking database for last update...`);
-    // For current month, get last update date from database
-    return await getLastUpdateDateFromDatabase(year, month);
+  const currentDate = new Date();
+  const currentYear = currentDate.getFullYear().toString();
+  const currentMonth = getMonthName(currentDate.getMonth());
+  
+  // ✅ FIXED: Only use database for CURRENT ongoing month
+  if (year === currentYear && month === currentMonth) {
+    console.log(`📅 [DailyAverage] CURRENT ongoing month detected: ${month} ${year}, checking database for last update...`);
+    const lastUpdateDay = await getLastUpdateDateFromDatabase(year, month);
+    const currentDay = currentDate.getDate();
+    
+    // Use the smaller value between last update and current day for safety
+    const activeDays = Math.min(lastUpdateDay, currentDay);
+    console.log(`📅 [DailyAverage] Current month active days: ${activeDays} (lastUpdate: ${lastUpdateDay}, today: ${currentDay})`);
+    return activeDays;
   }
   
-  // For past months, return total days
+  // ✅ FIXED: For ALL past months (including completed current year months), use total days
   const totalDays = getDaysInMonth(year, month);
-  console.log(`📅 [DailyAverage] Past month detected: ${month} ${year}, using total days: ${totalDays}`);
+  console.log(`📅 [DailyAverage] Past/completed month detected: ${month} ${year}, using total days: ${totalDays}`);
   return totalDays;
 };
 
@@ -277,24 +301,25 @@ export const calculateDailyAverageWithFormula = async (
 };
 
 /**
- * Calculate daily average with dynamic day detection
- * Automatically handles current month progress vs completed months
- * Now uses async function to get real-time data from database
+ * Calculate daily average with SIMPLE and UNIVERSAL logic
+ * ✅ FIXED: Always use total days for ALL past months, only use database for current ongoing month
  */
 export const calculateDailyAverage = async (
   monthlyValue: number, 
   year: string, 
   month: string
 ): Promise<number> => {
+  // ✅ SIMPLE LOGIC: Get days using improved getCurrentMonthProgress
   const activeDays = await getCurrentMonthProgress(year, month);
   
-  if (activeDays === 0) {
-    console.warn(`⚠️ [DailyAverage] No active days found for ${month} ${year}`);
-    return monthlyValue; // Return monthly value as fallback
+  if (activeDays === 0 || activeDays < 1) {
+    console.warn(`⚠️ [DailyAverage] Invalid days (${activeDays}) for ${month} ${year}, using fallback`);
+    const fallbackDays = getDaysInMonth(year, month);
+    return monthlyValue / fallbackDays;
   }
   
   const dailyAverage = monthlyValue / activeDays;
-  console.log(`📊 [DailyAverage] Daily Average calculated: ${monthlyValue} ÷ ${activeDays} = ${dailyAverage.toFixed(2)}`);
+  console.log(`📊 [DailyAverage] ${month} ${year}: ${monthlyValue} ÷ ${activeDays} = ${dailyAverage.toFixed(2)}`);
   
   return dailyAverage;
 };

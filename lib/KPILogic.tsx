@@ -1134,7 +1134,7 @@ export async function getSlicerData(): Promise<SlicerData> {
   }
 }
 
-export async function getMonthsForYear(year: string, currency?: string): Promise<string[]> {
+export async function getMonthsForYear(year: string, currency?: string, line?: string): Promise<string[]> {
   try {
     let query = supabase
       .from('member_report_daily')
@@ -1143,6 +1143,11 @@ export async function getMonthsForYear(year: string, currency?: string): Promise
     
     if (currency) {
       query = query.eq('currency', currency)
+    }
+    
+    // ✅ FIXED: Add line filter untuk consistent dengan KPI data
+    if (line) {
+      query = query.eq('line', line)
     }
     
     const { data, error } = await query

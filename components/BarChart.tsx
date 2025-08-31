@@ -138,15 +138,16 @@ export default function BarChart({
               datasetLabel.toLowerCase().includes('depositor') || 
               datasetLabel.toLowerCase().includes('member') ||
               datasetLabel.toLowerCase().includes('user') ||
-              datasetLabel.toLowerCase().includes('count')
+              datasetLabel.toLowerCase().includes('count') ||
+              datasetLabel.toLowerCase().includes('cases')
             );
             
             if (isCountType) {
-              // For count/integer - show full value with 0,000 format
-              return `${datasetLabel}: ${value.toLocaleString()} persons`;
+              // For count/integer - using standard format: 0,000
+              return `${datasetLabel}: ${formatIntegerKPI(value)} persons`;
             } else {
-              // For amount/numeric - show full value with currency and 0,000 format
-              return `${datasetLabel}: ${getCurrencySymbol(currency)} ${value.toLocaleString()}`;
+              // For amount/numeric - using standard format: RM 0,000.00
+              return `${datasetLabel}: ${formatCurrencyKPI(value, currency)}`;
             }
           }
         }
