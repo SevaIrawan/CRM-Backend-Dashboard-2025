@@ -121,8 +121,8 @@ async function getActiveMembersWithDays(
     const memberActiveDays: { [userkey: string]: Set<string> } = {}
     
     activeData.forEach(row => {
-      const userkey = row.userkey
-      const date = row.date.split('T')[0] // Get YYYY-MM-DD format
+      const userkey = String(row.userkey)
+      const date = String(row.date).split('T')[0] // Get YYYY-MM-DD format
       
       if (!memberActiveDays[userkey]) {
         memberActiveDays[userkey] = new Set()
@@ -293,7 +293,7 @@ async function calculateCategoryKPIs(
     const totalGGR = kpiData.reduce((sum, row) => sum + (Number(row.gross_gaming_revenue) || 0), 0)
     const totalPromotionCost = kpiData.reduce((sum, row) => sum + (Number(row.bonus) || 0), 0)
     
-    const uniquePlayers = new Set(kpiData.map(row => row.userkey)).size
+    const uniquePlayers = new Set(kpiData.map(row => String(row.userkey))).size
     const atv = totalDepositCases > 0 ? totalDepositAmount / totalDepositCases : 0
 
     // Calculate member details
@@ -359,8 +359,8 @@ function calculateMemberDetails(
   const memberActiveDates: { [userkey: string]: Set<string> } = {}
   
   data.forEach(row => {
-    const userkey = row.userkey
-    const date = row.date.split('T')[0]
+    const userkey = String(row.userkey)
+    const date = String(row.date).split('T')[0]
     
     if (memberMap[userkey]) {
       // Track active dates
@@ -380,8 +380,8 @@ function calculateMemberDetails(
       memberMap[userkey].promotionCost += Number(row.bonus) || 0
       
       // Update user info
-      if (row.user_name) memberMap[userkey].userName = row.user_name
-      if (row.unique_code) memberMap[userkey].uniqueCode = row.unique_code
+      if (row.user_name) memberMap[userkey].userName = String(row.user_name)
+      if (row.unique_code) memberMap[userkey].uniqueCode = String(row.unique_code)
       
       // Update last active date
       if (date > memberMap[userkey].lastActiveDate) {
