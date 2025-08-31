@@ -65,14 +65,19 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    // Process unique values with ALL option
-    const uniqueLines = Array.from(new Set(lineData?.map(row => row.line).filter(Boolean) || []))
-    const linesWithAll = ['ALL', ...uniqueLines]
+    // Process unique values with proper ALL option (no duplication)
+    const uniqueLines = Array.from(new Set(lineData?.map(row => String(row.line)).filter(Boolean) || []))
+    // Remove any existing 'ALL' or 'All' from database to avoid duplicates
+    const cleanLines = uniqueLines.filter(line => line !== 'ALL' && line !== 'All')
+    const linesWithAll = ['ALL', ...cleanLines.sort()]
     
     const uniqueYears = Array.from(new Set(yearData?.map(row => row.year?.toString()).filter(Boolean) || []))
     
-    const uniqueMonths = Array.from(new Set(monthData?.map(row => row.month).filter(Boolean) || []))
-    const monthsWithAll = ['ALL', ...uniqueMonths]
+    // Sort months in proper chronological order
+    const uniqueMonths = Array.from(new Set(monthData?.map(row => String(row.month)).filter(Boolean) || []))
+    const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+    const sortedMonths = uniqueMonths.sort((a, b) => monthOrder.indexOf(a) - monthOrder.indexOf(b))
+    const monthsWithAll = ['ALL', ...sortedMonths]
 
     // Get date range for USC currency
     const { data: minDateData } = await supabase
