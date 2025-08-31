@@ -65,7 +65,8 @@ export default function BarChart({
       datasetLabel.toLowerCase().includes('depositor') || 
       datasetLabel.toLowerCase().includes('member') ||
       datasetLabel.toLowerCase().includes('user') ||
-      datasetLabel.toLowerCase().includes('count')
+      datasetLabel.toLowerCase().includes('count') ||
+      datasetLabel.toLowerCase().includes('register')
     );
     
     if (isCountType) {
@@ -93,12 +94,13 @@ export default function BarChart({
       datasetLabel.toLowerCase().includes('depositor') || 
       datasetLabel.toLowerCase().includes('member') ||
       datasetLabel.toLowerCase().includes('user') ||
-      datasetLabel.toLowerCase().includes('count')
+      datasetLabel.toLowerCase().includes('count') ||
+      datasetLabel.toLowerCase().includes('register')
     );
     
     if (isCountType) {
       // For count/integer - using standard format: 0,000
-      return formatIntegerKPI(value) + ' persons';
+      return formatIntegerKPI(value) + ' members';
     } else {
       // For amount/numeric - using standard format: RM 0,000.00
       return formatCurrencyKPI(value, currency);
@@ -143,7 +145,8 @@ export default function BarChart({
               datasetLabel.toLowerCase().includes('depositor') || 
               datasetLabel.toLowerCase().includes('member') ||
               datasetLabel.toLowerCase().includes('user') ||
-              datasetLabel.toLowerCase().includes('count')
+              datasetLabel.toLowerCase().includes('count') ||
+              datasetLabel.toLowerCase().includes('register')
             );
             
             if (isCasesType) {
@@ -151,7 +154,7 @@ export default function BarChart({
               return `${datasetLabel}: ${formatIntegerKPI(value)} cases`;
             } else if (isCountType) {
               // For count/integer - using standard format: 0,000
-              return `${datasetLabel}: ${formatIntegerKPI(value)} persons`;
+              return `${datasetLabel}: ${formatIntegerKPI(value)} members`;
             } else {
               // For amount/numeric - using standard format: RM 0,000.00
               return `${datasetLabel}: ${formatCurrencyKPI(value, currency)}`;
