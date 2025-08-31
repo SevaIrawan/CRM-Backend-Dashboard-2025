@@ -21,15 +21,6 @@ export const USER_ROLES: { [key: string]: UserRole } = {
     name: 'admin',
     displayName: 'Administrator',
     permissions: [
-      'dashboard',
-      'strategic-executive', 
-      'business-flow',
-      'sr',
-      'bgo',
-      'xoo',
-      'os',
-      'myr',
-      'sgd',
       'usc',
       'transaction',
       'supabase',
@@ -37,40 +28,6 @@ export const USER_ROLES: { [key: string]: UserRole } = {
     ],
     canAccessUserManagement: true,
     isReadOnly: false
-  },
-  'executive': {
-    id: 'executive',
-    name: 'executive',
-    displayName: 'Executive',
-    permissions: [
-      'dashboard',
-      'strategic-executive',
-      'business-flow',
-      'myr',
-      'sgd',
-      'usc'
-    ],
-    canAccessUserManagement: false,
-    isReadOnly: true
-  },
-  'manager': {
-    id: 'manager',
-    name: 'manager',
-    displayName: 'Manager',
-    permissions: [
-      'dashboard',
-      'strategic-executive',
-      'business-flow',
-      'sr',
-      'bgo',
-      'xoo',
-      'os',
-      'myr',
-      'sgd',
-      'usc'
-    ],
-    canAccessUserManagement: false,
-    isReadOnly: true
   },
   'manager_usc': {
     id: 'manager_usc',
@@ -99,15 +56,6 @@ export const USER_ROLES: { [key: string]: UserRole } = {
     name: 'user',
     displayName: 'User',
     permissions: [
-      'dashboard',
-      'strategic-executive',
-      'business-flow',
-      'sr',
-      'bgo',
-      'xoo',
-      'os',
-      'myr',
-      'sgd',
       'usc',
       'transaction',
       'supabase'
@@ -136,19 +84,6 @@ export const hasPermission = (userRole: string, pagePath: string): boolean => {
 
   // Map page paths to permission names
   const pathToPermission: { [key: string]: string } = {
-    '/dashboard': 'dashboard',
-    '/strategic-executive': 'strategic-executive',
-    '/business-flow': 'business-flow',
-    '/sr': 'sr',
-    '/bgo': 'bgo',
-    '/xoo': 'xoo',
-    '/os': 'os',
-    '/myr': 'myr',
-    '/myr/overview': 'myr',
-    '/myr/member-analytic': 'myr',
-    '/sgd': 'sgd',
-    '/sgd/overview': 'sgd',
-    '/sgd/member-analytic': 'sgd',
     '/usc': 'usc',
     '/usc/overview': 'usc',
     '/usc/sales': 'usc',
@@ -201,15 +136,6 @@ export const getMenuItemsByRole = (userRole: string) => {
   if (!role) return []
 
   const allMenuItems = [
-    { title: 'Dashboard', path: '/dashboard', permission: 'dashboard' },
-    { title: 'Strategic Executive', path: '/strategic-executive', permission: 'strategic-executive' },
-    { title: 'Business Flow', path: '/business-flow', permission: 'business-flow' },
-    { title: 'Sales & Revenue', path: '/sr', permission: 'sr' },
-    { title: 'BGO', path: '/bgo', permission: 'bgo' },
-    { title: 'XOO', path: '/xoo', permission: 'xoo' },
-    { title: 'OS', path: '/os', permission: 'os' },
-    { title: 'MYR', path: '/myr', permission: 'myr', hasSubmenu: true },
-    { title: 'SGD', path: '/sgd', permission: 'sgd', hasSubmenu: true },
     { title: 'USC', path: '/usc', permission: 'usc', hasSubmenu: true },
     { title: 'Transaction', path: '/transaction', permission: 'transaction', hasSubmenu: true },
     { title: 'Supabase', path: '/supabase', permission: 'supabase' },

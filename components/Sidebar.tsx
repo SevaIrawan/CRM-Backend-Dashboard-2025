@@ -58,10 +58,6 @@ export default function Sidebar({
   useEffect(() => {
     if (pathname.startsWith('/transaction/')) {
       setOpenSubmenu('Transaction')
-    } else if (pathname.startsWith('/myr/')) {
-      setOpenSubmenu('MYR')
-    } else if (pathname.startsWith('/sgd/')) {
-      setOpenSubmenu('SGD')
     } else if (pathname.startsWith('/usc/')) {
       setOpenSubmenu('USC')
     }
@@ -186,66 +182,6 @@ export default function Sidebar({
     // Map role menu items to full menu items with icons and submenus
     const fullMenuItems = [
       {
-        title: 'Dashboard',
-        path: '/dashboard',
-        icon: <DashboardIcon size={18} color="#ffffff" />,
-        permission: 'dashboard'
-      },
-      {
-        title: 'Strategic Executive',
-        path: '/strategic-executive',
-        icon: <StrategyIcon size={18} color="#ffffff" />,
-        permission: 'strategic-executive'
-      },
-      {
-        title: 'Business Flow',
-        path: '/business-flow',
-        icon: <FlowIcon size={18} color="#ffffff" />,
-        permission: 'business-flow'
-      },
-      {
-        title: 'Sales & Revenue',
-        path: '/sr',
-        icon: <SalesIcon size={18} color="#ffffff" />,
-        permission: 'sr'
-      },
-      {
-        title: 'BGO',
-        path: '/bgo',
-        icon: <GrowthIcon size={18} color="#ffffff" />,
-        permission: 'bgo'
-      },
-      {
-        title: 'XOO',
-        path: '/xoo',
-        icon: <ExecutiveOptimizationIcon size={18} color="#ffffff" />,
-        permission: 'xoo'
-      },
-      {
-        title: 'OS',
-        path: '/os',
-        icon: <ManagementIcon size={18} color="#ffffff" />,
-        permission: 'os'
-      },
-      {
-        title: 'MYR',
-        icon: <USCIcon size={18} color="#ffffff" />,
-        permission: 'myr',
-        submenu: [
-          { title: 'Overview MYR', path: '/myr/overview' },
-          { title: 'Member Analytic MYR', path: '/myr/member-analytic' }
-        ]
-      },
-      {
-        title: 'SGD',
-        icon: <USCIcon size={18} color="#ffffff" />,
-        permission: 'sgd',
-        submenu: [
-          { title: 'Overview SGD', path: '/sgd/overview' },
-          { title: 'Member Analytic SGD', path: '/sgd/member-analytic' }
-        ]
-      },
-      {
         title: 'USC',
         icon: <USCIcon size={18} color="#ffffff" />,
         permission: 'usc',
@@ -310,7 +246,7 @@ export default function Sidebar({
   // Helper function untuk mendeteksi sub menu secara dinamis
   // Tambahkan path baru di sini untuk menambah sub menu baru
   const isSubmenuPath = (path: string) => {
-    return path.startsWith('/transaction/') || path.startsWith('/usc/') || path.startsWith('/myr/') || path.startsWith('/sgd/')
+    return path.startsWith('/transaction/') || path.startsWith('/usc/')
   }
 
   // Helper function untuk mendapatkan parent menu dari path
@@ -318,8 +254,6 @@ export default function Sidebar({
   const getParentMenuFromPath = (path: string) => {
     if (path.startsWith('/transaction/')) return 'Transaction'
     if (path.startsWith('/usc/')) return 'USC'
-    if (path.startsWith('/myr/')) return 'MYR'
-    if (path.startsWith('/sgd/')) return 'SGD'
     return null
   }
 
@@ -351,7 +285,7 @@ export default function Sidebar({
 
   // Preload common pages on mount
   useEffect(() => {
-    const commonPaths = ['/dashboard', '/business-flow', '/strategic-executive', '/usc/overview']
+    const commonPaths = ['/usc/overview']
     commonPaths.forEach(path => {
       setTimeout(() => preloadPage(path), 100)
     })

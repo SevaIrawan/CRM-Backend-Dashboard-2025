@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { getSlicerData, getAllKPIsWithMoM, getLineChartData, SlicerFilters, SlicerData, KPIData, getLinesForCurrency, calculateKPIs, getMonthsForYear } from '@/lib/KPILogic';
-import { formatCurrencyKPI, formatIntegerKPI, formatMoMChange } from '@/lib/formatHelpers';
+import { supabase } from '@/lib/supabase';
 import Layout from '@/components/Layout';
 import Frame from '@/components/Frame';
 import { YearSlicer, MonthSlicer, CurrencySlicer, LineSlicer } from '@/components/slicers';
@@ -12,15 +12,16 @@ import BarChart from '@/components/BarChart';
 import DonutChart from '@/components/DonutChart';
 import { getChartIcon } from '@/lib/CentralIcon';
 import { calculateDailyAverage, getMonthInfo, getAllKPIsWithDailyAverage } from '@/lib/dailyAverageHelper';
+import { formatCurrencyKPI, formatIntegerKPI, formatMoMChange } from '@/lib/formatHelpers';
 
-export default function SalesRevenuePage() {
+export default function USCOverviewPage() {
   const [kpiData, setKpiData] = useState<KPIData | null>(null);
   const [momData, setMomData] = useState<KPIData | null>(null);
   const [slicerData, setSlicerData] = useState<SlicerData | null>(null);
   const [selectedYear, setSelectedYear] = useState('2025');
   const [selectedMonth, setSelectedMonth] = useState('July');
-  const [selectedCurrency, setSelectedCurrency] = useState('MYR');
-  const [selectedLine, setSelectedLine] = useState('ALL');
+  const [selectedCurrency] = useState('USC'); // Locked to USC
+  const [selectedLine, setSelectedLine] = useState('All');
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [filteredLines, setFilteredLines] = useState<string[]>([]);
@@ -37,8 +38,8 @@ export default function SalesRevenuePage() {
     withdrawAmount: 0,
     grossGamingRevenue: 0,
     activeMember: 0,
-    newDepositor: 0,
-    conversionRate: 0
+    purchaseFrequency: 0,
+    customerMaturityIndex: 0
   });
 
   useEffect(() => {
@@ -46,125 +47,123 @@ export default function SalesRevenuePage() {
       try {
         setIsLoading(true);
         setLoadError(null);
-        console.log('🔄 [Sales Revenue] Starting data load...');
 
-        // Fetch slicer data
-        const slicerDataResult = await getSlicerData();
-        console.log('📊 [Sales Revenue] Slicer data loaded:', slicerDataResult);
-        setSlicerData(slicerDataResult);
+        // Get REAL data from database for USC currency
+        const { data: yearData } = await supabase
+          .from('member_report_daily')
+          .select('year')
+          .eq('currency', 'USC')
+          .order('year', { ascending: false });
 
-        // Fetch filtered lines based on selected currency
-        const linesForCurrency = await getLinesForCurrency(selectedCurrency, selectedYear);
-        console.log('🔗 [Sales Revenue] Lines for currency loaded:', linesForCurrency);
-        setFilteredLines(linesForCurrency);
+        const { data: monthData } = await supabase
+          .from('member_report_daily')
+          .select('month')
+          .eq('currency', 'USC')
+          .eq('year', selectedYear)
+          .order('month');
 
-        // Filter months based on selected year - use all available months for now
-        if (slicerDataResult.months) {
-          setFilteredMonths(slicerDataResult.months);
+        // ✅ FIXED: Line Slicer hanya berdasarkan currency active saja
+        const { data: lineData } = await supabase
+          .from('member_report_daily')
+          .select('line')
+          .eq('currency', 'USC')
+          .order('line');
+
+        // Extract unique values from REAL data
+        const availableYears = Array.from(new Set(yearData?.map((row: any) => row.year?.toString()).filter(Boolean) || [])) as string[];
+        const availableMonths = Array.from(new Set(monthData?.map((row: any) => row.month).filter(Boolean) || [])) as string[];
+        const availableLines = Array.from(new Set(lineData?.map((row: any) => row.line).filter(Boolean) || [])) as string[];
+        
+        setSlicerData({
+          years: availableYears,
+          months: availableMonths,
+          currencies: ['USC'],
+          lines: availableLines
+        });
+        
+        setFilteredLines(availableLines);
+        setFilteredMonths(availableMonths);
+
+        if (availableYears.length > 0 && !availableYears.includes(selectedYear)) {
+          setSelectedYear(availableYears[0]);
+          return;
+        }
+        
+        if (availableMonths.length > 0 && !availableMonths.includes(selectedMonth)) {
+          setSelectedMonth(availableMonths[0]);
+          return;
+        }
+        
+        if (availableLines.length > 0 && selectedLine !== 'All' && !availableLines.includes(selectedLine)) {
+          setSelectedLine('All');
+          return;
         }
 
-        // Fetch KPI data with current filters
-        console.log('📈 [Sales Revenue] Fetching KPI data with filters:', {
+        // ✅ FIXED: Logic Line Slicer yang benar - tidak ada undefined
+        const kpiFilters = {
           year: selectedYear,
           month: selectedMonth,
-          currency: selectedCurrency,
-          line: selectedLine
-        });
+          currency: 'USC',
+          line: selectedLine // ✅ SELALU kirim selectedLine, jangan undefined
+        };
         
-        const kpiResult = await getAllKPIsWithMoM({
-          year: selectedYear,
-          month: selectedMonth,
-          currency: selectedCurrency,
-          line: selectedLine
-        });
-        
-        console.log('📊 [Sales Revenue] KPI result received:', kpiResult);
-        console.log('📊 [Sales Revenue] Current KPI data:', kpiResult.current);
-        console.log('📊 [Sales Revenue] MoM data:', kpiResult.mom);
-
+        const kpiResult = await getAllKPIsWithMoM(kpiFilters);
         setKpiData(kpiResult.current);
         setMomData(kpiResult.mom);
 
-        // Fetch chart data
-        console.log('📈 [Sales Revenue] Fetching chart data...');
+        // ✅ FIXED: Chart filters harus sama dengan KPI filters untuk konsistensi
         const chartFilters: SlicerFilters = {
           year: selectedYear,
           month: selectedMonth,
-          currency: selectedCurrency,
-          line: selectedLine
+          currency: 'USC',
+          line: selectedLine // ✅ SELALU kirim selectedLine, jangan undefined
         };
         
         const chartResult = await getLineChartData(chartFilters);
-        console.log('📊 [Sales Revenue] Chart data loaded:', chartResult);
         setLineChartData(chartResult);
         
-        // Create Sales Revenue specific chart data using REAL KPI data
         const srData = await createSRChartData(chartFilters);
-        console.log('📈 [Sales Revenue] SR Chart data created with REAL data:', srData);
         setSrChartData(srData);
 
       } catch (error) {
-        console.error('❌ [Sales Revenue] Error loading data:', error);
+        console.error('Error loading data:', error);
         setLoadError('Failed to load data. Please try again.');
       } finally {
         setIsLoading(false);
-        console.log('✅ [Sales Revenue] Data loading completed');
       }
     };
 
     const timeoutId = setTimeout(loadData, 100);
     return () => clearTimeout(timeoutId);
-  }, [selectedYear, selectedMonth, selectedCurrency, selectedLine]);
+  }, [selectedYear, selectedMonth, selectedLine]);
 
-  // Update filtered lines when currency changes
-  useEffect(() => {
-    const updateFilteredLines = async () => {
-      if (selectedCurrency) {
-        const linesForCurrency = await getLinesForCurrency(selectedCurrency, selectedYear);
-        setFilteredLines(linesForCurrency);
-        
-        // Reset line selection if current selection is not available in new currency
-        if (!linesForCurrency.includes(selectedLine)) {
-          setSelectedLine('ALL');
-        }
-      }
-    };
-
-    updateFilteredLines();
-  }, [selectedCurrency, selectedYear]);
-
-  // Update filtered months when year changes
-  useEffect(() => {
-    if (slicerData?.months) {
-      // For now, use all available months
-      setFilteredMonths(slicerData.months);
-    }
-  }, [slicerData]);
+           // Currency locked to USC - no need to update filtered lines
+   useEffect(() => {
+     // Reset line selection if current selection is not available
+     if (!filteredLines.includes(selectedLine)) {
+       setSelectedLine('All');
+     }
+   }, [filteredLines, selectedLine]);
 
   // Calculate daily averages for ALL KPIs when KPI data changes
   useEffect(() => {
     const calculateDailyAverages = async () => {
       if (kpiData && selectedYear && selectedMonth) {
-        try {
-          console.log('🔄 [Sales Revenue] Using Central Daily Average function...');
-          
-          // Use central function - sama seperti getAllKPIsWithMoM
+                 try {
           const result = await getAllKPIsWithDailyAverage(kpiData, selectedYear, selectedMonth);
           
           setDailyAverages({
-            depositAmount: result.dailyAverage.depositAmount || 0,
-            withdrawAmount: result.dailyAverage.withdrawAmount || 0,
-            grossGamingRevenue: result.dailyAverage.grossGamingRevenue || 0,
-            activeMember: result.dailyAverage.activeMember || 0,
-            newDepositor: result.dailyAverage.newDepositor || 0,
-            conversionRate: result.dailyAverage.conversionRate || 0
-          });
-          
-          console.log('✅ [Sales Revenue] Central Daily Average applied to ALL KPIs');
-          
-        } catch (error) {
-          console.error('❌ [Sales Revenue] Error with central Daily Average:', error);
-        }
+             depositAmount: result.dailyAverage.depositAmount || 0,
+             withdrawAmount: result.dailyAverage.withdrawAmount || 0,
+             grossGamingRevenue: result.dailyAverage.grossGamingRevenue || 0,
+             activeMember: result.dailyAverage.activeMember || 0,
+             purchaseFrequency: result.dailyAverage.purchaseFrequency || 0,
+             customerMaturityIndex: result.dailyAverage.customerMaturityIndex || 0
+           });
+           
+         } catch (error) {
+           // Silent error handling
+         }
       }
     };
 
@@ -176,35 +175,24 @@ export default function SalesRevenuePage() {
   // Function to create Sales Revenue specific chart data using REAL monthly KPI data
   const createSRChartData = async (filters: SlicerFilters) => {
     try {
-      console.log('📈 [Sales Revenue] Creating chart data with REAL KPIs...');
-      console.log('🔍 [Sales Revenue] Filters:', filters);
-      
-      // Get dynamic months for the selected year (same as getLineChartData line 1139)
-      const months = await getMonthsForYear(filters.year);
-      console.log('📅 [Sales Revenue] Dynamic months for chart:', months);
+      const months = await getMonthsForYear(filters.year, 'USC');
       
       if (!months || months.length === 0) {
-        console.error('❌ [Sales Revenue] No months data available');
         return null;
       }
       
-      // Get REAL monthly KPI data by calling calculateKPIs for each month
-      // This follows the EXACT same pattern as getLineChartData line 1149-1175
       const monthlyKPIData = await Promise.all(
         months.map(async (month) => {
           const monthFilters = {
             year: filters.year,
-            currency: filters.currency,
+            currency: 'USC',
             month: month,
-            line: filters.line // Include line filter for active slicer
+            line: filters.line
           };
           
-          console.log(`📊 [Sales Revenue] Calculating KPIs for ${month}...`);
           return await calculateKPIs(monthFilters);
         })
       );
-      
-      console.log('✅ [Sales Revenue] Monthly KPI data calculated:', monthlyKPIData.length, 'months');
     
       return {
         // Row 2 - Financial Performance Single Line Charts (REAL DATA dari KPILogic)
@@ -235,34 +223,30 @@ export default function SalesRevenuePage() {
           ],
           categories: months.map(month => month.substring(0, 3)) // Short month names
         },
-        // Row 3 - User Acquisition Charts (REAL DATA with correct chart types)
-        newDepositorBarChart: {
+        // Row 3 - Transaction Cases Charts (REAL DATA with correct chart types)
+        depositCasesBarChart: {
           series: [
             {
-              name: 'New Depositor',
-              data: monthlyKPIData.map(kpi => kpi.newDepositor) // REAL dari calculateKPIs line 825
+              name: 'Deposit Cases',
+              data: monthlyKPIData.map(kpi => kpi.depositCases) // REAL dari calculateKPIs
             }
           ],
           categories: months.map(month => month.substring(0, 3)) // Short month names
         },
-        conversionRateLineChart: {
+        withdrawCasesLineChart: {
           series: [
             {
-              name: 'Conversion Rate',
-              data: monthlyKPIData.map(kpi => kpi.conversionRate) // REAL dari calculateKPIs line 852
+              name: 'Withdraw Cases',
+              data: monthlyKPIData.map(kpi => kpi.withdrawCases) // REAL dari calculateKPIs
             }
           ],
           categories: months.map(month => month.substring(0, 3)) // Short month names
         },
-        activeMemberPureMemberLineChart: {
+        netProfitTrend: {
           series: [
             {
-              name: 'Active Member',
-              data: monthlyKPIData.map(kpi => kpi.activeMember) // REAL dari calculateKPIs
-            },
-            {
-              name: 'Pure Member',
-              data: monthlyKPIData.map(kpi => kpi.pureMember) // REAL dari calculateKPIs
+              name: 'Net Profit',
+              data: monthlyKPIData.map(kpi => kpi.netProfit) // REAL dari calculateKPIs
             }
           ],
           categories: months.map(month => month.substring(0, 3)) // Short month names
@@ -277,15 +261,24 @@ export default function SalesRevenuePage() {
           ],
           categories: months.map(month => month.substring(0, 3)) // Short month names
         },
-        purchaseFrequencyTrend: {
-          series: [
-            {
-              name: 'Purchase Frequency',
-              data: monthlyKPIData.map(kpi => kpi.purchaseFrequency) // REAL dari calculateKPIs line 844
-            }
-          ],
-          categories: months.map(month => month.substring(0, 3)) // Short month names
-        },
+                 purchaseFrequencyTrend: {
+           series: [
+             {
+               name: 'Purchase Frequency',
+               data: monthlyKPIData.map(kpi => kpi.purchaseFrequency) // REAL dari calculateKPIs line 844
+             }
+           ],
+           categories: months.map(month => month.substring(0, 3)) // Short month names
+         },
+         avgCustomerLifespanTrend: {
+           series: [
+             {
+               name: 'Average Customer Lifespan',
+               data: monthlyKPIData.map(kpi => kpi.avgCustomerLifespan) // REAL dari calculateKPIs
+             }
+           ],
+           categories: months.map(month => month.substring(0, 3)) // Short month names
+         },
         // Row 5 - Advanced Analytics Single Line Charts (REAL DATA)
         customerLifetimeValueTrend: {
           series: [
@@ -322,7 +315,6 @@ export default function SalesRevenuePage() {
       };
       
     } catch (error) {
-      console.error('❌ [Sales Revenue] Error creating chart data:', error);
       return null;
     }
   };
@@ -339,16 +331,12 @@ export default function SalesRevenuePage() {
           <YearSlicer 
             value={selectedYear} 
             onChange={setSelectedYear}
+            selectedCurrency="USC"
+            years={slicerData?.years}
           />
         </div>
         
-        <div className="slicer-group">
-          <label className="slicer-label">CURRENCY:</label>
-          <CurrencySlicer 
-            value={selectedCurrency} 
-            onChange={setSelectedCurrency}
-          />
-        </div>
+                 {/* Currency locked to USC - slicer hidden */}
         
         <div className="slicer-group">
           <label className="slicer-label">MONTH:</label>
@@ -356,7 +344,7 @@ export default function SalesRevenuePage() {
             value={selectedMonth} 
             onChange={setSelectedMonth}
             selectedYear={selectedYear}
-            selectedCurrency={selectedCurrency}
+            selectedCurrency="USC"
           />
         </div>
 
@@ -375,9 +363,9 @@ export default function SalesRevenuePage() {
   if (isLoading) {
     return (
       <Layout>
-        <div className="loading-container">
-          <p>Loading Sales Revenue data...</p>
-        </div>
+                 <div className="loading-container">
+           <p>Loading USC Sales Revenue data...</p>
+         </div>
       </Layout>
     );
   }
@@ -459,32 +447,32 @@ export default function SalesRevenuePage() {
               isPositive: Boolean(momData?.activeMember && momData.activeMember > 0)
             }}
           />
-          <StatCard
-            title="NEW DEPOSITOR"
-            value={formatIntegerKPI(kpiData?.newDepositor || 0)}
-            icon="New Depositor"
-            additionalKpi={{
-              label: "DAILY AVERAGE",
-              value: formatIntegerKPI(Math.round(dailyAverages.newDepositor))
-            }}
-            comparison={{
-              percentage: formatMoMChange(momData?.newDepositor || 0),
-              isPositive: Boolean(momData?.newDepositor && momData.newDepositor > 0)
-            }}
-          />
-          <StatCard
-            title="CONVERSION RATE"
-            value={`${(kpiData?.conversionRate || 0).toFixed(2)}%`}
-            icon="Conversion Rate"
-            additionalKpi={{
-              label: "DAILY AVERAGE",
-              value: `${dailyAverages.conversionRate.toFixed(2)}%`
-            }}
-            comparison={{
-              percentage: formatMoMChange(momData?.conversionRate || 0),
-              isPositive: Boolean(momData?.conversionRate && momData.conversionRate > 0)
-            }}
-          />
+                     <StatCard
+             title="PURCHASE FREQUENCY"
+             value={`${(kpiData?.purchaseFrequency || 0).toFixed(2)}`}
+             icon="Purchase Frequency"
+             additionalKpi={{
+               label: "DAILY AVERAGE",
+               value: `${dailyAverages.purchaseFrequency.toFixed(2)}`
+             }}
+             comparison={{
+               percentage: formatMoMChange(momData?.purchaseFrequency || 0),
+               isPositive: Boolean(momData?.purchaseFrequency && momData.purchaseFrequency > 0)
+             }}
+           />
+           <StatCard
+             title="CUSTOMER MATURITY INDEX"
+             value={`${(kpiData?.customerMaturityIndex || 0).toFixed(2)}`}
+             icon="Customer Maturity Index"
+             additionalKpi={{
+               label: "DAILY AVERAGE",
+               value: `${dailyAverages.customerMaturityIndex.toFixed(2)}`
+             }}
+             comparison={{
+               percentage: formatMoMChange(momData?.customerMaturityIndex || 0),
+               isPositive: Boolean(momData?.customerMaturityIndex && momData.customerMaturityIndex > 0)
+             }}
+           />
         </div>
 
         {/* Row 2: Financial Performance Charts */}
@@ -515,31 +503,31 @@ export default function SalesRevenuePage() {
           />
         </div>
 
-        {/* Row 3: User Acquisition Charts */}
+        {/* Row 3: Transaction Cases Charts */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <BarChart
-            series={srChartData?.newDepositorBarChart?.series || []}
-            categories={srChartData?.newDepositorBarChart?.categories || []}
-            title="NEW DEPOSITOR TREND"
+            series={srChartData?.depositCasesBarChart?.series || []}
+            categories={srChartData?.depositCasesBarChart?.categories || []}
+            title="DEPOSIT CASES TREND"
             currency={selectedCurrency}
-            chartIcon={getChartIcon('New Depositor')}
+            chartIcon={getChartIcon('deposits')}
           />
           <LineChart
-            series={srChartData?.conversionRateLineChart?.series || []}
-            categories={srChartData?.conversionRateLineChart?.categories || []}
-            title="CONVERSION RATE TREND"
+            series={srChartData?.withdrawCasesLineChart?.series || []}
+            categories={srChartData?.withdrawCasesLineChart?.categories || []}
+            title="WITHDRAW CASES TREND"
             currency={selectedCurrency}
             hideLegend={true}
-            chartIcon={getChartIcon('Conversion Rate')}
+            chartIcon={getChartIcon('Withdraw Amount')}
           />
-                     <LineChart
-             series={srChartData?.activeMemberPureMemberLineChart?.series || []}
-             categories={srChartData?.activeMemberPureMemberLineChart?.categories || []}
-             title="ACTIVE MEMBER VS PURE MEMBER TREND"
-             currency={selectedCurrency}
-             hideLegend={true}
-             chartIcon={getChartIcon('Active Member')}
-           />
+          <LineChart
+            series={srChartData?.netProfitTrend?.series || []}
+            categories={srChartData?.netProfitTrend?.categories || []}
+            title="NET PROFIT TREND"
+            currency={selectedCurrency}
+            hideLegend={true}
+            chartIcon={getChartIcon('Net Profit')}
+          />
         </div>
 
         {/* Row 4: User Behavior Analytics */}
@@ -560,22 +548,14 @@ export default function SalesRevenuePage() {
             hideLegend={true}
             chartIcon={getChartIcon('Purchase Frequency')}
           />
-          <DonutChart
-            series={[
-              {
-                name: 'Retention Rate',
-                data: [kpiData?.retentionRate || 0]  // ✅ Data sesuai slicer bulan yang dipilih
-              },
-              {
-                name: 'Churn Rate', 
-                data: [kpiData?.churnRate || 0]      // ✅ Data sesuai slicer bulan yang dipilih
-              }
-            ]}
-            title="RETENTION VS CHURN RATE"
-            currency={selectedCurrency}
-            colors={['#3B82F6', '#F97316']}
-            chartIcon={getChartIcon('Retention vs Churn Rate')}
-          />
+                     <LineChart
+             series={srChartData?.avgCustomerLifespanTrend?.series || []}
+             categories={srChartData?.avgCustomerLifespanTrend?.categories || []}
+             title="AVERAGE CUSTOMER LIFESPAN TREND (ACL)"
+             currency={selectedCurrency}
+             hideLegend={true}
+             chartIcon={getChartIcon('Average Customer Lifespan')}
+           />
         </div>
 
         {/* Row 5: Advanced Analytics Charts */}

@@ -54,40 +54,10 @@ export default function Header({
       // Main Pages
       case '/':
         return 'NEXMAX Dashboard'
-      case '/dashboard':
-        return 'Dashboard'
       case '/users':
         return 'User Management'
-      case '/strategic-executive':
-        return 'Strategic Executive'
-      case '/business-flow':
-        return 'Business Flow'
-      case '/bgo':
-        return 'Business Growth Optimization'
-      case '/sr':
-        return 'Sales & Revenue'
-      case '/xoo':
-        return 'Executive Operation & Optimization'
-      case '/os':
-        return 'Operation Supervision'
       case '/supabase':
         return 'Supabase Connection'
-      
-      // MYR Pages
-      case '/myr':
-        return 'MYR'
-      case '/myr/overview':
-        return 'Overview MYR'
-      case '/myr/member-analytic':
-        return 'Member Analytic MYR'
-      
-      // SGD Pages
-      case '/sgd':
-        return 'SGD'
-      case '/sgd/overview':
-        return 'Overview SGD'
-      case '/sgd/member-analytic':
-        return 'Member Analytic SGD'
       
       // USC Pages
       case '/usc':
@@ -153,7 +123,7 @@ export default function Header({
             .join(' ')
           
           // Add currency prefix if it's a currency page
-          if (pathSegments[0] === 'myr' || pathSegments[0] === 'sgd' || pathSegments[0] === 'usc') {
+          if (pathSegments[0] === 'usc') {
             const currency = pathSegments[0].toUpperCase()
             return `${titleCase} ${currency}`
           }
