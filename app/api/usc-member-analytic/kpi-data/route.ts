@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
       purchaseFrequency: (() => {
         const userTransactions: { [key: string]: number } = {}
         data.forEach(row => {
-          const userkey = row.userkey
+          const userkey = String(row.userkey)
           if (!userTransactions[userkey]) userTransactions[userkey] = 0
           userTransactions[userkey] += (Number(row.deposit_cases) || 0)
         })
@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
         const avgFrequency = (() => {
           const userTransactions: { [key: string]: number } = {}
           data.forEach(row => {
-            const userkey = row.userkey
+            const userkey = String(row.userkey)
             if (!userTransactions[userkey]) userTransactions[userkey] = 0
             userTransactions[userkey] += (Number(row.deposit_cases) || 0)
           })

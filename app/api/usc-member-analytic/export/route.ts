@@ -145,7 +145,7 @@ function calculateRetentionAnalysis(data: any[]) {
   
   // Calculate activity days per user from REAL DATA
   data.forEach(row => {
-    const userkey = row.userkey
+    const userkey = String(row.userkey)
     if (!userActivity[userkey]) {
       userActivity[userkey] = {
         activeDays: 0,
