@@ -172,8 +172,14 @@ export default function Sidebar({
     }
     return 'user' // Default to user instead of admin
   }
-
-  const userRole = getUserRole()
+  
+  // IMPORTANT: Avoid hydration mismatch by resolving userRole after mount
+  const [userRole, setUserRole] = useState<string>('user')
+  useEffect(() => {
+    // Read role from localStorage only on client after mount
+    const role = getUserRole()
+    setUserRole(role)
+  }, [])
   
   // Get menu items based on user role
   const getMenuItems = () => {
