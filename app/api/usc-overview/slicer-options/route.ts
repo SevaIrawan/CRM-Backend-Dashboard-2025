@@ -95,11 +95,13 @@ export async function GET(request: NextRequest) {
     // Build month-year mapping
     const monthYearMap: Record<string, Set<string>> = {}
     allMonthsData?.forEach(row => {
-      if (row.month && row.year) {
-        if (!monthYearMap[row.month]) {
-          monthYearMap[row.month] = new Set()
+      const monthKey = String(row.month)
+      const yearValue = String(row.year)
+      if (monthKey && yearValue) {
+        if (!monthYearMap[monthKey]) {
+          monthYearMap[monthKey] = new Set()
         }
-        monthYearMap[row.month].add(String(row.year))
+        monthYearMap[monthKey].add(yearValue)
       }
     })
 
