@@ -46,6 +46,14 @@ export default function KPIComparisonPage() {
   const [periodBStart, setPeriodBStart] = useState<string>('');
   const [periodBEnd, setPeriodBEnd] = useState<string>('');
 
+  // UI states for single-popup date range per period
+  const [showPickerA, setShowPickerA] = useState<boolean>(false);
+  const [showPickerB, setShowPickerB] = useState<boolean>(false);
+  const [tempAStart, setTempAStart] = useState<string>('');
+  const [tempAEnd, setTempAEnd] = useState<string>('');
+  const [tempBStart, setTempBStart] = useState<string>('');
+  const [tempBEnd, setTempBEnd] = useState<string>('');
+
   // Data states
   const [comparisonData, setComparisonData] = useState<ComparisonData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -154,7 +162,161 @@ export default function KPIComparisonPage() {
         {/* Title area - left side */}
       </div>
       
-      <div className="subheader-controls">
+      <div className="subheader-controls" style={{ gap: '16px' }}>
+        {/* PERIOD A DATE RANGE - Single Popup */}
+        <div className="slicer-group" style={{ position: 'relative' }}>
+          <label className="slicer-label">PERIOD A:</label>
+          <input
+            type="text"
+            value={`${periodAStart} to ${periodAEnd}`}
+            readOnly
+            onClick={() => {
+              setTempAStart(periodAStart);
+              setTempAEnd(periodAEnd);
+              setShowPickerA(true);
+            }}
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              backgroundColor: 'white',
+              fontSize: '14px',
+              color: '#374151',
+              cursor: 'pointer',
+              outline: 'none',
+              transition: 'all 0.2s ease',
+              minWidth: '220px',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+            }}
+            placeholder="Select date range..."
+          />
+          {showPickerA && (
+            <div style={{
+              position: 'absolute',
+              top: '42px',
+              left: 0,
+              zIndex: 50,
+              background: 'white',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              padding: '12px',
+              boxShadow: '0 10px 20px rgba(0,0,0,0.08)'
+            }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <input
+                  type="date"
+                  value={tempAStart}
+                  min={slicerOptions?.dateRange.min}
+                  max={slicerOptions?.dateRange.max}
+                  onChange={(e) => setTempAStart(e.target.value)}
+                  style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                />
+                <span style={{ color: '#6b7280' }}>to</span>
+                <input
+                  type="date"
+                  value={tempAEnd}
+                  min={slicerOptions?.dateRange.min}
+                  max={slicerOptions?.dateRange.max}
+                  onChange={(e) => setTempAEnd(e.target.value)}
+                  style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
+                <button onClick={() => setShowPickerA(false)} style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #e5e7eb' }}>Cancel</button>
+                <button
+                  onClick={() => {
+                    if (tempAStart && tempAEnd) {
+                      setPeriodAStart(tempAStart);
+                      setPeriodAEnd(tempAEnd);
+                    }
+                    setShowPickerA(false);
+                  }}
+                  style={{ padding: '6px 10px', borderRadius: '6px', background: '#1e293b', color: 'white', border: 'none' }}
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* PERIOD B DATE RANGE - Single Popup */}
+        <div className="slicer-group" style={{ position: 'relative' }}>
+          <label className="slicer-label">PERIOD B:</label>
+          <input
+            type="text"
+            value={`${periodBStart} to ${periodBEnd}`}
+            readOnly
+            onClick={() => {
+              setTempBStart(periodBStart);
+              setTempBEnd(periodBEnd);
+              setShowPickerB(true);
+            }}
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              backgroundColor: 'white',
+              fontSize: '14px',
+              color: '#374151',
+              cursor: 'pointer',
+              outline: 'none',
+              transition: 'all 0.2s ease',
+              minWidth: '220px',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+            }}
+            placeholder="Select date range..."
+          />
+          {showPickerB && (
+            <div style={{
+              position: 'absolute',
+              top: '42px',
+              left: 0,
+              zIndex: 50,
+              background: 'white',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              padding: '12px',
+              boxShadow: '0 10px 20px rgba(0,0,0,0.08)'
+            }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <input
+                  type="date"
+                  value={tempBStart}
+                  min={slicerOptions?.dateRange.min}
+                  max={slicerOptions?.dateRange.max}
+                  onChange={(e) => setTempBStart(e.target.value)}
+                  style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                />
+                <span style={{ color: '#6b7280' }}>to</span>
+                <input
+                  type="date"
+                  value={tempBEnd}
+                  min={slicerOptions?.dateRange.min}
+                  max={slicerOptions?.dateRange.max}
+                  onChange={(e) => setTempBEnd(e.target.value)}
+                  style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
+                <button onClick={() => setShowPickerB(false)} style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #e5e7eb' }}>Cancel</button>
+                <button
+                  onClick={() => {
+                    if (tempBStart && tempBEnd) {
+                      setPeriodBStart(tempBStart);
+                      setPeriodBEnd(tempBEnd);
+                    }
+                    setShowPickerB(false);
+                  }}
+                  style={{ padding: '6px 10px', borderRadius: '6px', background: '#1e293b', color: 'white', border: 'none' }}
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* LINE SLICER */}
         <div className="slicer-group">
           <label className="slicer-label">LINE:</label>
@@ -182,102 +344,6 @@ export default function KPIComparisonPage() {
               </option>
             ))}
           </select>
-        </div>
-
-        {/* PERIOD A DATE RANGE */}
-        <div className="slicer-group">
-          <label className="slicer-label">PERIOD A:</label>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <input
-              type="date"
-              value={periodAStart}
-              onChange={(e) => setPeriodAStart(e.target.value)}
-              min={slicerOptions?.dateRange.min}
-              max={slicerOptions?.dateRange.max}
-              style={{
-                padding: '8px 12px',
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                backgroundColor: 'white',
-                fontSize: '14px',
-                color: '#374151',
-                cursor: 'pointer',
-                outline: 'none',
-                transition: 'all 0.2s ease',
-                minWidth: '130px',
-                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
-              }}
-            />
-            <span style={{ color: '#6b7280' }}>to</span>
-            <input
-              type="date"
-              value={periodAEnd}
-              onChange={(e) => setPeriodAEnd(e.target.value)}
-              min={slicerOptions?.dateRange.min}
-              max={slicerOptions?.dateRange.max}
-              style={{
-                padding: '8px 12px',
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                backgroundColor: 'white',
-                fontSize: '14px',
-                color: '#374151',
-                cursor: 'pointer',
-                outline: 'none',
-                transition: 'all 0.2s ease',
-                minWidth: '130px',
-                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
-              }}
-            />
-          </div>
-        </div>
-
-        {/* PERIOD B DATE RANGE */}
-        <div className="slicer-group">
-          <label className="slicer-label">PERIOD B:</label>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <input
-              type="date"
-              value={periodBStart}
-              onChange={(e) => setPeriodBStart(e.target.value)}
-              min={slicerOptions?.dateRange.min}
-              max={slicerOptions?.dateRange.max}
-              style={{
-                padding: '8px 12px',
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                backgroundColor: 'white',
-                fontSize: '14px',
-                color: '#374151',
-                cursor: 'pointer',
-                outline: 'none',
-                transition: 'all 0.2s ease',
-                minWidth: '130px',
-                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
-              }}
-            />
-            <span style={{ color: '#6b7280' }}>to</span>
-            <input
-              type="date"
-              value={periodBEnd}
-              onChange={(e) => setPeriodBEnd(e.target.value)}
-              min={slicerOptions?.dateRange.min}
-              max={slicerOptions?.dateRange.max}
-              style={{
-                padding: '8px 12px',
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                backgroundColor: 'white',
-                fontSize: '14px',
-                color: '#374151',
-                cursor: 'pointer',
-                outline: 'none',
-                transition: 'all 0.2s ease',
-                minWidth: '130px',
-                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
-              }}
-            />
-          </div>
         </div>
       </div>
     </div>
@@ -321,7 +387,7 @@ export default function KPIComparisonPage() {
                   {comparisonData.comparisonData.map((row, index) => (
                     <tr 
                       key={row.metricKey}
-                      className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
+                      className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 cursor-pointer transition-colors`}
                     >
                       <td className="px-4 py-3 text-left border border-gray-300 font-medium">
                         {row.metric}
