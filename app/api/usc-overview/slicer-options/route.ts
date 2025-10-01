@@ -71,13 +71,12 @@ export async function GET(request: NextRequest) {
     const defaultYear = latestRecord?.[0]?.year?.toString() || sortedYears[0] || '2025'
     const defaultMonth = latestRecord?.[0]?.month ? String(latestRecord[0].month) : 'September'
 
-    // Get ALL months (not just for latest year) - untuk support semua year
+    // Get all months with year from database - client will dedupe
     const { data: allMonthsData, error: monthsError } = await supabase
       .from('blue_whale_usc_summary')
       .select('month, year')
       .eq('currency', 'USC')
       .not('month', 'is', null)
-      .limit(500)
 
     if (monthsError) {
       console.error('❌ Error fetching months:', monthsError)
@@ -88,23 +87,48 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    // Get unique months dari semua data
-    const uniqueMonths = Array.from(new Set(allMonthsData?.map(row => row.month).filter(Boolean) || []))
+    console.log('🔍 [USC Slicer] Raw months data from DB:', {
+      totalRows: allMonthsData?.length,
+      sampleData: allMonthsData?.slice(0, 20)
+    })
+
+    // Build month-year mapping
+    const monthYearMap: Record<string, Set<string>> = {}
+    allMonthsData?.forEach(row => {
+      if (row.month && row.year) {
+        if (!monthYearMap[row.month]) {
+          monthYearMap[row.month] = new Set()
+        }
+        monthYearMap[row.month].add(String(row.year))
+      }
+    })
+
+    console.log('🔍 [USC Slicer] Month-year mapping:', monthYearMap)
+
+    // Get all unique months
+    const uniqueMonths = Object.keys(monthYearMap)
     const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 
                        'July', 'August', 'September', 'October', 'November', 'December']
-    const sortedMonths = uniqueMonths.sort((a, b) => monthOrder.indexOf(String(a)) - monthOrder.indexOf(String(b)))
-    const monthsWithAll = ['ALL', ...sortedMonths]
+    const sortedMonths = uniqueMonths.sort((a, b) => monthOrder.indexOf(a) - monthOrder.indexOf(b))
+    
+    // Create months array with year info
+    const monthsWithYearInfo = sortedMonths.map(month => ({
+      value: month,
+      label: month,
+      years: Array.from(monthYearMap[month])
+    }))
+    const monthsWithAll = [
+      { value: 'ALL', label: 'ALL', years: sortedYears },
+      ...monthsWithYearInfo
+    ]
 
     const slicerOptions = {
       currencies, // Locked to USC
       lines: linesWithAll,
       years: sortedYears,
-      months: monthsWithAll.map(month => ({
-        value: month,
-        label: month === 'ALL' ? 'ALL' : month
-      })),
+      months: monthsWithAll,
       dateRange: {
-        min: '2024-01-01',
+        min: '2021-01-01',
         max: '2025-12-31'
       },
       defaults: {

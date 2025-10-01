@@ -354,11 +354,22 @@ export default function USCOverviewPage() {
               boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
             }}
           >
-            {slicerOptions?.months?.map((month: any) => (
-              <option key={month.value} value={month.value}>
-                {month.label}
-              </option>
-            ))}
+            {slicerOptions?.months
+              ?.filter((month: any) => {
+                // Show ALL option always
+                if (month.value === 'ALL') return true;
+                
+                // Filter months based on selected year
+                if (!selectedYear) return true;
+                
+                // Check if this month exists in the selected year
+                return month.years && month.years.includes(selectedYear);
+              })
+              ?.map((month: any) => (
+                <option key={month.value} value={month.value}>
+                  {month.label}
+                </option>
+              ))}
           </select>
         </div>
 
