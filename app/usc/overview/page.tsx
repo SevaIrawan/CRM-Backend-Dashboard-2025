@@ -11,28 +11,8 @@ import { formatCurrencyKPI, formatIntegerKPI, formatMoMChange, formatNumericKPI,
 import { getAllUSCKPIsWithMoM } from '@/lib/USCDailyAverageAndMoM';
 
 // USC-specific types
-interface USCKPIData {
-  depositAmount: number
-  withdrawAmount: number
-  grossGamingRevenue: number
-  activeMember: number
-  depositCases: number
-  withdrawCases: number
-  netProfit: number
-  avgTransactionValue: number
-  purchaseFrequency: number
-  customerMaturityIndex: number
-  churnMember: number
-  churnRate: number
-  retentionRate: number
-  growthRate: number
-  customerLifetimeValue: number
-  avgCustomerLifespan: number
-  winrate: number
-  holdPercentage: number
-  conversionRate: number
-  depositAmountPerUser: number
-}
+// Import USCKPIData from the source of truth
+import { USCKPIData, USCMoMData } from '@/lib/USCDailyAverageAndMoM'
 
 // ✅ FIX HYDRATION: Dynamic import untuk chart components
 const LineChart = dynamic(() => import('@/components/LineChart'), {
