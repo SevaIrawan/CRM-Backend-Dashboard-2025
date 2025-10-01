@@ -13,13 +13,12 @@ export async function GET(request: NextRequest) {
 
     console.log('📊 [DEBUG] Querying blue_whale_usc_summary (MV) for lines...')
     
-    // Get DISTINCT lines from MV with limit for performance
+    // Get DISTINCT lines from MV - NO LIMIT
     const { data: allLines, error: linesError } = await supabase
       .from('blue_whale_usc_summary')
       .select('line')
       .eq('currency', 'USC')
       .not('line', 'is', null)
-      .limit(1000)
 
     console.log('📊 [DEBUG] Lines query result:', { 
       dataCount: allLines?.length, 
@@ -40,13 +39,12 @@ export async function GET(request: NextRequest) {
     const cleanLines = uniqueLines.filter(line => line !== 'ALL' && line !== 'All')
     const linesWithAll = ['ALL', ...cleanLines.sort()]
 
-    // Get years from MV with limit for performance
+    // Get years from MV - NO LIMIT
     const { data: allYears, error: yearsError } = await supabase
       .from('blue_whale_usc_summary')
       .select('year')
       .eq('currency', 'USC')
       .not('year', 'is', null)
-      .limit(100)
 
     if (yearsError) {
       console.error('❌ Error fetching years:', yearsError)
@@ -66,7 +64,7 @@ export async function GET(request: NextRequest) {
       .select('year, month, date')
       .eq('currency', 'USC')
       .order('date', { ascending: false })
-      .limit(1)
+      .limit(1)  // Only 1 record needed for default
 
     const defaultYear = latestRecord?.[0]?.year?.toString() || sortedYears[0] || '2025'
     const defaultMonth = latestRecord?.[0]?.month ? String(latestRecord[0].month) : 'September'

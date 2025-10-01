@@ -90,6 +90,12 @@ export default function USCOverviewPage() {
         const result = await response.json();
 
         if (result.success) {
+          console.log('🔍 [USC Overview CLIENT] Slicer data received from API:', {
+            years: result.data.years,
+            monthsCount: result.data.months?.length,
+            monthsSample: result.data.months?.slice(0, 5)
+          });
+          
           setSlicerOptions(result.data);
           // Auto-set defaults from API
           setSelectedYear(result.data.defaults.year);
@@ -314,7 +320,7 @@ export default function USCOverviewPage() {
                 // Show ALL option always
                 if (month.value === 'ALL') return true;
                 
-                // Filter months based on selected year
+                // Filter months based on selected year (DYNAMIC)
                 if (!selectedYear) return true;
                 
                 // Check if this month exists in the selected year

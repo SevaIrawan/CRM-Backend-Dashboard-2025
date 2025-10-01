@@ -240,7 +240,7 @@ export default function USCMemberAnalyticPage() {
                 // Show ALL option always
                 if (month.value === 'ALL') return true;
                 
-                // Filter months based on selected year
+                // Filter months based on selected year (DYNAMIC)
                 if (!selectedYear) return true;
                 
                 // Check if this month exists in the selected year
