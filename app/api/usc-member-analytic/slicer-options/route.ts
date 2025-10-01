@@ -42,15 +42,13 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    // Get unique months from MV table (faster)
-    const latestYear = yearData?.[0]?.year || 2025
+    // Get ALL unique months (not limited to specific year) from MV table
     const { data: monthData, error: monthError } = await supabase
       .from('blue_whale_usc_summary')
       .select('month')
       .eq('currency', 'USC')
-      .eq('year', latestYear)
       .not('month', 'is', null)
-      .order('month')
+      .limit(500)
 
     if (monthError) {
       console.error('❌ Error fetching months:', monthError)
@@ -69,7 +67,7 @@ export async function GET(request: NextRequest) {
     
     const uniqueYears = Array.from(new Set(yearData?.map(row => row.year?.toString()).filter(Boolean) || []))
     
-    // Sort months in proper chronological order
+    // Sort months in proper chronological order - get ALL unique months
     const uniqueMonths = Array.from(new Set(monthData?.map(row => String(row.month)).filter(Boolean) || []))
     const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
     const sortedMonths = uniqueMonths.sort((a, b) => monthOrder.indexOf(a) - monthOrder.indexOf(b))

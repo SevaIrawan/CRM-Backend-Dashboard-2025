@@ -60,15 +60,24 @@ export async function GET(request: NextRequest) {
     const uniqueYears = Array.from(new Set(allYears?.map(row => row.year?.toString()).filter(Boolean) || []))
     const sortedYears = uniqueYears.sort((a, b) => parseInt(b || '0') - parseInt(a || '0'))
 
-    // Get months for latest year from MV with limit for performance
-    const latestYear = sortedYears[0] || '2025'
-    const { data: allMonths, error: monthsError } = await supabase
+    // Get latest record first to determine defaults
+    const { data: latestRecord } = await supabase
       .from('blue_whale_usc_summary')
-      .select('month')
+      .select('year, month, date')
       .eq('currency', 'USC')
-      .eq('year', parseInt(latestYear))
+      .order('date', { ascending: false })
+      .limit(1)
+
+    const defaultYear = latestRecord?.[0]?.year?.toString() || sortedYears[0] || '2025'
+    const defaultMonth = latestRecord?.[0]?.month ? String(latestRecord[0].month) : 'September'
+
+    // Get ALL months (not just for latest year) - untuk support semua year
+    const { data: allMonthsData, error: monthsError } = await supabase
+      .from('blue_whale_usc_summary')
+      .select('month, year')
+      .eq('currency', 'USC')
       .not('month', 'is', null)
-      .limit(100)
+      .limit(500)
 
     if (monthsError) {
       console.error('❌ Error fetching months:', monthsError)
@@ -79,29 +88,12 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    const uniqueMonths = Array.from(new Set(allMonths?.map(row => row.month).filter(Boolean) || []))
+    // Get unique months dari semua data
+    const uniqueMonths = Array.from(new Set(allMonthsData?.map(row => row.month).filter(Boolean) || []))
     const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 
                        'July', 'August', 'September', 'October', 'November', 'December']
     const sortedMonths = uniqueMonths.sort((a, b) => monthOrder.indexOf(String(a)) - monthOrder.indexOf(String(b)))
     const monthsWithAll = ['ALL', ...sortedMonths]
-
-
-    // Get latest record untuk default from blue_whale_usc_summary (MV) for better performance
-    const { data: latestRecord } = await supabase
-      .from('blue_whale_usc_summary')
-      .select('year, month, date')
-      .eq('currency', 'USC')
-      .order('date', { ascending: false })
-      .limit(1)
-
-    let defaultYear = sortedYears[0] || '2025'
-    let defaultMonth = sortedMonths[0] || 'ALL'
-    
-    if (latestRecord && latestRecord.length > 0) {
-      const latest = latestRecord[0]
-      defaultYear = latest.year?.toString() || defaultYear
-      defaultMonth = String(latest.month) || defaultMonth
-    }
 
     const slicerOptions = {
       currencies, // Locked to USC

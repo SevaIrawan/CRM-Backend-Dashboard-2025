@@ -178,33 +178,6 @@ export default function USCMemberAnalyticPage() {
     return () => clearTimeout(timeoutId);
   }, [selectedYear, selectedMonth, selectedLine]);
 
-  // Calculate daily averages for ALL KPIs when KPI data changes
-  useEffect(() => {
-    const calculateDailyAverages = async () => {
-      if (kpiData && selectedYear && selectedMonth) {
-        try {
-          const result = await getAllKPIsWithDailyAverage(kpiData, selectedYear, selectedMonth);
-          
-          setDailyAverages({
-            ggrUser: result.dailyAverage.ggrPerUser || 0,
-            depositAmountUser: result.dailyAverage.depositAmountUser || 0,
-            avgTransactionValue: result.dailyAverage.avgTransactionValue || 0,
-            activeMember: result.dailyAverage.activeMember || 0,
-            conversionRate: result.dailyAverage.conversionRate || 0,
-            churnRate: result.dailyAverage.churnRate || 0
-          });
-          
-        } catch (error) {
-          // Silent error handling
-        }
-      }
-    };
-
-    calculateDailyAverages();
-  }, [kpiData, selectedYear, selectedMonth]);
-
-  // Function to create Member Analytic specific chart data using REAL monthly KPI data
-
   const customSubHeader = (
     <div className="dashboard-subheader">
       <div className="subheader-title">
