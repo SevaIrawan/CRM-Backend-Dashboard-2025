@@ -381,20 +381,20 @@ export default function CustomerRetentionUSC() {
                     position: 'sticky', 
                     top: 0, 
                     zIndex: 10,
-                    backgroundColor: '#4b5563'
+                    backgroundColor: '#1e293b'
                   }}>
-                    <tr style={{ backgroundColor: '#4b5563', borderBottom: '2px solid #374151' }}>
-                      <th style={{...headerStyle, backgroundColor: '#4b5563', color: '#ffffff'}}>Unique Code</th>
-                      <th style={{...headerStyle, backgroundColor: '#4b5563', color: '#ffffff'}}>User Name</th>
-                      <th style={{...headerStyle, backgroundColor: '#4b5563', color: '#ffffff'}}>Last Deposit Date</th>
-                      <th style={{...headerStyle, backgroundColor: '#4b5563', color: '#ffffff'}}>Active Days</th>
-                      <th style={{...headerStyle, backgroundColor: '#4b5563', color: '#ffffff'}}>Inactive Days</th>
-                      <th style={{...headerStyle, backgroundColor: '#4b5563', color: '#ffffff'}}>Deposit Cases</th>
-                      <th style={{...headerStyle, backgroundColor: '#4b5563', color: '#ffffff'}}>Deposit Amount</th>
-                      <th style={{...headerStyle, backgroundColor: '#4b5563', color: '#ffffff'}}>Withdraw Cases</th>
-                      <th style={{...headerStyle, backgroundColor: '#4b5563', color: '#ffffff'}}>Withdraw Amount</th>
-                      <th style={{...headerStyle, backgroundColor: '#4b5563', color: '#ffffff'}}>Net Profit</th>
-                      <th style={{...headerStyle, backgroundColor: '#4b5563', color: '#ffffff'}}>Winrate (%)</th>
+                    <tr style={{ backgroundColor: '#1e293b', borderBottom: '2px solid #334155' }}>
+                      <th style={{...headerStyle, backgroundColor: '#1e293b', color: '#ffffff'}}>Unique Code</th>
+                      <th style={{...headerStyle, backgroundColor: '#1e293b', color: '#ffffff'}}>User Name</th>
+                      <th style={{...headerStyleRight, backgroundColor: '#1e293b', color: '#ffffff'}}>Last Deposit Date</th>
+                      <th style={{...headerStyleRight, backgroundColor: '#1e293b', color: '#ffffff'}}>Active Days</th>
+                      <th style={{...headerStyleRight, backgroundColor: '#1e293b', color: '#ffffff'}}>Inactive Days</th>
+                      <th style={{...headerStyleRight, backgroundColor: '#1e293b', color: '#ffffff'}}>Deposit Cases</th>
+                      <th style={{...headerStyleRight, backgroundColor: '#1e293b', color: '#ffffff'}}>Deposit Amount</th>
+                      <th style={{...headerStyleRight, backgroundColor: '#1e293b', color: '#ffffff'}}>Withdraw Cases</th>
+                      <th style={{...headerStyleRight, backgroundColor: '#1e293b', color: '#ffffff'}}>Withdraw Amount</th>
+                      <th style={{...headerStyleRight, backgroundColor: '#1e293b', color: '#ffffff'}}>Net Profit</th>
+                      <th style={{...headerStyleRight, backgroundColor: '#1e293b', color: '#ffffff'}}>Winrate (%)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -415,21 +415,21 @@ export default function CustomerRetentionUSC() {
                       >
                         <td style={cellStyle}>{row.unique_code}</td>
                         <td style={cellStyle}>{row.user_name}</td>
-                        <td style={cellStyle}>{row.last_deposit_date}</td>
-                        <td style={cellStyle}>{formatInteger(row.active_days)}</td>
-                        <td style={cellStyle}>{formatInteger(row.inactive_days)}</td>
-                        <td style={cellStyle}>{formatInteger(row.deposit_cases)}</td>
-                        <td style={cellStyle}>USD {formatCurrency(row.deposit_amount)}</td>
-                        <td style={cellStyle}>{formatInteger(row.withdraw_cases)}</td>
-                        <td style={cellStyle}>USD {formatCurrency(row.withdraw_amount)}</td>
+                        <td style={cellStyleRight}>{row.last_deposit_date}</td>
+                        <td style={cellStyleRight}>{formatInteger(row.active_days)}</td>
+                        <td style={cellStyleRight}>{formatInteger(row.inactive_days)}</td>
+                        <td style={cellStyleRight}>{formatInteger(row.deposit_cases)}</td>
+                        <td style={cellStyleRight}>USD {formatCurrency(row.deposit_amount)}</td>
+                        <td style={cellStyleRight}>{formatInteger(row.withdraw_cases)}</td>
+                        <td style={cellStyleRight}>USD {formatCurrency(row.withdraw_amount)}</td>
                         <td style={{
-                          ...cellStyle,
+                          ...cellStyleRight,
                           fontWeight: '600',
                           color: row.net_profit >= 0 ? '#059669' : '#dc2626'
                         }}>
                           USD {formatCurrency(row.net_profit)}
                         </td>
-                        <td style={cellStyle}>{formatPercentage(row.winrate)}</td>
+                        <td style={cellStyleRight}>{formatPercentage(row.winrate)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -514,10 +514,15 @@ const headerStyle: React.CSSProperties = {
   fontSize: '13px',
   fontWeight: '600',
   color: '#ffffff',
-  backgroundColor: '#4b5563',
+  backgroundColor: '#1e293b',
   textTransform: 'uppercase',
   letterSpacing: '0.5px',
   whiteSpace: 'nowrap'
+}
+
+const headerStyleRight: React.CSSProperties = {
+  ...headerStyle,
+  textAlign: 'right'
 }
 
 const cellStyle: React.CSSProperties = {
@@ -525,5 +530,10 @@ const cellStyle: React.CSSProperties = {
   fontSize: '14px',
   color: '#1f2937',
   whiteSpace: 'nowrap'
+}
+
+const cellStyleRight: React.CSSProperties = {
+  ...cellStyle,
+  textAlign: 'right'
 }
 

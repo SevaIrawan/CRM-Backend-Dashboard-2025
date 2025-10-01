@@ -261,67 +261,67 @@ export default function MemberReportUSC() {
                 </div>
               ) : (
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#4b5563' }}>
-                    <tr style={{ backgroundColor: '#4b5563', borderBottom: '2px solid #374151' }}>
-                      <th style={headerStyle}>Date</th>
+                  <thead style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#1e293b' }}>
+                    <tr style={{ backgroundColor: '#1e293b', borderBottom: '2px solid #334155' }}>
+                      <th style={headerStyleRight}>Date</th>
                       <th style={headerStyle}>Currency</th>
                       <th style={headerStyle}>Line</th>
                       <th style={headerStyle}>User Name</th>
                       <th style={headerStyle}>Unique Code</th>
                       <th style={headerStyle}>VIP Level</th>
                       <th style={headerStyle}>Operator</th>
-                      <th style={headerStyle}>Inactive Days</th>
+                      <th style={headerStyleRight}>Inactive Days</th>
                       <th style={headerStyle}>Traffic</th>
-                      <th style={headerStyle}>Register Date</th>
-                      <th style={headerStyle}>First Deposit Date</th>
-                      <th style={headerStyle}>Last Deposit Date</th>
-                      <th style={headerStyle}>Deposit Cases</th>
-                      <th style={headerStyle}>Deposit Amount</th>
-                      <th style={headerStyle}>Withdraw Cases</th>
-                      <th style={headerStyle}>Withdraw Amount</th>
-                      <th style={headerStyle}>Bonus</th>
-                      <th style={headerStyle}>Cases Adjustment</th>
-                      <th style={headerStyle}>Add Bonus</th>
-                      <th style={headerStyle}>Deduct Bonus</th>
-                      <th style={headerStyle}>Add Transaction</th>
-                      <th style={headerStyle}>Deduct Transaction</th>
-                      <th style={headerStyle}>Cases Bets</th>
-                      <th style={headerStyle}>Bets Amount</th>
-                      <th style={headerStyle}>Valid Amount</th>
-                      <th style={headerStyle}>GGR</th>
-                      <th style={headerStyle}>Net Profit</th>
+                      <th style={headerStyleRight}>Register Date</th>
+                      <th style={headerStyleRight}>First Deposit Date</th>
+                      <th style={headerStyleRight}>Last Deposit Date</th>
+                      <th style={headerStyleRight}>Deposit Cases</th>
+                      <th style={headerStyleRight}>Deposit Amount</th>
+                      <th style={headerStyleRight}>Withdraw Cases</th>
+                      <th style={headerStyleRight}>Withdraw Amount</th>
+                      <th style={headerStyleRight}>Bonus</th>
+                      <th style={headerStyleRight}>Cases Adjustment</th>
+                      <th style={headerStyleRight}>Add Bonus</th>
+                      <th style={headerStyleRight}>Deduct Bonus</th>
+                      <th style={headerStyleRight}>Add Transaction</th>
+                      <th style={headerStyleRight}>Deduct Transaction</th>
+                      <th style={headerStyleRight}>Cases Bets</th>
+                      <th style={headerStyleRight}>Bets Amount</th>
+                      <th style={headerStyleRight}>Valid Amount</th>
+                      <th style={headerStyleRight}>GGR</th>
+                      <th style={headerStyleRight}>Net Profit</th>
                     </tr>
                   </thead>
                   <tbody>
                     {memberData.map((row, index) => (
                       <tr key={`${row.unique_code}-${index}`} style={{ backgroundColor: index % 2 === 0 ? 'white' : '#f9fafb', borderBottom: '1px solid #e5e7eb', transition: 'background-color 0.15s ease' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#eff6ff' }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = index % 2 === 0 ? 'white' : '#f9fafb' }}>
-                        <td style={cellStyle}>{row.date}</td>
+                        <td style={cellStyleRight}>{row.date}</td>
                         <td style={cellStyle}>{row.currency}</td>
                         <td style={cellStyle}>{row.line}</td>
                         <td style={cellStyle}>{row.user_name}</td>
                         <td style={cellStyle}>{row.unique_code}</td>
                         <td style={cellStyle}>{row.vip_level || '-'}</td>
                         <td style={cellStyle}>{row.operator || '-'}</td>
-                        <td style={cellStyle}>{formatInteger(row.inactive_days)}</td>
+                        <td style={cellStyleRight}>{formatInteger(row.inactive_days)}</td>
                         <td style={cellStyle}>{row.traffic || '-'}</td>
-                        <td style={cellStyle}>{row.register_date || '-'}</td>
-                        <td style={cellStyle}>{row.first_deposit_date || '-'}</td>
-                        <td style={cellStyle}>{row.last_deposit_date}</td>
-                        <td style={cellStyle}>{formatInteger(row.deposit_cases)}</td>
-                        <td style={cellStyle}>USD {formatCurrency(row.deposit_amount)}</td>
-                        <td style={cellStyle}>{formatInteger(row.withdraw_cases)}</td>
-                        <td style={cellStyle}>USD {formatCurrency(row.withdraw_amount)}</td>
-                        <td style={cellStyle}>USD {formatCurrency(row.bonus)}</td>
-                        <td style={cellStyle}>{formatInteger(row.cases_adjustment)}</td>
-                        <td style={cellStyle}>USD {formatCurrency(row.add_bonus)}</td>
-                        <td style={cellStyle}>USD {formatCurrency(row.deduct_bonus)}</td>
-                        <td style={cellStyle}>USD {formatCurrency(row.add_transaction)}</td>
-                        <td style={cellStyle}>USD {formatCurrency(row.deduct_transaction)}</td>
-                        <td style={cellStyle}>{formatInteger(row.cases_bets)}</td>
-                        <td style={cellStyle}>USD {formatCurrency(row.bets_amount)}</td>
-                        <td style={cellStyle}>USD {formatCurrency(row.valid_amount)}</td>
-                        <td style={cellStyle}>USD {formatCurrency(row.ggr)}</td>
-                        <td style={{ ...cellStyle, fontWeight: '600', color: row.net_profit >= 0 ? '#059669' : '#dc2626' }}>USD {formatCurrency(row.net_profit)}</td>
+                        <td style={cellStyleRight}>{row.register_date || '-'}</td>
+                        <td style={cellStyleRight}>{row.first_deposit_date || '-'}</td>
+                        <td style={cellStyleRight}>{row.last_deposit_date}</td>
+                        <td style={cellStyleRight}>{formatInteger(row.deposit_cases)}</td>
+                        <td style={cellStyleRight}>USD {formatCurrency(row.deposit_amount)}</td>
+                        <td style={cellStyleRight}>{formatInteger(row.withdraw_cases)}</td>
+                        <td style={cellStyleRight}>USD {formatCurrency(row.withdraw_amount)}</td>
+                        <td style={cellStyleRight}>USD {formatCurrency(row.bonus)}</td>
+                        <td style={cellStyleRight}>{formatInteger(row.cases_adjustment)}</td>
+                        <td style={cellStyleRight}>USD {formatCurrency(row.add_bonus)}</td>
+                        <td style={cellStyleRight}>USD {formatCurrency(row.deduct_bonus)}</td>
+                        <td style={cellStyleRight}>USD {formatCurrency(row.add_transaction)}</td>
+                        <td style={cellStyleRight}>USD {formatCurrency(row.deduct_transaction)}</td>
+                        <td style={cellStyleRight}>{formatInteger(row.cases_bets)}</td>
+                        <td style={cellStyleRight}>USD {formatCurrency(row.bets_amount)}</td>
+                        <td style={cellStyleRight}>USD {formatCurrency(row.valid_amount)}</td>
+                        <td style={cellStyleRight}>USD {formatCurrency(row.ggr)}</td>
+                        <td style={{ ...cellStyleRight, fontWeight: '600', color: row.net_profit >= 0 ? '#059669' : '#dc2626' }}>USD {formatCurrency(row.net_profit)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -353,10 +353,15 @@ const headerStyle: React.CSSProperties = {
   fontSize: '13px',
   fontWeight: '600',
   color: '#ffffff',
-  backgroundColor: '#4b5563',
+  backgroundColor: '#1e293b',
   textTransform: 'uppercase',
   letterSpacing: '0.5px',
   whiteSpace: 'nowrap'
+}
+
+const headerStyleRight: React.CSSProperties = {
+  ...headerStyle,
+  textAlign: 'right'
 }
 
 const cellStyle: React.CSSProperties = {
@@ -364,5 +369,10 @@ const cellStyle: React.CSSProperties = {
   fontSize: '14px',
   color: '#1f2937',
   whiteSpace: 'nowrap'
+}
+
+const cellStyleRight: React.CSSProperties = {
+  ...cellStyle,
+  textAlign: 'right'
 }
 
