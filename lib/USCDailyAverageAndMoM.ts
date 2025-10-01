@@ -5,7 +5,7 @@
  */
 
 import { supabase } from '@/lib/supabase'
-import { calculateUSCKPIs, USCKPIData as USCLogicKPIData } from '@/lib/USCLogic.ts'
+import { calculateUSCKPIs, USCKPIData as USCLogicKPIData } from '@/lib/USCLogic'
 
 // USC-specific types - SYNC with USCLogic.ts
 export interface USCKPIData {

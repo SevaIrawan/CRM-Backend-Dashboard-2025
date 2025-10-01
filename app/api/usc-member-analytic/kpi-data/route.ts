@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { calculateUSCKPIs } from '@/lib/USCLogic.ts'
+import { calculateUSCKPIs } from '@/lib/USCLogic'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
