@@ -9,8 +9,8 @@ export async function POST(request: NextRequest) {
       currency, line, year, month, startDate, endDate, filterMode, exportType 
     })
 
-    // Build query for REAL DATA export - USC currency locked
-    let query = supabase.from('member_report_daily').select('*')
+    // Build query for REAL DATA export from blue_whale_usc_summary (MV) - USC currency locked
+    let query = supabase.from('blue_whale_usc_summary').select('*')
       .eq('currency', 'USC') // Currency LOCKED to USC
 
     // Apply filters based on selections - ALL REAL DATA

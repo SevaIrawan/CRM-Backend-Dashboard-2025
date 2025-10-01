@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { calculateUSCKPIs } from '@/lib/USCLogic.ts'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -10,226 +11,125 @@ export async function GET(request: NextRequest) {
   const year = searchParams.get('year')
 
   try {
-    console.log('📈 [USC Member-Analytic Chart API] Fetching REAL DATA for member analytic charts with USC lock:', { 
+    console.log('📈 [USC Member-Analytic Chart API] Fetching chart data:', { 
       currency, line, year 
     })
 
-    // Get all months for the selected year from REAL DATA
-    let monthQuery = supabase
-      .from('member_report_daily')
+    // Get available months for the year
+    let monthsQuery = supabase
+      .from('blue_whale_usc_summary')
       .select('month')
-      .eq('currency', 'USC') // Currency LOCKED to USC
-      .not('month', 'is', null)
-      .order('month')
-
-    // "ALL" means get ALL lines data (no line filter), not literal "ALL" in database
-    if (line && line !== 'ALL' && line !== 'all') {
-      monthQuery = monthQuery.eq('line', line)
-    }
-
-    if (year && year !== 'ALL') {
-      monthQuery = monthQuery.eq('year', parseInt(year))
-    }
-
-    const { data: monthData, error: monthError } = await monthQuery
-
-    if (monthError) {
-      console.error('❌ Error fetching months for member analytic charts:', monthError)
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Database error while fetching chart months',
-        message: monthError.message 
-      }, { status: 500 })
-    }
-
-    // Sort months in proper chronological order
-    const uniqueMonths = Array.from(new Set(monthData?.map(row => String(row.month)).filter(Boolean) || []))
-    const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-    const availableMonths = uniqueMonths.sort((a, b) => monthOrder.indexOf(a) - monthOrder.indexOf(b))
+      .eq('currency', 'USC')
+      .eq('year', parseInt(year || '2025'))
     
-    if (availableMonths.length === 0) {
-      console.log('⚠️ No months data found for USC Member-Analytic charts')
-      return NextResponse.json({
-        success: true,
-        data: {
-          message: 'No chart data available for current filters',
-          hasData: false,
-          filters: { currency, line, year }
-        }
-      })
+    if (line && line !== 'ALL') {
+      monthsQuery = monthsQuery.eq('line', line)
     }
 
-    // Get member analytic chart data for each month from REAL DATA ONLY
-    const chartDataPromises = availableMonths.map(async (month: string) => {
-      let query = supabase
-        .from('member_report_daily')
-        .select('*')
-        .eq('currency', 'USC') // Currency LOCKED to USC
-        .eq('month', month)
+    const { data: monthsData, error: monthsError } = await monthsQuery
 
-      // "ALL" means get ALL lines data (no line filter), not literal "ALL" in database
-      if (line && line !== 'ALL' && line !== 'all') {
-        query = query.eq('line', line)
-      }
+    if (monthsError) throw monthsError
 
-      if (year && year !== 'ALL') {
-        query = query.eq('year', parseInt(year))
-      }
+    const uniqueMonths = Array.from(new Set(monthsData?.map((item: any) => item.month).filter(Boolean)))
+    
+    // Sort months chronologically
+    const monthOrder: { [key: string]: number } = {
+      'January': 1, 'February': 2, 'March': 3, 'April': 4, 'May': 5, 'June': 6,
+      'July': 7, 'August': 8, 'September': 9, 'October': 10, 'November': 11, 'December': 12
+    }
+    uniqueMonths.sort((a: string, b: string) => (monthOrder[a] || 0) - (monthOrder[b] || 0))
 
-      const { data, error } = await query
+    console.log('📅 [USC Member-Analytic Chart API] Available months:', uniqueMonths)
 
-      if (error) {
-        console.error(`❌ Error fetching data for month ${month}:`, error)
-        return null
-      }
-
-      if (!data || data.length === 0) {
-        return {
-          month,
-          ggrPerUser: 0,
-          depositAmountUser: 0,
-          avgTransactionValue: 0,
-          activeMember: 0,
-          conversionRate: 0,
-          churnRate: 0,
-          newRegister: 0,
-          newDepositor: 0,
-          retentionRate: 0
-        }
-      }
-
-      // Calculate member analytics metrics from REAL DATA for this month
-      const uniqueUsers = new Set(data.map(row => row.userkey)).size
-      const totalGGR = data.reduce((sum, row) => sum + (Number(row.gross_gaming_revenue) || 0), 0)
-      const totalDeposit = data.reduce((sum, row) => sum + (Number(row.deposit_amount) || 0), 0)
-      const totalDepositCases = data.reduce((sum, row) => sum + (Number(row.deposit_cases) || 0), 0)
-      const usersWithDeposit = new Set(data.filter(row => (Number(row.deposit_cases) || 0) > 0).map(row => row.userkey)).size
-      const activeUsers = new Set(data.filter(row => (Number(row.deposit_cases) || 0) > 0 || (Number(row.withdraw_cases) || 0) > 0).map(row => row.userkey)).size
-
-      return {
-        month,
-        ggrPerUser: uniqueUsers > 0 ? totalGGR / uniqueUsers : 0,
-        depositAmountUser: uniqueUsers > 0 ? totalDeposit / uniqueUsers : 0,
-        avgTransactionValue: totalDepositCases > 0 ? totalDeposit / totalDepositCases : 0,
-        activeMember: uniqueUsers,
-        conversionRate: uniqueUsers > 0 ? (usersWithDeposit / uniqueUsers) * 100 : 0,
-        churnRate: uniqueUsers > 0 ? ((uniqueUsers - activeUsers) / uniqueUsers) * 100 : 0,
-        newRegister: uniqueUsers, // Based on unique users in month
-        newDepositor: usersWithDeposit,
-        retentionRate: uniqueUsers > 0 ? (activeUsers / uniqueUsers) * 100 : 0
-      }
+    // Calculate KPIs for each month using USCLogic
+    const monthlyKPIPromises = uniqueMonths.map(async (month) => {
+      const kpiData = await calculateUSCKPIs({
+        year: year || '2025',
+        month: month,
+        line: line || undefined
+      })
+      
+      return { month, kpiData }
     })
 
-    const monthlyChartData = await Promise.all(chartDataPromises)
-    const validChartData = monthlyChartData.filter(data => data !== null)
+    const monthlyKPIResults = await Promise.all(monthlyKPIPromises)
 
-    // Format member analytic chart data for frontend consumption
+    // Format chart data
+    // Debug: Check Pure Member data
+    const pureMemberData = monthlyKPIResults.map(r => r.kpiData.pureMember)
+    console.log('🔍 [USC Member-Analytic Chart API] Pure Member data:', pureMemberData)
+    console.log('🔍 [USC Member-Analytic Chart API] Sample KPI:', monthlyKPIResults[0]?.kpiData)
+
     const chartSeries = {
-      // GGR Per User Trend
       ggrUserTrend: {
-        series: [
-          { 
-            name: 'GGR Per User', 
-            data: validChartData.map(d => d.ggrPerUser) 
-          }
-        ],
-        categories: validChartData.map(d => d.month.substring(0, 3))
+        series: [{ 
+          name: 'GGR Per User', 
+          data: monthlyKPIResults.map(r => r.kpiData.ggrPerUser) 
+        }],
+        categories: monthlyKPIResults.map(r => r.month.substring(0, 3))
       },
-
-      // Deposit Amount Per User Trend
       depositAmountUserTrend: {
-        series: [
-          { 
-            name: 'Deposit Amount Per User', 
-            data: validChartData.map(d => d.depositAmountUser) 
-          }
-        ],
-        categories: validChartData.map(d => d.month.substring(0, 3))
+        series: [{ 
+          name: 'Deposit Amount Per User', 
+          data: monthlyKPIResults.map(r => r.kpiData.depositAmountUser) 
+        }],
+        categories: monthlyKPIResults.map(r => r.month.substring(0, 3))
       },
-
-      // New Register vs New Depositor
       newRegisterTrend: {
         series: [
-          { 
-            name: 'New Register', 
-            data: validChartData.map(d => d.newRegister) 
-          },
-          { 
-            name: 'New Depositor', 
-            data: validChartData.map(d => d.newDepositor) 
-          }
+          { name: 'New Register', data: monthlyKPIResults.map(r => r.kpiData.newRegister) },
+          { name: 'New Depositor', data: monthlyKPIResults.map(r => r.kpiData.newDepositor) }
         ],
-        categories: validChartData.map(d => d.month.substring(0, 3))
+        categories: monthlyKPIResults.map(r => r.month.substring(0, 3))
       },
-
-      // Active Member Trend
       activeMemberTrend: {
         series: [
-          { 
-            name: 'Active Member', 
-            data: validChartData.map(d => d.activeMember) 
-          }
+          { name: 'Active Member', data: monthlyKPIResults.map(r => r.kpiData.activeMember) },
+          { name: 'Pure Member', data: monthlyKPIResults.map(r => r.kpiData.pureMember) }
         ],
-        categories: validChartData.map(d => d.month.substring(0, 3))
+        categories: monthlyKPIResults.map(r => r.month.substring(0, 3))
       },
-
-      // Retention vs Churn Rate
       retentionChurnTrend: {
         series: [
-          { 
-            name: 'Retention Rate', 
-            data: validChartData.map(d => d.retentionRate) 
-          },
-          { 
-            name: 'Churn Rate', 
-            data: validChartData.map(d => d.churnRate) 
-          }
+          { name: 'Retention Rate', data: monthlyKPIResults.map(r => r.kpiData.retentionRate) },
+          { name: 'Churn Rate', data: monthlyKPIResults.map(r => r.kpiData.churnRate) }
         ],
-        categories: validChartData.map(d => d.month.substring(0, 3))
+        categories: monthlyKPIResults.map(r => r.month.substring(0, 3))
       },
-
-      // Customer Lifetime Value Trend
       customerLifetimeValueTrend: {
-        series: [
-          { 
-            name: 'Customer Lifetime Value', 
-            data: validChartData.map(d => d.depositAmountUser * 2.5) // Estimated CLV
-          }
-        ],
-        categories: validChartData.map(d => d.month.substring(0, 3))
+        series: [{ 
+          name: 'Customer Lifetime Value', 
+          data: monthlyKPIResults.map(r => r.kpiData.customerLifetimeValue) 
+        }],
+        categories: monthlyKPIResults.map(r => r.month.substring(0, 3))
       },
-
-      // Purchase Frequency Trend  
       purchaseFrequencyTrend: {
-        series: [
-          { 
-            name: 'Purchase Frequency', 
-            data: validChartData.map(d => d.avgTransactionValue > 0 ? d.depositAmountUser / d.avgTransactionValue : 0) 
-          }
-        ],
-        categories: validChartData.map(d => d.month.substring(0, 3))
+        series: [{ 
+          name: 'Purchase Frequency', 
+          data: monthlyKPIResults.map(r => r.kpiData.purchaseFrequency) 
+        }],
+        categories: monthlyKPIResults.map(r => r.month.substring(0, 3))
       }
     }
 
-    console.log(`✅ [USC Member-Analytic Chart API] Generated member analytic chart data from ${validChartData.length} months of REAL DATA`)
+    console.log(`✅ [USC Member-Analytic Chart API] Chart data with precision KPIs for ${monthlyKPIResults.length} months`)
 
     return NextResponse.json({
       success: true,
       data: chartSeries,
       meta: {
-        monthsCount: validChartData.length,
-        dataSource: 'member_report_daily',
+        monthsCount: monthlyKPIResults.length,
+        dataSource: 'blue_whale_usc_summary + blue_whale_usc (hybrid via USCLogic)',
         currency: 'USC',
-        filters: { line, year },
-        isRealData: true
+        filters: { line, year }
       }
     })
 
   } catch (error) {
-    console.error('❌ [USC Member-Analytic Chart API] Error processing REAL DATA for charts:', error)
+    console.error('❌ [USC Member-Analytic Chart API] Error fetching chart data:', error)
     return NextResponse.json({ 
       success: false, 
-      error: 'Internal server error while processing chart data',
+      error: 'Internal server error',
       message: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }

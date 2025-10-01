@@ -2,14 +2,36 @@
 
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { getAllKPIsWithMoM, calculateKPIs, getMonthsForYear, SlicerFilters, KPIData } from '@/lib/KPILogic';
 import Layout from '@/components/Layout';
 import Frame from '@/components/Frame';
-import { YearSlicer, MonthSlicer, LineSlicer } from '@/components/slicers';
+import { LineSlicer } from '@/components/slicers';
 import StatCard from '@/components/StatCard';
 import { getChartIcon } from '@/lib/CentralIcon';
-import { getAllKPIsWithDailyAverage } from '@/lib/dailyAverageHelper';
 import { formatCurrencyKPI, formatIntegerKPI, formatMoMChange, formatNumericKPI, formatPercentageKPI } from '@/lib/formatHelpers';
+import { getAllUSCKPIsWithMoM } from '@/lib/USCDailyAverageAndMoM';
+
+// USC-specific types
+interface USCKPIData {
+  activeMember: number
+  depositCases: number
+  depositAmount: number
+  withdrawAmount: number
+  netProfit: number
+  grossGamingRevenue: number
+  avgTransactionValue: number
+  purchaseFrequency: number
+  customerMaturityIndex: number
+  churnRate: number
+  retentionRate: number
+  growthRate: number
+  customerLifetimeValue: number
+  avgCustomerLifespan: number
+  winrate: number
+  holdPercentage: number
+  conversionRate: number
+  ggrPerUser: number
+  depositAmountUser: number
+}
 
 // ✅ FIX HYDRATION: Dynamic import untuk chart components
 const LineChart = dynamic(() => import('@/components/LineChart'), {
@@ -47,8 +69,8 @@ export default function USCMemberAnalyticPage() {
   // ✅ FIX HYDRATION: Client-side only state
   const [isMounted, setIsMounted] = useState(false);
   
-  const [kpiData, setKpiData] = useState<KPIData | null>(null);
-  const [momData, setMomData] = useState<KPIData | null>(null);
+  const [kpiData, setKpiData] = useState<USCKPIData | null>(null);
+  const [momData, setMomData] = useState<USCKPIData | null>(null);
   const [slicerOptions, setSlicerOptions] = useState<SlicerOptions | null>(null);
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('');
@@ -116,20 +138,21 @@ export default function USCMemberAnalyticPage() {
         setLoadError(null);
         setChartError(null);
         
-        console.log('🔄 [USC Member Analytic] Loading ALL data (KPI + Charts)...');
+        console.log('🔄 [USC Member Analytic] Loading ALL data (KPI + Charts with MoM and Daily Average)...');
 
-        // ✅ FIXED: Logic Line Slicer yang benar - konsisten dengan pattern
-        const kpiFilters: SlicerFilters = {
-          year: selectedYear,
-          month: selectedMonth,
-          currency: 'USC',
-          line: selectedLine === 'ALL' ? undefined : selectedLine
-        };
+        // Get ALL USC KPIs with MoM and Daily Average
+        const result = await getAllUSCKPIsWithMoM(selectedYear, selectedMonth, selectedLine === 'ALL' ? undefined : selectedLine);
         
-        // Get KPI data from KPILogic.tsx
-        const kpiResult = await getAllKPIsWithMoM(kpiFilters);
-        setKpiData(kpiResult.current);
-        setMomData(kpiResult.mom);
+        setKpiData(result.current);
+        setMomData(result.mom as any);
+        setDailyAverages({
+          ggrUser: result.dailyAverage.ggrPerUser,
+          depositAmountUser: result.dailyAverage.depositAmountUser,
+          avgTransactionValue: result.dailyAverage.avgTransactionValue,
+          activeMember: result.dailyAverage.activeMember,
+          conversionRate: result.dailyAverage.conversionRate,
+          churnRate: result.dailyAverage.churnRate
+        });
         
         console.log('✅ [USC Member Analytic] KPI data loaded successfully');
         
@@ -141,8 +164,13 @@ export default function USCMemberAnalyticPage() {
           line: selectedLine === 'ALL' ? undefined : selectedLine
         };
         
-        const chartData = await createMemberAnalyticChartData(chartFilters);
-        setLineChartData(chartData);
+        // Get chart data from USC Member Analytic Chart API endpoint
+        const chartResponse = await fetch(`/api/usc-member-analytic/chart-data?line=${selectedLine}&year=${selectedYear}`);
+        const chartResult = await chartResponse.json();
+        
+        if (chartResult.success) {
+          setLineChartData(chartResult.data);
+        }
         
         console.log('✅ [USC Member Analytic] ALL data loaded successfully - Ready to display!');
 
@@ -184,136 +212,6 @@ export default function USCMemberAnalyticPage() {
   }, [kpiData, selectedYear, selectedMonth]);
 
   // Function to create Member Analytic specific chart data using REAL monthly KPI data
-  const createMemberAnalyticChartData = async (filters: SlicerFilters) => {
-    try {
-      const months = await getMonthsForYear(filters.year, 'USC', filters.line);
-      
-      if (!months || months.length === 0) {
-        return null;
-      }
-      
-      const monthlyKPIData = await Promise.all(
-        months.map(async (month) => {
-          const monthFilters = {
-            year: filters.year,
-            currency: 'USC',
-            month: month,
-            line: filters.line
-          };
-          
-          return await calculateKPIs(monthFilters);
-        })
-      );
-
-      // 🔍 SIMPLE DEBUG: Check newRegister data
-      console.log('🔍 [Member Analytic] NEW REGISTER DATA:', {
-        months: months,
-        newRegisterValues: monthlyKPIData.map(kpi => kpi.newRegister),
-        newRegisterTypes: monthlyKPIData.map(kpi => typeof kpi.newRegister)
-      });
-    
-      return {
-        // Row 2 - Bar Charts (REAL DATA dari KPILogic)
-        newRegisterTrend: {
-          series: [
-            {
-              name: 'New Register',
-              data: monthlyKPIData.map(kpi => kpi.newRegister) // REAL dari calculateKPIs
-            }
-          ],
-          categories: months.map(month => month.substring(0, 3)) // Short month names
-        },
-        newDepositorTrend: {
-          series: [
-            {
-              name: 'New Depositor',
-              data: monthlyKPIData.map(kpi => kpi.newDepositor) // REAL dari calculateKPIs
-            }
-          ],
-          categories: months.map(month => month.substring(0, 3)) // Short month names
-        },
-        activeMemberTrend: {
-          series: [
-            {
-              name: 'Active Member',
-              data: monthlyKPIData.map(kpi => kpi.activeMember) // REAL dari calculateKPIs
-            }
-          ],
-          categories: months.map(month => month.substring(0, 3)) // Short month names
-        },
-        pureMemberTrend: {
-          series: [
-            {
-              name: 'Pure Member',
-              data: monthlyKPIData.map(kpi => kpi.pureMember) // REAL dari calculateKPIs
-            }
-          ],
-          categories: months.map(month => month.substring(0, 3)) // Short month names
-        },
-        // Row 3 - Single Line Charts (REAL DATA)
-        ggrUserTrend: {
-          series: [
-            {
-              name: 'GGR User',
-              data: monthlyKPIData.map(kpi => kpi.ggrPerUser) // REAL dari calculateKPIs
-            }
-          ],
-          categories: months.map(month => month.substring(0, 3)) // Short month names
-        },
-        depositAmountUserTrend: {
-          series: [
-            {
-              name: 'Deposit Amount User',
-              data: monthlyKPIData.map(kpi => kpi.depositAmountUser) // REAL dari calculateKPIs
-            }
-          ],
-          categories: months.map(month => month.substring(0, 3)) // Short month names
-        },
-        // Row 4 - 2 Line Charts (2 lines each) (REAL DATA)
-        retentionRateTrend: {
-          series: [
-            {
-              name: 'RETENTION RATE',
-              data: monthlyKPIData.map(kpi => kpi.retentionRate) // REAL dari calculateKPIs
-            }
-          ],
-          categories: months.map(month => month.substring(0, 3)) // Short month names
-        },
-        churnRateTrend: {
-          series: [
-            {
-              name: 'CHURN RATE',
-              data: monthlyKPIData.map(kpi => kpi.churnRate) // REAL dari calculateKPIs
-            }
-          ],
-          categories: months.map(month => month.substring(0, 3)) // Short month names
-        },
-        customerLifetimeValueTrend: {
-          series: [
-            {
-              name: 'CUSTOMER LIFETIME VALUE',
-              data: monthlyKPIData.map(kpi => kpi.customerLifetimeValue) // REAL dari calculateKPIs
-            }
-          ],
-          categories: months.map(month => month.substring(0, 3)) // Short month names
-        },
-        purchaseFrequencyTrend: {
-          series: [
-            {
-              name: 'PURCHASE FREQUENCY',
-              data: monthlyKPIData.map(kpi => kpi.purchaseFrequency) // REAL dari calculateKPIs
-            }
-          ],
-          categories: months.map(month => month.substring(0, 3)) // Short month names
-        }
-      };
-      
-    } catch (error) {
-      console.error('Error creating chart data:', error);
-      setChartError('Failed to load chart data');
-      return null;
-    }
-  };
 
   const customSubHeader = (
     <div className="dashboard-subheader">
@@ -324,24 +222,60 @@ export default function USCMemberAnalyticPage() {
       <div className="subheader-controls">
         <div className="slicer-group">
           <label className="slicer-label">YEAR:</label>
-          <YearSlicer 
-            value={selectedYear} 
-            onChange={setSelectedYear}
-            selectedCurrency="USC"
-            years={slicerOptions?.years}
-          />
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(e.target.value)}
+            className="subheader-select"
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              backgroundColor: 'white',
+              fontSize: '14px',
+              color: '#374151',
+              cursor: 'pointer',
+              outline: 'none',
+              transition: 'all 0.2s ease',
+              minWidth: '100px',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+            }}
+          >
+            {slicerOptions?.years?.map((year: string) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
         </div>
         
         {/* Currency locked to USC - slicer hidden */}
         
         <div className="slicer-group">
           <label className="slicer-label">MONTH:</label>
-          <MonthSlicer 
-            value={selectedMonth} 
-            onChange={setSelectedMonth}
-            selectedYear={selectedYear}
-            selectedCurrency="USC"
-          />
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="subheader-select"
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              backgroundColor: 'white',
+              fontSize: '14px',
+              color: '#374151',
+              cursor: 'pointer',
+              outline: 'none',
+              transition: 'all 0.2s ease',
+              minWidth: '120px',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+            }}
+          >
+            {slicerOptions?.months?.map((month: any) => (
+              <option key={month.value} value={month.value}>
+                {month.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="slicer-group">
@@ -502,12 +436,9 @@ export default function USCMemberAnalyticPage() {
 
           {/* Row 2: Bar Charts */}
           <div className="chart-row">
-            {lineChartData?.newRegisterTrend?.series?.[0]?.data && lineChartData?.newRegisterTrend?.categories ? (
+            {lineChartData?.newRegisterTrend?.series && lineChartData?.newRegisterTrend?.categories ? (
               <BarChart
-                series={[
-                  { name: 'New Register', data: lineChartData.newRegisterTrend.series[0].data },
-                  { name: 'New Depositor', data: lineChartData.newDepositorTrend?.series?.[0]?.data || [] }
-                ]}
+                series={lineChartData.newRegisterTrend.series}
                 categories={lineChartData.newRegisterTrend.categories}
                 title="NEW REGISTER VS NEW DEPOSITOR TREND"
                 currency={undefined} // Member data, bukan currency
@@ -528,12 +459,9 @@ export default function USCMemberAnalyticPage() {
               </div>
             )}
             
-            {lineChartData?.activeMemberTrend?.series?.[0]?.data && lineChartData?.activeMemberTrend?.categories ? (
+            {lineChartData?.activeMemberTrend?.series && lineChartData?.activeMemberTrend?.categories ? (
               <BarChart
-                series={[
-                  { name: 'Active Member', data: lineChartData.activeMemberTrend.series[0].data },
-                  { name: 'Pure Member', data: lineChartData.pureMemberTrend?.series?.[0]?.data || [] }
-                ]}
+                series={lineChartData.activeMemberTrend.series}
                 categories={lineChartData.activeMemberTrend.categories}
                 title="ACTIVE MEMBER VS PURE MEMBER TREND"
                 currency={undefined} // Member data, bukan currency
@@ -580,13 +508,10 @@ export default function USCMemberAnalyticPage() {
 
           {/* Row 4: Multi-line Charts */}
           <div className="chart-row">
-            {lineChartData?.retentionRateTrend?.series?.[0]?.data && lineChartData?.retentionRateTrend?.categories ? (
+            {lineChartData?.retentionChurnTrend?.series && lineChartData?.retentionChurnTrend?.categories ? (
               <LineChart
-                series={[
-                  { name: 'RETENTION RATE', data: lineChartData.retentionRateTrend.series[0].data },
-                  { name: 'CHURN RATE', data: lineChartData.churnRateTrend?.series?.[0]?.data || [] }
-                ]}
-                categories={lineChartData.retentionRateTrend.categories}
+                series={lineChartData.retentionChurnTrend.series}
+                categories={lineChartData.retentionChurnTrend.categories}
                 title="RETENTION VS CHURN RATE"
                 currency={selectedCurrency}
                 chartIcon={getChartIcon('RETENTION VS CHURN RATE')}

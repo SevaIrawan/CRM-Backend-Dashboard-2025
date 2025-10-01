@@ -2,14 +2,37 @@
 
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { getAllKPIsWithMoM, calculateKPIs, getMonthsForYear, SlicerFilters, KPIData } from '@/lib/KPILogic';
 import Layout from '@/components/Layout';
 import Frame from '@/components/Frame';
-import { YearSlicer, MonthSlicer, LineSlicer } from '@/components/slicers';
+import { LineSlicer } from '@/components/slicers';
 import StatCard from '@/components/StatCard';
 import { getChartIcon } from '@/lib/CentralIcon';
-import { getAllKPIsWithDailyAverage } from '@/lib/dailyAverageHelper';
 import { formatCurrencyKPI, formatIntegerKPI, formatMoMChange, formatNumericKPI, formatPercentageKPI } from '@/lib/formatHelpers';
+import { getAllUSCKPIsWithMoM } from '@/lib/USCDailyAverageAndMoM';
+
+// USC-specific types
+interface USCKPIData {
+  depositAmount: number
+  withdrawAmount: number
+  grossGamingRevenue: number
+  activeMember: number
+  depositCases: number
+  withdrawCases: number
+  netProfit: number
+  avgTransactionValue: number
+  purchaseFrequency: number
+  customerMaturityIndex: number
+  churnMember: number
+  churnRate: number
+  retentionRate: number
+  growthRate: number
+  customerLifetimeValue: number
+  avgCustomerLifespan: number
+  winrate: number
+  holdPercentage: number
+  conversionRate: number
+  depositAmountPerUser: number
+}
 
 // ✅ FIX HYDRATION: Dynamic import untuk chart components
 const LineChart = dynamic(() => import('@/components/LineChart'), {
@@ -47,8 +70,8 @@ export default function USCOverviewPage() {
   // ✅ FIX HYDRATION: Client-side only state
   const [isMounted, setIsMounted] = useState(false);
   
-  const [kpiData, setKpiData] = useState<KPIData | null>(null);
-  const [momData, setMomData] = useState<KPIData | null>(null);
+  const [kpiData, setKpiData] = useState<USCKPIData | null>(null);
+  const [momData, setMomData] = useState<USCKPIData | null>(null);
   const [slicerOptions, setSlicerOptions] = useState<SlicerOptions | null>(null);
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('');
@@ -106,57 +129,147 @@ export default function USCOverviewPage() {
     loadSlicerOptions();
   }, []);
 
-  // Load KPI and Chart data when filters change
+  // Load KPI data when month changes (for StatCard display)
   useEffect(() => {
     if (!selectedYear || !selectedMonth || !selectedLine) return;
 
-    const loadData = async () => {
+    const loadKPIData = async () => {
       try {
         setIsLoading(true);
         setLoadError(null);
-        setChartError(null);
         
-        console.log('🔄 [USC Overview] Loading ALL data (KPI + Charts)...');
+        console.log('🔄 [USC Overview] Loading KPI data with MoM and Daily Average...');
 
-        // ✅ FIXED: Logic Line Slicer yang benar - konsisten dengan pattern
-        const kpiFilters: SlicerFilters = {
-          year: selectedYear,
-          month: selectedMonth,
-          currency: 'USC',
-          line: selectedLine === 'ALL' ? undefined : selectedLine
-        };
+        // Get ALL USC KPIs with MoM and Daily Average
+        const result = await getAllUSCKPIsWithMoM(selectedYear, selectedMonth, selectedLine === 'ALL' ? undefined : selectedLine);
         
-        // Get KPI data from KPILogic.tsx
-        const kpiResult = await getAllKPIsWithMoM(kpiFilters);
-        setKpiData(kpiResult.current);
-        setMomData(kpiResult.mom);
+        setKpiData(result.current);
+        setMomData(result.mom as any);
+        setDailyAverages({
+          depositAmount: result.dailyAverage.depositAmount,
+          withdrawAmount: result.dailyAverage.withdrawAmount,
+          grossGamingRevenue: result.dailyAverage.grossGamingRevenue,
+          activeMember: result.dailyAverage.activeMember,
+          purchaseFrequency: result.dailyAverage.purchaseFrequency,
+          customerMaturityIndex: result.dailyAverage.customerMaturityIndex
+        });
         
         console.log('✅ [USC Overview] KPI data loaded successfully');
-        
-        // ✅ FIXED: Chart filters harus sama dengan KPI filters untuk konsistensi
-        const chartFilters: SlicerFilters = {
-          year: selectedYear,
-          month: selectedMonth,
-          currency: 'USC',
-          line: selectedLine === 'ALL' ? undefined : selectedLine
-        };
-        
-        const srData = await createSRChartData(chartFilters);
-        setSrChartData(srData);
-        
-        console.log('✅ [USC Overview] ALL data loaded successfully - Ready to display!');
 
       } catch (error) {
-        console.error('Error loading data:', error);
-        setLoadError('Failed to load data. Please try again.');
+        console.error('Error loading KPI data:', error);
+        setLoadError('Failed to load KPI data. Please try again.');
       } finally {
         setIsLoading(false);
       }
     };
 
-    const timeoutId = setTimeout(loadData, 100);
+    const timeoutId = setTimeout(loadKPIData, 100);
     return () => clearTimeout(timeoutId);
   }, [selectedYear, selectedMonth, selectedLine]);
+
+  // Load Chart data when year or line changes (MONTHLY data for entire year)
+  useEffect(() => {
+    if (!selectedYear || !selectedLine) return;
+
+    const loadChartData = async () => {
+      try {
+        setChartError(null);
+        
+        console.log('🔄 [USC Overview] Loading Chart data (MONTHLY for entire year)...');
+        
+        // Get chart data dari MV table (pre-aggregated)
+        const chartResponse = await fetch(`/api/usc-overview/chart-data?line=${selectedLine}&year=${selectedYear}`);
+        const chartResult = await chartResponse.json();
+        
+        console.log('📊 [USC Overview] Chart API Response:', chartResult);
+        
+        if (!chartResult.success) {
+          throw new Error('Failed to fetch chart data');
+        }
+        
+        const monthlyData = chartResult.monthlyData;
+        
+        console.log('📊 [USC Overview] Monthly data from MV:', monthlyData);
+        
+        if (Object.keys(monthlyData).length > 0) {
+          // Sort months chronologically
+          const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 
+                             'July', 'August', 'September', 'October', 'November', 'December'];
+          const sortedMonths = Object.keys(monthlyData).sort((a, b) => 
+            monthOrder.indexOf(a) - monthOrder.indexOf(b)
+          );
+
+          // Create chart data from aggregated monthly data using precision KPIs
+          const chartData = {
+            depositAmountTrend: {
+              series: [{ name: 'Deposit Amount', data: sortedMonths.map(month => monthlyData[month].deposit_amount) }],
+              categories: sortedMonths.map(month => month.substring(0, 3))
+            },
+            withdrawAmountTrend: {
+              series: [{ name: 'Withdraw Amount', data: sortedMonths.map(month => monthlyData[month].withdraw_amount) }],
+              categories: sortedMonths.map(month => month.substring(0, 3))
+            },
+            grossGamingRevenueTrend: {
+              series: [{ name: 'Gross Gaming Revenue', data: sortedMonths.map(month => monthlyData[month].ggr) }],
+              categories: sortedMonths.map(month => month.substring(0, 3))
+            },
+            depositCasesBarChart: {
+              series: [{ name: 'Deposit Cases', data: sortedMonths.map(month => monthlyData[month].deposit_cases) }],
+              categories: sortedMonths.map(month => month.substring(0, 3))
+            },
+            withdrawCasesLineChart: {
+              series: [{ name: 'Withdraw Cases', data: sortedMonths.map(month => monthlyData[month].withdraw_cases) }],
+              categories: sortedMonths.map(month => month.substring(0, 3))
+            },
+            netProfitTrend: {
+              series: [{ name: 'Net Profit', data: sortedMonths.map(month => monthlyData[month].net_profit) }],
+              categories: sortedMonths.map(month => month.substring(0, 3))
+            },
+            avgTransactionValueTrend: {
+              series: [{ name: 'Average Transaction Value', data: sortedMonths.map(month => monthlyData[month].atv) }],
+              categories: sortedMonths.map(month => month.substring(0, 3))
+            },
+            purchaseFrequencyTrend: {
+              series: [{ name: 'Purchase Frequency', data: sortedMonths.map(month => monthlyData[month].pf) }],
+              categories: sortedMonths.map(month => month.substring(0, 3))
+            },
+            avgCustomerLifespanTrend: {
+              series: [{ name: 'Average Customer Lifespan', data: sortedMonths.map(month => monthlyData[month]?.acl || 0) }], // Calculated from Master table via USCLogic
+              categories: sortedMonths.map(month => month.substring(0, 3))
+            },
+            customerLifetimeValueTrend: {
+              series: [{ name: 'Customer Lifetime Value', data: sortedMonths.map(month => monthlyData[month]?.clv || 0) }], // Calculated from Master table via USCLogic
+              categories: sortedMonths.map(month => month.substring(0, 3))
+            },
+            customerMaturityIndexTrend: {
+              series: [{ name: 'Customer Maturity Index', data: sortedMonths.map(month => monthlyData[month]?.cmi || 0) }], // Calculated from Master table via USCLogic
+              categories: sortedMonths.map(month => month.substring(0, 3))
+            },
+            winrateTrend: {
+              series: [{ name: 'Winrate', data: sortedMonths.map(month => {
+                // Winrate = GGR / Deposit Amount * 100
+                const ggr = monthlyData[month]?.ggr || 0;
+                const depositAmount = monthlyData[month]?.deposit_amount || 0;
+                return depositAmount > 0 ? (ggr / depositAmount) * 100 : 0;
+              }) }],
+              categories: sortedMonths.map(month => month.substring(0, 3))
+            }
+          };
+          setSrChartData(chartData);
+        }
+        
+        console.log('✅ [USC Overview] Chart data loaded successfully (MONTHLY)');
+
+      } catch (error) {
+        console.error('Error loading chart data:', error);
+        setChartError('Failed to load chart data.');
+      }
+    };
+
+    const timeoutId = setTimeout(loadChartData, 100);
+    return () => clearTimeout(timeoutId);
+  }, [selectedYear, selectedLine]); // Only depends on year and line, not month
 
   // Calculate daily averages for ALL KPIs when KPI data changes
   useEffect(() => {
@@ -183,149 +296,6 @@ export default function USCOverviewPage() {
     calculateDailyAverages();
   }, [kpiData, selectedYear, selectedMonth]);
 
-  // Function to create Sales Revenue specific chart data using REAL monthly KPI data
-  const createSRChartData = async (filters: SlicerFilters) => {
-    try {
-      const months = await getMonthsForYear(filters.year, 'USC', filters.line);
-      
-      if (!months || months.length === 0) {
-        return null;
-      }
-      
-      const monthlyKPIData = await Promise.all(
-        months.map(async (month) => {
-          const monthFilters = {
-            year: filters.year,
-            currency: 'USC',
-            month: month,
-            line: filters.line
-          };
-          
-          return await calculateKPIs(monthFilters);
-        })
-      );
-    
-      return {
-        // Row 2 - Financial Performance Single Line Charts (REAL DATA dari KPILogic)
-        depositAmountTrend: {
-          series: [
-            {
-              name: 'Deposit Amount',
-              data: monthlyKPIData.map(kpi => kpi.depositAmount) // REAL dari calculateKPIs
-            }
-          ],
-          categories: months.map(month => month.substring(0, 3)) // Short month names
-        },
-        withdrawAmountTrend: {
-          series: [
-            {
-              name: 'Withdraw Amount', 
-              data: monthlyKPIData.map(kpi => kpi.withdrawAmount) // REAL dari calculateKPIs
-            }
-          ],
-          categories: months.map(month => month.substring(0, 3)) // Short month names
-        },
-        grossGamingRevenueTrend: {
-          series: [
-            {
-              name: 'Gross Gaming Revenue',
-              data: monthlyKPIData.map(kpi => kpi.grossGamingRevenue) // REAL dari calculateKPIs
-            }
-          ],
-          categories: months.map(month => month.substring(0, 3)) // Short month names
-        },
-        // Row 3 - Transaction Cases Charts (REAL DATA with correct chart types)
-        depositCasesBarChart: {
-          series: [
-            {
-              name: 'Deposit Cases',
-              data: monthlyKPIData.map(kpi => kpi.depositCases) // REAL dari calculateKPIs
-            }
-          ],
-          categories: months.map(month => month.substring(0, 3)) // Short month names
-        },
-        withdrawCasesLineChart: {
-          series: [
-            {
-              name: 'Withdraw Cases',
-              data: monthlyKPIData.map(kpi => kpi.withdrawCases) // REAL dari calculateKPIs
-            }
-          ],
-          categories: months.map(month => month.substring(0, 3)) // Short month names
-        },
-        netProfitTrend: {
-          series: [
-            {
-              name: 'Net Profit',
-              data: monthlyKPIData.map(kpi => kpi.netProfit) // REAL dari calculateKPIs
-            }
-          ],
-          categories: months.map(month => month.substring(0, 3)) // Short month names
-        },
-        // Row 4 - User Behavior Single Line Charts (REAL DATA)
-        avgTransactionValueTrend: {
-          series: [
-            {
-              name: 'Average Transaction Value',
-              data: monthlyKPIData.map(kpi => kpi.avgTransactionValue) // REAL dari calculateKPIs
-            }
-          ],
-          categories: months.map(month => month.substring(0, 3)) // Short month names
-        },
-        purchaseFrequencyTrend: {
-          series: [
-            {
-              name: 'Purchase Frequency',
-              data: monthlyKPIData.map(kpi => kpi.purchaseFrequency) // REAL dari calculateKPIs
-            }
-          ],
-          categories: months.map(month => month.substring(0, 3)) // Short month names
-        },
-        avgCustomerLifespanTrend: {
-          series: [
-            {
-              name: 'Average Customer Lifespan',
-              data: monthlyKPIData.map(kpi => kpi.avgCustomerLifespan) // REAL dari calculateKPIs
-            }
-          ],
-          categories: months.map(month => month.substring(0, 3)) // Short month names
-        },
-        // Row 5 - Advanced Analytics Single Line Charts (REAL DATA)
-        customerLifetimeValueTrend: {
-          series: [
-            {
-              name: 'Customer Lifetime Value',
-              data: monthlyKPIData.map(kpi => kpi.customerLifetimeValue) // REAL dari calculateKPIs
-            }
-          ],
-          categories: months.map(month => month.substring(0, 3)) // Short month names
-        },
-        customerMaturityIndexTrend: {
-          series: [
-            {
-              name: 'Customer Maturity Index',
-              data: monthlyKPIData.map(kpi => kpi.customerMaturityIndex) // REAL dari calculateKPIs
-            }
-          ],
-          categories: months.map(month => month.substring(0, 3)) // Short month names
-        },
-        winrateTrend: {
-          series: [
-            {
-              name: 'Winrate',
-              data: monthlyKPIData.map(kpi => kpi.winrate) // REAL dari calculateKPIs
-            }
-          ],
-          categories: months.map(month => month.substring(0, 3)) // Short month names
-        }
-      };
-      
-    } catch (error) {
-      console.error('Error creating chart data:', error);
-      setChartError('Failed to load chart data');
-      return null;
-    }
-  };
 
   const customSubHeader = (
     <div className="dashboard-subheader">
@@ -336,24 +306,60 @@ export default function USCOverviewPage() {
       <div className="subheader-controls">
         <div className="slicer-group">
           <label className="slicer-label">YEAR:</label>
-          <YearSlicer 
+          <select
             value={selectedYear} 
-            onChange={setSelectedYear}
-            selectedCurrency="USC"
-            years={slicerOptions?.years}
-          />
+            onChange={(e) => setSelectedYear(e.target.value)}
+            className="subheader-select"
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              backgroundColor: 'white',
+              fontSize: '14px',
+              color: '#374151',
+              cursor: 'pointer',
+              outline: 'none',
+              transition: 'all 0.2s ease',
+              minWidth: '100px',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+            }}
+          >
+            {slicerOptions?.years?.map((year: string) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
         </div>
         
         {/* Currency locked to USC - slicer hidden */}
         
         <div className="slicer-group">
           <label className="slicer-label">MONTH:</label>
-          <MonthSlicer 
+          <select
             value={selectedMonth} 
-            onChange={setSelectedMonth}
-            selectedYear={selectedYear}
-            selectedCurrency="USC"
-          />
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="subheader-select"
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              backgroundColor: 'white',
+              fontSize: '14px',
+              color: '#374151',
+              cursor: 'pointer',
+              outline: 'none',
+              transition: 'all 0.2s ease',
+              minWidth: '120px',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+            }}
+          >
+            {slicerOptions?.months?.map((month: any) => (
+              <option key={month.value} value={month.value}>
+                {month.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="slicer-group">

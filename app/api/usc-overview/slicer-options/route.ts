@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
-  const selectedCurrency = searchParams.get('selectedCurrency') // Should always be USC for this page
+  const selectedCurrency = searchParams.get('selectedCurrency')
 
   try {
     console.log('🔍 [USC Overview API] Fetching slicer options for USC currency lock')
@@ -11,122 +11,88 @@ export async function GET(request: NextRequest) {
     // Currency is LOCKED to USC for this page
     const currencies = ['USC']
 
-    // Get unique lines - filtered by USC currency (active currency lock)
-    const { data: lineData, error: lineError } = await supabase
-      .from('member_report_daily')
+    console.log('📊 [DEBUG] Querying blue_whale_usc table for lines...')
+    
+    // Get all available lines from blue_whale_usc_summary (MV) for better performance
+    const { data: allLines, error: linesError } = await supabase
+      .from('blue_whale_usc_summary')
       .select('line')
-      .eq('currency', 'USC') // Currency lock USC
+      .eq('currency', 'USC')
       .not('line', 'is', null)
-      .order('line')
 
-    if (lineError) {
-      console.error('❌ Error fetching lines for USC:', lineError)
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Database error while fetching lines',
-        message: lineError.message 
-      }, { status: 500 })
-    }
-
-    // Get unique years - filtered by USC currency (active currency lock)
-    const { data: yearData, error: yearError } = await supabase
-      .from('member_report_daily')
-      .select('year')
-      .eq('currency', 'USC') // Currency lock USC
-      .not('year', 'is', null)
-      .order('year', { ascending: false })
-
-    if (yearError) {
-      console.error('❌ Error fetching years for USC:', yearError)
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Database error while fetching years',
-        message: yearError.message 
-      }, { status: 500 })
-    }
-
-    // Get unique months - filtered by USC currency (active currency lock)
-    // Get latest year if no specific year selected
-    const latestYear = yearData?.[0]?.year || 2025
-    const { data: monthData, error: monthError } = await supabase
-      .from('member_report_daily')
-      .select('month')
-      .eq('currency', 'USC') // Currency lock USC
-      .eq('year', latestYear)
-      .not('month', 'is', null)
-      .order('month')
-
-    if (monthError) {
-      console.error('❌ Error fetching months for USC:', monthError)
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Database error while fetching months',
-        message: monthError.message 
-      }, { status: 500 })
-    }
-
-    // Process unique values with proper ALL option (no duplication)
-    const uniqueLines = Array.from(new Set(lineData?.map(row => String(row.line)).filter(Boolean) || []))
-    // Remove any existing 'ALL' or 'All' from database to avoid duplicates
-    const cleanLines = uniqueLines.filter(line => line !== 'ALL' && line !== 'All')
-    const linesWithAll = ['ALL', ...cleanLines.sort()]
-    
-    const uniqueYears = Array.from(new Set(yearData?.map(row => row.year?.toString()).filter(Boolean) || []))
-    
-    // Sort months in proper chronological order
-    const uniqueMonths = Array.from(new Set(monthData?.map(row => String(row.month)).filter(Boolean) || []))
-    const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-    const sortedMonths = uniqueMonths.sort((a, b) => monthOrder.indexOf(a) - monthOrder.indexOf(b))
-    const monthsWithAll = ['ALL', ...sortedMonths]
-
-    // Get date range for USC currency
-    const { data: minDateData } = await supabase
-      .from('member_report_daily')
-      .select('date')
-      .eq('currency', 'USC')
-      .order('date', { ascending: true })
-      .limit(1)
-
-    const { data: maxDateData } = await supabase
-      .from('member_report_daily')
-      .select('date')
-      .eq('currency', 'USC')
-      .order('date', { ascending: false })
-      .limit(1)
-
-    const dateRange = {
-      min: minDateData?.[0]?.date || '2024-01-01',
-      max: maxDateData?.[0]?.date || '2025-12-31'
-    }
-
-    const slicerOptions = {
-      currencies, // Locked to USC
-      lines: linesWithAll,
-      years: uniqueYears,
-      months: monthsWithAll.map(month => ({
-        value: month,
-        label: month === 'ALL' ? 'ALL' : month
-      })),
-      dateRange
-    }
-
-    console.log('✅ [USC Overview API] Slicer options loaded with USC currency lock:', {
-      currencies: currencies.length,
-      lines: linesWithAll.length,
-      years: uniqueYears.length,
-      months: monthsWithAll.length
+    console.log('📊 [DEBUG] Lines query result:', { 
+      dataCount: allLines?.length, 
+      error: linesError,
+      sampleData: allLines?.slice(0, 3)
     })
 
-    // Get latest record to auto-set default year and month to most recent data
+    if (linesError) {
+      console.error('❌ Error fetching lines:', linesError)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Database error',
+        message: linesError.message 
+      }, { status: 500 })
+    }
+
+    const uniqueLines = Array.from(new Set(allLines?.map(row => row.line).filter(Boolean) || []))
+    const cleanLines = uniqueLines.filter(line => line !== 'ALL' && line !== 'All')
+    const linesWithAll = ['ALL', ...cleanLines.sort()]
+
+    // Get all available years from blue_whale_usc_summary (MV) for better performance
+    const { data: allYears, error: yearsError } = await supabase
+      .from('blue_whale_usc_summary')
+      .select('year')
+      .eq('currency', 'USC')
+      .not('year', 'is', null)
+
+    if (yearsError) {
+      console.error('❌ Error fetching years:', yearsError)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Database error',
+        message: yearsError.message 
+      }, { status: 500 })
+    }
+
+    const uniqueYears = Array.from(new Set(allYears?.map(row => row.year?.toString()).filter(Boolean) || []))
+    const sortedYears = uniqueYears.sort((a, b) => parseInt(b || '0') - parseInt(a || '0'))
+
+    // Get months for latest year from blue_whale_usc_summary (MV) for better performance
+    const latestYear = sortedYears[0] || '2025'
+    const { data: allMonths, error: monthsError } = await supabase
+      .from('blue_whale_usc_summary')
+      .select('month')
+      .eq('currency', 'USC')
+      .eq('year', parseInt(latestYear))
+      .not('month', 'is', null)
+
+    if (monthsError) {
+      console.error('❌ Error fetching months:', monthsError)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Database error',
+        message: monthsError.message 
+      }, { status: 500 })
+    }
+
+    const uniqueMonths = Array.from(new Set(allMonths?.map(row => row.month).filter(Boolean) || []))
+    const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 
+                       'July', 'August', 'September', 'October', 'November', 'December']
+    const sortedMonths = uniqueMonths.sort((a, b) => monthOrder.indexOf(String(a)) - monthOrder.indexOf(String(b)))
+    const monthsWithAll = ['ALL', ...sortedMonths]
+
+
+    // Get latest record untuk default from blue_whale_usc_summary (MV) for better performance
     const { data: latestRecord } = await supabase
-      .from('member_report_daily')
+      .from('blue_whale_usc_summary')
       .select('year, month, date')
       .eq('currency', 'USC')
       .order('date', { ascending: false })
       .limit(1)
 
-    let defaultYear = uniqueYears[0] || '2025'
-    let defaultMonth = 'ALL'
+    let defaultYear = sortedYears[0] || '2025'
+    let defaultMonth = sortedMonths[0] || 'ALL'
     
     if (latestRecord && latestRecord.length > 0) {
       const latest = latestRecord[0]
@@ -134,9 +100,18 @@ export async function GET(request: NextRequest) {
       defaultMonth = String(latest.month) || defaultMonth
     }
 
-    // Add defaults for auto-setting slicers to latest data
-    const slicerOptionsWithDefaults = {
-      ...slicerOptions,
+    const slicerOptions = {
+      currencies, // Locked to USC
+      lines: linesWithAll,
+      years: sortedYears,
+      months: monthsWithAll.map(month => ({
+        value: month,
+        label: month === 'ALL' ? 'ALL' : month
+      })),
+      dateRange: {
+        min: '2024-01-01',
+        max: '2025-12-31'
+      },
       defaults: {
         currency: 'USC',
         line: 'ALL',
@@ -145,9 +120,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    console.log('✅ [USC Overview API] Slicer options loaded with USC currency lock:', {
+      currencies: currencies.length,
+      lines: linesWithAll.length,
+      years: sortedYears.length,
+      months: monthsWithAll.length
+    })
+
     return NextResponse.json({
       success: true,
-      data: slicerOptionsWithDefaults
+      data: slicerOptions
     })
 
   } catch (error) {

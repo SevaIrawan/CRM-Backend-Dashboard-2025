@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { getUSCPrecisionKPIs } from '@/lib/USCPrecisionKPIs'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -20,95 +21,66 @@ export async function GET(request: NextRequest) {
       currency, line, year, month, startDate, endDate, filterMode, page, limit 
     })
 
-    // Build base query - USC currency is LOCKED
-    let baseQuery = supabase.from('member_report_daily').select('*')
-      .eq('currency', 'USC') // Currency LOCKED to USC
 
-    // Add filters based on slicer selections (dependent on USC currency)
+    // Use MV for aggregated data and detail table for precision KPIs (hybrid approach)
+    const mvFilters = {
+      currency: 'USC' as const,
+      line,
+      year,
+      month: month === 'ALL' ? null : month, // Allow ALL months when month=ALL
+      startDate,
+      endDate,
+      filterMode: (filterMode === 'month' || filterMode === 'daterange') ? filterMode : null
+    }
+
+    // Get summary data from MV (MV already filtered by currency USC)
+    let summaryQuery = supabase
+      .from('blue_whale_usc_summary')
+      .select('*')
+
     if (line && line !== 'ALL') {
-      baseQuery = baseQuery.eq('line', line)
+      summaryQuery = summaryQuery.eq('line', line)
     }
-
-    if (year && year !== 'ALL') {
-      baseQuery = baseQuery.eq('year', parseInt(year))
-    }
-
-    // Handle month vs date range filtering
-    if (filterMode === 'month' && month && month !== 'ALL') {
-      baseQuery = baseQuery.eq('month', month)
-    } else if (filterMode === 'daterange' && startDate && endDate) {
-      baseQuery = baseQuery.gte('date', startDate).lte('date', endDate)
-    }
-
-    // Get total count first (separate query with same filters)
-    const countQuery = supabase.from('member_report_daily')
-      .select('*', { count: 'exact', head: true })
-      .eq('currency', 'USC') // Currency LOCKED to USC
     
-    // Apply same filters to count query
-    if (line && line !== 'ALL') {
-      countQuery.eq('line', line)
-    }
-
     if (year && year !== 'ALL') {
-      countQuery.eq('year', parseInt(year))
+      summaryQuery = summaryQuery.eq('year', parseInt(year))
+    }
+    
+    if (month && month !== 'ALL') {
+      summaryQuery = summaryQuery.eq('month', month)
     }
 
-    if (filterMode === 'month' && month && month !== 'ALL') {
-      countQuery.eq('month', month)
-    } else if (filterMode === 'daterange' && startDate && endDate) {
-      countQuery.gte('date', startDate).lte('date', endDate)
-    }
+    summaryQuery = summaryQuery.order('date', { ascending: false })
 
-    const { count, error: countError } = await countQuery
+    const { data: summaryData, error: summaryError } = await summaryQuery
 
-    if (countError) {
-      console.error('❌ Error getting count for USC Overview:', countError)
+    if (summaryError) {
+      console.error('❌ [USC Overview API] Error fetching summary data:', summaryError)
       return NextResponse.json({ 
         success: false, 
-        error: 'Database error while counting records',
-        message: countError.message 
+        error: 'Database error',
+        message: summaryError.message 
       }, { status: 500 })
     }
 
-    const totalRecords = count || 0
-    const totalPages = Math.ceil(totalRecords / limit)
+    // Get precision KPIs from detail table
+    const precision = await getUSCPrecisionKPIs({
+      line,
+      year,
+      month,
+      startDate,
+      endDate,
+      filterMode: (filterMode === 'month' || filterMode === 'daterange') ? filterMode : null
+    })
 
-    // Add pagination to main query
-    const offset = (page - 1) * limit
-    baseQuery = baseQuery.range(offset, offset + limit - 1)
-
-    // Order by date for consistent results
-    baseQuery = baseQuery.order('date', { ascending: false })
-
-    const { data, error } = await baseQuery
-
-    if (error) {
-      console.error('❌ Error fetching USC Overview data:', error)
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Database error while fetching data',
-        message: error.message 
-      }, { status: 500 })
-    }
-
-    const pagination = {
-      currentPage: page,
-      totalPages,
-      totalRecords,
-      recordsPerPage: limit,
-      hasNextPage: page < totalPages,
-      hasPrevPage: page > 1
-    }
-
-    console.log(`✅ [USC Overview API] Loaded ${data?.length || 0} records (Page ${page}/${totalPages}) with USC currency lock`)
+    console.log(`✅ [USC Overview API] Loaded ${summaryData?.length || 0} summary records + precision KPIs`)
 
     return NextResponse.json({
       success: true,
-      data: data || [],
-      pagination,
+      data: summaryData || [],
+      precisionKPIs: precision,
       filters: {
-        currency: 'USC', // Always USC for this page
+        currency: 'USC',
         line,
         year,
         month,

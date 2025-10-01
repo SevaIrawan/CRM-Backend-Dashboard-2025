@@ -47,7 +47,7 @@ export default function Sidebar({
     // Auto refresh setiap 30 detik
     const interval = setInterval(fetchLastUpdate, 30000)
     return () => clearInterval(interval)
-  }, [])
+  }, [pathname]) // Re-fetch when page changes (USC vs non-USC)
 
   // STANDARD SUB MENU RULES:
   // 1. Auto show sub menu ketika user berada di halaman sub menu
@@ -67,9 +67,15 @@ export default function Sidebar({
     try {
       setIsLoading(true)
       
-      // Mengambil MAX(date) dari kolom member_report_daily
+      // Determine table based on current page
+      const isUSCPage = pathname.startsWith('/usc/')
+      const tableName = isUSCPage ? 'blue_whale_usc' : 'member_report_daily'
+      
+      console.log(`🔍 [Sidebar] Fetching last update from ${tableName} for path: ${pathname}`)
+      
+      // Mengambil MAX(date) dari table yang sesuai
       const { data, error } = await supabase
-        .from('member_report_daily')
+        .from(tableName)
         .select('date')
         .order('date', { ascending: false })
         .limit(1)
@@ -141,7 +147,9 @@ export default function Sidebar({
           setIsLoading(false)
         }
       } else {
-        console.log('⚠️ Sidebar - No data found in member_report_daily')
+        const isUSCPage = pathname.startsWith('/usc/')
+        const tableName = isUSCPage ? 'blue_whale_usc' : 'member_report_daily'
+        console.log(`⚠️ Sidebar - No data found in ${tableName}`)
         setLastUpdate('No Data')
         setIsConnected(false)
         setIsLoading(false)

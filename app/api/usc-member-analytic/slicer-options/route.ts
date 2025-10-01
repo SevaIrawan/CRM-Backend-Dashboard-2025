@@ -8,55 +8,55 @@ export async function GET(request: NextRequest) {
     // Currency is LOCKED to USC for Member-Analytic page
     const currencies = ['USC']
 
-    // Get unique lines - filtered by USC currency (active currency lock)
+    // Get unique lines from MV table (faster)
     const { data: lineData, error: lineError } = await supabase
-      .from('member_report_daily')
+      .from('blue_whale_usc_summary')
       .select('line')
-      .eq('currency', 'USC') // Currency lock USC
+      .eq('currency', 'USC')
       .not('line', 'is', null)
       .order('line')
 
     if (lineError) {
-      console.error('❌ Error fetching lines for USC Member-Analytic:', lineError)
+      console.error('❌ Error fetching lines:', lineError)
       return NextResponse.json({ 
         success: false, 
-        error: 'Database error while fetching lines',
+        error: 'Database error',
         message: lineError.message 
       }, { status: 500 })
     }
 
-    // Get unique years - filtered by USC currency (active currency lock)
+    // Get unique years from MV table (faster)
     const { data: yearData, error: yearError } = await supabase
-      .from('member_report_daily')
+      .from('blue_whale_usc_summary')
       .select('year')
-      .eq('currency', 'USC') // Currency lock USC
+      .eq('currency', 'USC')
       .not('year', 'is', null)
       .order('year', { ascending: false })
 
     if (yearError) {
-      console.error('❌ Error fetching years for USC Member-Analytic:', yearError)
+      console.error('❌ Error fetching years:', yearError)
       return NextResponse.json({ 
         success: false, 
-        error: 'Database error while fetching years',
+        error: 'Database error',
         message: yearError.message 
       }, { status: 500 })
     }
 
-    // Get unique months - filtered by USC currency (active currency lock)
+    // Get unique months from MV table (faster)
     const latestYear = yearData?.[0]?.year || 2025
     const { data: monthData, error: monthError } = await supabase
-      .from('member_report_daily')
+      .from('blue_whale_usc_summary')
       .select('month')
-      .eq('currency', 'USC') // Currency lock USC
+      .eq('currency', 'USC')
       .eq('year', latestYear)
       .not('month', 'is', null)
       .order('month')
 
     if (monthError) {
-      console.error('❌ Error fetching months for USC Member-Analytic:', monthError)
+      console.error('❌ Error fetching months:', monthError)
       return NextResponse.json({ 
         success: false, 
-        error: 'Database error while fetching months',
+        error: 'Database error',
         message: monthError.message 
       }, { status: 500 })
     }
@@ -75,18 +75,16 @@ export async function GET(request: NextRequest) {
     const sortedMonths = uniqueMonths.sort((a, b) => monthOrder.indexOf(a) - monthOrder.indexOf(b))
     const monthsWithAll = ['ALL', ...sortedMonths]
 
-    // Get date range for USC currency
+    // Get date range for USC currency from blue_whale_usc_summary
     const { data: minDateData } = await supabase
-      .from('member_report_daily')
+      .from('blue_whale_usc_summary')
       .select('date')
-      .eq('currency', 'USC')
       .order('date', { ascending: true })
       .limit(1)
 
     const { data: maxDateData } = await supabase
-      .from('member_report_daily')
+      .from('blue_whale_usc_summary')
       .select('date')
-      .eq('currency', 'USC')
       .order('date', { ascending: false })
       .limit(1)
 
@@ -115,7 +113,7 @@ export async function GET(request: NextRequest) {
 
     // Get latest record to auto-set default year and month to most recent data
     const { data: latestRecord } = await supabase
-      .from('member_report_daily')
+      .from('blue_whale_usc_summary')
       .select('year, month, date')
       .eq('currency', 'USC')
       .order('date', { ascending: false })

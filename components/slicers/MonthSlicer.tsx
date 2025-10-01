@@ -27,7 +27,6 @@ export default function MonthSlicer({ value, onChange, className = '', selectedY
         setLoading(true)
         console.log('📅 [MonthSlicer] Fetching months for year using KPILogic PostgreSQL pattern:', selectedYear)
         
-        // Use centralized KPILogic function (PostgreSQL pattern)
         const months = await getMonthsForYear(selectedYear, selectedCurrency)
         setAvailableMonths(months)
         

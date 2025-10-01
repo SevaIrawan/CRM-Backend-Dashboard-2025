@@ -11,7 +11,7 @@ interface YearSlicerProps {
   selectedCurrency?: string
 }
 
-export default function YearSlicer({ value, onChange, className = '', years: propYears, selectedCurrency = 'USC' }: YearSlicerProps) {
+export default function YearSlicer({ value, onChange, className = '', years: propYears, selectedCurrency = 'MYR' }: YearSlicerProps) {
   const [years, setYears] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
 
