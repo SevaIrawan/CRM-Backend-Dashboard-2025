@@ -105,8 +105,9 @@ export async function POST(request: NextRequest) {
     const pureLastDepositMap = new Map()
     allDates?.forEach(row => {
       const current = pureLastDepositMap.get(row.userkey)
-      if (!current || row.date > current) {
-        pureLastDepositMap.set(row.userkey, row.date)
+      const rowDate = String(row.date)
+      if (!current || rowDate > current) {
+        pureLastDepositMap.set(row.userkey, rowDate)
       }
     })
 
