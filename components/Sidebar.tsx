@@ -202,7 +202,9 @@ export default function Sidebar({
         submenu: [
           { title: 'Overview USC', path: '/usc/overview' },
           { title: 'Member Analytic USC', path: '/usc/member-analytic' },
-          { title: 'Churn Member USC', path: '/usc/churn-member' }
+          { title: 'Customer Retention USC', path: '/usc/customer-retention' },
+          { title: 'Churn Member USC', path: '/usc/churn-member' },
+          { title: 'Member Report USC', path: '/usc/member-report' }
         ]
       },
       {
