@@ -156,14 +156,6 @@ export default function USCMemberAnalyticPage() {
         
         console.log('✅ [USC Member Analytic] KPI data loaded successfully');
         
-        // ✅ FIXED: Chart filters harus sama dengan KPI filters untuk konsistensi
-        const chartFilters: SlicerFilters = {
-          year: selectedYear,
-          month: selectedMonth,
-          currency: 'USC',
-          line: selectedLine === 'ALL' ? undefined : selectedLine
-        };
-        
         // Get chart data from USC Member Analytic Chart API endpoint
         const chartResponse = await fetch(`/api/usc-member-analytic/chart-data?line=${selectedLine}&year=${selectedYear}`);
         const chartResult = await chartResponse.json();
