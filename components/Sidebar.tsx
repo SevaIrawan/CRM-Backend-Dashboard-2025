@@ -201,7 +201,8 @@ export default function Sidebar({
         permission: 'usc',
         submenu: [
           { title: 'Overview USC', path: '/usc/overview' },
-          { title: 'Member Analytic USC', path: '/usc/member-analytic' }
+          { title: 'Member Analytic USC', path: '/usc/member-analytic' },
+          { title: 'Churn Member USC', path: '/usc/churn-member' }
         ]
       },
       {
