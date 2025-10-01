@@ -11,14 +11,15 @@ export async function GET(request: NextRequest) {
     // Currency is LOCKED to USC for this page
     const currencies = ['USC']
 
-    console.log('📊 [DEBUG] Querying blue_whale_usc table for lines...')
+    console.log('📊 [DEBUG] Querying blue_whale_usc_summary (MV) for lines...')
     
-    // Get all available lines from blue_whale_usc_summary (MV) for better performance
+    // Get DISTINCT lines from MV with limit for performance
     const { data: allLines, error: linesError } = await supabase
       .from('blue_whale_usc_summary')
       .select('line')
       .eq('currency', 'USC')
       .not('line', 'is', null)
+      .limit(1000)
 
     console.log('📊 [DEBUG] Lines query result:', { 
       dataCount: allLines?.length, 
@@ -39,12 +40,13 @@ export async function GET(request: NextRequest) {
     const cleanLines = uniqueLines.filter(line => line !== 'ALL' && line !== 'All')
     const linesWithAll = ['ALL', ...cleanLines.sort()]
 
-    // Get all available years from blue_whale_usc_summary (MV) for better performance
+    // Get years from MV with limit for performance
     const { data: allYears, error: yearsError } = await supabase
       .from('blue_whale_usc_summary')
       .select('year')
       .eq('currency', 'USC')
       .not('year', 'is', null)
+      .limit(100)
 
     if (yearsError) {
       console.error('❌ Error fetching years:', yearsError)
@@ -58,7 +60,7 @@ export async function GET(request: NextRequest) {
     const uniqueYears = Array.from(new Set(allYears?.map(row => row.year?.toString()).filter(Boolean) || []))
     const sortedYears = uniqueYears.sort((a, b) => parseInt(b || '0') - parseInt(a || '0'))
 
-    // Get months for latest year from blue_whale_usc_summary (MV) for better performance
+    // Get months for latest year from MV with limit for performance
     const latestYear = sortedYears[0] || '2025'
     const { data: allMonths, error: monthsError } = await supabase
       .from('blue_whale_usc_summary')
@@ -66,6 +68,7 @@ export async function GET(request: NextRequest) {
       .eq('currency', 'USC')
       .eq('year', parseInt(latestYear))
       .not('month', 'is', null)
+      .limit(100)
 
     if (monthsError) {
       console.error('❌ Error fetching months:', monthsError)
