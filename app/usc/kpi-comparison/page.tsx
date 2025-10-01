@@ -305,16 +305,16 @@ export default function KPIComparisonPage() {
                 <thead className="sticky top-0 bg-[#1e293b] text-white" style={{ zIndex: 10 }}>
                   <tr>
                     <th className="px-4 py-3 text-left font-semibold border border-gray-300">Metrics</th>
-                    <th className="px-4 py-3 text-right font-semibold border border-gray-300">
+                    <th className="px-4 py-3 text-left font-semibold border border-gray-300">
                       Period A<br />
                       <span className="text-xs font-normal">({periodAStart} to {periodAEnd})</span>
                     </th>
-                    <th className="px-4 py-3 text-right font-semibold border border-gray-300">
+                    <th className="px-4 py-3 text-left font-semibold border border-gray-300">
                       Period B<br />
                       <span className="text-xs font-normal">({periodBStart} to {periodBEnd})</span>
                     </th>
-                    <th className="px-4 py-3 text-right font-semibold border border-gray-300">Compare (Diff)</th>
-                    <th className="px-4 py-3 text-right font-semibold border border-gray-300">Compare (%)</th>
+                    <th className="px-4 py-3 text-left font-semibold border border-gray-300">Compare (Diff)</th>
+                    <th className="px-4 py-3 text-left font-semibold border border-gray-300">Compare (%)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -332,14 +332,15 @@ export default function KPIComparisonPage() {
                       <td className="px-4 py-3 text-right border border-gray-300">
                         {formatValue(row.periodB, row.type)}
                       </td>
-                      <td className="px-4 py-3 text-right border border-gray-300">
+                      <td 
+                        className="px-4 py-3 text-right border border-gray-300 font-semibold"
+                        style={{ color: row.color === 'green' ? '#16a34a' : row.color === 'red' ? '#dc2626' : '#374151' }}
+                      >
                         {formatValue(row.difference, row.type)}
                       </td>
                       <td 
                         className="px-4 py-3 text-right border border-gray-300 font-semibold"
-                        style={{ 
-                          color: row.color === 'green' ? '#16a34a' : row.color === 'red' ? '#dc2626' : '#6b7280'
-                        }}
+                        style={{ color: row.color === 'green' ? '#16a34a' : row.color === 'red' ? '#dc2626' : '#6b7280' }}
                       >
                         {row.percentageDisplay}
                       </td>

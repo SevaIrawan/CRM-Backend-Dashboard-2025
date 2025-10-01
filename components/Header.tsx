@@ -66,6 +66,8 @@ export default function Header({
         return 'USC Overview'
       case '/usc/member-analytic':
         return 'Member Analytic USC'
+      case '/usc/kpi-comparison':
+        return 'KPI Comparison USC'
       case '/usc/churn-member':
         return 'USC Churn Member'
       case '/usc/retention-day':

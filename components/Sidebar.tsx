@@ -201,8 +201,8 @@ export default function Sidebar({
         permission: 'usc',
         submenu: [
           { title: 'Overview USC', path: '/usc/overview' },
-          { title: 'KPI Comparison', path: '/usc/kpi-comparison' },
           { title: 'Member Analytic USC', path: '/usc/member-analytic' },
+          { title: 'KPI Comparison', path: '/usc/kpi-comparison' },
           { title: 'Customer Retention USC', path: '/usc/customer-retention' },
           { title: 'Churn Member USC', path: '/usc/churn-member' },
           { title: 'Member Report USC', path: '/usc/member-report' }
