@@ -158,8 +158,8 @@ async function getUSCLastUpdateDate(year: string, month: string): Promise<number
       return getDaysInMonth(year, month)
     }
     
-    if (data && data.length > 0) {
-      const lastDate = new Date(data[0].date)
+    if (data && data.length > 0 && data[0].date) {
+      const lastDate = new Date(String(data[0].date))
       const dayOfMonth = lastDate.getDate()
       console.log(`✅ [USC Daily Average] Last update date: ${dayOfMonth}`)
       return dayOfMonth
