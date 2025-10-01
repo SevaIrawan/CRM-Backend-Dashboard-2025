@@ -251,31 +251,6 @@ export default function USCOverviewPage() {
     return () => clearTimeout(timeoutId);
   }, [selectedYear, selectedLine]); // Only depends on year and line, not month
 
-  // Calculate daily averages for ALL KPIs when KPI data changes
-  useEffect(() => {
-    const calculateDailyAverages = async () => {
-      if (kpiData && selectedYear && selectedMonth) {
-        try {
-          const result = await getAllKPIsWithDailyAverage(kpiData, selectedYear, selectedMonth);
-          
-          setDailyAverages({
-            depositAmount: result.dailyAverage.depositAmount || 0,
-            withdrawAmount: result.dailyAverage.withdrawAmount || 0,
-            grossGamingRevenue: result.dailyAverage.grossGamingRevenue || 0,
-            activeMember: result.dailyAverage.activeMember || 0,
-            purchaseFrequency: result.dailyAverage.purchaseFrequency || 0,
-            customerMaturityIndex: result.dailyAverage.customerMaturityIndex || 0
-          });
-          
-        } catch (error) {
-          // Silent error handling
-        }
-      }
-    };
-
-    calculateDailyAverages();
-  }, [kpiData, selectedYear, selectedMonth]);
-
 
   const customSubHeader = (
     <div className="dashboard-subheader">
