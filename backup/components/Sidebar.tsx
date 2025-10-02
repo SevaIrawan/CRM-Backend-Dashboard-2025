@@ -203,7 +203,10 @@ export default function Sidebar({
           { title: 'Overview USC', path: '/usc/overview' },
           { title: 'Member Analytic USC', path: '/usc/member-analytic' },
           { title: 'Brand Comparison USC', path: '/usc/brand-comparison' },
-          { title: 'KPI Comparison', path: '/usc/kpi-comparison' }
+          { title: 'KPI Comparison', path: '/usc/kpi-comparison' },
+          { title: 'Customer Retention USC', path: '/usc/customer-retention' },
+          { title: 'Churn Member USC', path: '/usc/churn-member' },
+          { title: 'Member Report USC', path: '/usc/member-report' }
         ]
       },
       {
