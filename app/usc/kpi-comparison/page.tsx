@@ -155,6 +155,41 @@ export default function KPIComparisonPage() {
     }
   };
 
+  // Export CSV function
+  const handleExportCSV = () => {
+    if (!comparisonData?.comparisonData?.length) return;
+    
+    const csvHeaders = [
+      'Metrics',
+      'Period A',
+      'Period B', 
+      'Compare (Diff)',
+      'Compare (%)'
+    ];
+    
+    const csvRows = comparisonData.comparisonData.map(row => [
+      row.metric,
+      formatValue(row.periodA, row.type),
+      formatValue(row.periodB, row.type),
+      formatValue(row.difference, row.type),
+      row.percentageDisplay
+    ]);
+    
+    const csvContent = [csvHeaders, ...csvRows]
+      .map(row => row.map(cell => `"${cell}"`).join(','))
+      .join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `kpi-comparison-usc-${selectedLine}-${periodAStart}-to-${periodBEnd}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // SubHeader with slicers (SAMA SEPERTI PAGE LAIN)
   const customSubHeader = (
     <div className="dashboard-subheader">
@@ -344,6 +379,27 @@ export default function KPIComparisonPage() {
               </option>
             ))}
           </select>
+        </div>
+
+        {/* Export Button */}
+        <div className="slicer-group">
+          <button
+            onClick={handleExportCSV}
+            className="subheader-select"
+            style={{ 
+              background: '#16a34a', 
+              color: 'white', 
+              border: '1px solid #16a34a',
+              cursor: 'pointer',
+              minWidth: '120px',
+              padding: '8px 12px',
+              borderRadius: '8px',
+              fontSize: '14px',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+            }}
+          >
+            Export CSV
+          </button>
         </div>
       </div>
     </div>

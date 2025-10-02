@@ -92,6 +92,40 @@ export default function BrandComparisonPage() {
   const formatDec = (v:number) => v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   const formatPct = (v:number) => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`
 
+  const handleExportCSV = () => {
+    if (!rows.length) return
+    
+    const csvHeaders = [
+      'Brand/Line',
+      'Period A - Count', 'Period A - ATV', 'Period A - PF', 'Period A - DC', 'Period A - DA', 'Period A - GGR', 'Period A - Winrate', 'Period A - GGR User', 'Period A - DA User',
+      'Period B - Count', 'Period B - ATV', 'Period B - PF', 'Period B - DC', 'Period B - DA', 'Period B - GGR', 'Period B - Winrate', 'Period B - GGR User', 'Period B - DA User',
+      'Compare (Diff) - Count', 'Compare (Diff) - ATV', 'Compare (Diff) - PF', 'Compare (Diff) - DC', 'Compare (Diff) - DA', 'Compare (Diff) - GGR', 'Compare (Diff) - Winrate', 'Compare (Diff) - GGR User', 'Compare (Diff) - DA User',
+      'Compare (%) - Count', 'Compare (%) - ATV', 'Compare (%) - PF', 'Compare (%) - DC', 'Compare (%) - DA', 'Compare (%) - GGR', 'Compare (%) - Winrate', 'Compare (%) - GGR User', 'Compare (%) - DA User'
+    ]
+    
+    const csvRows = rows.map(row => [
+      row.brand,
+      formatInt(row.periodA.activeMember), formatAmt(row.periodA.avgTransactionValue), formatDec(row.periodA.purchaseFrequency), formatInt(row.periodA.depositCases), formatAmt(row.periodA.depositAmount), formatAmt(row.periodA.ggr), formatDec(row.periodA.winrate), formatAmt(row.periodA.ggrPerUser), formatAmt(row.periodA.depositAmountPerUser),
+      formatInt(row.periodB.activeMember), formatAmt(row.periodB.avgTransactionValue), formatDec(row.periodB.purchaseFrequency), formatInt(row.periodB.depositCases), formatAmt(row.periodB.depositAmount), formatAmt(row.periodB.ggr), formatDec(row.periodB.winrate), formatAmt(row.periodB.ggrPerUser), formatAmt(row.periodB.depositAmountPerUser),
+      formatInt(row.diff.activeMember), formatAmt(row.diff.avgTransactionValue), formatDec(row.diff.purchaseFrequency), formatInt(row.diff.depositCases), formatAmt(row.diff.depositAmount), formatAmt(row.diff.ggr), formatAmt(row.diff.winrate), formatAmt(row.diff.ggrPerUser), formatAmt(row.diff.depositAmountPerUser),
+      formatPct(row.percent.activeMember), formatPct(row.percent.avgTransactionValue), formatPct(row.percent.purchaseFrequency), formatPct(row.percent.depositCases), formatPct(row.percent.depositAmount), formatPct(row.percent.ggr), formatPct(row.percent.winrate), formatPct(row.percent.ggrPerUser), formatPct(row.percent.depositAmountPerUser)
+    ])
+    
+    const csvContent = [csvHeaders, ...csvRows]
+      .map(row => row.map(cell => `"${cell}"`).join(','))
+      .join('\n')
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `brand-comparison-usc-${periodAStart}-to-${periodBEnd}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   const customSubHeader = (
     <div className="dashboard-subheader">
       <div className="subheader-title" />
@@ -135,6 +169,22 @@ export default function BrandComparisonPage() {
               </div>
             </div>
           )}
+        </div>
+        {/* Export Button */}
+        <div className="slicer-group">
+          <button
+            onClick={handleExportCSV}
+            className="subheader-select"
+            style={{ 
+              background: '#16a34a', 
+              color: 'white', 
+              border: '1px solid #16a34a',
+              cursor: 'pointer',
+              minWidth: '120px'
+            }}
+          >
+            Export CSV
+          </button>
         </div>
       </div>
     </div>
@@ -196,14 +246,14 @@ export default function BrandComparisonPage() {
               <table className="w-full border-collapse">
                 <thead className="sticky top-0 bg-[#1e293b] text-white" style={{ zIndex: 10 }}>
                   <tr>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300">Brand/Line</th>
+                    <th className="px-4 py-3 text-left font-semibold border border-gray-300 sticky left-0 bg-[#1e293b] z-20" style={{ boxShadow: '2px 0 5px rgba(0,0,0,0.1)' }}>Brand/Line</th>
                     <th colSpan={9} className="px-4 py-3 text-left font-semibold border border-gray-300">Period A ({periodAStart} to {periodAEnd})</th>
                     <th colSpan={9} className="px-4 py-3 text-left font-semibold border border-gray-300">Period B ({periodBStart} to {periodBEnd})</th>
                     <th colSpan={9} className="px-4 py-3 text-left font-semibold border border-gray-300">Compare (Diff)</th>
                     <th colSpan={9} className="px-4 py-3 text-left font-semibold border border-gray-300">Compare (%)</th>
                   </tr>
                   <tr>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300">&nbsp;</th>
+                    <th className="px-4 py-3 text-left font-semibold border border-gray-300 sticky left-0 bg-[#1e293b] z-20" style={{ boxShadow: '2px 0 5px rgba(0,0,0,0.1)' }}>&nbsp;</th>
                     {/* 9 A */}
                     <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>Count</th>
                     <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>ATV</th>
@@ -248,8 +298,8 @@ export default function BrandComparisonPage() {
                 </thead>
                 <tbody>
                   {rows.map((r, idx) => (
-                    <tr key={r.brand} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 cursor-pointer transition-colors`}>
-                      <td className="px-4 py-3 text-left border border-gray-300 font-medium">{r.brand}</td>
+                    <tr key={r.brand} className={`group ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 cursor-pointer transition-colors`}>
+                      <td className="px-4 py-3 text-left border border-gray-300 font-medium sticky left-0 z-20 text-white bg-[#1e293b]" style={{ boxShadow: '2px 0 5px rgba(0,0,0,0.1)' }}>{r.brand}</td>
                       {/* A */}
                       <td className="px-4 py-3 text-right border border-gray-300">{formatInt(r.periodA.activeMember)}</td>
                       <td className="px-4 py-3 text-right border border-gray-300">{formatAmt(r.periodA.avgTransactionValue)}</td>
