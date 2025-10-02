@@ -16,11 +16,15 @@ export interface UserRole {
 }
 
 export const USER_ROLES: { [key: string]: UserRole } = {
+  // Admin = All Access All Page
   'admin': {
     id: 'admin',
     name: 'admin',
     displayName: 'Administrator',
     permissions: [
+      'dashboard',
+      'myr',
+      'sgd',
       'usc',
       'transaction',
       'supabase',
@@ -29,36 +33,82 @@ export const USER_ROLES: { [key: string]: UserRole } = {
     canAccessUserManagement: true,
     isReadOnly: false
   },
+  // Executive = Level/Role Execute = Limited Access > Dashboard, MYR, SGD, USC
+  'executive': {
+    id: 'executive',
+    name: 'executive',
+    displayName: 'Executive',
+    permissions: [
+      'dashboard',
+      'myr',
+      'sgd',
+      'usc'
+    ],
+    canAccessUserManagement: false,
+    isReadOnly: true
+  },
+  // Manager MYR = Level/Role Manager = Limited Access > MYR
+  'manager_myr': {
+    id: 'manager_myr',
+    name: 'manager_myr',
+    displayName: 'Manager MYR',
+    permissions: [
+      'myr'
+    ],
+    canAccessUserManagement: false,
+    isReadOnly: true
+  },
+  // Manager SGD = Level/Role Manager = Limited Access > SGD
+  'manager_sgd': {
+    id: 'manager_sgd',
+    name: 'manager_sgd',
+    displayName: 'Manager SGD',
+    permissions: [
+      'sgd'
+    ],
+    canAccessUserManagement: false,
+    isReadOnly: true
+  },
+  // Manager USC = Level/Role Manager = Limited Access > USC
   'manager_usc': {
     id: 'manager_usc',
     name: 'manager_usc',
-    displayName: 'USC Manager',
+    displayName: 'Manager USC',
     permissions: [
-      'usc',
-      'transaction'
+      'usc'
     ],
     canAccessUserManagement: false,
     isReadOnly: true
   },
-  'usc_dep': {
-    id: 'usc_dep',
-    name: 'usc_dep',
-    displayName: 'USC Department',
+  // SQ_MYR = Level/Role User = Limited Access > MYR
+  'sq_myr': {
+    id: 'sq_myr',
+    name: 'sq_myr',
+    displayName: 'SQ MYR',
     permissions: [
-      'usc',
-      'transaction'
+      'myr'
     ],
     canAccessUserManagement: false,
     isReadOnly: true
   },
-  'user': {
-    id: 'user',
-    name: 'user',
-    displayName: 'User',
+  // SQ_SGD = Level/Role User = Limited Access > SGD
+  'sq_sgd': {
+    id: 'sq_sgd',
+    name: 'sq_sgd',
+    displayName: 'SQ SGD',
     permissions: [
-      'usc',
-      'transaction',
-      'supabase'
+      'sgd'
+    ],
+    canAccessUserManagement: false,
+    isReadOnly: true
+  },
+  // SQ_USC = Level/Role User = Limited Access > USC
+  'sq_usc': {
+    id: 'sq_usc',
+    name: 'sq_usc',
+    displayName: 'SQ USC',
+    permissions: [
+      'usc'
     ],
     canAccessUserManagement: false,
     isReadOnly: true
@@ -84,9 +134,14 @@ export const hasPermission = (userRole: string, pagePath: string): boolean => {
 
   // Map page paths to permission names
   const pathToPermission: { [key: string]: string } = {
+    '/dashboard': 'dashboard',
+    '/myr': 'myr',
+    '/sgd': 'sgd',
     '/usc': 'usc',
     '/usc/overview': 'usc',
     '/usc/member-analytic': 'usc',
+    '/usc/brand-comparison': 'usc',
+    '/usc/kpi-comparison': 'usc',
     '/transaction': 'transaction',
     '/transaction/adjustment': 'transaction',
     '/transaction/deposit': 'transaction',
@@ -132,17 +187,24 @@ export const getRoleDisplayName = (roleName: string): string => {
 
 // Function untuk mendapatkan menu items berdasarkan role
 export const getMenuItemsByRole = (userRole: string) => {
+  console.log('🔍 [getMenuItemsByRole] Input userRole:', userRole)
   const role = getRoleInfo(userRole)
+  console.log('👤 [getMenuItemsByRole] Role info:', role)
   if (!role) return []
 
   const allMenuItems = [
+    { title: 'Dashboard', path: '/dashboard', permission: 'dashboard' },
+    { title: 'MYR', path: '/myr', permission: 'myr' },
+    { title: 'SGD', path: '/sgd', permission: 'sgd' },
     { title: 'USC', path: '/usc', permission: 'usc', hasSubmenu: true },
     { title: 'Transaction', path: '/transaction', permission: 'transaction', hasSubmenu: true },
     { title: 'Supabase', path: '/supabase', permission: 'supabase' },
     { title: 'User Management', path: '/users', permission: 'users' }
   ]
 
-  return allMenuItems.filter(item => 
+  const filteredItems = allMenuItems.filter(item => 
     role.permissions.includes(item.permission)
   )
+  console.log('✅ [getMenuItemsByRole] Filtered items:', filteredItems)
+  return filteredItems
 } 

@@ -27,10 +27,12 @@ export default function LoginPage() {
         if (user) {
           try {
             const userData = JSON.parse(user) // Validate JSON
-            if (userData.role === 'usc_dep') {
+            if (userData.role === 'admin') {
+              router.push('/dashboard')
+            } else if (userData.role === 'usc_dep' || userData.role === 'manager_usc' || userData.role === 'manager') {
               router.push('/usc/overview')
             } else {
-              router.push('/usc/overview')
+              router.push('/dashboard')
             }
           } catch (error) {
             console.error('Invalid session data:', error)
@@ -77,7 +79,9 @@ export default function LoginPage() {
 
       // Redirect based on user role
       setTimeout(() => {
-        if (users.role === 'usc_dep') {
+        if (users.role === 'admin') {
+          router.push('/dashboard')
+        } else if (users.role === 'usc_dep' || users.role === 'manager_usc' || users.role === 'manager') {
           router.push('/usc/overview')
         } else {
           router.push('/dashboard')

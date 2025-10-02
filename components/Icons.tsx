@@ -455,6 +455,14 @@ export const USCIcon = (props: Omit<IconProps, 'name'>) => (
   <Icon name="usc" {...props} />
 )
 
+export const MYRIcon = (props: Omit<IconProps, 'name'>) => (
+  <Icon name="usc" {...props} />
+)
+
+export const SGDIcon = (props: Omit<IconProps, 'name'>) => (
+  <Icon name="usc" {...props} />
+)
+
 // System Icons
 export const DatabaseIcon = (props: Omit<IconProps, 'name'>) => (
   <Icon name="database" {...props} />

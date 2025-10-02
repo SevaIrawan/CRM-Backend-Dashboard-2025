@@ -15,7 +15,9 @@ import {
   TransactionIcon, 
   SupabaseIcon, 
   UserIcon,
-  USCIcon
+  USCIcon,
+  MYRIcon,
+  SGDIcon
 } from './Icons'
 import { getMenuItemsByRole, hasPermission } from '@/utils/rolePermissions'
 
@@ -191,10 +193,40 @@ export default function Sidebar({
   
   // Get menu items based on user role
   const getMenuItems = () => {
+    console.log('🔍 [Sidebar] Current userRole:', userRole)
     const roleMenuItems = getMenuItemsByRole(userRole)
+    console.log('📋 [Sidebar] Role menu items:', roleMenuItems)
     
     // Map role menu items to full menu items with icons and submenus
     const fullMenuItems = [
+      {
+        title: 'Dashboard',
+        path: '/dashboard',
+        icon: <DashboardIcon size={18} color="#ffffff" />,
+        permission: 'dashboard'
+      },
+      {
+        title: 'MYR',
+        icon: <MYRIcon size={18} color="#ffffff" />,
+        permission: 'myr',
+        submenu: [
+          { title: 'Overview MYR', path: '/myr/overview' },
+          { title: 'Member Analytic MYR', path: '/myr/member-analytic' },
+          { title: 'Brand Comparison MYR', path: '/myr/brand-comparison' },
+          { title: 'KPI Comparison MYR', path: '/myr/kpi-comparison' }
+        ]
+      },
+      {
+        title: 'SGD',
+        icon: <SGDIcon size={18} color="#ffffff" />,
+        permission: 'sgd',
+        submenu: [
+          { title: 'Overview SGD', path: '/sgd/overview' },
+          { title: 'Member Analytic SGD', path: '/sgd/member-analytic' },
+          { title: 'Brand Comparison SGD', path: '/sgd/brand-comparison' },
+          { title: 'KPI Comparison SGD', path: '/sgd/kpi-comparison' }
+        ]
+      },
       {
         title: 'USC',
         icon: <USCIcon size={18} color="#ffffff" />,
@@ -238,9 +270,11 @@ export default function Sidebar({
     ]
 
     // Filter menu items based on user permissions
-    return fullMenuItems.filter(item => 
+    const filteredItems = fullMenuItems.filter(item => 
       roleMenuItems.some(roleItem => roleItem.permission === item.permission)
     )
+    console.log('✅ [Sidebar] Filtered menu items:', filteredItems)
+    return filteredItems
   }
 
   const menuItems = getMenuItems()

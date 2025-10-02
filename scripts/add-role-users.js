@@ -27,6 +27,12 @@ const roleUsers = [
     role: 'manager'
   },
   {
+    username: 'manager_usc',
+    password: 'managerusc123',
+    email: 'managerusc@nexmax.com',
+    role: 'manager_usc'
+  },
+  {
     username: 'usc_dep',
     password: 'usc123',
     email: 'usc@nexmax.com',
