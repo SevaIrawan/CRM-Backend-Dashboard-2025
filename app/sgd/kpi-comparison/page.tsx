@@ -15,7 +15,7 @@ export default function SGDKPIComparisonPage() {
         
         <ComingSoon 
           title="KPI Comparison SGD Coming Soon"
-          description="Singapore Dollar currency KPI comparison analytics will be available soon."
+          subtitle="Singapore Dollar currency KPI comparison analytics will be available soon."
         />
       </div>
     </Layout>

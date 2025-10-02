@@ -15,7 +15,7 @@ export default function MYROverviewPage() {
         
         <ComingSoon 
           title="Overview MYR Coming Soon"
-          description="Malaysian Ringgit currency overview and analytics will be available soon."
+          subtitle="Malaysian Ringgit currency overview and analytics will be available soon."
         />
       </div>
     </Layout>

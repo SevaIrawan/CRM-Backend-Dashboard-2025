@@ -15,7 +15,7 @@ export default function MYRPage() {
         
         <ComingSoon 
           title="MYR Dashboard Coming Soon"
-          description="Malaysian Ringgit currency-specific analytics and reports will be available soon."
+          subtitle="Malaysian Ringgit currency-specific analytics and reports will be available soon."
         />
       </div>
     </Layout>

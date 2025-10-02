@@ -15,7 +15,7 @@ export default function SGDMemberAnalyticPage() {
         
         <ComingSoon 
           title="Member Analytic SGD Coming Soon"
-          description="Singapore Dollar currency member analytics and reports will be available soon."
+          subtitle="Singapore Dollar currency member analytics and reports will be available soon."
         />
       </div>
     </Layout>

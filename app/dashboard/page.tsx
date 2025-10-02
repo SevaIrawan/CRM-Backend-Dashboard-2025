@@ -15,7 +15,7 @@ export default function DashboardPage() {
         
         <ComingSoon 
           title="Dashboard Coming Soon"
-          description="Comprehensive dashboard with all business metrics will be available soon."
+          subtitle="Comprehensive dashboard with all business metrics will be available soon."
         />
       </div>
     </Layout>

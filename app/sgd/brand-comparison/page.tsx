@@ -15,7 +15,7 @@ export default function SGDBrandComparisonPage() {
         
         <ComingSoon 
           title="Brand Comparison SGD Coming Soon"
-          description="Singapore Dollar currency brand comparison analytics will be available soon."
+          subtitle="Singapore Dollar currency brand comparison analytics will be available soon."
         />
       </div>
     </Layout>

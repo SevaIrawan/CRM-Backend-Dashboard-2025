@@ -15,7 +15,7 @@ export default function MYRBrandComparisonPage() {
         
         <ComingSoon 
           title="Brand Comparison MYR Coming Soon"
-          description="Malaysian Ringgit currency brand comparison analytics will be available soon."
+          subtitle="Malaysian Ringgit currency brand comparison analytics will be available soon."
         />
       </div>
     </Layout>

@@ -15,7 +15,7 @@ export default function SGDPage() {
         
         <ComingSoon 
           title="SGD Dashboard Coming Soon"
-          description="Singapore Dollar currency-specific analytics and reports will be available soon."
+          subtitle="Singapore Dollar currency-specific analytics and reports will be available soon."
         />
       </div>
     </Layout>

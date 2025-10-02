@@ -15,7 +15,7 @@ export default function MYRKPIComparisonPage() {
         
         <ComingSoon 
           title="KPI Comparison MYR Coming Soon"
-          description="Malaysian Ringgit currency KPI comparison analytics will be available soon."
+          subtitle="Malaysian Ringgit currency KPI comparison analytics will be available soon."
         />
       </div>
     </Layout>

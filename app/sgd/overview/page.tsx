@@ -15,7 +15,7 @@ export default function SGDOverviewPage() {
         
         <ComingSoon 
           title="Overview SGD Coming Soon"
-          description="Singapore Dollar currency overview and analytics will be available soon."
+          subtitle="Singapore Dollar currency overview and analytics will be available soon."
         />
       </div>
     </Layout>

@@ -15,7 +15,7 @@ export default function MYRMemberAnalyticPage() {
         
         <ComingSoon 
           title="Member Analytic MYR Coming Soon"
-          description="Malaysian Ringgit currency member analytics and reports will be available soon."
+          subtitle="Malaysian Ringgit currency member analytics and reports will be available soon."
         />
       </div>
     </Layout>
