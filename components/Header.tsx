@@ -74,6 +74,8 @@ export default function Header({
         'member-analytic': 'Member Analytic',
         'brand-comparison': 'Brand Comparison',
         'kpi-comparison': 'KPI Comparison',
+        'customer-retention': 'Customer Retention',
+        'member-report': 'Member Report',
         'churn-member': 'Churn Member',
         'retention-day': 'Retention Day'
       }
