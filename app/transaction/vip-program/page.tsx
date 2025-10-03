@@ -16,8 +16,6 @@ export default function VIPProgramPage() {
 
   return (
     <Layout
-      pageTitle="VIP Program"
-
       darkMode={darkMode}
       sidebarExpanded={sidebarExpanded}
       onToggleDarkMode={() => setDarkMode(!darkMode)}

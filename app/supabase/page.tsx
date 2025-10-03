@@ -327,10 +327,7 @@ export default function ConnectionTest() {
   }
 
   return (
-    <Layout
-      pageTitle="Supabase Connection Test"
-
-    >
+    <Layout>
       {/* FULL 1 FRAME - TANPA SCROLL DILUAR - MULTI SUB CONTENT */}
       <div style={{
         width: '100%',

@@ -16,8 +16,6 @@ export default function HeadcountPage() {
 
   return (
     <Layout
-      pageTitle="Headcount"
-
       darkMode={darkMode}
       sidebarExpanded={sidebarExpanded}
       onToggleDarkMode={() => setDarkMode(!darkMode)}

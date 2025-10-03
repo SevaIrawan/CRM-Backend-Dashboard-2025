@@ -241,8 +241,8 @@ export default function KPIComparisonPage() {
                 <input
                   type="date"
                   value={tempAStart}
-                  min={slicerOptions?.dateRange.min}
-                  max={slicerOptions?.dateRange.max}
+                  min="2021-01-01"
+                  max="2025-12-31"
                   onChange={(e) => setTempAStart(e.target.value)}
                   style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px' }}
                 />
@@ -250,8 +250,8 @@ export default function KPIComparisonPage() {
                 <input
                   type="date"
                   value={tempAEnd}
-                  min={slicerOptions?.dateRange.min}
-                  max={slicerOptions?.dateRange.max}
+                  min="2021-01-01"
+                  max="2025-12-31"
                   onChange={(e) => setTempAEnd(e.target.value)}
                   style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px' }}
                 />
@@ -318,8 +318,8 @@ export default function KPIComparisonPage() {
                 <input
                   type="date"
                   value={tempBStart}
-                  min={slicerOptions?.dateRange.min}
-                  max={slicerOptions?.dateRange.max}
+                  min="2021-01-01"
+                  max="2025-12-31"
                   onChange={(e) => setTempBStart(e.target.value)}
                   style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px' }}
                 />
@@ -327,8 +327,8 @@ export default function KPIComparisonPage() {
                 <input
                   type="date"
                   value={tempBEnd}
-                  min={slicerOptions?.dateRange.min}
-                  max={slicerOptions?.dateRange.max}
+                  min="2021-01-01"
+                  max="2025-12-31"
                   onChange={(e) => setTempBEnd(e.target.value)}
                   style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px' }}
                 />

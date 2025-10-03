@@ -50,91 +50,74 @@ export default function Header({
   const getPageTitle = () => {
     if (pageTitle) return pageTitle
     
-    switch (pathname) {
-      // Main Pages
-      case '/':
-        return 'NEXMAX Dashboard'
-      case '/users':
-        return 'User Management'
-      case '/supabase':
-        return 'Supabase Connection'
+    // Auto-detect page title based on pathname
+    const pathSegments = pathname.split('/').filter(Boolean)
+    
+    // Handle main pages
+    if (pathname === '/') return 'NEXMAX Dashboard'
+    if (pathname === '/users') return 'User Management'
+    if (pathname === '/supabase') return 'Supabase Connection'
+    if (pathname === '/login') return 'Login - NEXMAX'
+    if (pathname === '/not-found') return 'Page Not Found'
+    if (pathname === '/error') return 'Error'
+    if (pathname === '/global-error') return 'Global Error'
+    if (pathname === '/cache-test') return 'Cache Performance Test'
+    
+    // Handle currency pages (USC, MYR, SGD)
+    if (pathSegments.length >= 2) {
+      const currency = pathSegments[0].toUpperCase()
+      const page = pathSegments[1]
       
-      // USC Pages
-      case '/usc':
-        return 'USC'
-      case '/usc/overview':
-        return 'USC Overview'
-      case '/usc/member-analytic':
-        return 'Member Analytic USC'
-      case '/usc/kpi-comparison':
-        return 'KPI Comparison USC'
-      case '/usc/churn-member':
-        return 'USC Churn Member'
-      case '/usc/retention-day':
-        return 'USC Retention Day'
+      // Map page names to proper titles
+      const pageTitleMap: { [key: string]: string } = {
+        'overview': 'Overview',
+        'member-analytic': 'Member Analytic',
+        'brand-comparison': 'Brand Comparison',
+        'kpi-comparison': 'KPI Comparison',
+        'churn-member': 'Churn Member',
+        'retention-day': 'Retention Day'
+      }
       
-      // Transaction Pages
-      case '/transaction':
-        return 'Transaction'
-      case '/transaction/deposit':
-        return 'Transaction - Deposit'
-      case '/transaction/withdraw':
-        return 'Transaction - Withdraw'
-      case '/transaction/adjustment':
-        return 'Transaction - Adjustment'
-      case '/transaction/exchange':
-        return 'Transaction - Exchange'
-      case '/transaction/headcount':
-        return 'Transaction - Headcount'
-      case '/transaction/member-report':
-        return 'Transaction - Member Report'
-      case '/transaction/new-depositor':
-        return 'Transaction - New Depositor'
-      case '/transaction/new-register':
-        return 'Transaction - New Register'
-      case '/transaction/vip-program':
-        return 'Transaction - VIP Program'
-      case '/transaction/master-data':
-        return 'Transaction - Master Data'
+      const pageTitle = pageTitleMap[page] || page
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ')
       
-      // Login Page
-      case '/login':
-        return 'Login - NEXMAX'
-      
-      // Error Pages
-      case '/not-found':
-        return 'Page Not Found'
-      case '/error':
-        return 'Error'
-      case '/global-error':
-        return 'Global Error'
-      
-      // Test Pages
-      case '/cache-test':
-        return 'Cache Performance Test'
-      
-      default:
-        // Try to extract page name from pathname for dynamic titles
-        const pathSegments = pathname.split('/').filter(Boolean)
-        if (pathSegments.length > 0) {
-          const lastSegment = pathSegments[pathSegments.length - 1]
-          // Convert kebab-case to Title Case
-          const titleCase = lastSegment
-            .split('-')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ')
-          
-          // Add currency prefix if it's a currency page
-          if (pathSegments[0] === 'usc') {
-            const currency = pathSegments[0].toUpperCase()
-            return `${titleCase} ${currency}`
-          }
-          
-          return titleCase
-        }
-        
-        return 'NEXMAX Dashboard'
+      return `${pageTitle} ${currency}`
     }
+    
+    // Handle transaction pages
+    if (pathSegments[0] === 'transaction' && pathSegments.length >= 2) {
+      const transactionPage = pathSegments[1]
+      const pageTitle = transactionPage
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ')
+      
+      return `Transaction - ${pageTitle}`
+    }
+    
+    // Handle single segment paths (currency root pages)
+    if (pathSegments.length === 1) {
+      const segment = pathSegments[0]
+      if (['usc', 'myr', 'sgd'].includes(segment)) {
+        return segment.toUpperCase()
+      }
+      if (segment === 'transaction') {
+        return 'Transaction'
+      }
+    }
+    
+    // Fallback: convert pathname to title case
+    if (pathSegments.length > 0) {
+      const lastSegment = pathSegments[pathSegments.length - 1]
+      return lastSegment
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ')
+    }
+    
+    return 'NEXMAX Dashboard'
   }
 
   const handleLogout = async () => {

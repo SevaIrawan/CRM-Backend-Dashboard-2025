@@ -137,11 +137,11 @@ export default function BrandComparisonPage() {
             onClick={() => { setTempAStart(periodAStart); setTempAEnd(periodAEnd); setShowPickerA(true) }}
             className="subheader-select" style={{ minWidth: '220px', cursor: 'pointer' }} />
           {showPickerA && (
-            <div style={{ position:'absolute', top:'42px', left:0, zIndex:50, background:'white', border:'1px solid #e5e7eb', borderRadius:8, padding:12 }}>
+            <div style={{ position:'absolute', top:'42px', left:0, zIndex:9999, background:'white', border:'1px solid #e5e7eb', borderRadius:8, padding:12, pointerEvents:'auto' }}>
               <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-                <input type="date" value={tempAStart} min={slicerOptions?.dateRange.min} max={slicerOptions?.dateRange.max} onChange={e=>setTempAStart(e.target.value)} />
+                <input type="date" value={tempAStart} min="2021-01-01" max="2025-12-31" onChange={e=>setTempAStart(e.target.value)} />
                 <span style={{ color:'#6b7280' }}>to</span>
-                <input type="date" value={tempAEnd} min={slicerOptions?.dateRange.min} max={slicerOptions?.dateRange.max} onChange={e=>setTempAEnd(e.target.value)} />
+                <input type="date" value={tempAEnd} min="2021-01-01" max="2025-12-31" onChange={e=>setTempAEnd(e.target.value)} />
               </div>
               <div style={{ display:'flex', justifyContent:'flex-end', gap:8, marginTop:10 }}>
                 <button onClick={()=>setShowPickerA(false)} style={{ padding:'6px 10px', border:'1px solid #e5e7eb', borderRadius:6 }}>Cancel</button>
@@ -157,11 +157,11 @@ export default function BrandComparisonPage() {
             onClick={() => { setTempBStart(periodBStart); setTempBEnd(periodBEnd); setShowPickerB(true) }}
             className="subheader-select" style={{ minWidth: '220px', cursor: 'pointer' }} />
           {showPickerB && (
-            <div style={{ position:'absolute', top:'42px', left:0, zIndex:50, background:'white', border:'1px solid #e5e7eb', borderRadius:8, padding:12 }}>
+            <div style={{ position:'absolute', top:'42px', left:0, zIndex:9999, background:'white', border:'1px solid #e5e7eb', borderRadius:8, padding:12, pointerEvents:'auto' }}>
               <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-                <input type="date" value={tempBStart} min={slicerOptions?.dateRange.min} max={slicerOptions?.dateRange.max} onChange={e=>setTempBStart(e.target.value)} />
+                <input type="date" value={tempBStart} min="2021-01-01" max="2025-12-31" onChange={e=>setTempBStart(e.target.value)} />
                 <span style={{ color:'#6b7280' }}>to</span>
-                <input type="date" value={tempBEnd} min={slicerOptions?.dateRange.min} max={slicerOptions?.dateRange.max} onChange={e=>setTempBEnd(e.target.value)} />
+                <input type="date" value={tempBEnd} min="2021-01-01" max="2025-12-31" onChange={e=>setTempBEnd(e.target.value)} />
               </div>
               <div style={{ display:'flex', justifyContent:'flex-end', gap:8, marginTop:10 }}>
                 <button onClick={()=>setShowPickerB(false)} style={{ padding:'6px 10px', border:'1px solid #e5e7eb', borderRadius:6 }}>Cancel</button>

@@ -62,6 +62,10 @@ export default function Sidebar({
       setOpenSubmenu('Transaction')
     } else if (pathname.startsWith('/usc/')) {
       setOpenSubmenu('USC')
+    } else if (pathname.startsWith('/myr/')) {
+      setOpenSubmenu('MYR')
+    } else if (pathname.startsWith('/sgd/')) {
+      setOpenSubmenu('SGD')
     }
   }, [pathname])
 
@@ -70,8 +74,14 @@ export default function Sidebar({
       setIsLoading(true)
       
       // Determine table based on current page
-      const isUSCPage = pathname.startsWith('/usc/')
-      const tableName = isUSCPage ? 'blue_whale_usc' : 'member_report_daily'
+      let tableName = 'member_report_daily' // default
+      if (pathname.startsWith('/usc/')) {
+        tableName = 'blue_whale_usc'
+      } else if (pathname.startsWith('/myr/')) {
+        tableName = 'blue_whale_myr'
+      } else if (pathname.startsWith('/sgd/')) {
+        tableName = 'blue_whale_sgd'
+      }
       
       console.log(`🔍 [Sidebar] Fetching last update from ${tableName} for path: ${pathname}`)
       
@@ -281,6 +291,27 @@ export default function Sidebar({
 
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null)
 
+  // Load submenu state from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedSubmenu = localStorage.getItem('nexmax_open_submenu')
+      if (savedSubmenu && savedSubmenu !== 'null') {
+        setOpenSubmenu(savedSubmenu)
+      }
+    } catch (error) {
+      console.error('Error loading submenu state:', error)
+    }
+  }, [])
+
+  // Save submenu state to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('nexmax_open_submenu', openSubmenu || 'null')
+    } catch (error) {
+      console.error('Error saving submenu state:', error)
+    }
+  }, [openSubmenu])
+
   const toggleSubmenu = (title: string) => {
     // Jika user klik menu yang sama, toggle (buka/tutup) submenu
     if (openSubmenu === title) {
@@ -292,11 +323,22 @@ export default function Sidebar({
     }
   }
 
+  // Enhanced submenu state management with persistence
+  const handleSubmenuToggle = (title: string, isActivePage: boolean) => {
+    if (isActivePage) {
+      // Jika user sedang di halaman submenu, biarkan terbuka
+      setOpenSubmenu(title)
+    } else {
+      // Jika user klik menu yang sama tapi tidak di halaman submenu, toggle
+      toggleSubmenu(title)
+    }
+  }
+
   // HELPER FUNCTIONS FOR STANDARD SUB MENU RULES:
   // Helper function untuk mendeteksi sub menu secara dinamis
   // Tambahkan path baru di sini untuk menambah sub menu baru
   const isSubmenuPath = (path: string) => {
-    return path.startsWith('/transaction/') || path.startsWith('/usc/')
+    return path.startsWith('/transaction/') || path.startsWith('/usc/') || path.startsWith('/myr/') || path.startsWith('/sgd/')
   }
 
   // Helper function untuk mendapatkan parent menu dari path
@@ -304,6 +346,8 @@ export default function Sidebar({
   const getParentMenuFromPath = (path: string) => {
     if (path.startsWith('/transaction/')) return 'Transaction'
     if (path.startsWith('/usc/')) return 'USC'
+    if (path.startsWith('/myr/')) return 'MYR'
+    if (path.startsWith('/sgd/')) return 'SGD'
     return null
   }
 
@@ -326,6 +370,17 @@ export default function Sidebar({
     router.push(path)
   }
 
+  // Enhanced menu click handler for main menu items (non-submenu)
+  const handleMainMenuClick = (item: any) => {
+    if (item.submenu) {
+      // Jika menu memiliki submenu, toggle submenu
+      handleSubmenuToggle(item.title, isSubmenuPath(pathname) && getParentMenuFromPath(pathname) === item.title)
+    } else if (item.path) {
+      // Jika menu tidak memiliki submenu, navigasi langsung
+      handleMenuClick(item.path)
+    }
+  }
+
   // Preload function untuk pages yang sering diakses
   const preloadPage = (path: string) => {
     if (typeof window !== 'undefined') {
@@ -335,9 +390,14 @@ export default function Sidebar({
 
   // Preload common pages on mount
   useEffect(() => {
-    const commonPaths = ['/usc/overview']
-    commonPaths.forEach(path => {
-      setTimeout(() => preloadPage(path), 100)
+    const commonPaths = [
+      '/usc/overview',
+      '/myr/overview', 
+      '/sgd/overview',
+      '/dashboard'
+    ]
+    commonPaths.forEach((path, index) => {
+      setTimeout(() => preloadPage(path), 100 * (index + 1))
     })
   }, [])
 
@@ -410,7 +470,7 @@ export default function Sidebar({
             {item.submenu ? (
               <div>
                                  <div
-                   onClick={() => toggleSubmenu(item.title)}
+                   onClick={() => handleSubmenuToggle(item.title, isSubmenuPath(pathname) && getParentMenuFromPath(pathname) === item.title)}
                    style={{
                      padding: sidebarOpen ? '12px 20px' : '12px 0',
                      cursor: 'pointer',
@@ -526,7 +586,7 @@ export default function Sidebar({
               </div>
             ) : (
                              <div
-                 onClick={() => handleMenuClick(item.path)}
+                 onClick={() => handleMainMenuClick(item)}
                  style={{
                    padding: sidebarOpen ? '12px 20px' : '12px 0',
                    cursor: 'pointer',

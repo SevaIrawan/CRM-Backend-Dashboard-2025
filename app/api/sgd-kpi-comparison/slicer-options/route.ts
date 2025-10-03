@@ -3,17 +3,17 @@ import { supabase } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔍 [USC KPI Comparison API] Fetching slicer options for USC currency')
+    console.log('🔍 [SGD KPI Comparison API] Fetching slicer options for SGD currency')
 
     // Get DISTINCT lines from MV
     const { data: allLines, error: linesError } = await supabase
-      .from('blue_whale_usc_summary')
+      .from('blue_whale_sgd_summary')
       .select('line')
-      .eq('currency', 'USC')
+      .eq('currency', 'SGD')
       .not('line', 'is', null)
 
     if (linesError) {
-      console.error('❌ [USC KPI Comparison] Error fetching lines:', linesError)
+      console.error('❌ [SGD KPI Comparison] Error fetching lines:', linesError)
       return NextResponse.json({ 
         success: false, 
         error: 'Database error',
@@ -27,17 +27,17 @@ export async function GET(request: NextRequest) {
 
     // Get latest record for date range defaults from master table (real-time data)
     const { data: latestRecord } = await supabase
-      .from('blue_whale_usc')
+      .from('blue_whale_sgd')
       .select('date')
-      .eq('currency', 'USC')
+      .eq('currency', 'SGD')
       .order('date', { ascending: false })
       .limit(1)
 
     // Get min date from master table
     const { data: minRecord } = await supabase
-      .from('blue_whale_usc')
+      .from('blue_whale_sgd')
       .select('date')
-      .eq('currency', 'USC')
+      .eq('currency', 'SGD')
       .order('date', { ascending: true })
       .limit(1)
 
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    console.log('✅ [USC KPI Comparison] Slicer options loaded:', {
+    console.log('✅ [SGD KPI Comparison] Slicer options loaded:', {
       linesCount: linesWithAll.length,
       minDate,
       maxDate
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ [USC KPI Comparison] Unexpected error:', error)
+    console.error('❌ [SGD KPI Comparison] Unexpected error:', error)
     return NextResponse.json({ 
       success: false, 
       error: 'Internal server error',

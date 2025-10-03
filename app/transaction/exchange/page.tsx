@@ -16,8 +16,6 @@ export default function TransactionExchange() {
 
   return (
     <Layout
-      pageTitle="Transaction Exchange"
-
       darkMode={darkMode}
       sidebarExpanded={sidebarExpanded}
       onToggleDarkMode={() => setDarkMode(!darkMode)}
