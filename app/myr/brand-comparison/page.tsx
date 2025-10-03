@@ -39,6 +39,56 @@ export default function BrandComparisonPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Calculate totals for the footer - using same logic as individual rows
+  const totalPeriodA = {
+    activeMember: rows.reduce((sum, r) => sum + r.periodA.activeMember, 0),
+    avgTransactionValue: rows.reduce((sum, r) => sum + r.periodA.avgTransactionValue, 0),
+    purchaseFrequency: rows.reduce((sum, r) => sum + r.periodA.purchaseFrequency, 0),
+    depositCases: rows.reduce((sum, r) => sum + r.periodA.depositCases, 0),
+    depositAmount: rows.reduce((sum, r) => sum + r.periodA.depositAmount, 0),
+    ggr: rows.reduce((sum, r) => sum + r.periodA.ggr, 0),
+    winrate: rows.reduce((sum, r) => sum + r.periodA.winrate, 0),
+    ggrPerUser: rows.reduce((sum, r) => sum + r.periodA.ggrPerUser, 0),
+    depositAmountPerUser: rows.reduce((sum, r) => sum + r.periodA.depositAmountPerUser, 0)
+  }
+
+  const totalPeriodB = {
+    activeMember: rows.reduce((sum, r) => sum + r.periodB.activeMember, 0),
+    avgTransactionValue: rows.reduce((sum, r) => sum + r.periodB.avgTransactionValue, 0),
+    purchaseFrequency: rows.reduce((sum, r) => sum + r.periodB.purchaseFrequency, 0),
+    depositCases: rows.reduce((sum, r) => sum + r.periodB.depositCases, 0),
+    depositAmount: rows.reduce((sum, r) => sum + r.periodB.depositAmount, 0),
+    ggr: rows.reduce((sum, r) => sum + r.periodB.ggr, 0),
+    winrate: rows.reduce((sum, r) => sum + r.periodB.winrate, 0),
+    ggrPerUser: rows.reduce((sum, r) => sum + r.periodB.ggrPerUser, 0),
+    depositAmountPerUser: rows.reduce((sum, r) => sum + r.periodB.depositAmountPerUser, 0)
+  }
+
+  // Calculate differences and percentages using same logic as individual rows
+  const totalDiff = {
+    activeMember: totalPeriodB.activeMember - totalPeriodA.activeMember,
+    avgTransactionValue: totalPeriodB.avgTransactionValue - totalPeriodA.avgTransactionValue,
+    purchaseFrequency: totalPeriodB.purchaseFrequency - totalPeriodA.purchaseFrequency,
+    depositCases: totalPeriodB.depositCases - totalPeriodA.depositCases,
+    depositAmount: totalPeriodB.depositAmount - totalPeriodA.depositAmount,
+    ggr: totalPeriodB.ggr - totalPeriodA.ggr,
+    winrate: totalPeriodB.winrate - totalPeriodA.winrate,
+    ggrPerUser: totalPeriodB.ggrPerUser - totalPeriodA.ggrPerUser,
+    depositAmountPerUser: totalPeriodB.depositAmountPerUser - totalPeriodA.depositAmountPerUser
+  }
+
+  const totalPercent = {
+    activeMember: totalPeriodA.activeMember === 0 ? 0 : (totalDiff.activeMember / totalPeriodA.activeMember) * 100,
+    avgTransactionValue: totalPeriodA.avgTransactionValue === 0 ? 0 : (totalDiff.avgTransactionValue / totalPeriodA.avgTransactionValue) * 100,
+    purchaseFrequency: totalPeriodA.purchaseFrequency === 0 ? 0 : (totalDiff.purchaseFrequency / totalPeriodA.purchaseFrequency) * 100,
+    depositCases: totalPeriodA.depositCases === 0 ? 0 : (totalDiff.depositCases / totalPeriodA.depositCases) * 100,
+    depositAmount: totalPeriodA.depositAmount === 0 ? 0 : (totalDiff.depositAmount / totalPeriodA.depositAmount) * 100,
+    ggr: totalPeriodA.ggr === 0 ? 0 : (totalDiff.ggr / totalPeriodA.ggr) * 100,
+    winrate: totalPeriodA.winrate === 0 ? 0 : (totalDiff.winrate / totalPeriodA.winrate) * 100,
+    ggrPerUser: totalPeriodA.ggrPerUser === 0 ? 0 : (totalDiff.ggrPerUser / totalPeriodA.ggrPerUser) * 100,
+    depositAmountPerUser: totalPeriodA.depositAmountPerUser === 0 ? 0 : (totalDiff.depositAmountPerUser / totalPeriodA.depositAmountPerUser) * 100
+  }
+
   useEffect(() => {
     const init = async () => {
       try {
@@ -682,8 +732,8 @@ export default function BrandComparisonPage() {
                         position: 'sticky',
                         left: 0,
                         zIndex: 20,
-                        backgroundColor: '#374151',
-                        color: 'white',
+                        backgroundColor: idx % 2 === 0 ? 'white' : '#f9fafb',
+                        color: '#374151',
                         boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
                       }}>{r.brand}</td>
                       {/* A */}
@@ -729,6 +779,63 @@ export default function BrandComparisonPage() {
                     </tr>
                   ))}
                 </tbody>
+                {/* Total Row */}
+                <tfoot>
+                  <tr className="bg-gray-100 font-bold">
+                    <td style={{
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      border: '1px solid #e0e0e0',
+                      fontWeight: '700',
+                      position: 'sticky',
+                      left: 0,
+                      zIndex: 20,
+                      backgroundColor: '#f3f4f6',
+                      color: '#374151',
+                      boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
+                    }}>TOTAL</td>
+                    {/* A */}
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700' }}>{formatInt(totalPeriodA.activeMember)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700' }}>{formatAmt(totalPeriodA.avgTransactionValue)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700' }}>{formatDec(totalPeriodA.purchaseFrequency)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700' }}>{formatInt(totalPeriodA.depositCases)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700' }}>{formatAmt(totalPeriodA.depositAmount)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700' }}>{formatAmt(totalPeriodA.ggr)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700' }}>{formatDec(totalPeriodA.winrate)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700' }}>{formatAmt(totalPeriodA.ggrPerUser)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700' }}>{formatAmt(totalPeriodA.depositAmountPerUser)}</td>
+                    {/* B */}
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700' }}>{formatInt(totalPeriodB.activeMember)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700' }}>{formatAmt(totalPeriodB.avgTransactionValue)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700' }}>{formatDec(totalPeriodB.purchaseFrequency)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700' }}>{formatInt(totalPeriodB.depositCases)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700' }}>{formatAmt(totalPeriodB.depositAmount)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700' }}>{formatAmt(totalPeriodB.ggr)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700' }}>{formatDec(totalPeriodB.winrate)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700' }}>{formatAmt(totalPeriodB.ggrPerUser)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700' }}>{formatAmt(totalPeriodB.depositAmountPerUser)}</td>
+                    {/* Diff */}
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700', color: totalDiff.activeMember > 0 ? '#16a34a' : totalDiff.activeMember < 0 ? '#dc2626' : '#374151' }}>{formatInt(totalDiff.activeMember)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700', color: totalDiff.avgTransactionValue > 0 ? '#16a34a' : totalDiff.avgTransactionValue < 0 ? '#dc2626' : '#374151' }}>{formatAmt(totalDiff.avgTransactionValue)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700', color: totalDiff.purchaseFrequency > 0 ? '#16a34a' : totalDiff.purchaseFrequency < 0 ? '#dc2626' : '#374151' }}>{formatDec(totalDiff.purchaseFrequency)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700', color: totalDiff.depositCases > 0 ? '#16a34a' : totalDiff.depositCases < 0 ? '#dc2626' : '#374151' }}>{formatInt(totalDiff.depositCases)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700', color: totalDiff.depositAmount > 0 ? '#16a34a' : totalDiff.depositAmount < 0 ? '#dc2626' : '#374151' }}>{formatAmt(totalDiff.depositAmount)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700', color: totalDiff.ggr > 0 ? '#16a34a' : totalDiff.ggr < 0 ? '#dc2626' : '#374151' }}>{formatAmt(totalDiff.ggr)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700', color: totalDiff.winrate > 0 ? '#16a34a' : totalDiff.winrate < 0 ? '#dc2626' : '#374151' }}>{formatAmt(totalDiff.winrate)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700', color: totalDiff.ggrPerUser > 0 ? '#16a34a' : totalDiff.ggrPerUser < 0 ? '#dc2626' : '#374151' }}>{formatAmt(totalDiff.ggrPerUser)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700', color: totalDiff.depositAmountPerUser > 0 ? '#16a34a' : totalDiff.depositAmountPerUser < 0 ? '#dc2626' : '#374151' }}>{formatAmt(totalDiff.depositAmountPerUser)}</td>
+                    {/* Percent */}
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700', color: totalPercent.activeMember > 0 ? '#16a34a' : totalPercent.activeMember < 0 ? '#dc2626' : '#6b7280' }}>{formatPct(totalPercent.activeMember)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700', color: totalPercent.avgTransactionValue > 0 ? '#16a34a' : totalPercent.avgTransactionValue < 0 ? '#dc2626' : '#6b7280' }}>{formatPct(totalPercent.avgTransactionValue)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700', color: totalPercent.purchaseFrequency > 0 ? '#16a34a' : totalPercent.purchaseFrequency < 0 ? '#dc2626' : '#6b7280' }}>{formatPct(totalPercent.purchaseFrequency)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700', color: totalPercent.depositCases > 0 ? '#16a34a' : totalPercent.depositCases < 0 ? '#dc2626' : '#6b7280' }}>{formatPct(totalPercent.depositCases)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700', color: totalPercent.depositAmount > 0 ? '#16a34a' : totalPercent.depositAmount < 0 ? '#dc2626' : '#6b7280' }}>{formatPct(totalPercent.depositAmount)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700', color: totalPercent.ggr > 0 ? '#16a34a' : totalPercent.ggr < 0 ? '#dc2626' : '#6b7280' }}>{formatPct(totalPercent.ggr)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700', color: totalPercent.winrate > 0 ? '#16a34a' : totalPercent.winrate < 0 ? '#dc2626' : '#6b7280' }}>{formatPct(totalPercent.winrate)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700', color: totalPercent.ggrPerUser > 0 ? '#16a34a' : totalPercent.ggrPerUser < 0 ? '#dc2626' : '#6b7280' }}>{formatPct(totalPercent.ggrPerUser)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '700', color: totalPercent.depositAmountPerUser > 0 ? '#16a34a' : totalPercent.depositAmountPerUser < 0 ? '#dc2626' : '#6b7280' }}>{formatPct(totalPercent.depositAmountPerUser)}</td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           )}
