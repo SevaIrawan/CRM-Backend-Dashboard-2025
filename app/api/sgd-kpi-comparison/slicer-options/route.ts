@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     const linesWithAll = ['ALL', ...cleanLines.sort()]
 
     // Get latest record for date range defaults from master table (real-time data)
-    const { data: latestRecord } = await supabase
+    const { data: latestRecord, error: maxErr } = await supabase
       .from('blue_whale_sgd')
       .select('date')
       .eq('currency', 'SGD')
@@ -34,15 +34,22 @@ export async function GET(request: NextRequest) {
       .limit(1)
 
     // Get min date from master table
-    const { data: minRecord } = await supabase
+    const { data: minRecord, error: minErr } = await supabase
       .from('blue_whale_sgd')
       .select('date')
       .eq('currency', 'SGD')
       .order('date', { ascending: true })
       .limit(1)
 
+    if (maxErr) {
+      console.warn('⚠️ [SGD KPI Comparison] Error fetching max date:', maxErr)
+    }
+    if (minErr) {
+      console.warn('⚠️ [SGD KPI Comparison] Error fetching min date:', minErr)
+    }
+
     const minDate = minRecord?.[0]?.date || '2021-01-01'
-    const maxDate = latestRecord?.[0]?.date || '2025-12-31'
+    const maxDate = latestRecord?.[0]?.date || new Date().toISOString().split('T')[0]
 
     const slicerOptions = {
       lines: linesWithAll,
