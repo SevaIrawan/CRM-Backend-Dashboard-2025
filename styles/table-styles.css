@@ -1,0 +1,58 @@
+/* Consistent table styling for all Brand Comparison and KPI Comparison tables */
+
+.table-container {
+  overflow-x: auto;
+}
+
+.standard-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #e0e0e0;
+}
+
+.standard-table th {
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 600;
+  border: 1px solid #e0e0e0;
+  border-bottom: 2px solid #d0d0d0;
+  background-color: #1e293b;
+  color: white;
+  white-space: nowrap;
+}
+
+.standard-table td {
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+}
+
+.standard-table .sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.standard-table .sticky-column {
+  position: sticky;
+  left: 0;
+  z-index: 20;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
+
+.standard-table .sticky-column-header {
+  background-color: #1e293b;
+  color: white;
+  position: sticky;
+  left: 0;
+  z-index: 20;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
+
+.standard-table .sticky-column-data {
+  background-color: #1e293b;
+  color: white;
+  position: sticky;
+  left: 0;
+  z-index: 20;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}

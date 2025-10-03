@@ -243,103 +243,497 @@ export default function BrandComparisonPage() {
 
           {!loading && !error && (
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead className="sticky top-0 bg-[#1e293b] text-white" style={{ zIndex: 10 }}>
+              <table className="w-full" style={{
+                borderCollapse: 'collapse',
+                border: '1px solid #e0e0e0'
+              }}>
+                <thead className="sticky top-0" style={{ zIndex: 10 }}>
                   <tr>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300 sticky left-0 bg-[#1e293b] z-20" style={{ boxShadow: '2px 0 5px rgba(0,0,0,0.1)' }}>Brand/Line</th>
-                    <th colSpan={9} className="px-4 py-3 text-left font-semibold border border-gray-300">Period A ({periodAStart} to {periodAEnd})</th>
-                    <th colSpan={9} className="px-4 py-3 text-left font-semibold border border-gray-300">Period B ({periodBStart} to {periodBEnd})</th>
-                    <th colSpan={9} className="px-4 py-3 text-left font-semibold border border-gray-300">Compare (Diff)</th>
-                    <th colSpan={9} className="px-4 py-3 text-left font-semibold border border-gray-300">Compare (%)</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      position: 'sticky',
+                      left: 0,
+                      zIndex: 20,
+                      boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
+                    }}>Brand/Line</th>
+                    <th colSpan={9} style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white'
+                    }}>Period A ({periodAStart} to {periodAEnd})</th>
+                    <th colSpan={9} style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white'
+                    }}>Period B ({periodBStart} to {periodBEnd})</th>
+                    <th colSpan={9} style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white'
+                    }}>Compare (Diff)</th>
+                    <th colSpan={9} style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white'
+                    }}>Compare (%)</th>
                   </tr>
                   <tr>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300 sticky left-0 bg-[#1e293b] z-20" style={{ boxShadow: '2px 0 5px rgba(0,0,0,0.1)' }}>&nbsp;</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      position: 'sticky',
+                      left: 0,
+                      zIndex: 20,
+                      boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
+                    }}>&nbsp;</th>
                     {/* 9 A */}
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>Count</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>ATV</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>PF</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>DC</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>DA</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>GGR</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>Winrate</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>GGR User</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>DA User</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>Count</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>ATV</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>PF</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>DC</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>DA</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>GGR</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>Winrate</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>GGR User</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>DA User</th>
                     {/* 9 B */}
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>Count</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>ATV</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>PF</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>DC</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>DA</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>GGR</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>Winrate</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>GGR User</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>DA User</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>Count</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>ATV</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>PF</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>DC</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>DA</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>GGR</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>Winrate</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>GGR User</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>DA User</th>
                     {/* 9 Diff */}
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>Count</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>ATV</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>PF</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>DC</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>DA</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>GGR</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>Winrate</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>GGR User</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>DA User</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>Count</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>ATV</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>PF</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>DC</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>DA</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>GGR</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>Winrate</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>GGR User</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>DA User</th>
                     {/* 9 Percent */}
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>Count</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>ATV</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>PF</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>DC</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>DA</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>GGR</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>Winrate</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>GGR User</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ whiteSpace: 'nowrap' }}>DA User</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>Count</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>ATV</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>PF</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>DC</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>DA</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>GGR</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>Winrate</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>GGR User</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      whiteSpace: 'nowrap'
+                    }}>DA User</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((r, idx) => (
                     <tr key={r.brand} className={`group ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 cursor-pointer transition-colors`}>
-                      <td className="px-4 py-3 text-left border border-gray-300 font-medium sticky left-0 z-20 text-white bg-[#1e293b]" style={{ boxShadow: '2px 0 5px rgba(0,0,0,0.1)' }}>{r.brand}</td>
+                      <td style={{
+                        padding: '8px 12px',
+                        textAlign: 'left',
+                        border: '1px solid #e0e0e0',
+                        fontWeight: '500',
+                        position: 'sticky',
+                        left: 0,
+                        zIndex: 20,
+                        backgroundColor: '#374151',
+                        color: 'white',
+                        boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
+                      }}>{r.brand}</td>
                       {/* A */}
-                      <td className="px-4 py-3 text-right border border-gray-300">{formatInt(r.periodA.activeMember)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300">{formatAmt(r.periodA.avgTransactionValue)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300">{formatDec(r.periodA.purchaseFrequency)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300">{formatInt(r.periodA.depositCases)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300">{formatAmt(r.periodA.depositAmount)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300">{formatAmt(r.periodA.ggr)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300">{formatDec(r.periodA.winrate)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300">{formatAmt(r.periodA.ggrPerUser)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300">{formatAmt(r.periodA.depositAmountPerUser)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0' }}>{formatInt(r.periodA.activeMember)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0' }}>{formatAmt(r.periodA.avgTransactionValue)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0' }}>{formatDec(r.periodA.purchaseFrequency)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0' }}>{formatInt(r.periodA.depositCases)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0' }}>{formatAmt(r.periodA.depositAmount)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0' }}>{formatAmt(r.periodA.ggr)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0' }}>{formatDec(r.periodA.winrate)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0' }}>{formatAmt(r.periodA.ggrPerUser)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0' }}>{formatAmt(r.periodA.depositAmountPerUser)}</td>
                       {/* B */}
-                      <td className="px-4 py-3 text-right border border-gray-300">{formatInt(r.periodB.activeMember)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300">{formatAmt(r.periodB.avgTransactionValue)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300">{formatDec(r.periodB.purchaseFrequency)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300">{formatInt(r.periodB.depositCases)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300">{formatAmt(r.periodB.depositAmount)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300">{formatAmt(r.periodB.ggr)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300">{formatDec(r.periodB.winrate)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300">{formatAmt(r.periodB.ggrPerUser)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300">{formatAmt(r.periodB.depositAmountPerUser)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0' }}>{formatInt(r.periodB.activeMember)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0' }}>{formatAmt(r.periodB.avgTransactionValue)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0' }}>{formatDec(r.periodB.purchaseFrequency)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0' }}>{formatInt(r.periodB.depositCases)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0' }}>{formatAmt(r.periodB.depositAmount)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0' }}>{formatAmt(r.periodB.ggr)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0' }}>{formatDec(r.periodB.winrate)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0' }}>{formatAmt(r.periodB.ggrPerUser)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0' }}>{formatAmt(r.periodB.depositAmountPerUser)}</td>
                       {/* Diff */}
-                      <td className="px-4 py-3 text-right border border-gray-300 font-semibold" style={{ color: r.diff.activeMember > 0 ? '#16a34a' : r.diff.activeMember < 0 ? '#dc2626' : '#374151' }}>{formatInt(r.diff.activeMember)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300 font-semibold" style={{ color: r.diff.avgTransactionValue > 0 ? '#16a34a' : r.diff.avgTransactionValue < 0 ? '#dc2626' : '#374151' }}>{formatAmt(r.diff.avgTransactionValue)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300 font-semibold" style={{ color: r.diff.purchaseFrequency > 0 ? '#16a34a' : r.diff.purchaseFrequency < 0 ? '#dc2626' : '#374151' }}>{formatDec(r.diff.purchaseFrequency)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300 font-semibold" style={{ color: r.diff.depositCases > 0 ? '#16a34a' : r.diff.depositCases < 0 ? '#dc2626' : '#374151' }}>{formatInt(r.diff.depositCases)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300 font-semibold" style={{ color: r.diff.depositAmount > 0 ? '#16a34a' : r.diff.depositAmount < 0 ? '#dc2626' : '#374151' }}>{formatAmt(r.diff.depositAmount)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300 font-semibold" style={{ color: r.diff.ggr > 0 ? '#16a34a' : r.diff.ggr < 0 ? '#dc2626' : '#374151' }}>{formatAmt(r.diff.ggr)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300 font-semibold" style={{ color: r.diff.winrate > 0 ? '#16a34a' : r.diff.winrate < 0 ? '#dc2626' : '#374151' }}>{formatAmt(r.diff.winrate)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300 font-semibold" style={{ color: r.diff.ggrPerUser > 0 ? '#16a34a' : r.diff.ggrPerUser < 0 ? '#dc2626' : '#374151' }}>{formatAmt(r.diff.ggrPerUser)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300 font-semibold" style={{ color: r.diff.depositAmountPerUser > 0 ? '#16a34a' : r.diff.depositAmountPerUser < 0 ? '#dc2626' : '#374151' }}>{formatAmt(r.diff.depositAmountPerUser)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '600', color: r.diff.activeMember > 0 ? '#16a34a' : r.diff.activeMember < 0 ? '#dc2626' : '#374151' }}>{formatInt(r.diff.activeMember)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '600' , color: r.diff.avgTransactionValue > 0 ? '#16a34a' : r.diff.avgTransactionValue < 0 ? '#dc2626' : '#374151' }}>{formatAmt(r.diff.avgTransactionValue)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '600' , color: r.diff.purchaseFrequency > 0 ? '#16a34a' : r.diff.purchaseFrequency < 0 ? '#dc2626' : '#374151' }}>{formatDec(r.diff.purchaseFrequency)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '600' , color: r.diff.depositCases > 0 ? '#16a34a' : r.diff.depositCases < 0 ? '#dc2626' : '#374151' }}>{formatInt(r.diff.depositCases)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '600' , color: r.diff.depositAmount > 0 ? '#16a34a' : r.diff.depositAmount < 0 ? '#dc2626' : '#374151' }}>{formatAmt(r.diff.depositAmount)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '600' , color: r.diff.ggr > 0 ? '#16a34a' : r.diff.ggr < 0 ? '#dc2626' : '#374151' }}>{formatAmt(r.diff.ggr)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '600' , color: r.diff.winrate > 0 ? '#16a34a' : r.diff.winrate < 0 ? '#dc2626' : '#374151' }}>{formatAmt(r.diff.winrate)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '600' , color: r.diff.ggrPerUser > 0 ? '#16a34a' : r.diff.ggrPerUser < 0 ? '#dc2626' : '#374151' }}>{formatAmt(r.diff.ggrPerUser)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '600' , color: r.diff.depositAmountPerUser > 0 ? '#16a34a' : r.diff.depositAmountPerUser < 0 ? '#dc2626' : '#374151' }}>{formatAmt(r.diff.depositAmountPerUser)}</td>
                       {/* Percent */}
-                      <td className="px-4 py-3 text-right border border-gray-300 font-semibold" style={{ color: r.percent.activeMember > 0 ? '#16a34a' : r.percent.activeMember < 0 ? '#dc2626' : '#6b7280' }}>{formatPct(r.percent.activeMember)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300 font-semibold" style={{ color: r.percent.avgTransactionValue > 0 ? '#16a34a' : r.percent.avgTransactionValue < 0 ? '#dc2626' : '#6b7280' }}>{formatPct(r.percent.avgTransactionValue)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300 font-semibold" style={{ color: r.percent.purchaseFrequency > 0 ? '#16a34a' : r.percent.purchaseFrequency < 0 ? '#dc2626' : '#6b7280' }}>{formatPct(r.percent.purchaseFrequency)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300 font-semibold" style={{ color: r.percent.depositCases > 0 ? '#16a34a' : r.percent.depositCases < 0 ? '#dc2626' : '#6b7280' }}>{formatPct(r.percent.depositCases)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300 font-semibold" style={{ color: r.percent.depositAmount > 0 ? '#16a34a' : r.percent.depositAmount < 0 ? '#dc2626' : '#6b7280' }}>{formatPct(r.percent.depositAmount)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300 font-semibold" style={{ color: r.percent.ggr > 0 ? '#16a34a' : r.percent.ggr < 0 ? '#dc2626' : '#6b7280' }}>{formatPct(r.percent.ggr)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300 font-semibold" style={{ color: r.percent.winrate > 0 ? '#16a34a' : r.percent.winrate < 0 ? '#dc2626' : '#6b7280' }}>{formatPct(r.percent.winrate)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300 font-semibold" style={{ color: r.percent.ggrPerUser > 0 ? '#16a34a' : r.percent.ggrPerUser < 0 ? '#dc2626' : '#6b7280' }}>{formatPct(r.percent.ggrPerUser)}</td>
-                      <td className="px-4 py-3 text-right border border-gray-300 font-semibold" style={{ color: r.percent.depositAmountPerUser > 0 ? '#16a34a' : r.percent.depositAmountPerUser < 0 ? '#dc2626' : '#6b7280' }}>{formatPct(r.percent.depositAmountPerUser)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '600' , color: r.percent.activeMember > 0 ? '#16a34a' : r.percent.activeMember < 0 ? '#dc2626' : '#6b7280' }}>{formatPct(r.percent.activeMember)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '600' , color: r.percent.avgTransactionValue > 0 ? '#16a34a' : r.percent.avgTransactionValue < 0 ? '#dc2626' : '#6b7280' }}>{formatPct(r.percent.avgTransactionValue)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '600' , color: r.percent.purchaseFrequency > 0 ? '#16a34a' : r.percent.purchaseFrequency < 0 ? '#dc2626' : '#6b7280' }}>{formatPct(r.percent.purchaseFrequency)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '600' , color: r.percent.depositCases > 0 ? '#16a34a' : r.percent.depositCases < 0 ? '#dc2626' : '#6b7280' }}>{formatPct(r.percent.depositCases)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '600' , color: r.percent.depositAmount > 0 ? '#16a34a' : r.percent.depositAmount < 0 ? '#dc2626' : '#6b7280' }}>{formatPct(r.percent.depositAmount)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '600' , color: r.percent.ggr > 0 ? '#16a34a' : r.percent.ggr < 0 ? '#dc2626' : '#6b7280' }}>{formatPct(r.percent.ggr)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '600' , color: r.percent.winrate > 0 ? '#16a34a' : r.percent.winrate < 0 ? '#dc2626' : '#6b7280' }}>{formatPct(r.percent.winrate)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '600' , color: r.percent.ggrPerUser > 0 ? '#16a34a' : r.percent.ggrPerUser < 0 ? '#dc2626' : '#6b7280' }}>{formatPct(r.percent.ggrPerUser)}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid #e0e0e0', fontWeight: '600' , color: r.percent.depositAmountPerUser > 0 ? '#16a34a' : r.percent.depositAmountPerUser < 0 ? '#dc2626' : '#6b7280' }}>{formatPct(r.percent.depositAmountPerUser)}</td>
                     </tr>
                   ))}
                 </tbody>

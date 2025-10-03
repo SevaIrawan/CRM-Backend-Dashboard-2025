@@ -245,7 +245,8 @@ export default function Sidebar({
           { title: 'Overview USC', path: '/usc/overview' },
           { title: 'Member Analytic USC', path: '/usc/member-analytic' },
           { title: 'Brand Comparison USC', path: '/usc/brand-comparison' },
-          { title: 'KPI Comparison', path: '/usc/kpi-comparison' }
+          { title: 'KPI Comparison USC', path: '/usc/kpi-comparison' },
+          { title: 'Member Report USC', path: '/usc/member-report' }
         ]
       },
       {
@@ -392,6 +393,7 @@ export default function Sidebar({
   useEffect(() => {
     const commonPaths = [
       '/usc/overview',
+      '/usc/member-report',
       '/myr/overview', 
       '/sgd/overview',
       '/dashboard'

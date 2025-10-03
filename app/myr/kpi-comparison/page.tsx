@@ -423,20 +423,68 @@ export default function KPIComparisonPage() {
 
           {!loading && !error && comparisonData && (
             <div className="overflow-x-auto" style={{ maxHeight: 'calc(100vh - 300px)' }}>
-              <table className="w-full border-collapse">
-                <thead className="sticky top-0 bg-[#1e293b] text-white" style={{ zIndex: 10, position: 'sticky', top: 0, pointerEvents: 'none' }}>
+              <table className="w-full" style={{
+                borderCollapse: 'collapse',
+                border: '1px solid #e0e0e0'
+              }}>
+                <thead className="sticky top-0" style={{ zIndex: 10, position: 'sticky', top: 0, pointerEvents: 'none' }}>
                   <tr>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ pointerEvents: 'none' }}>Metrics</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ pointerEvents: 'none' }}>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      pointerEvents: 'none'
+                    }}>Metrics</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      pointerEvents: 'none'
+                    }}>
                       Period A<br />
                       <span className="text-xs font-normal">({periodAStart} to {periodAEnd})</span>
                     </th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ pointerEvents: 'none' }}>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      pointerEvents: 'none'
+                    }}>
                       Period B<br />
                       <span className="text-xs font-normal">({periodBStart} to {periodBEnd})</span>
                     </th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ pointerEvents: 'none' }}>Compare (Diff)</th>
-                    <th className="px-4 py-3 text-left font-semibold border border-gray-300" style={{ pointerEvents: 'none' }}>Compare (%)</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      pointerEvents: 'none'
+                    }}>Compare (Diff)</th>
+                    <th style={{ 
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      border: '1px solid #e0e0e0',
+                      borderBottom: '2px solid #d0d0d0',
+                      backgroundColor: '#374151',
+                      color: 'white',
+                      pointerEvents: 'none'
+                    }}>Compare (%)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -445,25 +493,44 @@ export default function KPIComparisonPage() {
                       key={row.metricKey}
                       className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 cursor-pointer transition-colors`}
                     >
-                      <td className="px-4 py-3 text-left border border-gray-300 font-medium">
+                      <td style={{
+                        padding: '8px 12px',
+                        textAlign: 'left',
+                        border: '1px solid #e0e0e0',
+                        fontWeight: '500'
+                      }}>
                         {row.metric}
                       </td>
-                      <td className="px-4 py-3 text-right border border-gray-300">
+                      <td style={{
+                        padding: '8px 12px',
+                        textAlign: 'right',
+                        border: '1px solid #e0e0e0'
+                      }}>
                         {formatValue(row.periodA, row.type)}
                       </td>
-                      <td className="px-4 py-3 text-right border border-gray-300">
+                      <td style={{
+                        padding: '8px 12px',
+                        textAlign: 'right',
+                        border: '1px solid #e0e0e0'
+                      }}>
                         {formatValue(row.periodB, row.type)}
                       </td>
-                      <td 
-                        className="px-4 py-3 text-right border border-gray-300 font-semibold"
-                        style={{ color: row.color === 'green' ? '#16a34a' : row.color === 'red' ? '#dc2626' : '#374151' }}
-                      >
+                      <td style={{
+                        padding: '8px 12px',
+                        textAlign: 'right',
+                        border: '1px solid #e0e0e0',
+                        fontWeight: '600',
+                        color: row.color === 'green' ? '#16a34a' : row.color === 'red' ? '#dc2626' : '#374151'
+                      }}>
                         {formatValue(row.difference, row.type)}
                       </td>
-                      <td 
-                        className="px-4 py-3 text-right border border-gray-300 font-semibold"
-                        style={{ color: row.color === 'green' ? '#16a34a' : row.color === 'red' ? '#dc2626' : '#6b7280' }}
-                      >
+                      <td style={{
+                        padding: '8px 12px',
+                        textAlign: 'right',
+                        border: '1px solid #e0e0e0',
+                        fontWeight: '600',
+                        color: row.color === 'green' ? '#16a34a' : row.color === 'red' ? '#dc2626' : '#6b7280'
+                      }}>
                         {row.percentageDisplay}
                       </td>
                     </tr>
