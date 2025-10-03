@@ -223,7 +223,8 @@ export default function Sidebar({
           { title: 'Overview MYR', path: '/myr/overview' },
           { title: 'Member Analytic MYR', path: '/myr/member-analytic' },
           { title: 'Brand Comparison MYR', path: '/myr/brand-comparison' },
-          { title: 'KPI Comparison MYR', path: '/myr/kpi-comparison' }
+          { title: 'KPI Comparison MYR', path: '/myr/kpi-comparison' },
+          { title: 'Member Report MYR', path: '/myr/member-report' }
         ]
       },
       {
@@ -234,7 +235,8 @@ export default function Sidebar({
           { title: 'Overview SGD', path: '/sgd/overview' },
           { title: 'Member Analytic SGD', path: '/sgd/member-analytic' },
           { title: 'Brand Comparison SGD', path: '/sgd/brand-comparison' },
-          { title: 'KPI Comparison SGD', path: '/sgd/kpi-comparison' }
+          { title: 'KPI Comparison SGD', path: '/sgd/kpi-comparison' },
+          { title: 'Member Report SGD', path: '/sgd/member-report' }
         ]
       },
       {
@@ -394,8 +396,10 @@ export default function Sidebar({
     const commonPaths = [
       '/usc/overview',
       '/usc/member-report',
-      '/myr/overview', 
+      '/myr/overview',
+      '/myr/member-report',
       '/sgd/overview',
+      '/sgd/member-report',
       '/dashboard'
     ]
     commonPaths.forEach((path, index) => {
