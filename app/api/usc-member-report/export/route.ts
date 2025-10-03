@@ -26,18 +26,44 @@ export async function POST(request: NextRequest) {
       query = query.filter('date', 'gte', startDate).filter('date', 'lte', endDate)
     }
 
-    const result = await query.order('date', { ascending: false })
+    // For large datasets, we need to fetch in batches
+    const batchSize = 5000 // Process 5000 records at a time
+    let allData: any[] = []
+    let offset = 0
+    let hasMore = true
 
-    if (result.error) {
-      console.error('❌ Export query error:', result.error)
-      return NextResponse.json({ 
-        error: 'Database error during export',
-        message: result.error.message 
-      }, { status: 500 })
+    console.log('📊 Starting batch export for large dataset...')
+
+    while (hasMore) {
+      const batchQuery = query.range(offset, offset + batchSize - 1)
+      const result = await batchQuery.order('date', { ascending: false })
+
+      if (result.error) {
+        console.error('❌ Export batch query error:', result.error)
+        return NextResponse.json({ 
+          error: 'Database error during export',
+          message: result.error.message 
+        }, { status: 500 })
+      }
+
+      const batchData = result.data || []
+      allData = [...allData, ...batchData]
+      
+      console.log(`📊 Batch ${Math.floor(offset / batchSize) + 1}: ${batchData.length} records (Total: ${allData.length})`)
+      
+      // If we got less than batchSize, we've reached the end
+      hasMore = batchData.length === batchSize
+      offset += batchSize
+
+      // Safety limit to prevent infinite loops
+      if (allData.length > 100000) {
+        console.log('⚠️ Export limit reached: 100,000 records')
+        break
+      }
     }
 
-    const data = result.data || []
-    console.log(`📊 Exporting ${data.length} blue_whale_usc records`)
+    const data = allData
+    console.log(`📊 Export completed: ${data.length} blue_whale_usc records`)
 
     if (data.length === 0) {
       return NextResponse.json({ 

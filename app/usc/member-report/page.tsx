@@ -54,10 +54,63 @@ export default function USCMemberReportPage() {
   // Columns to hide
   const hiddenColumns = ['ABSENT', 'YEAR', 'MONTH', 'USERKEY', 'UNIQUEKEY', 'WINRATE', 'CURRENCY']
   
+  // Custom column order for better organization - based on actual column names from database
+  const columnOrder = [
+    'date',
+    'line', 
+    'user_name',
+    'unique_code',
+    'vip_level',
+    'operator',
+    'traffic',
+    'register_date',
+    'first_deposit_date',
+    'first_deposit_amount',
+    'last_deposit_date',
+    'days_inactive',
+    'deposit_cases',
+    'deposit_amount',
+    'withdraw_cases',
+    'withdraw_amount',
+    'bonus',
+    'cases_adjustment',
+    'add_bonus',
+    'deduct_bonus',
+    'add_transaction',
+    'deduct_transaction',
+    'cases_bets',
+    'bets_amount',
+    'valid_amount',
+    'ggr',
+    'net_profit',
+    'last_activity_days'
+  ]
+  
   // Function to determine if column should be hidden
   const isColumnHidden = (column: string): boolean => {
     const upperColumn = column.toUpperCase()
     return hiddenColumns.includes(upperColumn)
+  }
+  
+  // Function to get sorted columns according to custom order
+  const getSortedColumns = (dataKeys: string[]): string[] => {
+    // First, get columns that exist in data and are not hidden
+    const visibleColumns = dataKeys.filter(column => !isColumnHidden(column))
+    
+    // Debug: Log actual column names
+    console.log('🔍 [Member Report] Available columns:', visibleColumns)
+    console.log('🔍 [Member Report] Custom order columns:', columnOrder)
+    
+    // Then sort them according to custom order
+    const sortedColumns = columnOrder.filter(col => visibleColumns.includes(col))
+    
+    // Add any remaining columns that weren't in the custom order (fallback)
+    const remainingColumns = visibleColumns.filter(col => !columnOrder.includes(col))
+    
+    console.log('🔍 [Member Report] Sorted columns:', sortedColumns)
+    console.log('🔍 [Member Report] Remaining columns:', remainingColumns)
+    
+    return [...sortedColumns, ...remainingColumns]
   }
   
   // Function to determine text alignment
@@ -212,6 +265,10 @@ export default function USCMemberReportPage() {
   const handleExport = async () => {
     try {
       setExporting(true)
+      
+      // Show progress message for large exports
+      console.log('📤 Starting export for large dataset...')
+      
       const response = await fetch('/api/usc-member-report/export', {
         method: 'POST',
         headers: {
@@ -225,6 +282,8 @@ export default function USCMemberReportPage() {
           endDate: dateRange.end,
           filterMode
         }),
+        // Increase timeout for large datasets
+        signal: AbortSignal.timeout(300000) // 5 minutes timeout
       })
 
       if (response.ok) {
@@ -320,7 +379,7 @@ export default function USCMemberReportPage() {
           disabled={exporting || memberReportData.length === 0}
           className={`export-button ${exporting || memberReportData.length === 0 ? 'disabled' : ''}`}
         >
-          {exporting ? 'Exporting...' : 'Export'}
+{exporting ? 'Exporting Large Dataset...' : 'Export'}
         </button>
       </div>
     </div>
@@ -391,8 +450,7 @@ export default function USCMemberReportPage() {
                   }}>
                     <thead>
                       <tr>
-                        {memberReportData.length > 0 && Object.keys(memberReportData[0])
-                          .filter(column => !isColumnHidden(column))
+                        {memberReportData.length > 0 && getSortedColumns(Object.keys(memberReportData[0]))
                           .map((column) => (
                             <th key={column} style={{ 
                               textAlign: 'left',
@@ -408,8 +466,7 @@ export default function USCMemberReportPage() {
                     <tbody>
                       {memberReportData.map((row, index) => (
                         <tr key={index}>
-                          {Object.keys(row)
-                            .filter(column => !isColumnHidden(column))
+                          {getSortedColumns(Object.keys(row))
                             .map((column) => (
                               <td key={column} style={{ 
                                 textAlign: getColumnAlignment(column, row[column]) as 'left' | 'right' | 'center',
