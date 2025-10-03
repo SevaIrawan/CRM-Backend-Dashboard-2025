@@ -71,10 +71,57 @@ export async function POST(request: NextRequest) {
       }, { status: 404 })
     }
 
-    // Convert to CSV - exclude hidden columns
+    // Convert to CSV - use custom column order and exclude hidden columns
     const hiddenColumns = ['ABSENT', 'YEAR', 'MONTH', 'USERKEY', 'UNIQUEKEY', 'WINRATE', 'CURRENCY']
+    
+    // Custom column order - same as frontend
+    const columnOrder = [
+      'date',
+      'line', 
+      'user_name',
+      'unique_code',
+      'vip_level',
+      'operator',
+      'traffic',
+      'register_date',
+      'first_deposit_date',
+      'first_deposit_amount',
+      'last_deposit_date',
+      'days_inactive',
+      'deposit_cases',
+      'deposit_amount',
+      'withdraw_cases',
+      'withdraw_amount',
+      'bonus',
+      'cases_adjustment',
+      'add_bonus',
+      'deduct_bonus',
+      'add_transaction',
+      'deduct_transaction',
+      'cases_bets',
+      'bets_amount',
+      'valid_amount',
+      'ggr',
+      'net_profit',
+      'last_activity_days'
+    ]
+    
+    // Function to get sorted columns according to custom order (same as frontend)
+    const getSortedColumns = (dataKeys: string[]): string[] => {
+      // First, get columns that exist in data and are not hidden
+      const visibleColumns = dataKeys.filter(column => !hiddenColumns.includes(column.toUpperCase()))
+      
+      // Then sort them according to custom order
+      const sortedColumns = columnOrder.filter(col => visibleColumns.includes(col))
+      
+      // Add any remaining columns that weren't in the custom order (fallback)
+      const remainingColumns = visibleColumns.filter(col => !columnOrder.includes(col))
+      
+      return [...sortedColumns, ...remainingColumns]
+    }
+    
     const allHeaders = Object.keys(data[0])
-    const headers = allHeaders.filter(header => !hiddenColumns.includes(header.toUpperCase()))
+    const headers = getSortedColumns(allHeaders)
     
     const csvContent = [
       headers.join(','),
