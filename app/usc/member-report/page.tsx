@@ -412,7 +412,7 @@ export default function USCMemberReportPage() {
                             .filter(column => !isColumnHidden(column))
                             .map((column) => (
                               <td key={column} style={{ 
-                                textAlign: getColumnAlignment(column, row[column]),
+                                textAlign: getColumnAlignment(column, row[column]) as 'left' | 'right' | 'center',
                                 border: '1px solid #e0e0e0',
                                 padding: '8px 12px'
                               }}>
