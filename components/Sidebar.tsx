@@ -225,6 +225,7 @@ export default function Sidebar({
           { title: 'Brand Comparison MYR', path: '/myr/brand-comparison' },
           { title: 'KPI Comparison MYR', path: '/myr/kpi-comparison' },
           { title: 'Customer Retention MYR', path: '/myr/customer-retention' },
+          { title: 'Churn Member MYR', path: '/myr/churn-member' },
           { title: 'Member Report MYR', path: '/myr/member-report' }
         ]
       },
@@ -238,6 +239,7 @@ export default function Sidebar({
           { title: 'Brand Comparison SGD', path: '/sgd/brand-comparison' },
           { title: 'KPI Comparison SGD', path: '/sgd/kpi-comparison' },
           { title: 'Customer Retention SGD', path: '/sgd/customer-retention' },
+          { title: 'Churn Member SGD', path: '/sgd/churn-member' },
           { title: 'Member Report SGD', path: '/sgd/member-report' }
         ]
       },
@@ -251,6 +253,7 @@ export default function Sidebar({
           { title: 'Brand Comparison USC', path: '/usc/brand-comparison' },
           { title: 'KPI Comparison USC', path: '/usc/kpi-comparison' },
           { title: 'Customer Retention USC', path: '/usc/customer-retention' },
+          { title: 'Churn Member USC', path: '/usc/churn-member' },
           { title: 'Member Report USC', path: '/usc/member-report' }
         ]
       },
@@ -399,12 +402,15 @@ export default function Sidebar({
     const commonPaths = [
       '/usc/overview',
       '/usc/customer-retention',
+      '/usc/churn-member',
       '/usc/member-report',
       '/myr/overview',
       '/myr/customer-retention',
+      '/myr/churn-member',
       '/myr/member-report',
       '/sgd/overview',
       '/sgd/customer-retention',
+      '/sgd/churn-member',
       '/sgd/member-report',
       '/dashboard'
     ]
