@@ -227,7 +227,7 @@ export async function GET(request: NextRequest) {
     // Group data by hour to find peak hours
     const hourlyData: { [hour: string]: any[] } = {}
     depositData.forEach(item => {
-      if (item.time) {
+      if (item.time && typeof item.time === 'string') {
         const hour = item.time.split(':')[0] // Extract hour (HH:MM:SS -> HH)
         if (!hourlyData[hour]) hourlyData[hour] = []
         hourlyData[hour].push(item)
