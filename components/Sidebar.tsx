@@ -226,6 +226,7 @@ export default function Sidebar({
           { title: 'KPI Comparison MYR', path: '/myr/kpi-comparison' },
           { title: 'Customer Retention MYR', path: '/myr/customer-retention' },
           { title: 'Churn Member MYR', path: '/myr/churn-member' },
+          { title: 'Auto Approval Monitor MYR', path: '/myr/auto-approval-monitor' },
           { title: 'Member Report MYR', path: '/myr/member-report' }
         ]
       },
