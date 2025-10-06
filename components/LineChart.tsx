@@ -455,11 +455,13 @@ export default function LineChart({
                   `Avg Process Time Automation: ${peakData.avgProcessingTimeAutomation.toFixed(1)}s`
                 ];
               }
-              // For second series, don't show anything to avoid duplication
+              // For second series, show ONLY the actual chart value to match visual
               else {
-                return undefined;
+                return `AVG Proc Time Automation: ${value.toFixed(1)}s`;
               }
             }
+            
+            // If we reach here, it's not a peak hour chart, continue with normal logic
             
             // Special case for "Automation Trans" - use "cases" suffix
             if (datasetLabel && datasetLabel.toLowerCase().includes('automation trans')) {

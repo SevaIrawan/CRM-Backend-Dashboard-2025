@@ -1,20 +1,730 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import Layout from '@/components/Layout'
 import Frame from '@/components/Frame'
-import ComingSoon from '@/components/ComingSoon'
+import { LineSlicer } from '@/components/slicers'
+import StatCard from '@/components/StatCard'
+import LineChart from '@/components/LineChart'
+import BarChart from '@/components/BarChart'
+import { getChartIcon } from '@/lib/CentralIcon'
+import { formatCurrencyKPI, formatIntegerKPI, formatMoMChange, formatNumericKPI, formatPercentageKPI } from '@/lib/formatHelpers'
 
-export default function AutoApprovalWithdrawPage() {
+// Types for slicer options API
+interface SlicerOptions {
+  lines: string[]
+  years: string[]
+  months: string[]
+  defaults: {
+    line: string
+    year: string
+    month: string
+  }
+}
+
+interface AutoApprovalData {
+  // Main KPIs
+  withdrawAmount: number
+  withdrawCases: number
+  averageProcessingTime: number
+  overdueTransactions: number
+  coverageRate: number
+  manualTimeSaved: number
+  
+  // Comprehensive KPI Data
+  automation?: {
+    automationTransactions: number
+    manualTransactions: number
+    automationRate: number
+    manualProcessingRate: number
+    automationAmountRate: number
+  }
+  
+  processingTime?: {
+    avgAll: number
+    avgAutomation: number
+    avgManual: number
+    efficiencyRatio: number
+  }
+  
+  performance?: {
+    overdueTransactions: number
+    fastProcessingRate: number
+    overdueRate: number
+    automationOverdue: number
+    manualOverdue: number
+  }
+  
+  // Debug Information
+  debug: {
+    totalCases: number
+    autoApprovalCases: number
+    manualCases: number
+    manualAvgProcessingTime: number
+    autoAvgProcessingTime: number
+    timeSavedPerTransaction: number
+    totalTimeSavedSeconds: number
+    autoApprovalTransactionVolume: number
+  }
+  
+  // Chart Data
+  weeklyProcessingTime: Array<{
+    week: string
+    avgProcessingTime: number
+  }>
+  weeklyCoverageRate: Array<{
+    week: string
+    coverageRate: number
+  }>
+  weeklyOverdueTransactions: Array<{
+    week: string
+    overdueCount: number
+  }>
+  automationOverdueTransactionsTrend: {
+    series: Array<{
+      name: string
+      data: number[]
+    }>
+    categories: string[]
+  }
+  dailyOverdueCount: Array<{
+    date: string
+    overdueCount: number
+  }>
+  dailyProcessingDistribution: Array<{
+    date: string
+    min: number
+    q1: number
+    median: number
+    q3: number
+    max: number
+  }>
+  dailyAutomationProcessingDistribution: Array<{
+    date: string
+    min: number
+    q1: number
+    median: number
+    q3: number
+    max: number
+  }>
+  peakHourProcessingTime: Array<{
+    period: string
+    peakHour: string
+    maxTotalTransactions: number
+    automationTransactions: number
+    avgProcessingTimeAutomation: number
+  }>
+  momComparison?: {
+    totalTransactions: number
+    automationTransactions: number
+    avgAutomationProcessingTime: number
+    automationOverdue: number
+    coverageRate: number
+    manualTimeSaved: number
+  }
+  metadata?: {
+    totalRecords: number
+    dateRange: {
+      start: number | null
+      end: number | null
+    }
+    automationStartDate: string
+    lastUpdated: string
+    maxDateData: number
+  }
+}
+
+export default function MYRAutoApprovalWithdrawPage() {
+  // Client-side only state
+  const [isMounted, setIsMounted] = useState(false)
+  
+  const [data, setData] = useState<AutoApprovalData | null>(null)
+  
+  // Debug logging for data state changes
+  useEffect(() => {
+    console.log('📊 [DEBUG] Data state changed:', data)
+    if (data) {
+      console.log('📊 [DEBUG] Data values:', {
+        withdrawAmount: data.withdrawAmount,
+        withdrawCases: data.withdrawCases,
+        coverageRate: data.coverageRate,
+        manualTimeSaved: data.manualTimeSaved
+      })
+      console.log('🎯 [DEBUG] Rendering StatCard with data:', {
+        withdrawAmount: data.withdrawAmount,
+        withdrawCases: data.withdrawCases,
+        coverageRate: data.coverageRate,
+        manualTimeSaved: data.manualTimeSaved
+      })
+      console.log('🎯 [DEBUG] Formatted values:', {
+        withdrawAmountFormatted: formatCurrencyKPI(data.withdrawAmount || 0, 'MYR'),
+        withdrawCasesFormatted: formatIntegerKPI(data.withdrawCases || 0),
+        coverageRateFormatted: formatPercentageKPI(data.coverageRate || 0),
+        manualTimeSavedFormatted: `${(data.manualTimeSaved || 0).toFixed(1)} hrs`
+      })
+      console.log('🎯 [DEBUG] StatCard values:', {
+        withdrawAmount: {
+          raw: data.withdrawAmount,
+          formatted: formatCurrencyKPI(data.withdrawAmount || 0, 'MYR'),
+          dailyAverage: formatCurrencyKPI((data.withdrawAmount || 0) / calculateActiveDays(), 'MYR')
+        },
+        withdrawCases: {
+          raw: data.withdrawCases,
+          formatted: formatIntegerKPI(data.withdrawCases || 0),
+          dailyAverage: formatIntegerKPI(Math.round((data.withdrawCases || 0) / calculateActiveDays()))
+        }
+      })
+    }
+  }, [data])
+  const [slicerOptions, setSlicerOptions] = useState<SlicerOptions | null>(null)
+  const [selectedLine, setSelectedLine] = useState('')
+  const [selectedYear, setSelectedYear] = useState('')
+  const [selectedMonth, setSelectedMonth] = useState('')
+  const [isWeekly, setIsWeekly] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  // Helper function to format MoM comparison
+  const formatMoMComparison = (value: number) => {
+    const absValue = Math.abs(value)
+    const sign = value >= 0 ? '+' : ''
+    return `${sign}${absValue.toFixed(1)}%`
+  }
+
+  // Helper function to calculate active days using STANDARD LOGIC
+  const calculateActiveDays = () => {
+    if (!selectedYear || !selectedMonth) return 30 // fallback
+    
+    const currentDate = new Date()
+    const currentYear = currentDate.getFullYear().toString()
+    const currentMonthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                              'July', 'August', 'September', 'October', 'November', 'December']
+    const currentMonth = currentMonthNames[currentDate.getMonth()]
+    
+    // STANDARD LOGIC: If current ongoing month, use max date data from database
+    if (selectedYear === currentYear && selectedMonth === currentMonth) {
+      // Use max date data from API response
+      const maxDateData = data?.metadata?.maxDateData || 0
+      if (maxDateData > 0) {
+        console.log('📅 [STANDARD LOGIC] Current ongoing month detected, using max date data:', maxDateData)
+        return maxDateData
+      } else {
+        // Fallback to current day if no data
+        const currentDay = currentDate.getDate()
+        console.log('📅 [STANDARD LOGIC] Current ongoing month, no data available, using current day:', currentDay)
+        return currentDay
+      }
+    }
+    
+    // STANDARD LOGIC: For past months, use total days in month
+    try {
+      const year = parseInt(selectedYear)
+      const monthName = selectedMonth
+      
+      // Convert month name to number
+      const monthNumber = currentMonthNames.indexOf(monthName) + 1
+      
+      if (monthNumber === 0) return 30 // fallback if month not found
+      
+      const monthStart = new Date(year, monthNumber - 1, 1)
+      const monthEnd = new Date(year, monthNumber, 0) // Last day of month
+      const totalDays = monthEnd.getDate()
+      
+      console.log('📅 [STANDARD LOGIC] Past/completed month detected, using total days:', { 
+        year, monthName, monthNumber, totalDays 
+      })
+      return totalDays
+    } catch (error) {
+      console.error('Error calculating active days:', error)
+      return 30 // fallback
+    }
+  }
+
+  // Ensure client-side only rendering
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+  
+  // Load slicer options on component mount
+  useEffect(() => {
+    const loadSlicerOptions = async () => {
+      try {
+        setLoadError(null)
+
+        console.log('🔍 [DEBUG] Loading slicer options...')
+        const response = await fetch('/api/myr-auto-approval-withdraw/slicer-options')
+        console.log('🔍 [DEBUG] Slicer options response status:', response.status)
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        
+        const result = await response.json()
+        console.log('📊 [DEBUG] Slicer options result:', result)
+
+        if (result.success) {
+          setSlicerOptions(result.data)
+          // Auto-set defaults from API
+          setSelectedLine(result.data.defaults.line || result.data.lines[0] || '')
+          setSelectedYear(result.data.defaults.year || result.data.years[0] || '')
+          setSelectedMonth(result.data.defaults.month || result.data.months[0] || '')
+          console.log('✅ [DEBUG] Slicer options loaded and defaults set')
+        } else {
+          setLoadError('Failed to load slicer options')
+        }
+      } catch (error) {
+        console.error('Error loading slicer options:', error)
+        setLoadError('Failed to load slicer options')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadSlicerOptions()
+  }, [])
+
+  // Load KPI data when slicers change
+  useEffect(() => {
+    console.log('🔄 [DEBUG] useEffect triggered with:', { selectedLine, selectedYear, selectedMonth, isWeekly })
+    if (!selectedLine || !selectedYear || !selectedMonth) {
+      console.log('❌ [DEBUG] Missing required slicer values, skipping data load')
+      return
+    }
+
+    const loadKPIData = async () => {
+      const callId = Math.random().toString(36).substr(2, 9)
+      console.log(`🚀 [DEBUG] Starting API call ${callId}`)
+      
+      try {
+        setIsLoading(true)
+        setLoadError(null)
+        
+        // Use year and month parameters directly from slicers
+        console.log('🔍 [DEBUG] Using slicer parameters:', { selectedLine, selectedYear, selectedMonth, isWeekly })
+        
+        const params = new URLSearchParams({
+          line: selectedLine,
+          year: selectedYear,
+          month: selectedMonth,
+          isWeekly: isWeekly.toString()
+        })
+        
+        console.log('🔍 [DEBUG] Loading KPI data with params:', params.toString())
+        console.log('🔍 [DEBUG] Full URL:', `/api/myr-auto-approval-withdraw/data?${params}`)
+        console.log('🔍 [DEBUG] Timestamp:', new Date().toISOString())
+        
+        const response = await fetch(`/api/myr-auto-approval-withdraw/data?${params}`)
+        console.log('🔍 [DEBUG] Response status:', response.status, response.statusText)
+        console.log('🔍 [DEBUG] Response timestamp:', new Date().toISOString())
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        
+        const result = await response.json()
+        console.log('📊 [DEBUG] API Response:', result.success ? 'SUCCESS' : 'FAILED', result)
+        
+        if (result.success) {
+          console.log('✅ [DEBUG] Setting data:', result.data)
+          console.log('✅ [DEBUG] Data keys:', Object.keys(result.data))
+          console.log('✅ [DEBUG] Withdraw Amount:', result.data.withdrawAmount, 'Type:', typeof result.data.withdrawAmount)
+          console.log('✅ [DEBUG] Withdraw Cases:', result.data.withdrawCases, 'Type:', typeof result.data.withdrawCases)
+          console.log('✅ [DEBUG] Automation data:', result.data.automation)
+          console.log('✅ [DEBUG] Processing time data:', result.data.processingTime)
+          setData(result.data)
+          console.log('✅ [DEBUG] Data set successfully')
+        } else {
+          console.log('❌ [DEBUG] API returned error:', result)
+          setLoadError('Failed to load KPI data')
+        }
+      } catch (error) {
+        console.error('Error loading KPI data:', error)
+        setLoadError('Failed to load KPI data')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    const timeoutId = setTimeout(loadKPIData, 100)
+    return () => clearTimeout(timeoutId)
+  }, [selectedLine, selectedYear, selectedMonth, isWeekly])
+
+
+  const customSubHeader = (
+    <div className="dashboard-subheader">
+      <div className="subheader-title">
+        {/* Title area - left side */}
+      </div>
+      
+      <div className="subheader-controls">
+        {/* Line Slicer */}
+        <div className="slicer-group">
+          <label className="slicer-label">LINE:</label>
+          <LineSlicer 
+            lines={slicerOptions?.lines || []}
+            selectedLine={selectedLine}
+            onLineChange={setSelectedLine}
+          />
+        </div>
+
+        {/* Year Slicer */}
+        <div className="slicer-group">
+          <label className="slicer-label">YEAR:</label>
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(e.target.value)}
+            className="subheader-select"
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              backgroundColor: 'white',
+              fontSize: '14px',
+              color: '#374151',
+              cursor: 'pointer',
+              outline: 'none',
+              transition: 'all 0.2s ease',
+              minWidth: '100px',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+            }}
+          >
+            {slicerOptions?.years?.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Month Slicer */}
+        <div className="slicer-group">
+          <label className="slicer-label">MONTH:</label>
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="subheader-select"
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              backgroundColor: 'white',
+              fontSize: '14px',
+              color: '#374151',
+              cursor: 'pointer',
+              outline: 'none',
+              transition: 'all 0.2s ease',
+              minWidth: '140px',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+            }}
+          >
+            {slicerOptions?.months?.map((month) => (
+                  <option key={month} value={month}>
+                {month}
+                  </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Daily/Weekly Toggle */}
+        <div className="slicer-group">
+          <label className="slicer-label">MODE:</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+              <input
+                type="radio"
+                name="dataMode"
+                value="daily"
+                checked={!isWeekly}
+                onChange={() => setIsWeekly(false)}
+                style={{ margin: 0 }}
+              />
+              <span style={{ fontSize: '14px' }}>Daily</span>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+              <input
+                type="radio"
+                name="dataMode"
+                value="weekly"
+                checked={isWeekly}
+                onChange={() => setIsWeekly(true)}
+                style={{ margin: 0 }}
+              />
+              <span style={{ fontSize: '14px' }}>Weekly</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
+  // Prevent hydration mismatch
+  if (!isMounted) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto mb-6"></div>
+            <div className="space-y-2">
+              <p className="text-lg font-semibold text-gray-800">Initializing Dashboard</p>
+              <p className="text-sm text-gray-500">Preparing client-side components...</p>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto mb-6"></div>
+            <div className="space-y-2">
+              <p className="text-lg font-semibold text-gray-800">Loading Auto Approval Withdrawal Monitoring MYR</p>
+              <p className="text-sm text-gray-500">Fetching real-time data from database...</p>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <Layout>
+        <div className="error-container">
+          <p>Error: {loadError}</p>
+        </div>
+      </Layout>
+    )
+  }
+
   return (
-    <Layout>
+    <Layout customSubHeader={customSubHeader}>
       <Frame variant="standard">
-        <ComingSoon 
-          title="Auto Approval Withdrawal Monitoring MYR"
-          subtitle="Auto Approval Withdrawal monitoring dashboard for MYR currency is coming soon"
-          message="This will include comprehensive tracking and analytics for automated withdrawal processes. Please check back soon!"
-        />
+
+        {/* Content Container with proper spacing and scroll */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '20px',
+          marginTop: '20px',
+          height: 'calc(100vh - 200px)',
+          overflowY: 'auto',
+          paddingRight: '8px'
+        }}>
+                 {/* BARIS 1: KPI CARDS (6 CARDS ROW) */}
+                 <div className="kpi-row">
+                   <StatCard
+                     title="TOTAL TRANSACTIONS"
+                     value={formatIntegerKPI(data?.withdrawCases || 0)}
+                     additionalKpi={{
+                       label: "DAILY AVERAGE",
+                       value: formatIntegerKPI(Math.round((data?.withdrawCases || 0) / calculateActiveDays()))
+                     }}
+                     comparison={{
+                       percentage: formatMoMComparison(data?.momComparison?.totalTransactions || 0),
+                       isPositive: (data?.momComparison?.totalTransactions || 0) >= 0
+                     }}
+                   />
+                   <StatCard
+                     title="TOTAL TRANS AUTOMATION"
+                     value={formatIntegerKPI(data?.automation?.automationTransactions || 0)}
+                     additionalKpi={{
+                       label: "DAILY AVERAGE",
+                       value: formatIntegerKPI(Math.round((data?.automation?.automationTransactions || 0) / calculateActiveDays()))
+                     }}
+                     comparison={{
+                       percentage: formatMoMComparison(data?.momComparison?.automationTransactions || 0),
+                       isPositive: (data?.momComparison?.automationTransactions || 0) >= 0
+                     }}
+                   />
+                   <StatCard
+                     title="AVG PROC TIME AUTOMATION"
+                     value={`${(data?.processingTime?.avgAutomation || 0).toFixed(1)} sec`}
+                     additionalKpi={{
+                       label: "DAILY AVERAGE",
+                       value: "-"
+                     }}
+                     comparison={{
+                       percentage: formatMoMComparison(data?.momComparison?.avgAutomationProcessingTime || 0),
+                       isPositive: (data?.momComparison?.avgAutomationProcessingTime || 0) >= 0
+                     }}
+                   />
+                   <StatCard
+                     title="OVERDUE TRANS AUTOMATION"
+                     value={formatIntegerKPI(data?.performance?.automationOverdue || 0)}
+                     additionalKpi={{
+                       label: "DAILY AVERAGE",
+                       value: formatIntegerKPI(Math.round((data?.performance?.automationOverdue || 0) / calculateActiveDays()))
+                     }}
+                     comparison={{
+                       percentage: formatMoMComparison(data?.momComparison?.automationOverdue || 0),
+                       isPositive: (data?.momComparison?.automationOverdue || 0) >= 0
+                     }}
+                   />
+                   <StatCard
+                     title="COVERAGE RATE"
+                     value={formatPercentageKPI(data?.coverageRate || 0)}
+                     additionalKpi={{
+                       label: "DAILY AVERAGE",
+                       value: "-"
+                     }}
+                     comparison={{
+                       percentage: formatMoMComparison(data?.momComparison?.coverageRate || 0),
+                       isPositive: (data?.momComparison?.coverageRate || 0) >= 0
+                     }}
+                   />
+                   <StatCard
+                     title="MANUAL TIME SAVED"
+                     value={`${(data?.manualTimeSaved || 0).toFixed(1)} hrs`}
+                     additionalKpi={{
+                       label: "DAILY AVERAGE",
+                       value: `${((data?.manualTimeSaved || 0) / calculateActiveDays()).toFixed(1)} hrs`
+                     }}
+                     comparison={{
+                       percentage: formatMoMComparison(data?.momComparison?.manualTimeSaved || 0),
+                       isPositive: (data?.momComparison?.manualTimeSaved || 0) >= 0
+                     }}
+                   />
+          </div>
+
+          {/* Row 2: Processing Time & Coverage Rate Charts */}
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                   <LineChart
+                     series={data?.weeklyProcessingTime ? [{
+                       name: 'Auto Approval Processing Time',
+                       data: data.weeklyProcessingTime.map(item => item.avgProcessingTime)
+                     }] : []}
+                     categories={data?.weeklyProcessingTime ? data.weeklyProcessingTime.map(item => item.week) : []}
+                     title={isWeekly ? "AVERAGE PROCESSING TIME AUTOMATION (WEEKLY)" : "AVERAGE PROCESSING TIME AUTOMATION (DAILY)"}
+                     currency="MYR"
+                     hideLegend={true}
+                     showDataLabels={true}
+                     chartIcon={getChartIcon('Processing Time')}
+                   />
+                   <LineChart
+                     series={data?.weeklyCoverageRate ? [{
+                       name: 'Coverage Rate',
+                       data: data.weeklyCoverageRate.map(item => item.coverageRate)
+                     }] : []}
+                     categories={data?.weeklyCoverageRate ? data.weeklyCoverageRate.map(item => item.week) : []}
+                     title={isWeekly ? "COVERAGE RATE (WEEKLY TREND)" : "COVERAGE RATE (DAILY TREND)"}
+                     currency="MYR"
+                     hideLegend={true}
+                     showDataLabels={true}
+                     color="#FF8C00"
+                     chartIcon={getChartIcon('Coverage Rate')}
+                   />
+                 </div>
+
+                 {/* Row 3: Overdue Transactions & Processing Distribution Charts */}
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                   <LineChart
+                     series={data?.dailyOverdueCount ? [{
+                       name: 'Automation Overdue Count',
+                       data: data.dailyOverdueCount.map(item => item.overdueCount)
+                     }] : []}
+                     categories={data?.dailyOverdueCount ? data.dailyOverdueCount.map(item => item.date) : []}
+                     title={isWeekly ? "OVERDUE TRANS AUTOMATION (WEEKLY)" : "OVERDUE TRANS AUTOMATION (Daily)"}
+                     currency="MYR"
+                     hideLegend={true}
+                     showDataLabels={true}
+                     color="#3B82F6"
+                     chartIcon={getChartIcon('Daily Overdue Count')}
+                   />
+                   <LineChart
+                     series={data?.dailyAutomationProcessingDistribution ? [{
+                       name: 'Automation Median Time',
+                       data: data.dailyAutomationProcessingDistribution.map(item => item.median)
+                     }] : []}
+                     categories={data?.dailyAutomationProcessingDistribution ? data.dailyAutomationProcessingDistribution.map(item => item.date) : []}
+                     title={isWeekly ? "PROCESSING TIME DISTRIBUTION AUTOMATION (WEEKLY)" : "PROCESSING TIME DISTRIBUTION AUTOMATION PER DAY"}
+                     currency="MYR"
+                     hideLegend={true}
+                     showDataLabels={true}
+                     color="#F97316"
+                     chartIcon={getChartIcon('Processing Time Distribution')}
+                   />
+                 </div>
+
+          {/* Slicer Info */}
+          <div className="slicer-info">
+            <p>Showing data for: {selectedLine} | {selectedYear} | {selectedMonth} | {
+              isWeekly ? 'WEEKLY MODE' : 'DAILY MODE'
+            }</p>
+          </div>
+        </div>
       </Frame>
+
+      <style jsx>{`
+        .error-container {
+          text-align: center;
+          padding: 48px;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .kpi-row {
+          display: grid;
+          grid-template-columns: repeat(6, 1fr);
+          gap: 15px;
+          margin-bottom: 20px;
+        }
+
+        .slicer-info {
+          background: #f3f4f6;
+          padding: 16px;
+          border-radius: 8px;
+          border: 1px solid #e5e7eb;
+          text-align: center;
+          margin-top: 20px;
+        }
+
+        .slicer-info p {
+          margin: 0;
+          color: #6b7280;
+          font-size: 14px;
+        }
+
+        @media (max-width: 1440px) {
+          .kpi-row {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+          }
+          .chart-row {
+            grid-template-columns: repeat(2, 1fr);
+          }
+          
+          /* Ensure 2-column layout for all chart rows */
+          .grid.grid-cols-1.md\\:grid-cols-2 {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+
+        @media (max-width: 1024px) {
+          .kpi-row {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .kpi-row {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .kpi-row {
+            grid-template-columns: 1fr;
+            gap: 6px;
+          }
+        }
+      `}</style>
     </Layout>
   )
 }
