@@ -31,6 +31,30 @@ interface AutoApprovalData {
   coverageRate: number
   manualTimeSaved: number
   
+  // Comprehensive KPI Data
+  automation?: {
+    automationTransactions: number
+    manualTransactions: number
+    automationRate: number
+    manualProcessingRate: number
+    automationAmountRate: number
+  }
+  
+  processingTime?: {
+    avgAll: number
+    avgAutomation: number
+    avgManual: number
+    efficiencyRatio: number
+  }
+  
+  performance?: {
+    overdueTransactions: number
+    fastProcessingRate: number
+    overdueRate: number
+    automationOverdue: number
+    manualOverdue: number
+  }
+  
   // Debug Information
   debug: {
     totalCases: number
@@ -202,73 +226,13 @@ export default function MYRAutoApprovalMonitorPage() {
         setIsLoading(true)
         setLoadError(null)
         
-        // Simple logic: Always use month range, toggle only affects chart data type
-        console.log('🔍 [DEBUG] Creating dates from:', { selectedYear, selectedMonth })
-        
-        // Parse month string (format: "2025-09")
-        const [year, month] = selectedMonth.split('-')
-        console.log('🔍 [DEBUG] Parsed year/month:', { year, month })
-        
-        // Fix: Use proper month boundaries (1st to last day of month)
-        const monthStart = new Date(parseInt(year), parseInt(month) - 1, 1)
-        const monthEnd = new Date(parseInt(year), parseInt(month), 0) // Last day of month
-        
-        console.log('🔍 [DEBUG] Date objects before conversion:', {
-          monthStart,
-          monthEnd,
-          monthStartUTC: monthStart.toUTCString(),
-          monthEndUTC: monthEnd.toUTCString()
-        })
-        
-        // Ensure we get the correct date strings
-        const startDateStr = monthStart.toISOString().split('T')[0]
-        const endDateStr = monthEnd.toISOString().split('T')[0]
-        
-        console.log('🔍 [DEBUG] Date strings after conversion:', {
-          startDateStr,
-          endDateStr,
-          monthStartISO: monthStart.toISOString(),
-          monthEndISO: monthEnd.toISOString()
-        })
-        
-        console.log('🔍 [DEBUG] Created dates:', { 
-          monthStart: startDateStr, 
-          monthEnd: endDateStr,
-          monthStartObj: monthStart,
-          monthEndObj: monthEnd
-        })
-
-        if (isNaN(monthStart.getTime()) || isNaN(monthEnd.getTime())) {
-          console.error('❌ [DEBUG] Invalid month dates:', { monthStart, monthEnd })
-          return
-        }
-        
-        console.log('🔍 [DEBUG] Expected date range for September 2025:', {
-          expectedStart: '2025-09-01',
-          expectedEnd: '2025-09-30',
-          actualStart: startDateStr,
-          actualEnd: endDateStr,
-          isCorrect: startDateStr === '2025-09-01' && endDateStr === '2025-09-30'
-        })
-        
-        // Force correct dates if they're wrong
-        const finalStartDate = startDateStr === '2025-09-01' ? startDateStr : '2025-09-01'
-        const finalEndDate = endDateStr === '2025-09-30' ? endDateStr : '2025-09-30'
-        
-        console.log('🔍 [DEBUG] Final date correction:', {
-          originalStart: startDateStr,
-          originalEnd: endDateStr,
-          finalStart: finalStartDate,
-          finalEnd: finalEndDate,
-          wasCorrected: startDateStr !== finalStartDate || endDateStr !== finalEndDate
-        })
+        // Use year and month parameters directly from slicers
+        console.log('🔍 [DEBUG] Using slicer parameters:', { selectedLine, selectedYear, selectedMonth, isWeekly })
         
         const params = new URLSearchParams({
           line: selectedLine,
           year: selectedYear,
           month: selectedMonth,
-          startDate: finalStartDate,
-          endDate: finalEndDate,
           isWeekly: isWeekly.toString()
         })
         
@@ -381,24 +345,11 @@ export default function MYRAutoApprovalMonitorPage() {
               boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
             }}
           >
-            {slicerOptions?.months?.map((month) => {
-              try {
-                const date = new Date(month + '-01')
-                if (isNaN(date.getTime())) {
-                  return <option key={month} value={month}>{month}</option>
-                }
-                return (
+            {slicerOptions?.months?.map((month) => (
                   <option key={month} value={month}>
-                    {date.toLocaleDateString('en-US', { 
-                      year: 'numeric', 
-                      month: 'long' 
-                    })}
+                {month}
                   </option>
-                )
-              } catch (error) {
-                return <option key={month} value={month}>{month}</option>
-              }
-            })}
+            ))}
           </select>
         </div>
 
@@ -491,14 +442,14 @@ export default function MYRAutoApprovalMonitorPage() {
           overflowY: 'auto',
           paddingRight: '8px'
         }}>
-                 {/* BARIS 1: KPI CARDS (STANDARD ROW) */}
+                 {/* BARIS 1: KPI CARDS (6 CARDS ROW) */}
                  <div className="kpi-row">
                    <StatCard
-                     title="DEPOSIT AMOUNT"
-                     value={formatCurrencyKPI(data?.depositAmount || 0, 'MYR')}
+                     title="TOTAL TRANSACTIONS"
+                     value={formatIntegerKPI(data?.depositCases || 0)}
                      additionalKpi={{
                        label: "DAILY AVERAGE",
-                       value: formatCurrencyKPI((data?.depositAmount || 0) / calculateDaysInMonth(), 'MYR')
+                       value: formatIntegerKPI(Math.round((data?.depositCases || 0) / calculateDaysInMonth()))
                      }}
                      comparison={{
                        percentage: "0%",
@@ -506,11 +457,35 @@ export default function MYRAutoApprovalMonitorPage() {
                      }}
                    />
                    <StatCard
-                     title="DEPOSIT CASES"
-                     value={formatIntegerKPI(data?.depositCases || 0)}
+                     title="TOTAL TRANS AUTOMATION"
+                     value={formatIntegerKPI(data?.automation?.automationTransactions || 0)}
                      additionalKpi={{
                        label: "DAILY AVERAGE",
-                       value: formatIntegerKPI(Math.round((data?.depositCases || 0) / calculateDaysInMonth()))
+                       value: formatIntegerKPI(Math.round((data?.automation?.automationTransactions || 0) / calculateDaysInMonth()))
+                     }}
+                     comparison={{
+                       percentage: "0%",
+                       isPositive: true
+                     }}
+                   />
+                   <StatCard
+                     title="AVG PROC TIME AUTOMATION"
+                     value={`${(data?.processingTime?.avgAutomation || 0).toFixed(1)} sec`}
+                     additionalKpi={{
+                       label: "MONTHLY AVERAGE",
+                       value: `${(data?.processingTime?.avgAutomation || 0).toFixed(1)} sec`
+                     }}
+                     comparison={{
+                       percentage: "0%",
+                       isPositive: true
+                     }}
+                   />
+                   <StatCard
+                     title="OVERDUE TRANSACTIONS"
+                     value={formatIntegerKPI(data?.performance?.overdueTransactions || 0)}
+                     additionalKpi={{
+                       label: "MONTHLY TOTAL",
+                       value: formatIntegerKPI(data?.performance?.overdueTransactions || 0)
                      }}
                      comparison={{
                        percentage: "0%",
@@ -533,7 +508,7 @@ export default function MYRAutoApprovalMonitorPage() {
                      title="MANUAL TIME SAVED"
                      value={`${(data?.manualTimeSaved || 0).toFixed(1)} hrs`}
                      additionalKpi={{
-                       label: "MONTHLY AVERAGE",
+                       label: "MONTHLY TOTAL",
                        value: `${(data?.manualTimeSaved || 0).toFixed(1)} hrs`
                      }}
                      comparison={{
@@ -640,8 +615,8 @@ export default function MYRAutoApprovalMonitorPage() {
 
         .kpi-row {
           display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 20px;
+          grid-template-columns: repeat(6, 1fr);
+          gap: 15px;
           margin-bottom: 20px;
         }
 
@@ -661,6 +636,10 @@ export default function MYRAutoApprovalMonitorPage() {
         }
 
         @media (max-width: 1440px) {
+          .kpi-row {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+          }
           .chart-row {
             grid-template-columns: repeat(2, 1fr);
           }
@@ -669,18 +648,21 @@ export default function MYRAutoApprovalMonitorPage() {
         @media (max-width: 1024px) {
           .kpi-row {
             grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
           }
         }
 
         @media (max-width: 768px) {
           .kpi-row {
             grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
           }
         }
 
         @media (max-width: 480px) {
           .kpi-row {
             grid-template-columns: 1fr;
+            gap: 6px;
           }
         }
       `}</style>

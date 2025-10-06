@@ -7,15 +7,15 @@ export async function GET(request: NextRequest) {
     
     // Get slicer parameters
     const line = searchParams.get('line')
-    const startDate = searchParams.get('startDate')
-    const endDate = searchParams.get('endDate')
+    const year = searchParams.get('year')
+    const month = searchParams.get('month')
     const isWeekly = searchParams.get('isWeekly') === 'true'
     const isMonthly = searchParams.get('isMonthly') === 'true'
     
     console.log('🔍 [DEBUG] Query parameters:', {
       line,
-      startDate,
-      endDate,
+      year,
+      month,
       isWeekly,
       isMonthly
     })
@@ -37,14 +37,15 @@ export async function GET(request: NextRequest) {
       console.log('🔍 [DEBUG] Added line filter:', line)
     }
     
-    if (startDate) {
-      depositQuery = depositQuery.gte('date', startDate)
-      console.log('🔍 [DEBUG] Added startDate filter:', startDate)
+    if (year) {
+      depositQuery = depositQuery.eq('year', parseInt(year))
+      console.log('🔍 [DEBUG] Added year filter:', year)
     }
     
-    if (endDate) {
-      depositQuery = depositQuery.lte('date', endDate)
-      console.log('🔍 [DEBUG] Added endDate filter:', endDate)
+    if (month) {
+      // Month is already just the month name (e.g., "September")
+      depositQuery = depositQuery.eq('month', month)
+      console.log('🔍 [DEBUG] Added month filter:', month)
     }
     
     const { data: depositData, error } = await depositQuery

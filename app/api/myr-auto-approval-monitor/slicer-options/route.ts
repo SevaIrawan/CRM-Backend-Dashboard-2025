@@ -31,13 +31,28 @@ export async function GET(request: NextRequest) {
           const cleanLines = uniqueLines.filter(line => line !== 'ALL' && line !== 'All')
           const linesWithAll = ['ALL', ...cleanLines.sort()]
 
-          // Auto-detect available months from actual data
+          // Get DISTINCT years from deposit table for MYR currency
+          const { data: yearData, error: yearsError } = await supabase
+            .from('deposit')
+            .select('year')
+            .eq('currency', 'MYR')
+            .not('year', 'is', null)
+
+          if (yearsError) {
+            console.error('❌ Error fetching years:', yearsError)
+            return NextResponse.json({
+              success: false,
+              error: 'Database error',
+              message: yearsError.message
+            }, { status: 500 })
+          }
+
+          // Get DISTINCT months from deposit table for MYR currency
           const { data: monthData, error: monthsError } = await supabase
             .from('deposit')
-            .select('date')
+            .select('month')
             .eq('currency', 'MYR')
-            .not('date', 'is', null)
-            .order('date', { ascending: true })
+            .not('month', 'is', null)
 
           if (monthsError) {
             console.error('❌ Error fetching months:', monthsError)
@@ -48,46 +63,29 @@ export async function GET(request: NextRequest) {
             }, { status: 500 })
           }
 
-          // Auto-generate years and months based on actual data range
-          const uniqueYears: string[] = []
-          const uniqueMonths: string[] = []
-          
-          if (monthData && monthData.length > 0) {
-            const startDate = new Date(monthData[0].date as string)
-            const endDate = new Date(monthData[monthData.length - 1].date as string)
-            
-            // Generate all years between start and end date
-            const currentYear = new Date(startDate.getFullYear(), 0, 1)
-            const endYear = new Date(endDate.getFullYear(), 0, 1)
-            
-            while (currentYear <= endYear) {
-              uniqueYears.push(currentYear.getFullYear().toString())
-              currentYear.setFullYear(currentYear.getFullYear() + 1)
-            }
-            
-            // Generate all months between start and end date
-            const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1)
-            const end = new Date(endDate.getFullYear(), endDate.getMonth(), 1)
-            
-            while (current <= end) {
-              const monthStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`
-              uniqueMonths.push(monthStr)
-              current.setMonth(current.getMonth() + 1)
-            }
-          }
+          // Process years data
+          const uniqueYears = Array.from(new Set(yearData?.map(row => row.year?.toString()).filter(Boolean) || [])).sort()
+
+          // Process months data (get distinct month names only)
+          const uniqueMonths = Array.from(new Set(
+            monthData?.map(row => row.month).filter(Boolean) || []
+          )).sort()
 
     // Get latest record for defaults
     const { data: latestRecord } = await supabase
       .from('deposit')
-      .select('line')
+      .select('line, year, month')
       .eq('currency', 'MYR')
       .not('line', 'is', null)
-      .order('date', { ascending: false })
+      .not('year', 'is', null)
+      .not('month', 'is', null)
+      .order('year', { ascending: false })
+      .order('month', { ascending: false })
       .limit(1)
 
           const defaultLine = latestRecord?.[0]?.line || linesWithAll[0] || 'ALL'
-          const defaultYear = uniqueYears.length > 0 ? uniqueYears[uniqueYears.length - 1] : ''
-          const defaultMonth = uniqueMonths.length > 0 ? uniqueMonths[uniqueMonths.length - 1] : ''
+          const defaultYear = latestRecord?.[0]?.year?.toString() || (uniqueYears.length > 0 ? uniqueYears[uniqueYears.length - 1] : '')
+          const defaultMonth = latestRecord?.[0]?.month || (uniqueMonths.length > 0 ? uniqueMonths[uniqueMonths.length - 1] : '')
 
           const slicerOptions = {
             lines: linesWithAll,
