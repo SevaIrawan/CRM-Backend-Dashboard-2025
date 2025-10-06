@@ -599,7 +599,7 @@ export default function Sidebar({
                   }}
                   className="sidebar-submenu"
                 >
-                    {item.submenu.map((subItem, subIndex) => (
+                    {item.submenu.map((subItem: { title: string; path: string }, subIndex) => (
                                              <div
                          key={subIndex}
                          onClick={() => handleMenuClick(subItem.path)}
