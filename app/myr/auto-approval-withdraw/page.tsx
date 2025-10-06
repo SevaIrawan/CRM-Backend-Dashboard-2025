@@ -11,8 +11,8 @@ export default function AutoApprovalWithdrawPage() {
       <Frame variant="standard">
         <ComingSoon 
           title="Auto Approval Withdrawal Monitoring MYR"
-          description="Auto Approval Withdrawal monitoring dashboard for MYR currency is coming soon. This will include comprehensive tracking and analytics for automated withdrawal processes."
-          expectedDate="Coming Soon"
+          subtitle="Auto Approval Withdrawal monitoring dashboard for MYR currency is coming soon"
+          message="This will include comprehensive tracking and analytics for automated withdrawal processes. Please check back soon!"
         />
       </Frame>
     </Layout>
