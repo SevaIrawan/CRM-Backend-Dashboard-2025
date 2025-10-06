@@ -322,6 +322,18 @@ export async function GET(request: NextRequest) {
         d.operator_group === 'Staff' || d.operator_group === 'User' || d.operator_group === 'Manual'
       )
       
+      // Debug: Log automation data if found before Sep 22
+      if (automationTransactions.length > 0) {
+        const sampleDate = periodData[0]?.date
+        if (sampleDate && sampleDate < '2025-09-22') {
+          console.log('🚨 [DEBUG] Found automation data before Sep 22:', {
+            date: sampleDate,
+            automationCount: automationTransactions.length,
+            sampleAutomation: automationTransactions[0]
+          })
+        }
+      }
+      
       return {
         totalAmount: periodData.reduce((sum, d) => sum + (d.amount || 0), 0),
         totalTransactions,
@@ -329,12 +341,13 @@ export async function GET(request: NextRequest) {
         manualTransactions: manualTransactions.length,
         avgProcessingTimeAll: totalTransactions > 0 ? 
           periodData.reduce((sum, d) => sum + (d.proc_sec || 0), 0) / totalTransactions : 0,
-        avgProcessingTimeAutomation: automationTransactions.length > 0 ? 
-          automationTransactions.reduce((sum, d) => sum + (d.proc_sec || 0), 0) / automationTransactions.length : 0,
+        avgProcessingTimeAutomation: automationTransactions.filter(d => d.date >= '2025-09-22').length > 0 ? 
+          automationTransactions.filter(d => d.date >= '2025-09-22').reduce((sum, d) => sum + (d.proc_sec || 0), 0) / automationTransactions.filter(d => d.date >= '2025-09-22').length : 0,
         avgProcessingTimeManual: manualTransactions.length > 0 ? 
           manualTransactions.reduce((sum, d) => sum + (d.proc_sec || 0), 0) / manualTransactions.length : 0,
         automationRate: totalTransactions > 0 ? (automationTransactions.length / totalTransactions) * 100 : 0,
         overdueTransactions: periodData.filter(d => (d.proc_sec || 0) > 30).length,
+        automationOverdueTransactions: automationTransactions.filter(d => (d.proc_sec || 0) > 30 && d.date >= '2025-09-22').length,
         fastProcessingRate: totalTransactions > 0 ? 
           (periodData.filter(d => (d.proc_sec || 0) <= 10).length / totalTransactions) * 100 : 0
       }
@@ -404,6 +417,23 @@ export async function GET(request: NextRequest) {
         series: [{ name: 'Overdue Transactions', data: timeSeriesData.map(d => d.overdueTransactions) }],
         categories: timeSeriesData.map(d => d.period)
       },
+      automationOverdueTransactionsTrend: (() => {
+        // Always use weekly data for this chart regardless of isWeekly toggle
+        const weeklyGroupedData = groupDataByPeriod(depositData, 'weekly')
+        const sortedWeeklyPeriods = Object.keys(weeklyGroupedData).sort()
+        const weeklyTimeSeriesData = sortedWeeklyPeriods.map(periodKey => {
+          const periodKPIs = calculatePeriodKPIs(weeklyGroupedData[periodKey])
+          const weekLabel = `Week ${periodKey.split('-W')[1]}`
+          return {
+            period: weekLabel,
+            ...periodKPIs
+          }
+        })
+        return {
+          series: [{ name: 'Automation Overdue Transactions', data: weeklyTimeSeriesData.map(d => d.automationOverdueTransactions) }],
+          categories: weeklyTimeSeriesData.map(d => d.period)
+        }
+      })(),
       fastProcessingRateTrend: {
         series: [{ name: 'Fast Processing Rate', data: timeSeriesData.map(d => d.fastProcessingRate) }],
         categories: timeSeriesData.map(d => d.period)
@@ -412,7 +442,7 @@ export async function GET(request: NextRequest) {
       // Legacy chart data (for backward compatibility)
       weeklyProcessingTime: timeSeriesData.map(d => ({
         week: d.period,
-        avgProcessingTime: d.avgProcessingTimeAll
+        avgProcessingTime: d.avgProcessingTimeAutomation
       })),
       weeklyCoverageRate: timeSeriesData.map(d => ({
         week: d.period,
@@ -420,11 +450,11 @@ export async function GET(request: NextRequest) {
       })),
       weeklyOverdueTransactions: timeSeriesData.map(d => ({
         week: d.period,
-        overdueCount: d.overdueTransactions
+        overdueCount: d.automationOverdueTransactions
       })),
       dailyOverdueCount: timeSeriesData.map(d => ({
         date: d.period,
-        overdueCount: d.overdueTransactions
+        overdueCount: d.automationOverdueTransactions
       })),
       dailyProcessingDistribution: timeSeriesData.map(d => ({
         date: d.period,

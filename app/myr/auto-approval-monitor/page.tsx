@@ -80,6 +80,13 @@ interface AutoApprovalData {
     week: string
     overdueCount: number
   }>
+  automationOverdueTransactionsTrend: {
+    series: Array<{
+      name: string
+      data: number[]
+    }>
+    categories: string[]
+  }
   dailyOverdueCount: Array<{
     date: string
     overdueCount: number
@@ -409,7 +416,7 @@ export default function MYRAutoApprovalMonitorPage() {
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto mb-6"></div>
             <div className="space-y-2">
-              <p className="text-lg font-semibold text-gray-800">Loading Auto Approval Monitor</p>
+              <p className="text-lg font-semibold text-gray-800">Loading Auto Approval Deposit MYR</p>
               <p className="text-sm text-gray-500">Fetching real-time data from database...</p>
             </div>
           </div>
@@ -472,7 +479,7 @@ export default function MYRAutoApprovalMonitorPage() {
                      title="AVG PROC TIME AUTOMATION"
                      value={`${(data?.processingTime?.avgAutomation || 0).toFixed(1)} sec`}
                      additionalKpi={{
-                       label: "MONTHLY AVERAGE",
+                       label: "DAILY AVERAGE",
                        value: `${(data?.processingTime?.avgAutomation || 0).toFixed(1)} sec`
                      }}
                      comparison={{
@@ -484,8 +491,8 @@ export default function MYRAutoApprovalMonitorPage() {
                      title="OVERDUE TRANSACTIONS (AUTO)"
                      value={formatIntegerKPI(data?.performance?.automationOverdue || 0)}
                      additionalKpi={{
-                       label: "AUTO APPROVAL ONLY",
-                       value: formatIntegerKPI(data?.performance?.automationOverdue || 0)
+                       label: "DAILY AVERAGE",
+                       value: formatIntegerKPI(Math.round((data?.performance?.automationOverdue || 0) / calculateDaysInMonth()))
                      }}
                      comparison={{
                        percentage: "0%",
@@ -496,7 +503,7 @@ export default function MYRAutoApprovalMonitorPage() {
                      title="COVERAGE RATE"
                      value={formatPercentageKPI(data?.coverageRate || 0)}
                      additionalKpi={{
-                       label: "MONTHLY AVERAGE",
+                       label: "DAILY AVERAGE",
                        value: formatPercentageKPI(data?.coverageRate || 0)
                      }}
                      comparison={{
@@ -508,8 +515,8 @@ export default function MYRAutoApprovalMonitorPage() {
                      title="MANUAL TIME SAVED"
                      value={`${(data?.manualTimeSaved || 0).toFixed(1)} hrs`}
                      additionalKpi={{
-                       label: "MONTHLY TOTAL",
-                       value: `${(data?.manualTimeSaved || 0).toFixed(1)} hrs`
+                       label: "DAILY AVERAGE",
+                       value: `${((data?.manualTimeSaved || 0) / calculateDaysInMonth()).toFixed(1)} hrs`
                      }}
                      comparison={{
                        percentage: "0%",
@@ -522,11 +529,11 @@ export default function MYRAutoApprovalMonitorPage() {
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                    <LineChart
                      series={data?.weeklyProcessingTime ? [{
-                       name: 'Processing Time',
+                       name: 'Auto Approval Processing Time',
                        data: data.weeklyProcessingTime.map(item => item.avgProcessingTime)
                      }] : []}
                      categories={data?.weeklyProcessingTime ? data.weeklyProcessingTime.map(item => item.week) : []}
-                     title={isWeekly ? "AVERAGE PROCESSING TIME (WEEKLY)" : "AVERAGE PROCESSING TIME (DAILY)"}
+                     title={isWeekly ? "AVERAGE PROCESSING TIME AUTOMATION (WEEKLY)" : "AVERAGE PROCESSING TIME AUTOMATION (DAILY)"}
                      currency="MYR"
                      hideLegend={true}
                      chartIcon={getChartIcon('Processing Time')}
@@ -544,12 +551,12 @@ export default function MYRAutoApprovalMonitorPage() {
                      chartIcon={getChartIcon('Coverage Rate')}
                    />
                    <BarChart
-                     series={data?.weeklyOverdueTransactions ? [{
-                       name: 'Overdue Count',
-                       data: data.weeklyOverdueTransactions.map(item => item.overdueCount)
+                     series={data?.automationOverdueTransactionsTrend ? [{
+                       name: 'Automation Overdue Count',
+                       data: data.automationOverdueTransactionsTrend.series[0].data
                      }] : []}
-                     categories={data?.weeklyOverdueTransactions ? data.weeklyOverdueTransactions.map(item => item.week) : []}
-                     title={isWeekly ? "OVERDUE TRANSACTIONS (WEEKLY)" : "OVERDUE TRANSACTIONS (DAILY)"}
+                     categories={data?.automationOverdueTransactionsTrend ? data.automationOverdueTransactionsTrend.categories : []}
+                     title="OVERDUE TRANSACTIONS AUTO (WEEKLY)"
                      currency="MYR"
                      chartIcon={getChartIcon('Overdue Transactions')}
                    />
@@ -559,11 +566,11 @@ export default function MYRAutoApprovalMonitorPage() {
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                    <LineChart
                      series={data?.dailyOverdueCount ? [{
-                       name: 'Overdue Count',
+                       name: 'Automation Overdue Count',
                        data: data.dailyOverdueCount.map(item => item.overdueCount)
                      }] : []}
                      categories={data?.dailyOverdueCount ? data.dailyOverdueCount.map(item => item.date) : []}
-                     title={isWeekly ? "OVERDUE TRANSACTION COUNT (WEEKLY)" : "DAILY OVERDUE TRANSACTION COUNT"}
+                     title={isWeekly ? "OVERDUE TRANSACTION AUTO (WEEKLY)" : "OVERDUE TRANSACTION AUTO (DAILY)"}
                      currency="MYR"
                      hideLegend={true}
                      color="#3B82F6"
