@@ -341,6 +341,16 @@ export async function GET(request: NextRequest) {
         }
       }
       
+      // Calculate processing time distribution stats for this period
+      const periodProcessingTimes = periodData.map((d: any) => d.proc_sec || 0).filter(t => t > 0).sort((a, b) => a - b)
+      const periodProcessingTimeStats = {
+        min: periodProcessingTimes.length > 0 ? periodProcessingTimes[0] : 0,
+        max: periodProcessingTimes.length > 0 ? periodProcessingTimes[periodProcessingTimes.length - 1] : 0,
+        median: periodProcessingTimes.length > 0 ? periodProcessingTimes[Math.floor(periodProcessingTimes.length / 2)] : 0,
+        q1: periodProcessingTimes.length > 0 ? periodProcessingTimes[Math.floor(periodProcessingTimes.length * 0.25)] : 0,
+        q3: periodProcessingTimes.length > 0 ? periodProcessingTimes[Math.floor(periodProcessingTimes.length * 0.75)] : 0
+      }
+      
       return {
         totalAmount: periodData.reduce((sum, d) => sum + (d.amount || 0), 0),
         totalTransactions,
@@ -356,7 +366,9 @@ export async function GET(request: NextRequest) {
         overdueTransactions: periodData.filter(d => (d.proc_sec || 0) > 30).length,
         automationOverdueTransactions: automationTransactions.filter(d => (d.proc_sec || 0) > 30 && d.date >= '2025-09-22').length,
         fastProcessingRate: totalTransactions > 0 ? 
-          (periodData.filter(d => (d.proc_sec || 0) <= 10).length / totalTransactions) * 100 : 0
+          (periodData.filter(d => (d.proc_sec || 0) <= 10).length / totalTransactions) * 100 : 0,
+        // Add processing time distribution stats
+        processingTimeDistribution: periodProcessingTimeStats
       }
     }
     
@@ -461,11 +473,11 @@ export async function GET(request: NextRequest) {
       })),
       dailyProcessingDistribution: timeSeriesData.map(d => ({
         date: d.period,
-        min: Math.round(d.avgProcessingTimeAll * 0.5),
-        q1: Math.round(d.avgProcessingTimeAll * 0.75),
-        median: Math.round(d.avgProcessingTimeAll),
-        q3: Math.round(d.avgProcessingTimeAll * 1.25),
-        max: Math.round(d.avgProcessingTimeAll * 1.5)
+        min: d.processingTimeDistribution.min,
+        q1: d.processingTimeDistribution.q1,
+        median: d.processingTimeDistribution.median,
+        q3: d.processingTimeDistribution.q3,
+        max: d.processingTimeDistribution.max
       })),
       peakHourProcessingTime: timeSeriesData.map(d => ({
         hour: d.period,
@@ -587,11 +599,11 @@ export async function GET(request: NextRequest) {
         })),
         dailyProcessingDistribution: timeSeriesData.map(d => ({
           date: d.period,
-          min: Math.round(d.avgProcessingTimeAll * 0.5),
-          q1: Math.round(d.avgProcessingTimeAll * 0.75),
-          median: Math.round(d.avgProcessingTimeAll),
-          q3: Math.round(d.avgProcessingTimeAll * 1.25),
-          max: Math.round(d.avgProcessingTimeAll * 1.5)
+          min: d.processingTimeDistribution.min,
+          q1: d.processingTimeDistribution.q1,
+          median: d.processingTimeDistribution.median,
+          q3: d.processingTimeDistribution.q3,
+          max: d.processingTimeDistribution.max
         })),
         peakHourProcessingTime: timeSeriesData.map(d => ({
           hour: d.period,
