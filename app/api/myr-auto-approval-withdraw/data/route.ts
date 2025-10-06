@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
       totalRecords: withdrawData?.length,
       sampleData: withdrawData?.slice(0, 2),
       allChannels: withdrawData?.map(d => d.chanel).slice(0, 10),
-      uniqueChannels: [...new Set(withdrawData?.map(d => d.chanel) || [])]
+      uniqueChannels: Array.from(new Set(withdrawData?.map(d => d.chanel) || []))
     })
     
     if (!withdrawData || withdrawData.length === 0) {
@@ -159,9 +159,9 @@ export async function GET(request: NextRequest) {
       total: withdrawData.length,
       automation: automationTransactions.length,
       manual: manualTransactions.length,
-      automationChannels: [...new Set(automationTransactions.map(d => d.chanel))],
-      manualChannels: [...new Set(manualTransactions.map(d => d.chanel))],
-      allUniqueChannels: [...new Set(withdrawData.map(d => d.chanel))],
+      automationChannels: Array.from(new Set(automationTransactions.map(d => d.chanel))),
+      manualChannels: Array.from(new Set(manualTransactions.map(d => d.chanel))),
+      allUniqueChannels: Array.from(new Set(withdrawData.map(d => d.chanel))),
       sampleData: withdrawData.slice(0, 3).map(d => ({ chanel: d.chanel, amount: d.amount }))
     })
 
@@ -173,12 +173,12 @@ export async function GET(request: NextRequest) {
 
     // Processing time calculations
     const automationProcessingTimes = finalAutomationTransactions
-      .filter(d => d.proc_sec && d.proc_sec > 0)
-      .map(d => d.proc_sec)
+      .filter(d => d.proc_sec && (d.proc_sec as number) > 0)
+      .map(d => d.proc_sec as number)
     
     const manualProcessingTimes = finalManualTransactions
-      .filter(d => d.proc_sec && d.proc_sec > 0)
-      .map(d => d.proc_sec)
+      .filter(d => d.proc_sec && (d.proc_sec as number) > 0)
+      .map(d => d.proc_sec as number)
 
     const avgAutomationProcessingTime = automationProcessingTimes.length > 0 
       ? automationProcessingTimes.reduce((sum: number, time: number) => sum + time, 0) / automationProcessingTimes.length 
@@ -189,15 +189,15 @@ export async function GET(request: NextRequest) {
       : 0
 
     const avgAllProcessingTime = withdrawData
-      .filter(d => d.proc_sec && d.proc_sec > 0)
-      .reduce((sum: number, d: any) => sum + d.proc_sec, 0) / withdrawData.filter(d => d.proc_sec && d.proc_sec > 0).length
+      .filter(d => d.proc_sec && (d.proc_sec as number) > 0)
+      .reduce((sum: number, d: any) => sum + (d.proc_sec as number), 0) / withdrawData.filter(d => d.proc_sec && (d.proc_sec as number) > 0).length
 
     // Coverage rate calculation
     const coverageRate = totalCases > 0 ? (finalAutomationTransactions.length / totalCases) * 100 : 0
 
     // Overdue transactions (processing time > 30 seconds)
-    const automationOverdue = finalAutomationTransactions.filter(d => d.proc_sec && d.proc_sec > 30).length
-    const manualOverdue = finalManualTransactions.filter(d => d.proc_sec && d.proc_sec > 30).length
+    const automationOverdue = finalAutomationTransactions.filter(d => d.proc_sec && (d.proc_sec as number) > 30).length
+    const manualOverdue = finalManualTransactions.filter(d => d.proc_sec && (d.proc_sec as number) > 30).length
     const totalOverdue = automationOverdue + manualOverdue
 
     // Manual time saved calculation
@@ -216,7 +216,7 @@ export async function GET(request: NextRequest) {
       const grouped: { [key: string]: any[] } = {}
       
       data.forEach(d => {
-        const date = new Date(d.date)
+        const date = new Date(d.date as string)
         let periodKey: string
         
         if (isWeekly) {
@@ -280,16 +280,16 @@ export async function GET(request: NextRequest) {
         })
         
         const avgProcessingTime = periodData
-          .filter(d => d.proc_sec && d.proc_sec > 0)
-          .reduce((sum: number, d: any) => sum + d.proc_sec, 0) / periodData.filter(d => d.proc_sec && d.proc_sec > 0).length
+          .filter(d => d.proc_sec && (d.proc_sec as number) > 0)
+          .reduce((sum: number, d: any) => sum + (d.proc_sec as number), 0) / periodData.filter(d => d.proc_sec && (d.proc_sec as number) > 0).length
 
-        const avgProcessingTimeAutomation = periodAutomation.length > 0 && periodAutomation.filter(d => d.proc_sec && d.proc_sec > 0).length > 0
-          ? periodAutomation.filter(d => d.proc_sec && d.proc_sec > 0).reduce((sum: number, d: any) => sum + d.proc_sec, 0) / periodAutomation.filter(d => d.proc_sec && d.proc_sec > 0).length
+        const avgProcessingTimeAutomation = periodAutomation.length > 0 && periodAutomation.filter(d => d.proc_sec && (d.proc_sec as number) > 0).length > 0
+          ? periodAutomation.filter(d => d.proc_sec && (d.proc_sec as number) > 0).reduce((sum: number, d: any) => sum + (d.proc_sec as number), 0) / periodAutomation.filter(d => d.proc_sec && (d.proc_sec as number) > 0).length
           : 0
 
         const coverageRate = periodData.length > 0 ? (periodAutomation.length / periodData.length) * 100 : 0
 
-        const overdueCount = periodAutomation.filter(d => d.proc_sec && d.proc_sec > 30).length
+        const overdueCount = periodAutomation.filter(d => d.proc_sec && (d.proc_sec as number) > 30).length
 
         // Debug log for first few periods
         if (period === 'Sep 1' || period === 'Sep 2' || period === 'Sep 3') {
@@ -300,7 +300,7 @@ export async function GET(request: NextRequest) {
             avgProcessingTimeAutomation,
             coverageRate,
             overdueCount,
-            automationChannels: [...new Set(periodAutomation.map(d => d.chanel))]
+            automationChannels: Array.from(new Set(periodAutomation.map(d => d.chanel)))
           })
         }
 
@@ -339,7 +339,7 @@ export async function GET(request: NextRequest) {
       if (!d.chanel) return false
       return d.chanel === 'Automation'
     }) || []
-    const prevMonthAutomationOverdue = prevMonthAutomation.filter(d => d.proc_sec && d.proc_sec > 30).length
+    const prevMonthAutomationOverdue = prevMonthAutomation.filter(d => d.proc_sec && (d.proc_sec as number) > 30).length
     const prevMonthAvgProcessingTime = prevMonthAutomation.length > 0 
       ? prevMonthAutomation.reduce((sum: number, d: any) => sum + (d.proc_sec || 0), 0) / prevMonthAutomation.length 
       : 0
@@ -361,8 +361,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculate max date data for current month
-    const maxDateData = withdrawData.length > 0 
-      ? Math.max(...withdrawData.map(d => new Date(d.date).getDate()))
+    const maxDateData = withdrawData.length > 0
+      ? Math.max(...withdrawData.map(d => new Date(d.date as string).getDate()))  
       : 0
 
     const response = NextResponse.json({
@@ -450,7 +450,7 @@ export async function GET(request: NextRequest) {
           // Group by hour to find peak hour
           const hourlyData: { [hour: string]: any[] } = {}
           periodData.forEach(d => {
-            const hour = new Date(d.date + ' ' + d.time).getHours()
+            const hour = new Date((d.date as string) + ' ' + (d.time as string)).getHours()
             const hourStr = hour.toString().padStart(2, '0') + ':00'
             if (!hourlyData[hourStr]) {
               hourlyData[hourStr] = []
@@ -489,8 +489,8 @@ export async function GET(request: NextRequest) {
         metadata: {
           totalRecords: withdrawData.length,
           dateRange: {
-            start: withdrawData.length > 0 ? new Date(Math.min(...withdrawData.map(d => new Date(d.date).getTime()))).getTime() : null,
-            end: withdrawData.length > 0 ? new Date(Math.max(...withdrawData.map(d => new Date(d.date).getTime()))).getTime() : null
+            start: withdrawData.length > 0 ? new Date(Math.min(...withdrawData.map(d => new Date(d.date as string).getTime()))).getTime() : null,
+            end: withdrawData.length > 0 ? new Date(Math.max(...withdrawData.map(d => new Date(d.date as string).getTime()))).getTime() : null
           },
           automationStartDate,
           lastUpdated: new Date().toISOString(),
