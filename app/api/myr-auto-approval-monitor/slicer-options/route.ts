@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔍 [MYR Auto Approval Monitor API] Fetching slicer options for MYR currency')
+    console.log('🔍 [MYR Auto Approval Monitor API] Fetching slicer options for MYR currency - FORCE MAX DATE')
     
     // Get DISTINCT lines from deposit table for MYR currency
     const { data: allLines, error: linesError } = await supabase
@@ -71,21 +71,28 @@ export async function GET(request: NextRequest) {
             monthData?.map(row => row.month).filter(Boolean) || []
           )).sort()
 
-    // Get latest record for defaults
+    // Get latest record for defaults - FORCE MAX DATE DATA
     const { data: latestRecord } = await supabase
       .from('deposit')
-      .select('line, year, month')
+      .select('line, year, month, date')
       .eq('currency', 'MYR')
       .not('line', 'is', null)
       .not('year', 'is', null)
       .not('month', 'is', null)
+      .not('date', 'is', null)
+      .order('date', { ascending: false })
       .order('year', { ascending: false })
       .order('month', { ascending: false })
       .limit(1)
 
-          const defaultLine = latestRecord?.[0]?.line || linesWithAll[0] || 'ALL'
-          const defaultYear = latestRecord?.[0]?.year?.toString() || (uniqueYears.length > 0 ? uniqueYears[uniqueYears.length - 1] : '')
-          const defaultMonth = latestRecord?.[0]?.month || (uniqueMonths.length > 0 ? uniqueMonths[uniqueMonths.length - 1] : '')
+    console.log('🔍 [FORCE MAX DATE] Latest record:', latestRecord?.[0])
+
+    // Force defaults to use MAX DATE data
+    const defaultLine = latestRecord?.[0]?.line || linesWithAll[0] || 'ALL'
+    const defaultYear = latestRecord?.[0]?.year?.toString() || (uniqueYears.length > 0 ? uniqueYears[uniqueYears.length - 1] : '')
+    const defaultMonth = latestRecord?.[0]?.month || (uniqueMonths.length > 0 ? uniqueMonths[uniqueMonths.length - 1] : '')
+    
+    console.log('🔍 [FORCE MAX DATE] Forced defaults:', { defaultLine, defaultYear, defaultMonth })
 
           const slicerOptions = {
             lines: linesWithAll,
@@ -107,10 +114,17 @@ export async function GET(request: NextRequest) {
             defaults: { defaultLine, defaultYear, defaultMonth }
           })
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: slicerOptions
     })
+    
+    // Add cache busting headers to force fresh data
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+    response.headers.set('Pragma', 'no-cache')
+    response.headers.set('Expires', '0')
+    
+    return response
     
   } catch (error) {
     console.error('❌ [MYR Auto Approval Monitor API] Error getting slicer options:', error)

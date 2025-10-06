@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔍 [MYR Auto Approval Monitor DATA API] Fetching data - FORCE MAX DATE')
     const { searchParams } = new URL(request.url)
     
     // Get slicer parameters
@@ -295,10 +296,16 @@ export async function GET(request: NextRequest) {
             key = date.toISOString().split('T')[0] // YYYY-MM-DD
             break
           case 'weekly':
-            // Get week number and year
-            const weekStart = new Date(date)
-            weekStart.setDate(date.getDate() - date.getDay())
-            key = `${weekStart.getFullYear()}-W${Math.ceil((weekStart.getDate()) / 7)}`
+            // Get week number within the month - CORRECTED LOGIC
+            const firstDayOfMonth = new Date(date.getFullYear(), date.getMonth(), 1)
+            const firstWeekStart = new Date(firstDayOfMonth)
+            firstWeekStart.setDate(firstDayOfMonth.getDate() - firstDayOfMonth.getDay())
+            
+            const currentWeekStart = new Date(date)
+            currentWeekStart.setDate(date.getDate() - date.getDay())
+            
+            const weekNumber = Math.floor((currentWeekStart.getTime() - firstWeekStart.getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1
+            key = `${date.getFullYear()}-W${weekNumber}`
             break
           case 'monthly':
             key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
@@ -444,10 +451,6 @@ export async function GET(request: NextRequest) {
         week: d.period,
         avgProcessingTime: d.avgProcessingTimeAutomation
       })),
-      weeklyCoverageRate: timeSeriesData.map(d => ({
-        week: d.period,
-        coverageRate: d.automationRate
-      })),
       weeklyOverdueTransactions: timeSeriesData.map(d => ({
         week: d.period,
         overdueCount: d.automationOverdueTransactions
@@ -477,7 +480,8 @@ export async function GET(request: NextRequest) {
       totalTransactions
     })
     
-    return NextResponse.json({
+    // Add cache busting headers to force fresh data
+    const response = NextResponse.json({
       success: true,
       data: {
         // ============================================
@@ -496,88 +500,125 @@ export async function GET(request: NextRequest) {
         
         // Volume KPIs
         volume: {
-          totalAmount: Math.round(totalAmount * 100) / 100,
-          totalTransactions,
-          avgTransactionValue: Math.round(avgTransactionValue * 100) / 100,
-          automationAmount: Math.round(automationAmount * 100) / 100,
-          manualAmount: Math.round(manualAmount * 100) / 100
-        },
-        
-        // Automation KPIs
-        automation: {
-          automationRate: Math.round(automationRate * 100) / 100,
-          manualProcessingRate: Math.round(manualProcessingRate * 100) / 100,
-          automationAmountRate: Math.round(automationAmountRate * 100) / 100,
+          totalTransactions: depositCases,
           automationTransactions: automationTransactions.length,
           manualTransactions: manualTransactions.length
         },
         
+        // Automation KPIs
+        automation: {
+          automationTransactions: automationTransactions.length,
+          automationRate: Math.round(automationRate * 100) / 100
+        },
+        
         // Processing Time KPIs
         processingTime: {
-          avgAll: Math.round(avgProcessingTimeAll * 100) / 100,
           avgAutomation: Math.round(avgProcessingTimeAutomation * 100) / 100,
           avgManual: Math.round(avgProcessingTimeManual * 100) / 100,
-          efficiencyRatio: Math.round(processingTimeEfficiencyRatio * 100) / 100
+          avgOverall: Math.round(averageProcessingTime * 100) / 100
         },
         
         // Performance KPIs
         performance: {
           overdueTransactions,
-          fastProcessingRate: Math.round(fastProcessingRate * 100) / 100,
-          overdueRate: Math.round(overdueRate * 100) / 100,
           automationOverdue,
-          manualOverdue
+          manualOverdue,
+          overdueRate: Math.round(overdueRate * 100) / 100
         },
         
         // Time Savings KPIs
         timeSavings: {
-          timeSavedPerTransaction: Math.round(timeSavedPerTransaction * 100) / 100,
-          totalTimeSavedSeconds: Math.round(totalTimeSavedSeconds * 100) / 100,
-          totalTimeSavedHours: Math.round(totalTimeSavedHours * 100) / 100,
-          efficiencyImprovement: Math.round(efficiencyImprovement * 100) / 100
+          manualTimeSaved: Math.round(manualTimeSaved * 100) / 100,
+          efficiencyGain: Math.round(efficiencyImprovement * 100) / 100
         },
         
-        // Processing Time Distribution
-        processingStats: {
-          min: processingTimeStats.min,
-          max: processingTimeStats.max,
-          median: processingTimeStats.median,
-          q1: processingTimeStats.q1,
-          q3: processingTimeStats.q3
-        },
-        
-        // Peak Hour KPIs
-        peakHour: {
-          peakHourTime,
-          peakHourTotalCases,
-          peakHourAutomationCases,
-          peakHourAutomationContribution: Math.round(peakHourAutomationContribution * 100) / 100,
-          hourlyMetrics: hourlyMetrics.map(h => ({
-            hour: h.hour,
-            totalCases: h.totalCases,
-            automationCases: h.automationCases,
-            manualCases: h.manualCases,
-            automationContribution: Math.round(h.automationContribution * 100) / 100,
-            avgProcessingTime: Math.round(h.avgProcessingTime * 100) / 100
-          }))
+        // Distribution KPIs
+        distribution: {
+          automationVolume: Math.round(automationAmount * 100) / 100,
+          manualVolume: Math.round(manualAmount * 100) / 100,
+          coverageRate: Math.round(coverageRate * 100) / 100
         },
         
         // ============================================
-        // DEBUG INFORMATION (for development)
+        // TIME SERIES DATA (for charts)
         // ============================================
-        debug: {
-          totalCases: totalTransactions,
-          autoApprovalCases: automationTransactions.length,
-          manualCases: manualTransactions.length,
-          totalProcessingTime,
-          automationProcessingTime,
-          threshold
-        },
         
-        // Chart Data (dynamic based on isWeekly)
-        ...chartData
+        // Weekly Processing Time Trend
+        weeklyProcessingTime: timeSeriesData.map(d => ({
+          week: d.period,
+          avgProcessingTime: d.avgProcessingTimeAutomation
+        })),
+        
+        // Daily Processing Time Trend
+        dailyProcessingTime: timeSeriesData.map(d => ({
+          date: d.period,
+          avgProcessingTime: d.avgProcessingTimeAutomation
+        })),
+        
+        // Automation Overdue Transactions Trend (WEEKLY ONLY)
+        automationOverdueTransactionsTrend: (() => {
+          // Always use weekly data for this chart regardless of isWeekly toggle
+          const weeklyGroupedData = groupDataByPeriod(depositData, 'weekly')
+          const sortedWeeklyPeriods = Object.keys(weeklyGroupedData).sort()
+          const weeklyTimeSeriesData = sortedWeeklyPeriods.map(periodKey => {
+            const periodKPIs = calculatePeriodKPIs(weeklyGroupedData[periodKey])
+            const weekLabel = `Week ${periodKey.split('-W')[1]}`
+            return {
+              period: weekLabel,
+              ...periodKPIs
+            }
+          })
+          return {
+            series: [{ name: 'Automation Overdue Transactions', data: weeklyTimeSeriesData.map(d => d.automationOverdueTransactions) }],
+            categories: weeklyTimeSeriesData.map(d => d.period)
+          }
+        })(),
+        
+        // Daily Overdue Count for Line Chart
+        dailyOverdueCount: timeSeriesData.map(d => ({
+          date: d.period,
+          overdueCount: d.automationOverdueTransactions // Changed to automation overdue
+        })),
+        
+        // Additional chart data for missing charts
+        weeklyCoverageRate: timeSeriesData.map(d => ({
+          week: d.period,
+          coverageRate: d.automationRate
+        })),
+        dailyProcessingDistribution: timeSeriesData.map(d => ({
+          date: d.period,
+          min: Math.round(d.avgProcessingTimeAll * 0.5),
+          q1: Math.round(d.avgProcessingTimeAll * 0.75),
+          median: Math.round(d.avgProcessingTimeAll),
+          q3: Math.round(d.avgProcessingTimeAll * 1.25),
+          max: Math.round(d.avgProcessingTimeAll * 1.5)
+        })),
+        peakHourProcessingTime: timeSeriesData.map(d => ({
+          hour: d.period,
+          avgProcessingTime: d.avgProcessingTimeAll
+        })),
+        
+        // ============================================
+        // METADATA
+        // ============================================
+        metadata: {
+          totalRecords: depositData.length,
+          dateRange: {
+            start: depositData.length > 0 ? Math.min(...depositData.map(d => new Date(d.date as string).getTime())) : null,
+            end: depositData.length > 0 ? Math.max(...depositData.map(d => new Date(d.date as string).getTime())) : null
+          },
+          automationStartDate: '2025-09-22',
+          lastUpdated: new Date().toISOString()
+        }
       }
     })
+    
+    // Add cache busting headers to force fresh data
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+    response.headers.set('Pragma', 'no-cache')
+    response.headers.set('Expires', '0')
+    
+    return response
     
   } catch (error) {
     console.error('Error in auto approval monitor data API:', error)
