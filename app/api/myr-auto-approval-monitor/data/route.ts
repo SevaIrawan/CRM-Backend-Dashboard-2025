@@ -257,7 +257,13 @@ export async function GET(request: NextRequest) {
     })
     
         // Calculate daily peak hour metrics for automation (as per user requirement)
-        const dailyPeakHourMetrics = []
+        const dailyPeakHourMetrics: Array<{
+          date: string;
+          peakHour: string;
+          maxTotalTransactions: number;
+          automationTransactions: number;
+          avgProcessingTimeAutomation: number;
+        }> = []
         
         console.log(`🔍 [DEBUG] Total depositData records: ${depositData.length}`)
         console.log(`🔍 [DEBUG] Sample depositData:`, depositData.slice(0, 3).map(d => ({
