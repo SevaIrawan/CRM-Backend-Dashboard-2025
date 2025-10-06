@@ -9,6 +9,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { Bar, Line } from 'react-chartjs-2';
 import { getChartIcon } from '../lib/CentralIcon';
 import { formatNumericKPI, formatIntegerKPI, formatCurrencyKPI } from '../lib/formatHelpers';
@@ -21,7 +22,8 @@ ChartJS.register(
   LineElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  ChartDataLabels
 );
 
 interface Series {
@@ -38,6 +40,7 @@ interface BarChartProps {
   color?: string;
   chartIcon?: string;
   horizontal?: boolean;
+  showDataLabels?: boolean; // Add prop for showing data labels
 }
 
 export default function BarChart({
@@ -48,7 +51,8 @@ export default function BarChart({
   type = 'bar',
   color = '#3B82F6',
   chartIcon,
-  horizontal = false
+  horizontal = false,
+  showDataLabels = false // Default false
 }: BarChartProps) {
   const getCurrencySymbol = (curr: string): string => {
     switch (curr) {
@@ -129,11 +133,49 @@ export default function BarChart({
       legend: {
         display: false  // HAPUS LEGEND
       },
+      datalabels: {
+        display: showDataLabels,
+        color: '#374151',
+        font: {
+          weight: 'bold' as const,
+          size: 10
+        },
+        anchor: 'end' as const,
+        align: horizontal ? 'end' as const : 'top' as const,
+        offset: 4,
+        formatter: function(value: number, context: any) {
+          const datasetLabel = context.dataset.label;
+          
+          // For overdue transactions, use "cases" suffix
+          if (datasetLabel && (
+            datasetLabel.toLowerCase().includes('overdue') ||
+            datasetLabel.toLowerCase().includes('transactions')
+          )) {
+            return formatIntegerKPI(value) + ' cases';
+          }
+          
+          // For cases type, use "cases" suffix
+          if (datasetLabel && datasetLabel.toLowerCase().includes('cases')) {
+            return formatIntegerKPI(value) + ' cases';
+          }
+          
+          // Default formatting
+          return formatIntegerKPI(value);
+        }
+      },
       tooltip: {
         callbacks: {
           label: function(context: any) {
             const value = horizontal ? context.parsed.x : context.parsed.y;
             const datasetLabel = context.dataset.label;
+            
+            // For overdue transactions, use "cases" suffix
+            if (datasetLabel && (
+              datasetLabel.toLowerCase().includes('overdue') ||
+              datasetLabel.toLowerCase().includes('transactions')
+            )) {
+              return `${datasetLabel}: ${formatIntegerKPI(value)} cases`;
+            }
             
             // Check if this is a cases type (Deposit Cases, Withdraw Cases)
             const isCasesType = datasetLabel && (

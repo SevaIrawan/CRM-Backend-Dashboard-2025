@@ -111,6 +111,16 @@ interface AutoApprovalData {
     hour: string
     avgProcessingTime: number
   }>
+  metadata?: {
+    totalRecords: number
+    dateRange: {
+      start: number | null
+      end: number | null
+    }
+    automationStartDate: string
+    lastUpdated: string
+    maxDateData: number
+  }
 }
 
 export default function MYRAutoApprovalMonitorPage() {
@@ -145,12 +155,12 @@ export default function MYRAutoApprovalMonitorPage() {
         depositAmount: {
           raw: data.depositAmount,
           formatted: formatCurrencyKPI(data.depositAmount || 0, 'MYR'),
-          dailyAverage: formatCurrencyKPI((data.depositAmount || 0) / calculateDaysInMonth(), 'MYR')
+          dailyAverage: formatCurrencyKPI((data.depositAmount || 0) / calculateActiveDays(), 'MYR')
         },
         depositCases: {
           raw: data.depositCases,
           formatted: formatIntegerKPI(data.depositCases || 0),
-          dailyAverage: formatIntegerKPI(Math.round((data.depositCases || 0) / calculateDaysInMonth()))
+          dailyAverage: formatIntegerKPI(Math.round((data.depositCases || 0) / calculateActiveDays()))
         }
       })
     }
@@ -163,33 +173,51 @@ export default function MYRAutoApprovalMonitorPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
 
-  // Helper function to calculate days in selected month
-  const calculateDaysInMonth = () => {
+  // Helper function to calculate active days using STANDARD LOGIC
+  const calculateActiveDays = () => {
     if (!selectedYear || !selectedMonth) return 30 // fallback
+    
+    const currentDate = new Date()
+    const currentYear = currentDate.getFullYear().toString()
+    const currentMonthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                              'July', 'August', 'September', 'October', 'November', 'December']
+    const currentMonth = currentMonthNames[currentDate.getMonth()]
+    
+    // STANDARD LOGIC: If current ongoing month, use max date data from database
+    if (selectedYear === currentYear && selectedMonth === currentMonth) {
+      // Use max date data from API response
+      const maxDateData = data?.metadata?.maxDateData || 0
+      if (maxDateData > 0) {
+        console.log('📅 [STANDARD LOGIC] Current ongoing month detected, using max date data:', maxDateData)
+        return maxDateData
+      } else {
+        // Fallback to current day if no data
+        const currentDay = currentDate.getDate()
+        console.log('📅 [STANDARD LOGIC] Current ongoing month, no data available, using current day:', currentDay)
+        return currentDay
+      }
+    }
+    
+    // STANDARD LOGIC: For past months, use total days in month
     try {
-      // Parse month string (format: "September")
       const year = parseInt(selectedYear)
       const monthName = selectedMonth
       
       // Convert month name to number
-      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                         'July', 'August', 'September', 'October', 'November', 'December']
-      const monthNumber = monthNames.indexOf(monthName) + 1
+      const monthNumber = currentMonthNames.indexOf(monthName) + 1
       
       if (monthNumber === 0) return 30 // fallback if month not found
       
       const monthStart = new Date(year, monthNumber - 1, 1)
       const monthEnd = new Date(year, monthNumber, 0) // Last day of month
-      const daysInMonth = monthEnd.getDate()
-      console.log('🔍 [DEBUG] Days in month calculation:', { 
-        year, monthName, monthNumber,
-        monthStart: monthStart.toISOString().split('T')[0], 
-        monthEnd: monthEnd.toISOString().split('T')[0], 
-        daysInMonth 
+      const totalDays = monthEnd.getDate()
+      
+      console.log('📅 [STANDARD LOGIC] Past/completed month detected, using total days:', { 
+        year, monthName, monthNumber, totalDays 
       })
-      return daysInMonth
+      return totalDays
     } catch (error) {
-      console.error('Error calculating days in month:', error)
+      console.error('Error calculating active days:', error)
       return 30 // fallback
     }
   }
@@ -209,6 +237,10 @@ export default function MYRAutoApprovalMonitorPage() {
         console.log('🔍 [DEBUG] Loading slicer options...')
         const response = await fetch('/api/myr-auto-approval-monitor/slicer-options')
         console.log('🔍 [DEBUG] Slicer options response status:', response.status)
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
         
         const result = await response.json()
         console.log('📊 [DEBUG] Slicer options result:', result)
@@ -267,6 +299,10 @@ export default function MYRAutoApprovalMonitorPage() {
         const response = await fetch(`/api/myr-auto-approval-monitor/data?${params}`)
         console.log('🔍 [DEBUG] Response status:', response.status, response.statusText)
         console.log('🔍 [DEBUG] Response timestamp:', new Date().toISOString())
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
         
         const result = await response.json()
         console.log('📊 [DEBUG] API Response:', result.success ? 'SUCCESS' : 'FAILED', result)
@@ -473,7 +509,7 @@ export default function MYRAutoApprovalMonitorPage() {
                      value={formatIntegerKPI(data?.depositCases || 0)}
                      additionalKpi={{
                        label: "DAILY AVERAGE",
-                       value: formatIntegerKPI(Math.round((data?.depositCases || 0) / calculateDaysInMonth()))
+                       value: formatIntegerKPI(Math.round((data?.depositCases || 0) / calculateActiveDays()))
                      }}
                      comparison={{
                        percentage: "0%",
@@ -485,7 +521,7 @@ export default function MYRAutoApprovalMonitorPage() {
                      value={formatIntegerKPI(data?.automation?.automationTransactions || 0)}
                      additionalKpi={{
                        label: "DAILY AVERAGE",
-                       value: formatIntegerKPI(Math.round((data?.automation?.automationTransactions || 0) / calculateDaysInMonth()))
+                       value: formatIntegerKPI(Math.round((data?.automation?.automationTransactions || 0) / calculateActiveDays()))
                      }}
                      comparison={{
                        percentage: "0%",
@@ -505,11 +541,11 @@ export default function MYRAutoApprovalMonitorPage() {
                      }}
                    />
                    <StatCard
-                     title="OVERDUE TRANSACTIONS (AUTO)"
+                     title="OVERDUE TRANS AUTOMATION"
                      value={formatIntegerKPI(data?.performance?.automationOverdue || 0)}
                      additionalKpi={{
                        label: "DAILY AVERAGE",
-                       value: formatIntegerKPI(Math.round((data?.performance?.automationOverdue || 0) / calculateDaysInMonth()))
+                       value: formatIntegerKPI(Math.round((data?.performance?.automationOverdue || 0) / calculateActiveDays()))
                      }}
                      comparison={{
                        percentage: "0%",
@@ -533,7 +569,7 @@ export default function MYRAutoApprovalMonitorPage() {
                      value={`${(data?.manualTimeSaved || 0).toFixed(1)} hrs`}
                      additionalKpi={{
                        label: "DAILY AVERAGE",
-                       value: `${((data?.manualTimeSaved || 0) / calculateDaysInMonth()).toFixed(1)} hrs`
+                       value: `${((data?.manualTimeSaved || 0) / calculateActiveDays()).toFixed(1)} hrs`
                      }}
                      comparison={{
                        percentage: "0%",
@@ -553,6 +589,7 @@ export default function MYRAutoApprovalMonitorPage() {
                      title={isWeekly ? "AVERAGE PROCESSING TIME AUTOMATION (WEEKLY)" : "AVERAGE PROCESSING TIME AUTOMATION (DAILY)"}
                      currency="MYR"
                      hideLegend={true}
+                     showDataLabels={true}
                      chartIcon={getChartIcon('Processing Time')}
                    />
                    <LineChart
@@ -564,6 +601,7 @@ export default function MYRAutoApprovalMonitorPage() {
                      title={isWeekly ? "COVERAGE RATE (WEEKLY TREND)" : "COVERAGE RATE (DAILY TREND)"}
                      currency="MYR"
                      hideLegend={true}
+                     showDataLabels={true}
                      color="#FF8C00"
                      chartIcon={getChartIcon('Coverage Rate')}
                    />
@@ -573,8 +611,9 @@ export default function MYRAutoApprovalMonitorPage() {
                        data: data.automationOverdueTransactionsTrend.series[0].data
                      }] : []}
                      categories={data?.automationOverdueTransactionsTrend ? data.automationOverdueTransactionsTrend.categories : []}
-                     title="OVERDUE TRANSACTIONS AUTO (WEEKLY)"
+                     title="OVERDUE TRANS AUTOMATION (WEEKLY)"
                      currency="MYR"
+                     showDataLabels={true}
                      chartIcon={getChartIcon('Overdue Transactions')}
                    />
                  </div>
@@ -587,9 +626,10 @@ export default function MYRAutoApprovalMonitorPage() {
                        data: data.dailyOverdueCount.map(item => item.overdueCount)
                      }] : []}
                      categories={data?.dailyOverdueCount ? data.dailyOverdueCount.map(item => item.date) : []}
-                     title={isWeekly ? "OVERDUE TRANSACTION AUTO (WEEKLY)" : "OVERDUE TRANSACTION AUTO (DAILY)"}
+                     title={isWeekly ? "OVERDUE TRANS AUTOMATION (WEEKLY)" : "OVERDUE TRANS AUTOMATION (Daily)"}
                      currency="MYR"
                      hideLegend={true}
+                     showDataLabels={true}
                      color="#3B82F6"
                      chartIcon={getChartIcon('Daily Overdue Count')}
                    />
@@ -602,6 +642,7 @@ export default function MYRAutoApprovalMonitorPage() {
                      title={isWeekly ? "PROCESSING TIME DISTRIBUTION AUTOMATION (WEEKLY)" : "PROCESSING TIME DISTRIBUTION AUTOMATION PER DAY"}
                      currency="MYR"
                      hideLegend={true}
+                     showDataLabels={true}
                      color="#8B5CF6"
                      chartIcon={getChartIcon('Processing Time Distribution')}
                    />
@@ -614,6 +655,7 @@ export default function MYRAutoApprovalMonitorPage() {
                      title={isWeekly ? "PEAK HOUR PROCESSING TIME (WEEKLY)" : "PEAK HOUR PROCESSING TIME"}
                      currency="MYR"
                      hideLegend={true}
+                     showDataLabels={true}
                      color="#EC4899"
                      chartIcon={getChartIcon('Peak Hour Processing Time')}
                    />

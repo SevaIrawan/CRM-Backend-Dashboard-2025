@@ -650,7 +650,9 @@ export async function GET(request: NextRequest) {
             end: depositData.length > 0 ? Math.max(...depositData.map(d => new Date(d.date as string).getTime())) : null
           },
           automationStartDate: '2025-09-22',
-          lastUpdated: new Date().toISOString()
+          lastUpdated: new Date().toISOString(),
+          // Add max date data for Daily Average calculation
+          maxDateData: depositData.length > 0 ? Math.max(...depositData.map(d => new Date(d.date as string).getDate())) : 0
         }
       }
     })

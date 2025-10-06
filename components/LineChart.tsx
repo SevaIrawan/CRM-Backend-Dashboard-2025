@@ -10,6 +10,7 @@ import {
   Legend,
   Filler
 } from 'chart.js';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { getChartIcon } from '../lib/CentralIcon';
 import { formatNumericKPI, formatIntegerKPI, formatCurrencyKPI, formatPercentageKPI } from '../lib/formatHelpers';
 
@@ -21,7 +22,8 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
-  Filler
+  Filler,
+  ChartDataLabels
 );
 
 interface Series {
@@ -37,6 +39,7 @@ interface LineChartProps {
   chartIcon?: string;
   hideLegend?: boolean;
   color?: string; // Add color prop for customizable line and area color
+  showDataLabels?: boolean; // Add prop for showing data labels
 }
 
 export default function LineChart({ 
@@ -46,7 +49,8 @@ export default function LineChart({
   currency = 'MYR',
   chartIcon,
   hideLegend = false,
-  color = '#3B82F6' // Default blue color
+  color = '#3B82F6', // Default blue color
+  showDataLabels = false // Default false
 }: LineChartProps) {
   
   console.log('📈 [LineChart] Rendering chart:', {
@@ -331,6 +335,47 @@ export default function LineChart({
        legend: {
          display: false, // ALWAYS disable Chart.js legend - only use custom JSX legend
        },
+       datalabels: {
+         display: showDataLabels,
+         color: '#374151',
+         font: {
+           weight: 'bold' as const,
+           size: 10
+         },
+         anchor: 'end' as const,
+         align: 'top' as const,
+         offset: 4,
+         formatter: function(value: number, context: any) {
+           const datasetLabel = context.dataset.label;
+           
+           // For rate/percentage charts (coverage rate), use % suffix
+           if (datasetLabel && (
+             datasetLabel.toLowerCase().includes('rate') ||
+             datasetLabel.toLowerCase().includes('coverage')
+           )) {
+             return value.toFixed(1) + '%';
+           }
+           
+           // For time-related charts (processing time), use (s) suffix
+           if (datasetLabel && (
+             datasetLabel.toLowerCase().includes('processing time') ||
+             datasetLabel.toLowerCase().includes('time')
+           )) {
+             return value.toFixed(1) + 's';
+           }
+           
+           // For overdue transactions, use "cases" suffix
+           if (datasetLabel && (
+             datasetLabel.toLowerCase().includes('overdue') ||
+             datasetLabel.toLowerCase().includes('transactions')
+           )) {
+             return formatIntegerKPI(value) + ' cases';
+           }
+           
+           // Default formatting
+           return formatIntegerKPI(value);
+         }
+       },
        // Custom plugin untuk background Y1 dan Y2
        customBackgroundPlugin: {
          id: 'customBackground',
@@ -382,6 +427,22 @@ export default function LineChart({
           label: function(context: any) {
             const value = context.parsed.y;
             const datasetLabel = context.dataset.label;
+            
+            // For time-related charts (processing time), use (s) suffix
+            if (datasetLabel && (
+              datasetLabel.toLowerCase().includes('processing time') ||
+              datasetLabel.toLowerCase().includes('time')
+            )) {
+              return `  ${datasetLabel}: ${value.toFixed(1)}s`;
+            }
+            
+            // For overdue transactions, use "cases" suffix
+            if (datasetLabel && (
+              datasetLabel.toLowerCase().includes('overdue') ||
+              datasetLabel.toLowerCase().includes('transactions')
+            )) {
+              return `  ${datasetLabel}: ${formatIntegerKPI(value)} cases`;
+            }
             
             if (datasetLabel && datasetLabel.toLowerCase().includes('rate')) {
               return `  ${datasetLabel}: ${formatPercentageKPI(value)}`;
