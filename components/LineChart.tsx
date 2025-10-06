@@ -457,7 +457,7 @@ export default function LineChart({
               }
               // For second series, don't show anything to avoid duplication
               else {
-                return null;
+                return undefined;
               }
             }
             
