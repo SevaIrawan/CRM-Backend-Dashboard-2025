@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Auto Approval Deposit MYR - NexMax Dashboard',
+  title: 'Auto Approval Deposit Monitoring MYR - NexMax Dashboard',
   description: 'Auto Approval Deposit Monitoring for MYR Currency',
 }
 

@@ -222,11 +222,12 @@ export default function Sidebar({
         submenu: [
           { title: 'Overview MYR', path: '/myr/overview' },
           { title: 'Member Analytic MYR', path: '/myr/member-analytic' },
+          { title: 'Auto Approval Deposit Monitoring MYR', path: '/myr/auto-approval-monitor' },
+          { title: 'Auto Approval Withdrawal Monitoring MYR', path: '/myr/auto-approval-withdraw' },
           { title: 'Brand Comparison MYR', path: '/myr/brand-comparison' },
           { title: 'KPI Comparison MYR', path: '/myr/kpi-comparison' },
           { title: 'Customer Retention MYR', path: '/myr/customer-retention' },
           { title: 'Churn Member MYR', path: '/myr/churn-member' },
-          { title: 'Auto Approval Deposit MYR', path: '/myr/auto-approval-monitor' },
           { title: 'Member Report MYR', path: '/myr/member-report' }
         ]
       },

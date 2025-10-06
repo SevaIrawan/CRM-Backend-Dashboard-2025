@@ -159,13 +159,22 @@ export default function MYRAutoApprovalMonitorPage() {
   const calculateDaysInMonth = () => {
     if (!selectedYear || !selectedMonth) return 30 // fallback
     try {
-      // Parse month string (format: "2025-09")
-      const [year, month] = selectedMonth.split('-')
-      const monthStart = new Date(parseInt(year), parseInt(month) - 1, 1)
-      const monthEnd = new Date(parseInt(year), parseInt(month), 0) // Last day of month
+      // Parse month string (format: "September")
+      const year = parseInt(selectedYear)
+      const monthName = selectedMonth
+      
+      // Convert month name to number
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                         'July', 'August', 'September', 'October', 'November', 'December']
+      const monthNumber = monthNames.indexOf(monthName) + 1
+      
+      if (monthNumber === 0) return 30 // fallback if month not found
+      
+      const monthStart = new Date(year, monthNumber - 1, 1)
+      const monthEnd = new Date(year, monthNumber, 0) // Last day of month
       const daysInMonth = monthEnd.getDate()
       console.log('🔍 [DEBUG] Days in month calculation:', { 
-        year, month, 
+        year, monthName, monthNumber,
         monthStart: monthStart.toISOString().split('T')[0], 
         monthEnd: monthEnd.toISOString().split('T')[0], 
         daysInMonth 
@@ -416,7 +425,7 @@ export default function MYRAutoApprovalMonitorPage() {
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto mb-6"></div>
             <div className="space-y-2">
-              <p className="text-lg font-semibold text-gray-800">Loading Auto Approval Deposit MYR</p>
+              <p className="text-lg font-semibold text-gray-800">Loading Auto Approval Deposit Monitoring MYR</p>
               <p className="text-sm text-gray-500">Fetching real-time data from database...</p>
             </div>
           </div>
@@ -480,7 +489,7 @@ export default function MYRAutoApprovalMonitorPage() {
                      value={`${(data?.processingTime?.avgAutomation || 0).toFixed(1)} sec`}
                      additionalKpi={{
                        label: "DAILY AVERAGE",
-                       value: `${(data?.processingTime?.avgAutomation || 0).toFixed(1)} sec`
+                       value: "-"
                      }}
                      comparison={{
                        percentage: "0%",
@@ -504,7 +513,7 @@ export default function MYRAutoApprovalMonitorPage() {
                      value={formatPercentageKPI(data?.coverageRate || 0)}
                      additionalKpi={{
                        label: "DAILY AVERAGE",
-                       value: formatPercentageKPI(data?.coverageRate || 0)
+                       value: "-"
                      }}
                      comparison={{
                        percentage: "0%",
