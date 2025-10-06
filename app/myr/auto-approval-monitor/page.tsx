@@ -108,8 +108,11 @@ interface AutoApprovalData {
     max: number
   }>
   peakHourProcessingTime: Array<{
-    hour: string
-    avgProcessingTime: number
+    period: string
+    peakHour: string
+    maxTotalTransactions: number
+    automationTransactions: number
+    avgProcessingTimeAutomation: number
   }>
   metadata?: {
     totalRecords: number
@@ -578,8 +581,8 @@ export default function MYRAutoApprovalMonitorPage() {
                    />
           </div>
 
-          {/* Row 2: Processing Time Charts */}
-                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          {/* Row 2: Processing Time & Coverage Rate Charts */}
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                    <LineChart
                      series={data?.weeklyProcessingTime ? [{
                        name: 'Auto Approval Processing Time',
@@ -605,6 +608,10 @@ export default function MYRAutoApprovalMonitorPage() {
                      color="#FF8C00"
                      chartIcon={getChartIcon('Coverage Rate')}
                    />
+                 </div>
+
+                 {/* Row 3: Overdue Transactions Charts */}
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                    <BarChart
                      series={data?.automationOverdueTransactionsTrend ? [{
                        name: 'Automation Overdue Count',
@@ -616,10 +623,6 @@ export default function MYRAutoApprovalMonitorPage() {
                      showDataLabels={true}
                      chartIcon={getChartIcon('Overdue Transactions')}
                    />
-                 </div>
-
-                 {/* Row 3: Daily Monitoring Charts */}
-                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                    <LineChart
                      series={data?.dailyOverdueCount ? [{
                        name: 'Automation Overdue Count',
@@ -633,6 +636,10 @@ export default function MYRAutoApprovalMonitorPage() {
                      color="#3B82F6"
                      chartIcon={getChartIcon('Daily Overdue Count')}
                    />
+                 </div>
+
+                 {/* Row 4: Processing Distribution & Peak Hour Charts */}
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                    <LineChart
                      series={data?.dailyAutomationProcessingDistribution ? [{
                        name: 'Automation Median Time',
@@ -643,21 +650,28 @@ export default function MYRAutoApprovalMonitorPage() {
                      currency="MYR"
                      hideLegend={true}
                      showDataLabels={true}
-                     color="#8B5CF6"
+                     color="#F97316"
                      chartIcon={getChartIcon('Processing Time Distribution')}
                    />
                    <LineChart
-                     series={data?.peakHourProcessingTime ? [{
-                       name: 'Processing Time',
-                       data: data.peakHourProcessingTime.map(item => item.avgProcessingTime)
-                     }] : []}
-                     categories={data?.peakHourProcessingTime ? data.peakHourProcessingTime.map(item => item.hour) : []}
-                     title={isWeekly ? "PEAK HOUR PROCESSING TIME (WEEKLY)" : "PEAK HOUR PROCESSING TIME"}
+                     series={data?.peakHourProcessingTime ? [
+                       {
+                         name: 'Automation Trans',
+                         data: data.peakHourProcessingTime.map(item => item.automationTransactions)
+                       },
+                       {
+                         name: 'AVG Proc Time Automation',
+                         data: data.peakHourProcessingTime.map(item => item.avgProcessingTimeAutomation)
+                       }
+                     ] : []}
+                     categories={data?.peakHourProcessingTime ? data.peakHourProcessingTime.map(item => item.period) : []}
+                     title="PEAK HOUR PROC TIME AUTOMATION"
                      currency="MYR"
-                     hideLegend={true}
+                     hideLegend={false}
                      showDataLabels={true}
-                     color="#EC4899"
+                     color="#3B82F6"
                      chartIcon={getChartIcon('Peak Hour Processing Time')}
+                     peakHourData={data?.peakHourProcessingTime}
                    />
                  </div>
 
@@ -707,6 +721,11 @@ export default function MYRAutoApprovalMonitorPage() {
             gap: 12px;
           }
           .chart-row {
+            grid-template-columns: repeat(2, 1fr);
+          }
+          
+          /* Ensure 2-column layout for all chart rows */
+          .grid.grid-cols-1.md\\:grid-cols-2 {
             grid-template-columns: repeat(2, 1fr);
           }
         }

@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔍 [MYR Auto Approval Monitor DATA API] Starting request')
     console.log('🔍 [MYR Auto Approval Monitor DATA API] Fetching data - FORCE MAX DATE')
     const { searchParams } = new URL(request.url)
     
@@ -236,7 +237,118 @@ export async function GET(request: NextRequest) {
       }
     })
     
-    // Calculate hourly metrics
+        // Calculate daily peak hour metrics for automation (as per user requirement)
+        const dailyPeakHourMetrics = []
+        
+        console.log(`🔍 [DEBUG] Total depositData records: ${depositData.length}`)
+        console.log(`🔍 [DEBUG] Sample depositData:`, depositData.slice(0, 3).map(d => ({
+          id: d.id,
+          date: d.date,
+          time: d.time,
+          operator_group: d.operator_group,
+          proc_sec: d.proc_sec
+        })))
+    
+    // Group data by date first
+    const dailyData: { [date: string]: any[] } = {}
+    depositData.forEach(item => {
+      if (item.date) {
+        // Convert date to string format if it's a Date object
+        const dateStr = typeof item.date === 'string' ? item.date : item.date.toISOString().split('T')[0]
+        if (!dailyData[dateStr]) dailyData[dateStr] = []
+        dailyData[dateStr].push(item)
+      }
+    })
+    
+    console.log(`🔍 [DEBUG] Available dates in dailyData:`, Object.keys(dailyData).sort())
+    console.log(`🔍 [DEBUG] Date counts:`, Object.keys(dailyData).map(date => ({ date, count: dailyData[date].length })))
+    
+    // For each day, find the peak hour (hour with most TOTAL transactions)
+    Object.keys(dailyData).sort().forEach(date => {
+      const dayTransactions = dailyData[date]
+      
+      console.log(`🔍 [DEBUG] Processing date: ${date}, transactions: ${dayTransactions.length}`)
+      
+      // Group by hour for this specific day
+      const dayHourlyData: { [hour: string]: any[] } = {}
+      dayTransactions.forEach(item => {
+        if (item.time && typeof item.time === 'string') {
+          const hour = item.time.split(':')[0]
+          // Ensure hour is 2 digits (pad with 0 if needed)
+          const paddedHour = hour.padStart(2, '0')
+          if (!dayHourlyData[paddedHour]) dayHourlyData[paddedHour] = []
+          dayHourlyData[paddedHour].push(item)
+        }
+      })
+      
+      console.log(`🔍 [DEBUG] Hourly data for ${date}:`, Object.keys(dayHourlyData).map(hour => ({
+        hour,
+        count: dayHourlyData[hour].length
+      })))
+      
+      // Find peak hour (hour with most TOTAL transactions - all transactions)
+      let peakHour = '00:00'
+      let maxTotalTransactions = 0
+      let peakHourAutomationTransactions: any[] = []
+      
+      // Debug: Log all hours and their transaction counts
+      console.log(`🔍 [DEBUG] All hours for ${date}:`, Object.keys(dayHourlyData).map(hour => ({
+        hour,
+        totalTransactions: dayHourlyData[hour].length,
+        automationTransactions: dayHourlyData[hour].filter(d => 
+          (d.operator_group === 'Automation' || d.operator_group === 'BOT') && d.date >= '2025-09-22'
+        ).length
+      })))
+      
+      Object.keys(dayHourlyData).forEach(hour => {
+        const hourTransactions = dayHourlyData[hour]
+        
+        // Find hour with most TOTAL transactions (all types)
+        if (hourTransactions.length > maxTotalTransactions) {
+          maxTotalTransactions = hourTransactions.length
+          // Ensure hour is formatted as HH:00
+          const formattedHour = hour.padStart(2, '0')
+          peakHour = `${formattedHour}:00`
+          
+          // Get automation data from this peak hour
+          peakHourAutomationTransactions = hourTransactions.filter(d => 
+            (d.operator_group === 'Automation' || d.operator_group === 'BOT')
+          )
+          
+          console.log(`🔍 [DEBUG] Peak hour ${peakHour} for ${date}: total=${hourTransactions.length}, automation=${peakHourAutomationTransactions.length}`)
+          console.log(`🔍 [DEBUG] Automation transactions:`, peakHourAutomationTransactions.map(d => ({ 
+            id: d.id, 
+            operator_group: d.operator_group, 
+            date: d.date, 
+            time: d.time,
+            proc_sec: d.proc_sec 
+          })))
+          
+          console.log(`🔍 [DEBUG] New peak hour found for ${date}: ${peakHour} (hour: ${hour}, formatted: ${formattedHour}) with ${maxTotalTransactions} total transactions`)
+        }
+      })
+      
+      // Debug logging for peak hour calculation
+      console.log(`🔍 [DEBUG] Peak Hour for ${date}:`, {
+        peakHour,
+        maxTotalTransactions,
+        automationTransactions: peakHourAutomationTransactions.length,
+        avgProcessingTimeAutomation: peakHourAutomationTransactions.length > 0 ? 
+          peakHourAutomationTransactions.reduce((sum, d) => sum + (d.proc_sec || 0), 0) / peakHourAutomationTransactions.length : 0
+      })
+      
+      // Add to daily metrics
+      dailyPeakHourMetrics.push({
+        date: date,
+        peakHour: peakHour,
+        maxTotalTransactions: maxTotalTransactions,
+        automationTransactions: peakHourAutomationTransactions.length,
+        avgProcessingTimeAutomation: peakHourAutomationTransactions.length > 0 ? 
+          peakHourAutomationTransactions.reduce((sum, d) => sum + (d.proc_sec || 0), 0) / peakHourAutomationTransactions.length : 0
+      })
+    })
+    
+    // Legacy hourlyMetrics for backward compatibility
     const hourlyMetrics = Object.keys(hourlyData).map(hour => {
       const hourTransactions = hourlyData[hour]
       const hourAutomation = hourTransactions.filter(d => 
@@ -500,10 +612,38 @@ export async function GET(request: NextRequest) {
         q3: d.automationProcessingTimeDistribution.q3,
         max: d.automationProcessingTimeDistribution.max
       })),
-      peakHourProcessingTime: timeSeriesData.map(d => ({
-        hour: d.period,
-        avgProcessingTime: d.avgProcessingTimeAll
-      }))
+      peakHourProcessingTime: timeSeriesData.map(d => {
+        // Find corresponding daily peak hour data for this period
+        const periodDate = d.period
+        const dailyPeakData = dailyPeakHourMetrics.find(p => {
+          // Match by date format - handle different period formats
+          try {
+            let dateStr
+            if (periodDate.includes('Oct') || periodDate.includes('Sep')) {
+              // Handle "Oct 1", "Oct 2" format
+              dateStr = new Date(periodDate + ', 2025').toISOString().split('T')[0]
+            } else if (periodDate.includes('Week')) {
+              // Handle "Week 1", "Week 2" format - skip for now
+              return false
+            } else {
+              // Handle direct date format
+              dateStr = periodDate
+            }
+            return p.date === dateStr
+          } catch (error) {
+            console.error('Error parsing date:', periodDate, error)
+            return false
+          }
+        })
+        
+        return {
+          period: periodDate,
+          peakHour: dailyPeakData ? dailyPeakData.peakHour : '00:00',
+          maxTotalTransactions: dailyPeakData ? dailyPeakData.maxTotalTransactions : 0,
+          automationTransactions: dailyPeakData ? dailyPeakData.automationTransactions : 0,
+          avgProcessingTimeAutomation: dailyPeakData ? dailyPeakData.avgProcessingTimeAutomation : 0
+        }
+      })
     }
 
     console.log('🔍 [DEBUG] Final return values:', {
@@ -635,10 +775,51 @@ export async function GET(request: NextRequest) {
           q3: d.automationProcessingTimeDistribution.q3,
           max: d.automationProcessingTimeDistribution.max
         })),
-        peakHourProcessingTime: timeSeriesData.map(d => ({
-          hour: d.period,
-          avgProcessingTime: d.avgProcessingTimeAll
-        })),
+        peakHourProcessingTime: timeSeriesData.map(d => {
+          // Find corresponding daily peak hour data for this period
+          const periodDate = d.period
+          
+          // Debug logging
+          console.log(`🔍 [DEBUG] Looking for peak data for period: ${periodDate}`)
+          console.log(`🔍 [DEBUG] Available dailyPeakHourMetrics:`, dailyPeakHourMetrics.map(p => ({ date: p.date, peakHour: p.peakHour })))
+          
+          const dailyPeakData = dailyPeakHourMetrics.find(p => {
+            // Match by date format - handle different period formats
+            try {
+              let dateStr
+              if (periodDate.includes('Oct') || periodDate.includes('Sep')) {
+                // Handle "Oct 1", "Oct 2" format - fix the parsing logic
+                const month = periodDate.includes('Oct') ? '10' : '09'
+                const day = periodDate.split(' ')[1]
+                dateStr = `2025-${month}-${day.padStart(2, '0')}`
+                console.log(`🔍 [DEBUG] Parsed date for ${periodDate}: ${dateStr}`)
+              } else if (periodDate.includes('Week')) {
+                // Handle "Week 1", "Week 2" format - skip for now
+                return false
+              } else {
+                // Handle direct date format
+                dateStr = periodDate
+              }
+              
+              const match = p.date === dateStr
+              console.log(`🔍 [DEBUG] Comparing ${p.date} === ${dateStr}: ${match}`)
+              return match
+            } catch (error) {
+              console.error('Error parsing date:', periodDate, error)
+              return false
+            }
+          })
+          
+          console.log(`🔍 [DEBUG] Found dailyPeakData for ${periodDate}:`, dailyPeakData)
+          
+          return {
+            period: periodDate,
+            peakHour: dailyPeakData ? dailyPeakData.peakHour : '00:00',
+            maxTotalTransactions: dailyPeakData ? dailyPeakData.maxTotalTransactions : 0,
+            automationTransactions: dailyPeakData ? dailyPeakData.automationTransactions : 0,
+            avgProcessingTimeAutomation: dailyPeakData ? dailyPeakData.avgProcessingTimeAutomation : 0
+          }
+        }),
         
         // ============================================
         // METADATA
@@ -665,10 +846,12 @@ export async function GET(request: NextRequest) {
     return response
     
   } catch (error) {
-    console.error('Error in auto approval monitor data API:', error)
+    console.error('❌ [MYR Auto Approval Monitor DATA API] Error:', error)
+    console.error('❌ [MYR Auto Approval Monitor DATA API] Error stack:', error instanceof Error ? error.stack : 'No stack trace')
     return NextResponse.json({
       success: false,
-      error: 'Internal server error'
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }
 }

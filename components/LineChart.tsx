@@ -38,8 +38,15 @@ interface LineChartProps {
   currency?: string;
   chartIcon?: string;
   hideLegend?: boolean;
-  color?: string; // Add color prop for customizable line and area color
+  color?: string; // Add color prop for customizable line and area color (used for single series)
   showDataLabels?: boolean; // Add prop for showing data labels
+  peakHourData?: Array<{
+    period: string;
+    peakHour: string;
+    maxTotalTransactions: number;
+    automationTransactions: number;
+    avgProcessingTimeAutomation: number;
+  }>; // Add peak hour data for detailed tooltip
 }
 
 export default function LineChart({ 
@@ -50,7 +57,8 @@ export default function LineChart({
   chartIcon,
   hideLegend = false,
   color = '#3B82F6', // Default blue color
-  showDataLabels = false // Default false
+  showDataLabels = false, // Default false
+  peakHourData // Peak hour data for detailed tooltip
 }: LineChartProps) {
   
   console.log('📈 [LineChart] Rendering chart:', {
@@ -292,10 +300,10 @@ export default function LineChart({
       // Use custom color if provided, otherwise use default colors
       const lineColor = index === 0 ? color : '#F97316'; // First series uses color prop, second uses orange
       
-      // ✅ IMPROVED: Better background with gradient effect
+      // ✅ STANDARD: Semi-transparent background with gradient effect for all charts
       const bgColor = index === 0 
         ? `${color}20` // Add transparency to color prop (hex with alpha)
-        : 'rgba(249, 115, 22, 0.15)'; // Orange with better transparency
+        : 'rgba(249, 115, 22, 0.15)'; // Orange with transparency
       
       return {
         label: item.name,
@@ -347,6 +355,11 @@ export default function LineChart({
          offset: 4,
          formatter: function(value: number, context: any) {
            const datasetLabel = context.dataset.label;
+           
+           // Special case for "Automation Trans" - use "c" suffix for data labels
+           if (datasetLabel && datasetLabel.toLowerCase().includes('automation trans')) {
+             return formatIntegerKPI(value) + 'c';
+           }
            
            // For rate/percentage charts (coverage rate), use % suffix
            if (datasetLabel && (
@@ -427,6 +440,31 @@ export default function LineChart({
           label: function(context: any) {
             const value = context.parsed.y;
             const datasetLabel = context.dataset.label;
+            const dataIndex = context.dataIndex;
+            
+            // Special tooltip for PEAK HOUR chart
+            if (title && title.toLowerCase().includes('peak hour') && peakHourData && peakHourData[dataIndex]) {
+              const peakData = peakHourData[dataIndex];
+              
+              // For first series (Automation Trans), show detailed peak hour info
+              if (context.datasetIndex === 0) {
+                return [
+                  `Peak Hour: ${peakData.peakHour} GMT +7`,
+                  `Total Transaction Peak: ${formatIntegerKPI(peakData.maxTotalTransactions)}`,
+                  `Automation Handle: ${formatIntegerKPI(value)} cases`,
+                  `Avg Process Time Automation: ${peakData.avgProcessingTimeAutomation.toFixed(1)}s`
+                ];
+              }
+              // For second series, don't show anything to avoid duplication
+              else {
+                return null;
+              }
+            }
+            
+            // Special case for "Automation Trans" - use "cases" suffix
+            if (datasetLabel && datasetLabel.toLowerCase().includes('automation trans')) {
+              return `  ${datasetLabel}: ${formatIntegerKPI(value)} cases`;
+            }
             
             // For time-related charts (processing time), use (s) suffix
             if (datasetLabel && (
@@ -591,9 +629,21 @@ export default function LineChart({
   };
 
   console.log('📊 [LineChart] Chart data prepared:', {
+    title,
     labels: data.labels,
-    datasets: data.datasets.map(d => ({ label: d.label, dataLength: d.data.length })),
-    needsDualYAxis
+    datasets: data.datasets.map(d => ({ 
+      label: d.label, 
+      dataLength: d.data.length,
+      borderColor: d.borderColor,
+      backgroundColor: d.backgroundColor
+    })),
+    needsDualYAxis,
+    seriesColors: series.map((item, index) => ({
+      name: item.name,
+      index,
+      lineColor: index === 0 ? color : '#F97316',
+      legendColor: index === 0 ? '#3B82F6' : '#F97316'
+    }))
   })
 
   return (
