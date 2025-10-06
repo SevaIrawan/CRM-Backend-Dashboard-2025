@@ -114,6 +114,14 @@ interface AutoApprovalData {
     automationTransactions: number
     avgProcessingTimeAutomation: number
   }>
+  momComparison?: {
+    totalTransactions: number
+    automationTransactions: number
+    avgAutomationProcessingTime: number
+    automationOverdue: number
+    coverageRate: number
+    manualTimeSaved: number
+  }
   metadata?: {
     totalRecords: number
     dateRange: {
@@ -175,6 +183,13 @@ export default function MYRAutoApprovalMonitorPage() {
   const [isWeekly, setIsWeekly] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+
+  // Helper function to format MoM comparison
+  const formatMoMComparison = (value: number) => {
+    const absValue = Math.abs(value)
+    const sign = value >= 0 ? '+' : ''
+    return `${sign}${absValue.toFixed(1)}%`
+  }
 
   // Helper function to calculate active days using STANDARD LOGIC
   const calculateActiveDays = () => {
@@ -515,8 +530,8 @@ export default function MYRAutoApprovalMonitorPage() {
                        value: formatIntegerKPI(Math.round((data?.depositCases || 0) / calculateActiveDays()))
                      }}
                      comparison={{
-                       percentage: "0%",
-                       isPositive: true
+                       percentage: formatMoMComparison(data?.momComparison?.totalTransactions || 0),
+                       isPositive: (data?.momComparison?.totalTransactions || 0) >= 0
                      }}
                    />
                    <StatCard
@@ -527,8 +542,8 @@ export default function MYRAutoApprovalMonitorPage() {
                        value: formatIntegerKPI(Math.round((data?.automation?.automationTransactions || 0) / calculateActiveDays()))
                      }}
                      comparison={{
-                       percentage: "0%",
-                       isPositive: true
+                       percentage: formatMoMComparison(data?.momComparison?.automationTransactions || 0),
+                       isPositive: (data?.momComparison?.automationTransactions || 0) >= 0
                      }}
                    />
                    <StatCard
@@ -539,8 +554,8 @@ export default function MYRAutoApprovalMonitorPage() {
                        value: "-"
                      }}
                      comparison={{
-                       percentage: "0%",
-                       isPositive: true
+                       percentage: formatMoMComparison(data?.momComparison?.avgAutomationProcessingTime || 0),
+                       isPositive: (data?.momComparison?.avgAutomationProcessingTime || 0) >= 0
                      }}
                    />
                    <StatCard
@@ -551,8 +566,8 @@ export default function MYRAutoApprovalMonitorPage() {
                        value: formatIntegerKPI(Math.round((data?.performance?.automationOverdue || 0) / calculateActiveDays()))
                      }}
                      comparison={{
-                       percentage: "0%",
-                       isPositive: true
+                       percentage: formatMoMComparison(data?.momComparison?.automationOverdue || 0),
+                       isPositive: (data?.momComparison?.automationOverdue || 0) >= 0
                      }}
                    />
                    <StatCard
@@ -563,8 +578,8 @@ export default function MYRAutoApprovalMonitorPage() {
                        value: "-"
                      }}
                      comparison={{
-                       percentage: "0%",
-                       isPositive: true
+                       percentage: formatMoMComparison(data?.momComparison?.coverageRate || 0),
+                       isPositive: (data?.momComparison?.coverageRate || 0) >= 0
                      }}
                    />
                    <StatCard
@@ -575,8 +590,8 @@ export default function MYRAutoApprovalMonitorPage() {
                        value: `${((data?.manualTimeSaved || 0) / calculateActiveDays()).toFixed(1)} hrs`
                      }}
                      comparison={{
-                       percentage: "0%",
-                       isPositive: true
+                       percentage: formatMoMComparison(data?.momComparison?.manualTimeSaved || 0),
+                       isPositive: (data?.momComparison?.manualTimeSaved || 0) >= 0
                      }}
                    />
           </div>

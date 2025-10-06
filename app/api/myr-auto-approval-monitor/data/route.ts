@@ -1,6 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
+// Helper function to get previous month
+function getPreviousMonth(year: string, month: string): { year: string, month: string } {
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                     'July', 'August', 'September', 'October', 'November', 'December']
+  const currentMonthIndex = monthNames.indexOf(month)
+  const prevMonthIndex = currentMonthIndex === 0 ? 11 : currentMonthIndex - 1
+  const prevMonth = monthNames[prevMonthIndex]
+  const prevYear = currentMonthIndex === 0 ? (parseInt(year) - 1).toString() : year
+  return { year: prevYear, month: prevMonth }
+}
+
+// Helper function to calculate MoM percentage
+function calculateMoM(current: number, previous: number): number {
+  if (previous === 0) {
+    return current > 0 ? 100 : 0
+  }
+  return ((current - previous) / previous) * 100
+}
+
 export async function GET(request: NextRequest) {
   try {
     console.log('🔍 [MYR Auto Approval Monitor DATA API] Starting request')
@@ -820,6 +839,119 @@ export async function GET(request: NextRequest) {
             avgProcessingTimeAutomation: dailyPeakData ? dailyPeakData.avgProcessingTimeAutomation : 0
           }
         }),
+        
+        // ============================================
+        // MONTH-OVER-MONTH COMPARISON
+        // ============================================
+        momComparison: await (async () => {
+          if (!year || !month) return {
+            totalTransactions: 0,
+            automationTransactions: 0,
+            avgAutomationProcessingTime: 0,
+            automationOverdue: 0,
+            coverageRate: 0,
+            manualTimeSaved: 0
+          }
+
+          try {
+            console.log('🔄 [MoM] Calculating Month-over-Month comparison...')
+            const { year: prevYear, month: prevMonth } = getPreviousMonth(year, month)
+            console.log('🔄 [MoM] Previous month:', { prevYear, prevMonth })
+            
+            // Build query for previous month
+            let prevMonthQuery = supabase
+              .from('deposit')
+              .select('*')
+              .eq('currency', 'MYR')
+              .not('proc_sec', 'is', null)
+              .eq('year', parseInt(prevYear))
+              .eq('month', prevMonth)
+            
+            if (line) {
+              prevMonthQuery = prevMonthQuery.eq('line', line)
+            }
+            
+            const { data: prevMonthData, error: prevMonthError } = await prevMonthQuery
+            
+            if (prevMonthError) {
+              console.error('❌ [MoM] Error fetching previous month data:', prevMonthError)
+              return {
+                totalTransactions: 0,
+                automationTransactions: 0,
+                avgAutomationProcessingTime: 0,
+                automationOverdue: 0,
+                coverageRate: 0,
+                manualTimeSaved: 0
+              }
+            }
+            
+            if (!prevMonthData || prevMonthData.length === 0) {
+              console.log('⚠️ [MoM] No previous month data found')
+              return {
+                totalTransactions: 0,
+                automationTransactions: 0,
+                avgAutomationProcessingTime: 0,
+                automationOverdue: 0,
+                coverageRate: 0,
+                manualTimeSaved: 0
+              }
+            }
+            
+            console.log('✅ [MoM] Previous month data found:', prevMonthData.length, 'transactions')
+            
+            // Calculate previous month KPIs
+            const prevTotalTransactions = prevMonthData.length
+            const prevAutomationTransactions = prevMonthData.filter((d: any) => 
+              d.operator_group === 'Automation' || d.operator_group === 'BOT'
+            )
+            const prevAutomationProcessingTimes = prevAutomationTransactions
+              .filter((d: any) => d.proc_sec && d.proc_sec > 0)
+              .map((d: any) => d.proc_sec || 0)
+            const prevAvgAutomationProcessingTime = prevAutomationProcessingTimes.length > 0 
+              ? prevAutomationProcessingTimes.reduce((sum: number, time: number) => sum + time, 0) / prevAutomationProcessingTimes.length 
+              : 0
+            const prevAutomationOverdue = prevAutomationTransactions.filter((d: any) => (d.proc_sec || 0) > 30)
+            const prevCoverageRate = prevTotalTransactions > 0 ? (prevAutomationTransactions.length / prevTotalTransactions) * 100 : 0
+            
+            // Calculate previous month manual time saved
+            const prevManualTransactions = prevMonthData.filter((d: any) => 
+              d.operator_group === 'Staff' || d.operator_group === 'User' || d.operator_group === 'Manual'
+            )
+            const prevManualProcessingTimes = prevManualTransactions
+              .filter((d: any) => d.proc_sec && d.proc_sec > 0)
+              .map((d: any) => d.proc_sec || 0)
+            const prevAvgManualProcessingTime = prevManualProcessingTimes.length > 0 
+              ? prevManualProcessingTimes.reduce((sum: number, time: number) => sum + time, 0) / prevManualProcessingTimes.length 
+              : 0
+            const prevManualTimeSaved = prevAutomationTransactions.length > 0 && prevAvgManualProcessingTime > 0 && prevAvgAutomationProcessingTime > 0
+              ? ((prevAvgManualProcessingTime - prevAvgAutomationProcessingTime) * prevAutomationTransactions.length) / 3600
+              : 0
+            
+            // Calculate MoM percentages
+            const momResult = {
+              totalTransactions: calculateMoM(totalTransactions, prevTotalTransactions),
+              automationTransactions: calculateMoM(automationTransactions.length, prevAutomationTransactions.length),
+              avgAutomationProcessingTime: calculateMoM(avgProcessingTimeAutomation, prevAvgAutomationProcessingTime),
+              automationOverdue: calculateMoM(automationOverdue, prevAutomationOverdue.length),
+              coverageRate: calculateMoM(automationRate, prevCoverageRate),
+              manualTimeSaved: calculateMoM(manualTimeSaved, prevManualTimeSaved)
+            }
+            
+            console.log('📊 [MoM] Comparison results:', momResult)
+            return momResult
+            
+          } catch (error) {
+            console.error('❌ [MoM] Error calculating MoM comparison:', error)
+            return {
+              totalTransactions: 0,
+              automationTransactions: 0,
+              avgAutomationProcessingTime: 0,
+              automationOverdue: 0,
+              coverageRate: 0,
+              manualTimeSaved: 0
+            }
+          }
+        })(),
         
         // ============================================
         // METADATA

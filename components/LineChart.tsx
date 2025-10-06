@@ -449,7 +449,7 @@ export default function LineChart({
               // For first series (Automation Trans), show detailed peak hour info
               if (context.datasetIndex === 0) {
                 return [
-                  `Peak Hour: ${peakData.peakHour} GMT +7`,
+                  `Peak Hour: ${peakData.peakHour}`,
                   `Total Transaction Peak: ${formatIntegerKPI(peakData.maxTotalTransactions)}`,
                   `Automation Handle: ${formatIntegerKPI(value)} cases`,
                   `Avg Process Time Automation: ${peakData.avgProcessingTimeAutomation.toFixed(1)}s`
