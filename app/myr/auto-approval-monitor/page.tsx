@@ -481,11 +481,11 @@ export default function MYRAutoApprovalMonitorPage() {
                      }}
                    />
                    <StatCard
-                     title="OVERDUE TRANSACTIONS"
-                     value={formatIntegerKPI(data?.performance?.overdueTransactions || 0)}
+                     title="OVERDUE TRANSACTIONS (AUTO)"
+                     value={formatIntegerKPI(data?.performance?.automationOverdue || 0)}
                      additionalKpi={{
-                       label: "MONTHLY TOTAL",
-                       value: formatIntegerKPI(data?.performance?.overdueTransactions || 0)
+                       label: "AUTO APPROVAL ONLY",
+                       value: formatIntegerKPI(data?.performance?.automationOverdue || 0)
                      }}
                      comparison={{
                        percentage: "0%",
