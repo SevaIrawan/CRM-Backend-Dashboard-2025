@@ -279,7 +279,7 @@ export async function GET(request: NextRequest) {
     depositData.forEach(item => {
       if (item.date) {
         // Convert date to string format if it's a Date object
-        const dateStr = typeof item.date === 'string' ? item.date : item.date.toISOString().split('T')[0]
+        const dateStr = typeof item.date === 'string' ? item.date : (item.date as Date).toISOString().split('T')[0]
         if (!dailyData[dateStr]) dailyData[dateStr] = []
         dailyData[dateStr].push(item)
       }
