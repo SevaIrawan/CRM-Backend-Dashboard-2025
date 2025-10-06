@@ -99,6 +99,14 @@ interface AutoApprovalData {
     q3: number
     max: number
   }>
+  dailyAutomationProcessingDistribution: Array<{
+    date: string
+    min: number
+    q1: number
+    median: number
+    q3: number
+    max: number
+  }>
   peakHourProcessingTime: Array<{
     hour: string
     avgProcessingTime: number
@@ -586,12 +594,12 @@ export default function MYRAutoApprovalMonitorPage() {
                      chartIcon={getChartIcon('Daily Overdue Count')}
                    />
                    <LineChart
-                     series={data?.dailyProcessingDistribution ? [{
-                       name: 'Median Time',
-                       data: data.dailyProcessingDistribution.map(item => item.median)
+                     series={data?.dailyAutomationProcessingDistribution ? [{
+                       name: 'Automation Median Time',
+                       data: data.dailyAutomationProcessingDistribution.map(item => item.median)
                      }] : []}
-                     categories={data?.dailyProcessingDistribution ? data.dailyProcessingDistribution.map(item => item.date) : []}
-                     title={isWeekly ? "PROCESSING TIME DISTRIBUTION (WEEKLY)" : "PROCESSING TIME DISTRIBUTION PER DAY"}
+                     categories={data?.dailyAutomationProcessingDistribution ? data.dailyAutomationProcessingDistribution.map(item => item.date) : []}
+                     title={isWeekly ? "PROCESSING TIME DISTRIBUTION AUTOMATION (WEEKLY)" : "PROCESSING TIME DISTRIBUTION AUTOMATION PER DAY"}
                      currency="MYR"
                      hideLegend={true}
                      color="#8B5CF6"
