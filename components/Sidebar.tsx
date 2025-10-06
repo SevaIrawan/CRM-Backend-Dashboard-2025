@@ -21,6 +21,34 @@ import {
 } from './Icons'
 import { getMenuItemsByRole, hasPermission } from '@/utils/rolePermissions'
 
+// Function to filter menu items based on role for MYR pages
+const filterMenuItemsByRole = (menuItems: any[], userRole: string) => {
+  // Pages to hide for MYR roles (manager_myr, sq_myr) - still in development
+  const hiddenPagesForMYRRoles = ['/myr/overview', '/myr/member-analytic', '/myr/churn-member']
+  
+  // Only admin can see these pages
+  if (userRole === 'admin') {
+    return menuItems
+  }
+  
+  // Filter out hidden pages for MYR roles
+  if (userRole === 'manager_myr' || userRole === 'sq_myr') {
+    return menuItems.map(item => {
+      if (item.title === 'MYR' && item.submenu) {
+        return {
+          ...item,
+          submenu: item.submenu.filter((subItem: any) => 
+            !hiddenPagesForMYRRoles.includes(subItem.path)
+          )
+        }
+      }
+      return item
+    })
+  }
+  
+  return menuItems
+}
+
 interface SidebarProps {
   sidebarOpen: boolean
   setSidebarOpen: (open: boolean) => void
@@ -294,8 +322,11 @@ export default function Sidebar({
     const filteredItems = fullMenuItems.filter(item => 
       roleMenuItems.some(roleItem => roleItem.permission === item.permission)
     )
-    console.log('✅ [Sidebar] Filtered menu items:', filteredItems)
-    return filteredItems
+    
+    // Apply additional filtering for MYR roles to hide development pages
+    const finalFilteredItems = filterMenuItemsByRole(filteredItems, userRole)
+    console.log('✅ [Sidebar] Filtered menu items:', finalFilteredItems)
+    return finalFilteredItems
   }
 
   const menuItems = getMenuItems()

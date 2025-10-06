@@ -364,12 +364,12 @@ export default function LineChart({
              return value.toFixed(1) + 's';
            }
            
-           // For overdue transactions, use "cases" suffix
-           if (datasetLabel && (
-             datasetLabel.toLowerCase().includes('overdue') ||
-             datasetLabel.toLowerCase().includes('transactions')
-           )) {
-             return formatIntegerKPI(value) + ' cases';
+          // For overdue transactions, use "c" suffix for labels (to avoid overlap)
+          if (datasetLabel && (
+            datasetLabel.toLowerCase().includes('overdue') ||
+            datasetLabel.toLowerCase().includes('transactions')
+          )) {
+            return formatIntegerKPI(value) + 'c';
            }
            
            // Default formatting

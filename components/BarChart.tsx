@@ -146,12 +146,12 @@ export default function BarChart({
         formatter: function(value: number, context: any) {
           const datasetLabel = context.dataset.label;
           
-          // For overdue transactions, use "cases" suffix
+          // For overdue transactions, use "c" suffix for labels (to avoid overlap)
           if (datasetLabel && (
             datasetLabel.toLowerCase().includes('overdue') ||
             datasetLabel.toLowerCase().includes('transactions')
           )) {
-            return formatIntegerKPI(value) + ' cases';
+            return formatIntegerKPI(value) + 'c';
           }
           
           // For cases type, use "cases" suffix
