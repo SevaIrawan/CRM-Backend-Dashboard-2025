@@ -29,6 +29,7 @@ ChartJS.register(
 interface Series {
   name: string;
   data: number[];
+  color?: string;
 }
 
 interface BarChartProps {
@@ -117,8 +118,8 @@ export default function BarChart({
     datasets: series.map((dataset, index) => ({
       label: dataset.name,
       data: dataset.data,
-      backgroundColor: index === 0 ? color : '#f97316',
-      borderColor: index === 0 ? color : '#ea580c',
+      backgroundColor: dataset.color || (index === 0 ? color : '#f97316'),
+      borderColor: dataset.color || (index === 0 ? color : '#ea580c'),
       borderWidth: 1,
       borderRadius: 4,
       borderSkipped: false,
