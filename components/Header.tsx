@@ -87,7 +87,8 @@ export default function Header({
         .map(word => word.charAt(0).toUpperCase() + word.slice(1))
         .join(' ')
       
-      return `${pageTitle} ${currency}`
+      // Don't add currency suffix (keep title clean for all currency pages)
+      return pageTitle
     }
     
     // Handle transaction pages

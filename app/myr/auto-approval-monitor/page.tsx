@@ -87,6 +87,20 @@ interface AutoApprovalData {
     }>
     categories: string[]
   }
+  totalTransactionsTrend: {
+    series: Array<{
+      name: string
+      data: number[]
+    }>
+    categories: string[]
+  }
+  automationTransactionsTrend: {
+    series: Array<{
+      name: string
+      data: number[]
+    }>
+    categories: string[]
+  }
   dailyOverdueCount: Array<{
     date: string
     overdueCount: number
@@ -628,15 +642,23 @@ export default function MYRAutoApprovalMonitorPage() {
                  {/* Row 3: Overdue Transactions Charts */}
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                    <BarChart
-                     series={data?.automationOverdueTransactionsTrend ? [{
-                       name: 'Automation Overdue Count',
-                       data: data.automationOverdueTransactionsTrend.series[0].data
-                     }] : []}
-                     categories={data?.automationOverdueTransactionsTrend ? data.automationOverdueTransactionsTrend.categories : []}
-                     title="OVERDUE TRANS AUTOMATION (WEEKLY)"
+                     series={data?.totalTransactionsTrend && data?.automationTransactionsTrend ? [
+                       {
+                         name: 'Total Transaction Trend',
+                         data: data.totalTransactionsTrend.series[0].data,
+                         color: '#3B82F6'  // Blue
+                       },
+                       {
+                         name: 'Total Trans Automation',
+                         data: data.automationTransactionsTrend.series[0].data,
+                         color: '#FF8C00'  // Orange
+                       }
+                     ] : []}
+                     categories={data?.totalTransactionsTrend ? data.totalTransactionsTrend.categories : []}
+                     title={isWeekly ? "TRANSACTION VOLUME TREND ANALYSIS (WEEKLY)" : "TRANSACTION VOLUME TREND ANALYSIS (DAILY)"}
                      currency="MYR"
                      showDataLabels={true}
-                     chartIcon={getChartIcon('Overdue Transactions')}
+                     chartIcon={getChartIcon('Transaction Volume')}
                    />
                    <LineChart
                      series={data?.dailyOverdueCount ? [{

@@ -248,15 +248,15 @@ export default function Sidebar({
         icon: <MYRIcon size={18} color="#ffffff" />,
         permission: 'myr',
         submenu: [
-          { title: 'Overview MYR', path: '/myr/overview' },
-          { title: 'Member Analytic MYR', path: '/myr/member-analytic' },
-          { title: 'Auto Approval Deposit Monitoring MYR', path: '/myr/auto-approval-monitor' },
-          { title: 'Auto Approval Withdrawal Monitoring MYR', path: '/myr/auto-approval-withdraw' },
-          { title: 'Brand Comparison MYR', path: '/myr/brand-comparison' },
-          { title: 'KPI Comparison MYR', path: '/myr/kpi-comparison' },
-          { title: 'Customer Retention MYR', path: '/myr/customer-retention' },
-          { title: 'Churn Member MYR', path: '/myr/churn-member' },
-          { title: 'Member Report MYR', path: '/myr/member-report' }
+          { title: 'Overview', path: '/myr/overview' },
+          { title: 'Member Analytic', path: '/myr/member-analytic' },
+          { title: 'Auto Approval Deposit Monitoring', path: '/myr/auto-approval-monitor' },
+          { title: 'Auto Approval Withdrawal Monitoring', path: '/myr/auto-approval-withdraw' },
+          { title: 'Brand Comparison', path: '/myr/brand-comparison' },
+          { title: 'KPI Comparison', path: '/myr/kpi-comparison' },
+          { title: 'Customer Retention', path: '/myr/customer-retention' },
+          { title: 'Churn Member', path: '/myr/churn-member' },
+          { title: 'Member Report', path: '/myr/member-report' }
         ]
       },
       {
@@ -264,13 +264,13 @@ export default function Sidebar({
         icon: <SGDIcon size={18} color="#ffffff" />,
         permission: 'sgd',
         submenu: [
-          { title: 'Overview SGD', path: '/sgd/overview' },
-          { title: 'Member Analytic SGD', path: '/sgd/member-analytic' },
-          { title: 'Brand Comparison SGD', path: '/sgd/brand-comparison' },
-          { title: 'KPI Comparison SGD', path: '/sgd/kpi-comparison' },
-          { title: 'Customer Retention SGD', path: '/sgd/customer-retention' },
-          { title: 'Churn Member SGD', path: '/sgd/churn-member' },
-          { title: 'Member Report SGD', path: '/sgd/member-report' }
+          { title: 'Overview', path: '/sgd/overview' },
+          { title: 'Member Analytic', path: '/sgd/member-analytic' },
+          { title: 'Brand Comparison', path: '/sgd/brand-comparison' },
+          { title: 'KPI Comparison', path: '/sgd/kpi-comparison' },
+          { title: 'Customer Retention', path: '/sgd/customer-retention' },
+          { title: 'Churn Member', path: '/sgd/churn-member' },
+          { title: 'Member Report', path: '/sgd/member-report' }
         ]
       },
       {
@@ -278,13 +278,13 @@ export default function Sidebar({
         icon: <USCIcon size={18} color="#ffffff" />,
         permission: 'usc',
         submenu: [
-          { title: 'Overview USC', path: '/usc/overview' },
-          { title: 'Member Analytic USC', path: '/usc/member-analytic' },
-          { title: 'Brand Comparison USC', path: '/usc/brand-comparison' },
-          { title: 'KPI Comparison USC', path: '/usc/kpi-comparison' },
-          { title: 'Customer Retention USC', path: '/usc/customer-retention' },
-          { title: 'Churn Member USC', path: '/usc/churn-member' },
-          { title: 'Member Report USC', path: '/usc/member-report' }
+          { title: 'Overview', path: '/usc/overview' },
+          { title: 'Member Analytic', path: '/usc/member-analytic' },
+          { title: 'Brand Comparison', path: '/usc/brand-comparison' },
+          { title: 'KPI Comparison', path: '/usc/kpi-comparison' },
+          { title: 'Customer Retention', path: '/usc/customer-retention' },
+          { title: 'Churn Member', path: '/usc/churn-member' },
+          { title: 'Member Report', path: '/usc/member-report' }
         ]
       },
       {

@@ -146,10 +146,13 @@ export default function BarChart({
         formatter: function(value: number, context: any) {
           const datasetLabel = context.dataset.label;
           
-          // For overdue transactions, use "c" suffix for labels (to avoid overlap)
+          // For transaction trends and automation, use "c" suffix for labels (to avoid overlap)
           if (datasetLabel && (
             datasetLabel.toLowerCase().includes('overdue') ||
-            datasetLabel.toLowerCase().includes('transactions')
+            datasetLabel.toLowerCase().includes('transactions') ||
+            datasetLabel.toLowerCase().includes('transaction trend') ||
+            datasetLabel.toLowerCase().includes('trans automation') ||
+            datasetLabel.toLowerCase().includes('automation')
           )) {
             return formatIntegerKPI(value) + 'c';
           }
@@ -169,10 +172,13 @@ export default function BarChart({
             const value = horizontal ? context.parsed.x : context.parsed.y;
             const datasetLabel = context.dataset.label;
             
-            // For overdue transactions, use "cases" suffix
+            // For transaction trends and automation, use "cases" suffix
             if (datasetLabel && (
               datasetLabel.toLowerCase().includes('overdue') ||
-              datasetLabel.toLowerCase().includes('transactions')
+              datasetLabel.toLowerCase().includes('transactions') ||
+              datasetLabel.toLowerCase().includes('transaction trend') ||
+              datasetLabel.toLowerCase().includes('trans automation') ||
+              datasetLabel.toLowerCase().includes('automation')
             )) {
               return `${datasetLabel}: ${formatIntegerKPI(value)} cases`;
             }
