@@ -77,8 +77,8 @@ export default function Header({
         'customer-retention': 'Customer Retention',
         'member-report': 'Member Report',
         'churn-member': 'Churn Member',
-        'auto-approval-monitor': 'Auto Approval Deposit Monitoring',
-        'auto-approval-withdraw': 'Auto Approval Withdrawal Monitoring',
+        'auto-approval-monitor': 'Deposit Auto‑Approval',
+        'auto-approval-withdraw': 'Withdrawal Auto‑Approval',
         'retention-day': 'Retention Day'
       }
       
