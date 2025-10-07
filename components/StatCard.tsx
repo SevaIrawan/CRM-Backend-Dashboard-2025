@@ -19,6 +19,8 @@ interface StatCardProps {
   }
   comparisonSize?: number
   className?: string
+  onClick?: () => void
+  clickable?: boolean
 }
 
 export default function StatCard({ 
@@ -28,12 +30,18 @@ export default function StatCard({
   additionalKpi,  // New prop
   comparison, 
   comparisonSize = 12,
-  className = '' 
+  className = '',
+  onClick,
+  clickable = false
 }: StatCardProps) {
   const iconSvg = icon ? getKpiIcon(icon) : ''
   
   return (
-    <div className={`stat-card ${className}`}>
+    <div 
+      className={`stat-card ${className} ${clickable ? 'clickable' : ''}`}
+      onClick={clickable ? onClick : undefined}
+      style={{ cursor: clickable ? 'pointer' : 'default' }}
+    >
       <div className="stat-card-header">
         <h3 className="stat-card-title">{title}</h3>
         {icon && (
@@ -84,6 +92,21 @@ export default function StatCard({
           </div>
         )}
       </div>
+      
+      <style jsx>{`
+        .stat-card.clickable {
+          transition: all 0.2s ease;
+        }
+        
+        .stat-card.clickable:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .stat-card.clickable:active {
+          transform: translateY(0);
+        }
+      `}</style>
     </div>
   )
 } 
