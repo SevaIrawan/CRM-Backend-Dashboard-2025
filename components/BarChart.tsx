@@ -42,6 +42,7 @@ interface BarChartProps {
   chartIcon?: string;
   horizontal?: boolean;
   showDataLabels?: boolean; // Add prop for showing data labels
+  customLegend?: { label: string; color: string }[]; // Optional custom legend (rendered in header)
 }
 
 export default function BarChart({
@@ -53,7 +54,8 @@ export default function BarChart({
   color = '#3B82F6',
   chartIcon,
   horizontal = false,
-  showDataLabels = false // Default false
+  showDataLabels = false, // Default false
+  customLegend
 }: BarChartProps) {
   const getCurrencySymbol = (curr: string): string => {
     switch (curr) {
@@ -367,6 +369,23 @@ export default function BarChart({
               {title}
             </h3>
           </div>
+          {/* Custom Legend (optional) */}
+          {customLegend && customLegend.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              {customLegend.map((item, idx) => (
+                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{
+                    display: 'inline-block',
+                    width: '14px',
+                    height: '4px',
+                    backgroundColor: item.color,
+                    borderRadius: '2px'
+                  }} />
+                  <span style={{ fontSize: '11px', color: '#4b5563', fontWeight: 600 }}>{item.label.toUpperCase()}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
       

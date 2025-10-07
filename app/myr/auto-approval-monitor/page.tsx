@@ -663,6 +663,10 @@ export default function MYRAutoApprovalMonitorPage() {
                      currency="MYR"
                      showDataLabels={true}
                      chartIcon={getChartIcon('Transaction Volume')}
+                     customLegend={[
+                       { label: 'Total Transaction', color: '#3B82F6' },
+                       { label: 'Total Trans Automation', color: '#FF8C00' }
+                     ]}
                    />
                    <LineChart
                      series={data?.dailyOverdueCount ? [{
