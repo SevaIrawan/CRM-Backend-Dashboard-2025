@@ -413,7 +413,7 @@ export async function GET(request: NextRequest) {
     
     // Map to original KPI names for StatCard display
     const depositAmount = totalAmount
-    const averageProcessingTime = processingTimeEfficiencyRatio
+    const averageProcessingTime = avgProcessingTimeAutomation  // CHANGED: Use automation avg instead of ratio
     const manualTimeSaved = totalTimeSavedHours
     
     // ============================================
@@ -636,39 +636,7 @@ export async function GET(request: NextRequest) {
         median: d.automationProcessingTimeDistribution.median,
         q3: d.automationProcessingTimeDistribution.q3,
         max: d.automationProcessingTimeDistribution.max
-      })),
-      peakHourProcessingTime: timeSeriesData.map(d => {
-        // Find corresponding daily peak hour data for this period
-        const periodDate = d.period
-        const dailyPeakData = dailyPeakHourMetrics.find(p => {
-          // Match by date format - handle different period formats
-          try {
-            let dateStr
-            if (periodDate.includes('Oct') || periodDate.includes('Sep')) {
-              // Handle "Oct 1", "Oct 2" format
-              dateStr = new Date(periodDate + ', 2025').toISOString().split('T')[0]
-            } else if (periodDate.includes('Week')) {
-              // Handle "Week 1", "Week 2" format - skip for now
-              return false
-            } else {
-              // Handle direct date format
-              dateStr = periodDate
-            }
-            return p.date === dateStr
-          } catch (error) {
-            console.error('Error parsing date:', periodDate, error)
-            return false
-          }
-        })
-        
-        return {
-          period: periodDate,
-          peakHour: dailyPeakData ? dailyPeakData.peakHour : '00:00',
-          maxTotalTransactions: dailyPeakData ? dailyPeakData.maxTotalTransactions : 0,
-          automationTransactions: dailyPeakData ? dailyPeakData.automationTransactions : 0,
-          avgProcessingTimeAutomation: dailyPeakData ? dailyPeakData.avgProcessingTimeAutomation : 0
-        }
-      })
+      }))
     }
 
     console.log('🔍 [DEBUG] Final return values:', {
@@ -713,7 +681,7 @@ export async function GET(request: NextRequest) {
         processingTime: {
           avgAutomation: Math.round(avgProcessingTimeAutomation * 100) / 100,
           avgManual: Math.round(avgProcessingTimeManual * 100) / 100,
-          avgOverall: Math.round(averageProcessingTime * 100) / 100
+          avgOverall: Math.round(avgProcessingTimeAll * 100) / 100
         },
         
         // Performance KPIs

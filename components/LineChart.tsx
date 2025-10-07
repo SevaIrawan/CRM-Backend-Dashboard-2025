@@ -451,8 +451,7 @@ export default function LineChart({
                 return [
                   `Peak Hour: ${peakData.peakHour}`,
                   `Total Transaction Peak: ${formatIntegerKPI(peakData.maxTotalTransactions)}`,
-                  `Automation Handle: ${formatIntegerKPI(value)} cases`,
-                  `Avg Process Time Automation: ${peakData.avgProcessingTimeAutomation.toFixed(1)}s`
+                  `Automation Handle: ${formatIntegerKPI(value)} cases`
                 ];
               }
               // For second series, show ONLY the actual chart value to match visual

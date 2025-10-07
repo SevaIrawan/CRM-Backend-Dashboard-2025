@@ -291,6 +291,26 @@ export async function GET(request: NextRequest) {
 
         const overdueCount = periodAutomation.filter(d => d.proc_sec && (d.proc_sec as number) > 30).length
 
+        // Calculate processing time distribution stats for this period (ALL transactions)
+        const periodProcessingTimes = periodData.map((d: any) => d.proc_sec || 0).filter(t => t > 0).sort((a, b) => a - b)
+        const periodProcessingTimeStats = {
+          min: periodProcessingTimes.length > 0 ? periodProcessingTimes[0] : 0,
+          max: periodProcessingTimes.length > 0 ? periodProcessingTimes[periodProcessingTimes.length - 1] : 0,
+          median: periodProcessingTimes.length > 0 ? periodProcessingTimes[Math.floor(periodProcessingTimes.length / 2)] : 0,
+          q1: periodProcessingTimes.length > 0 ? periodProcessingTimes[Math.floor(periodProcessingTimes.length * 0.25)] : 0,
+          q3: periodProcessingTimes.length > 0 ? periodProcessingTimes[Math.floor(periodProcessingTimes.length * 0.75)] : 0
+        }
+        
+        // Calculate processing time distribution stats for AUTOMATION ONLY
+        const automationProcessingTimes = periodAutomation.map((d: any) => d.proc_sec || 0).filter(t => t > 0).sort((a, b) => a - b)
+        const automationProcessingTimeStats = {
+          min: automationProcessingTimes.length > 0 ? automationProcessingTimes[0] : 0,
+          max: automationProcessingTimes.length > 0 ? automationProcessingTimes[automationProcessingTimes.length - 1] : 0,
+          median: automationProcessingTimes.length > 0 ? automationProcessingTimes[Math.floor(automationProcessingTimes.length / 2)] : 0,
+          q1: automationProcessingTimes.length > 0 ? automationProcessingTimes[Math.floor(automationProcessingTimes.length * 0.25)] : 0,
+          q3: automationProcessingTimes.length > 0 ? automationProcessingTimes[Math.floor(automationProcessingTimes.length * 0.75)] : 0
+        }
+
         // Debug log for first few periods
         if (period === 'Sep 1' || period === 'Sep 2' || period === 'Sep 3') {
           console.log(`🔍 [DEBUG] Period ${period}:`, {
@@ -309,7 +329,9 @@ export async function GET(request: NextRequest) {
           avgProcessingTime,
           avgProcessingTimeAutomation,
           coverageRate,
-          overdueCount
+          overdueCount,
+          processingTimeDistribution: periodProcessingTimeStats,
+          automationProcessingTimeDistribution: automationProcessingTimeStats
         }
       })
     }
@@ -370,7 +392,7 @@ export async function GET(request: NextRequest) {
       data: {
         withdrawAmount: totalAmount,
         withdrawCases: totalCases,
-        averageProcessingTime: avgAllProcessingTime,
+        averageProcessingTime: avgAutomationProcessingTime,  // CHANGED: Use automation avg instead of all avg
         overdueTransactions: totalOverdue,
         coverageRate,
         manualTimeSaved,
@@ -429,19 +451,19 @@ export async function GET(request: NextRequest) {
         })),
         dailyProcessingDistribution: timeSeriesData.map(item => ({
           date: item.period,
-          min: 0,
-          q1: 0,
-          median: item.avgProcessingTimeAutomation,
-          q3: 0,
-          max: 0
+          min: item.processingTimeDistribution.min,
+          q1: item.processingTimeDistribution.q1,
+          median: item.processingTimeDistribution.median,
+          q3: item.processingTimeDistribution.q3,
+          max: item.processingTimeDistribution.max
         })),
         dailyAutomationProcessingDistribution: timeSeriesData.map(item => ({
           date: item.period,
-          min: 0,
-          q1: 0,
-          median: item.avgProcessingTimeAutomation,
-          q3: 0,
-          max: 0
+          min: item.automationProcessingTimeDistribution.min,
+          q1: item.automationProcessingTimeDistribution.q1,
+          median: item.automationProcessingTimeDistribution.median,
+          q3: item.automationProcessingTimeDistribution.q3,
+          max: item.automationProcessingTimeDistribution.max
         })),
         peakHourProcessingTime: timeSeriesData.map(item => {
           // Find the actual peak hour for this period
