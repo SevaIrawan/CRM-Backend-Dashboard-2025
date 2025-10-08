@@ -21,6 +21,7 @@ interface OverdueDetailsModalProps {
   line: string
   year: string
   month: string
+  type?: 'deposit' | 'withdraw' // Type to determine which API endpoint to use
 }
 
 export default function OverdueDetailsModal({
@@ -29,7 +30,8 @@ export default function OverdueDetailsModal({
   overdueCount,
   line,
   year,
-  month
+  month,
+  type = 'deposit' // Default to deposit for backward compatibility
 }: OverdueDetailsModalProps) {
   const [transactions, setTransactions] = useState<OverdueTransaction[]>([])
   const [loading, setLoading] = useState(false)
@@ -62,7 +64,12 @@ export default function OverdueDetailsModal({
         limit: String(limit)
       })
       
-      const response = await fetch(`/api/myr-auto-approval-monitor/overdue-details?${params}`)
+      // Determine API endpoint based on type
+      const apiEndpoint = type === 'withdraw' 
+        ? '/api/myr-auto-approval-withdraw/overdue-details'
+        : '/api/myr-auto-approval-monitor/overdue-details'
+      
+      const response = await fetch(`${apiEndpoint}?${params}`)
       const data = await response.json()
       
       if (data.success) {
@@ -88,6 +95,11 @@ export default function OverdueDetailsModal({
       const allRows: string[] = []
       allRows.push(headers.join(','))
 
+      // Determine API endpoint based on type
+      const apiEndpoint = type === 'withdraw' 
+        ? '/api/myr-auto-approval-withdraw/overdue-details'
+        : '/api/myr-auto-approval-monitor/overdue-details'
+
       // Fetch all pages in batches of 1000 rows
       const exportLimit = 1000
       const pages = Math.max(1, Math.ceil(totalRecords / exportLimit))
@@ -99,7 +111,7 @@ export default function OverdueDetailsModal({
           page: String(p),
           limit: String(exportLimit)
         })
-        const res = await fetch(`/api/myr-auto-approval-monitor/overdue-details?${params}`)
+        const res = await fetch(`${apiEndpoint}?${params}`)
         const json = await res.json()
         const rows: OverdueTransaction[] = json?.data?.overdueTransactions || []
         if (!rows.length) break
@@ -122,7 +134,8 @@ export default function OverdueDetailsModal({
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `overdue-transactions-${line}-${year}-${month}-ALL-${new Date().toISOString().split('T')[0]}.csv`
+      const transactionType = type === 'withdraw' ? 'withdraw' : 'deposit'
+      a.download = `overdue-${transactionType}-transactions-${line}-${year}-${month}-ALL-${new Date().toISOString().split('T')[0]}.csv`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)

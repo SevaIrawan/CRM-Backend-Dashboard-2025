@@ -7,6 +7,7 @@ import { LineSlicer } from '@/components/slicers'
 import StatCard from '@/components/StatCard'
 import LineChart from '@/components/LineChart'
 import BarChart from '@/components/BarChart'
+import OverdueDetailsModal from '@/components/OverdueDetailsModal'
 import { getChartIcon } from '@/lib/CentralIcon'
 import { formatCurrencyKPI, formatIntegerKPI, formatMoMChange, formatNumericKPI, formatPercentageKPI } from '@/lib/formatHelpers'
 
@@ -181,6 +182,7 @@ export default function MYRAutoApprovalWithdrawPage() {
   const [selectedYear, setSelectedYear] = useState('')
   const [selectedMonth, setSelectedMonth] = useState('')
   const [isWeekly, setIsWeekly] = useState(false)
+  const [showOverdueModal, setShowOverdueModal] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
 
@@ -552,18 +554,20 @@ export default function MYRAutoApprovalWithdrawPage() {
                        isPositive: (data?.momComparison?.avgAutomationProcessingTime || 0) >= 0
                      }}
                    />
-                   <StatCard
-                     title="OVERDUE TRANS AUTOMATION"
-                     value={formatIntegerKPI(data?.performance?.automationOverdue || 0)}
-                     additionalKpi={{
-                       label: "DAILY AVERAGE",
-                       value: formatIntegerKPI(Math.round((data?.performance?.automationOverdue || 0) / calculateActiveDays()))
-                     }}
-                     comparison={{
-                       percentage: formatMoMComparison(data?.momComparison?.automationOverdue || 0),
-                       isPositive: (data?.momComparison?.automationOverdue || 0) >= 0
-                     }}
-                   />
+                  <StatCard
+                    title="OVERDUE TRANS AUTOMATION"
+                    value={formatIntegerKPI(data?.performance?.automationOverdue || 0)}
+                    additionalKpi={{
+                      label: "DAILY AVERAGE",
+                      value: formatIntegerKPI(Math.round((data?.performance?.automationOverdue || 0) / calculateActiveDays()))
+                    }}
+                    comparison={{
+                      percentage: formatMoMComparison(data?.momComparison?.automationOverdue || 0),
+                      isPositive: (data?.momComparison?.automationOverdue || 0) >= 0
+                    }}
+                    onClick={() => setShowOverdueModal(true)}
+                    clickable={true}
+                  />
                    <StatCard
                      title="COVERAGE RATE"
                      value={formatPercentageKPI(data?.coverageRate || 0)}
@@ -725,6 +729,17 @@ export default function MYRAutoApprovalWithdrawPage() {
           }
         }
       `}</style>
+      
+      {/* Overdue Details Modal */}
+      <OverdueDetailsModal
+        isOpen={showOverdueModal}
+        onClose={() => setShowOverdueModal(false)}
+        overdueCount={data?.performance?.automationOverdue || 0}
+        line={selectedLine}
+        year={selectedYear}
+        month={selectedMonth}
+        type="withdraw"
+      />
     </Layout>
   )
 }
