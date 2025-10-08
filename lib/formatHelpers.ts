@@ -13,10 +13,23 @@
 export const formatNumericKPI = (value: number | null | undefined): string => {
   if (value === null || value === undefined || isNaN(value)) return '0.00';
   
-  return new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(value);
+  // ✅ IMPROVED: Use thousand denominations for better readability
+  const absValue = Math.abs(value);
+  const isNegative = value < 0;
+  
+  let formattedValue: string;
+  if (absValue >= 1000000) {
+    formattedValue = `${(absValue / 1000000).toFixed(2)}M`;
+  } else if (absValue >= 1000) {
+    formattedValue = `${(absValue / 1000).toFixed(2)}K`;
+  } else {
+    formattedValue = absValue.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+  
+  return `${isNegative ? '-' : ''}${formattedValue}`;
 };
 
 /**
@@ -58,10 +71,23 @@ export const formatCurrencyKPI = (value: number | null | undefined, currency: st
       symbol = 'RM';
   }
   
-  return `${symbol} ${new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(value)}`;
+  // ✅ IMPROVED: Use thousand denominations for better readability
+  const absValue = Math.abs(value);
+  const isNegative = value < 0;
+  
+  let formattedValue: string;
+  if (absValue >= 1000000) {
+    formattedValue = `${(absValue / 1000000).toFixed(2)}M`;
+  } else if (absValue >= 1000) {
+    formattedValue = `${(absValue / 1000).toFixed(2)}K`;
+  } else {
+    formattedValue = absValue.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+  
+  return `${symbol} ${isNegative ? '-' : ''}${formattedValue}`;
 };
 
 /**
