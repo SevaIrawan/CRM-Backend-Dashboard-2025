@@ -847,7 +847,7 @@ export default function LineChart({
                       textTransform: 'uppercase',
                       letterSpacing: '0.5px'
                     }}>
-                      {customLegend ? legendItem.label : item.name}
+                      {customLegend ? legendItem.label : (item as any).name}
                     </span>
                   </div>
                 );
