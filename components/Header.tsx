@@ -73,6 +73,7 @@ export default function Header({
         'overview': 'Overview',
         'member-analytic': 'Member Analytic',
         'brand-comparison': 'Brand Comparison',
+        'brand-performance-trends': 'Brand Performance Trends',
         'kpi-comparison': 'KPI Comparison',
         'customer-retention': 'Customer Retention',
         'member-report': 'Member Report',

@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
   try {
-    // Ambil min dan max date dari master table MYR (real-time data)
+    // Ambil min dan max date dari table blue_whale_myr (real-time data)
     const { data: minRecord, error: minErr } = await supabase
       .from('blue_whale_myr')
       .select('date')

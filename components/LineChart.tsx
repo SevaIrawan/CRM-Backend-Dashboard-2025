@@ -40,6 +40,7 @@ interface LineChartProps {
   hideLegend?: boolean;
   color?: string; // Add color prop for customizable line and area color (used for single series)
   showDataLabels?: boolean; // Add prop for showing data labels
+  customLegend?: Array<{ label: string; color: string }>; // Add custom legend support
   peakHourData?: Array<{
     period: string;
     peakHour: string;
@@ -58,6 +59,7 @@ export default function LineChart({
   hideLegend = false,
   color = '#3B82F6', // Default blue color
   showDataLabels = false, // Default false
+  customLegend,
   peakHourData // Peak hour data for detailed tooltip
 }: LineChartProps) {
   
@@ -113,6 +115,8 @@ export default function LineChart({
       case 'MYR': return 'RM';
       case 'SGD': return 'SGD';
       case 'USC': return 'USD';
+      case 'MEMBER': return '';
+      case 'CASES': return '';
       default: return 'RM';
     }
   };
@@ -132,12 +136,14 @@ export default function LineChart({
     );
     
          // Check if this is a count/integer type (Members, Depositor count, etc.)
-     const isCountType = datasetLabel && (
-       datasetLabel.toLowerCase().includes('member') ||
-       datasetLabel.toLowerCase().includes('unique') ||
-       datasetLabel.toLowerCase().includes('pure') ||
-       datasetLabel.toLowerCase().includes('count') ||
-       datasetLabel.toLowerCase().includes('depositor')
+     const isCountType = currency === 'MEMBER' || currency === 'CASES' || (
+       datasetLabel && (
+         datasetLabel.toLowerCase().includes('member') ||
+         datasetLabel.toLowerCase().includes('unique') ||
+         datasetLabel.toLowerCase().includes('pure') ||
+         datasetLabel.toLowerCase().includes('count') ||
+         datasetLabel.toLowerCase().includes('depositor')
+       )
      );
     
     // Check if this is CLV (Customer Lifetime Value)
@@ -187,12 +193,7 @@ export default function LineChart({
       }
       return Math.ceil(value).toLocaleString();
     } else if (isCountType) {
-      // For count/integer - no currency symbol
-      if (value >= 1000000) {
-        return (value / 1000000).toFixed(1) + 'M';
-      } else if (value >= 1000) {
-        return (value / 1000).toFixed(0) + 'K';
-      }
+      // For count/integer - no currency symbol, show all digits
       return value.toLocaleString();
     } else if (isCLVType) {
       // For CLV - show full number without decimals
@@ -232,16 +233,28 @@ export default function LineChart({
       datasetLabel.toLowerCase().includes('lifespan') // ACL adalah average
     );
     
+    // Check if this is a formula/numeric type (GGR User, DA User, ATV, etc.)
+    const isFormulaNumericType = datasetLabel && (
+      datasetLabel.toLowerCase().includes('ggr user') ||
+      datasetLabel.toLowerCase().includes('da user') ||
+      datasetLabel.toLowerCase().includes('atv') ||
+      datasetLabel.toLowerCase().includes('average transaction value') ||
+      datasetLabel.toLowerCase().includes('net profit') ||
+      datasetLabel.toLowerCase().includes('deposit amount')
+    );
+    
     // Check if this is a count/integer type (New Depositor, Active Member, etc.)
-    const isCountType = datasetLabel && (
-      datasetLabel.toLowerCase().includes('member') ||
-      datasetLabel.toLowerCase().includes('unique') ||
-      datasetLabel.toLowerCase().includes('pure') ||
-      datasetLabel.toLowerCase().includes('count') ||
-      datasetLabel.toLowerCase().includes('depositor') ||
-      datasetLabel.toLowerCase().includes('headcount') ||
-      datasetLabel.toLowerCase().includes('cases')
-    ) && !datasetLabel.toLowerCase().includes('lifespan'); // EXCLUDE ACL karena itu average
+    const isCountType = currency === 'MEMBER' || currency === 'CASES' || (
+      datasetLabel && (
+        (datasetLabel.toLowerCase().includes('member') && !datasetLabel.toLowerCase().includes('user')) ||
+        datasetLabel.toLowerCase().includes('unique') ||
+        datasetLabel.toLowerCase().includes('pure') ||
+        datasetLabel.toLowerCase().includes('count') ||
+        datasetLabel.toLowerCase().includes('depositor') ||
+        datasetLabel.toLowerCase().includes('headcount') ||
+        datasetLabel.toLowerCase().includes('cases')
+      ) && !datasetLabel.toLowerCase().includes('lifespan') && !isFormulaNumericType // EXCLUDE ACL dan formula numeric types
+    );
     
     // Check if this is an amount/currency type (Deposit, Withdraw, Revenue, CLV, etc.)
     const isAmountType = datasetLabel && (
@@ -277,7 +290,12 @@ export default function LineChart({
       // For frequency - using standard format: 0,000.00
       return formatNumericKPI(value);
     } else if (isCountType) {
-      // For count/integer - using standard format: 0,000
+      // For count/integer - using standard format: 0,000 (no currency symbol)
+      if (currency === 'MEMBER') {
+        return formatIntegerKPI(value) + ' members';
+      } else if (currency === 'CASES') {
+        return formatIntegerKPI(value) + ' cases';
+      }
       return formatIntegerKPI(value) + ' persons';
     } else if (isMaturityIndex) {
       // For maturity index - using standard format: 0,000.00%
@@ -384,6 +402,39 @@ export default function LineChart({
           )) {
             return formatIntegerKPI(value) + 'c';
            }
+           
+          // For cases type, use "c" suffix
+          if (datasetLabel && datasetLabel.toLowerCase().includes('cases')) {
+            return formatIntegerKPI(value) + 'c';
+          }
+          
+          // For purchase frequency, use 2 decimal places without unit
+          if (datasetLabel && datasetLabel.toLowerCase().includes('purchase frequency')) {
+            return value.toFixed(2);
+          }
+          
+          // For member type, do not use "Member" suffix
+          if (datasetLabel && (
+            datasetLabel.toLowerCase().includes('active member') ||
+            datasetLabel.toLowerCase().includes('member')
+          )) {
+            return formatIntegerKPI(value);
+          }
+          
+          // For currency/amount types, use currency format
+          if (datasetLabel && (
+            datasetLabel.toLowerCase().includes('amount') ||
+            datasetLabel.toLowerCase().includes('deposit') ||
+            datasetLabel.toLowerCase().includes('withdraw') ||
+            datasetLabel.toLowerCase().includes('revenue') ||
+            datasetLabel.toLowerCase().includes('ggr') ||
+            datasetLabel.toLowerCase().includes('profit') ||
+            datasetLabel.toLowerCase().includes('user') ||
+            datasetLabel.toLowerCase().includes('atv') ||
+            datasetLabel.toLowerCase().includes('value')
+          )) {
+            return formatCurrencyKPI(value, currency);
+          }
            
            // Default formatting
            return formatIntegerKPI(value);
@@ -514,6 +565,13 @@ export default function LineChart({
          display: true,
          position: 'left' as const,
          beginAtZero: false,
+         // ✅ IMPROVED: Dynamic scaling based on data maximum
+         suggestedMax: (() => {
+           const allValues = series.flatMap(s => s.data);
+           const maxValue = Math.max(...allValues);
+           // Add 20% padding above maximum value for better visualization
+           return maxValue * 1.2;
+         })(),
          grid: {
            display: true,
            color: 'rgba(229, 231, 235, 0.3)', // ✅ IMPROVED: Even softer grid lines
@@ -522,6 +580,23 @@ export default function LineChart({
          },
                  ticks: {
            padding: 20, // Increased padding for legend space
+           // ✅ IMPROVED: Professional step calculation for better Y-axis labels
+           stepSize: (() => {
+             const allValues = series.flatMap(s => s.data);
+             const maxValue = Math.max(...allValues);
+             const suggestedMax = maxValue * 1.2;
+             
+             // Calculate appropriate step size based on data range
+             if (suggestedMax >= 1000000) {
+               return Math.ceil(suggestedMax / 1000000 / 5) * 200000; // Steps of 200K, 400K, etc.
+             } else if (suggestedMax >= 10000) {
+               return Math.ceil(suggestedMax / 10000 / 5) * 10000; // Steps of 10K, 20K, etc.
+             } else if (suggestedMax >= 1000) {
+               return Math.ceil(suggestedMax / 1000 / 5) * 1000; // Steps of 1K, 2K, etc.
+             } else {
+               return Math.ceil(suggestedMax / 5); // Steps of 100, 200, etc.
+             }
+           })(),
            font: {
              weight: 'bold' as const,
              size: 10
@@ -573,6 +648,16 @@ export default function LineChart({
            display: true,
            position: 'right' as const,
            beginAtZero: false,
+           // ✅ IMPROVED: Dynamic scaling based on second series data maximum
+           suggestedMax: (() => {
+             if (series.length > 1) {
+               const secondSeriesValues = series[1].data;
+               const maxValue = Math.max(...secondSeriesValues);
+               // Add 20% padding above maximum value for better visualization
+               return maxValue * 1.2;
+             }
+             return undefined;
+           })(),
            grid: {
              drawOnChartArea: false,
              display: true,
@@ -581,6 +666,26 @@ export default function LineChart({
            },
                      ticks: {
              padding: 20, // Increased padding for legend space
+             // ✅ IMPROVED: Professional step calculation for better Y1-axis labels
+             stepSize: (() => {
+               if (series.length > 1) {
+                 const secondSeriesValues = series[1].data;
+                 const maxValue = Math.max(...secondSeriesValues);
+                 const suggestedMax = maxValue * 1.2;
+                 
+                 // Calculate appropriate step size based on second series data range
+                 if (suggestedMax >= 1000000) {
+                   return Math.ceil(suggestedMax / 1000000 / 5) * 200000; // Steps of 200K, 400K, etc.
+                 } else if (suggestedMax >= 10000) {
+                   return Math.ceil(suggestedMax / 10000 / 5) * 10000; // Steps of 10K, 20K, etc.
+                 } else if (suggestedMax >= 1000) {
+                   return Math.ceil(suggestedMax / 1000 / 5) * 1000; // Steps of 1K, 2K, etc.
+                 } else {
+                   return Math.ceil(suggestedMax / 5); // Steps of 100, 200, etc.
+                 }
+               }
+               return undefined;
+             })(),
              font: {
                weight: 'bold' as const,
                size: 10
@@ -721,29 +826,32 @@ export default function LineChart({
               alignItems: 'center',
               gap: '12px'
             }}>
-              {series.map((item, index) => (
-                <div key={index} style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}>
-                  <div style={{
-                    width: '12px',
-                    height: '3px',
-                    backgroundColor: index === 0 ? '#3B82F6' : '#F97316',
-                    borderRadius: '2px'
-                  }} />
-                  <span style={{
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    color: '#6B7280',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px'
+              {(customLegend || series).map((item, index) => {
+                const legendItem = customLegend ? customLegend[index] : { name: item.name, color: index === 0 ? '#3B82F6' : '#F97316' };
+                return (
+                  <div key={index} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
                   }}>
-                    {item.name}
-                  </span>
-                </div>
-              ))}
+                    <div style={{
+                      width: '12px',
+                      height: '3px',
+                      backgroundColor: customLegend ? legendItem.color : (index === 0 ? '#3B82F6' : '#F97316'),
+                      borderRadius: '2px'
+                    }} />
+                    <span style={{
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      color: '#6B7280',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px'
+                    }}>
+                      {customLegend ? legendItem.label : item.name}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

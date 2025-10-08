@@ -1145,7 +1145,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 2px; /* Reduced from 4px */
+  margin-bottom: 8px; /* Professional spacing */
 }
 
 .stat-card-icon {
@@ -1179,7 +1179,7 @@ body {
   font-size: 22px; /* Reduced from 24px */
   font-weight: 600;
   color: #111827;
-  margin: 0 0 2px 0; /* Reduced from 4px */
+  margin: 0 0 8px 0; /* Professional spacing */
   line-height: 1.1;
 }
 
@@ -1197,7 +1197,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 2px;
+  margin-top: 8px; /* Professional spacing */
   gap: 8px;
 }
 
@@ -1206,7 +1206,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
+  gap: 4px; /* Professional spacing */
   flex: 1;
 }
 

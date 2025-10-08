@@ -1,0 +1,1401 @@
+"use client"
+
+import { useEffect, useState } from 'react'
+import Layout from '@/components/Layout'
+import Frame from '@/components/Frame'
+import StatCard from '@/components/StatCard'
+import BarChart from '@/components/BarChart'
+import LineChart from '@/components/LineChart'
+import { formatKPIValue } from '@/lib/brandPerformanceTrendsLogic'
+import { getChartIcon } from '@/lib/CentralIcon'
+
+
+interface SlicerOptions {
+  dateRange: { min: string; max: string }
+  defaults: { latestDate: string }
+}
+
+interface BrandPerformanceData {
+  comparison: {
+    periodA: any
+    periodB: any
+    difference: any
+    percentageChange: any
+  }
+  charts: {
+    activeMemberComparison: any
+    depositCasesComparison: any
+    depositAmountTrend: any
+    netProfitTrend: any
+    ggrUserComparison: any
+    daUserComparison: any
+    atvTrend: any
+    purchaseFrequencyTrend: any
+  }
+}
+
+export default function BrandPerformanceTrendsPage() {
+  const [slicerOptions, setSlicerOptions] = useState<SlicerOptions | null>(null)
+  const [periodAStart, setPeriodAStart] = useState<string>('')
+  const [periodAEnd, setPeriodAEnd] = useState<string>('')
+  const [periodBStart, setPeriodBStart] = useState<string>('')
+  const [periodBEnd, setPeriodBEnd] = useState<string>('')
+  const [showPickerA, setShowPickerA] = useState(false)
+  const [showPickerB, setShowPickerB] = useState(false)
+  const [tempAStart, setTempAStart] = useState('')
+  const [tempAEnd, setTempAEnd] = useState('')
+  const [tempBStart, setTempBStart] = useState('')
+  const [tempBEnd, setTempBEnd] = useState('')
+  const [data, setData] = useState<BrandPerformanceData | null>(null)
+  const [tableData, setTableData] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Calculate totals for the footer - using proper logic for each KPI
+  const totalPeriodA = {
+    activeMember: tableData.reduce((sum, r) => sum + (r.periodA?.activeMember || 0), 0),
+    depositCases: tableData.reduce((sum, r) => sum + (r.periodA?.depositCases || 0), 0),
+    depositAmount: tableData.reduce((sum, r) => sum + (r.periodA?.depositAmount || 0), 0),
+    withdrawAmount: tableData.reduce((sum, r) => sum + (r.periodA?.withdrawAmount || 0), 0),
+    ggr: tableData.reduce((sum, r) => sum + (r.periodA?.ggr || 0), 0),
+    // Calculate derived KPIs using same logic as individual rows
+    avgTransactionValue: 0, // Will be calculated below
+    purchaseFrequency: 0, // Will be calculated below
+    winrate: 0, // Will be calculated below
+    ggrPerUser: 0, // Will be calculated below
+    depositAmountPerUser: 0 // Will be calculated below
+  }
+
+  // Calculate derived KPIs for Period A
+  totalPeriodA.avgTransactionValue = totalPeriodA.depositCases > 0 ? totalPeriodA.depositAmount / totalPeriodA.depositCases : 0
+  totalPeriodA.purchaseFrequency = totalPeriodA.activeMember > 0 ? totalPeriodA.depositCases / totalPeriodA.activeMember : 0
+  totalPeriodA.winrate = totalPeriodA.depositAmount > 0 ? ((totalPeriodA.depositAmount - totalPeriodA.withdrawAmount) / totalPeriodA.depositAmount) * 100 : 0
+  totalPeriodA.ggrPerUser = totalPeriodA.activeMember > 0 ? totalPeriodA.ggr / totalPeriodA.activeMember : 0
+  totalPeriodA.depositAmountPerUser = totalPeriodA.activeMember > 0 ? totalPeriodA.depositAmount / totalPeriodA.activeMember : 0
+
+  const totalPeriodB = {
+    activeMember: tableData.reduce((sum, r) => sum + (r.periodB?.activeMember || 0), 0),
+    depositCases: tableData.reduce((sum, r) => sum + (r.periodB?.depositCases || 0), 0),
+    depositAmount: tableData.reduce((sum, r) => sum + (r.periodB?.depositAmount || 0), 0),
+    withdrawAmount: tableData.reduce((sum, r) => sum + (r.periodB?.withdrawAmount || 0), 0),
+    ggr: tableData.reduce((sum, r) => sum + (r.periodB?.ggr || 0), 0),
+    // Calculate derived KPIs using same logic as individual rows
+    avgTransactionValue: 0, // Will be calculated below
+    purchaseFrequency: 0, // Will be calculated below
+    winrate: 0, // Will be calculated below
+    ggrPerUser: 0, // Will be calculated below
+    depositAmountPerUser: 0 // Will be calculated below
+  }
+
+  // Calculate derived KPIs for Period B
+  totalPeriodB.avgTransactionValue = totalPeriodB.depositCases > 0 ? totalPeriodB.depositAmount / totalPeriodB.depositCases : 0
+  totalPeriodB.purchaseFrequency = totalPeriodB.activeMember > 0 ? totalPeriodB.depositCases / totalPeriodB.activeMember : 0
+  totalPeriodB.winrate = totalPeriodB.depositAmount > 0 ? ((totalPeriodB.depositAmount - totalPeriodB.withdrawAmount) / totalPeriodB.depositAmount) * 100 : 0
+  totalPeriodB.ggrPerUser = totalPeriodB.activeMember > 0 ? totalPeriodB.ggr / totalPeriodB.activeMember : 0
+  totalPeriodB.depositAmountPerUser = totalPeriodB.activeMember > 0 ? totalPeriodB.depositAmount / totalPeriodB.activeMember : 0
+
+  // Calculate differences and percentages using proper logic
+  const totalDiff = {
+    activeMember: totalPeriodB.activeMember - totalPeriodA.activeMember,
+    avgTransactionValue: totalPeriodB.avgTransactionValue - totalPeriodA.avgTransactionValue,
+    purchaseFrequency: totalPeriodB.purchaseFrequency - totalPeriodA.purchaseFrequency,
+    depositCases: totalPeriodB.depositCases - totalPeriodA.depositCases,
+    depositAmount: totalPeriodB.depositAmount - totalPeriodA.depositAmount,
+    ggr: totalPeriodB.ggr - totalPeriodA.ggr,
+    winrate: totalPeriodB.winrate - totalPeriodA.winrate,
+    ggrPerUser: totalPeriodB.ggrPerUser - totalPeriodA.ggrPerUser,
+    depositAmountPerUser: totalPeriodB.depositAmountPerUser - totalPeriodA.depositAmountPerUser
+  }
+
+  const totalPercent = {
+    activeMember: totalPeriodA.activeMember === 0 ? 0 : (totalDiff.activeMember / totalPeriodA.activeMember) * 100,
+    avgTransactionValue: totalPeriodA.avgTransactionValue === 0 ? 0 : (totalDiff.avgTransactionValue / totalPeriodA.avgTransactionValue) * 100,
+    purchaseFrequency: totalPeriodA.purchaseFrequency === 0 ? 0 : (totalDiff.purchaseFrequency / totalPeriodA.purchaseFrequency) * 100,
+    depositCases: totalPeriodA.depositCases === 0 ? 0 : (totalDiff.depositCases / totalPeriodA.depositCases) * 100,
+    depositAmount: totalPeriodA.depositAmount === 0 ? 0 : (totalDiff.depositAmount / totalPeriodA.depositAmount) * 100,
+    ggr: totalPeriodA.ggr === 0 ? 0 : (totalDiff.ggr / totalPeriodA.ggr) * 100,
+    winrate: totalPeriodA.winrate === 0 ? 0 : (totalDiff.winrate / totalPeriodA.winrate) * 100,
+    ggrPerUser: totalPeriodA.ggrPerUser === 0 ? 0 : (totalDiff.ggrPerUser / totalPeriodA.ggrPerUser) * 100,
+    depositAmountPerUser: totalPeriodA.depositAmountPerUser === 0 ? 0 : (totalDiff.depositAmountPerUser / totalPeriodA.depositAmountPerUser) * 100
+  }
+
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const res = await fetch('/api/myr-brand-performance-trends/slicer-options')
+        const json = await res.json()
+        if (!json.success) throw new Error('Failed to load slicers')
+        const opt: SlicerOptions = json.data
+        setSlicerOptions(opt)
+
+        const latest = new Date(opt.defaults.latestDate)
+        const bEnd = new Date(latest)
+        const bStart = new Date(latest); bStart.setDate(bStart.getDate() - 29)
+        const aEnd = new Date(bStart); aEnd.setDate(aEnd.getDate() - 1)
+        const aStart = new Date(aEnd); aStart.setDate(aStart.getDate() - 29)
+
+        setPeriodBEnd(bEnd.toISOString().split('T')[0])
+        setPeriodBStart(bStart.toISOString().split('T')[0])
+        setPeriodAEnd(aEnd.toISOString().split('T')[0])
+        setPeriodAStart(aStart.toISOString().split('T')[0])
+      } catch (e: any) {
+        setError(e.message || 'Failed to init')
+      } finally {
+        setLoading(false)
+      }
+    }
+    init()
+  }, [])
+
+  useEffect(() => {
+    const load = async () => {
+      if (!periodAStart || !periodAEnd || !periodBStart || !periodBEnd) return
+      setLoading(true)
+      setError(null)
+      try {
+        const params = new URLSearchParams({ periodAStart, periodAEnd, periodBStart, periodBEnd })
+        const res = await fetch(`/api/myr-brand-performance-trends/data?${params}`)
+        const json = await res.json()
+        if (!json.success) throw new Error('Failed to load data')
+        setData(json.data)
+      } catch (e: any) {
+        setError(e.message || 'Failed to load')
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [periodAStart, periodAEnd, periodBStart, periodBEnd])
+
+  // Load table data
+  useEffect(() => {
+    const loadTableData = async () => {
+      if (!periodAStart || !periodAEnd || !periodBStart || !periodBEnd) return
+      try {
+        const params = new URLSearchParams({ periodAStart, periodAEnd, periodBStart, periodBEnd })
+        const res = await fetch(`/api/myr-brand-performance-trends/data?${params}`)
+        const json = await res.json()
+        if (json.success) {
+          setTableData(json.data?.rows || [])
+        }
+      } catch (e: any) {
+        console.error('Failed to load table data:', e)
+      }
+    }
+    loadTableData()
+  }, [periodAStart, periodAEnd, periodBStart, periodBEnd])
+
+  const customSubHeader = (
+    <div className="dashboard-subheader">
+      <div className="subheader-title" />
+      <div className="subheader-controls" style={{ gap: '16px', marginRight: '40px' }}>
+        {/* Period A */}
+        <div className="slicer-group" style={{ position: 'relative' }}>
+          <label className="slicer-label">PERIOD A:</label>
+          <input type="text" value={`${periodAStart} to ${periodAEnd}`} readOnly
+            onClick={() => { setTempAStart(periodAStart); setTempAEnd(periodAEnd); setShowPickerA(true) }}
+            className="subheader-select" style={{ minWidth: '220px', cursor: 'pointer' }} />
+          {showPickerA && (
+            <div style={{ position:'absolute', top:'42px', left:0, zIndex:9999, background:'white', border:'1px solid #e5e7eb', borderRadius:8, padding:12, pointerEvents:'auto' }}>
+              <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                <input type="date" value={tempAStart} min="2021-01-01" max="2025-12-31" onChange={e=>setTempAStart(e.target.value)} />
+                <span style={{ color:'#6b7280' }}>to</span>
+                <input type="date" value={tempAEnd} min="2021-01-01" max="2025-12-31" onChange={e=>setTempAEnd(e.target.value)} />
+              </div>
+              <div style={{ display:'flex', justifyContent:'flex-end', gap:8, marginTop:10 }}>
+                <button onClick={()=>setShowPickerA(false)} style={{ padding:'6px 10px', border:'1px solid #e5e7eb', borderRadius:6 }}>Cancel</button>
+                <button onClick={()=>{ if (tempAStart && tempAEnd){ setPeriodAStart(tempAStart); setPeriodAEnd(tempAEnd);} setShowPickerA(false) }} style={{ padding:'6px 10px', background:'#1e293b', color:'white', borderRadius:6 }}>Apply</button>
+              </div>
+            </div>
+          )}
+        </div>
+        {/* Period B */}
+        <div className="slicer-group" style={{ position: 'relative' }}>
+          <label className="slicer-label">PERIOD B:</label>
+          <input type="text" value={`${periodBStart} to ${periodBEnd}`} readOnly
+            onClick={() => { setTempBStart(periodBStart); setTempBEnd(periodBEnd); setShowPickerB(true) }}
+            className="subheader-select" style={{ minWidth: '220px', cursor: 'pointer' }} />
+          {showPickerB && (
+            <div style={{ position:'absolute', top:'42px', left:0, zIndex:9999, background:'white', border:'1px solid #e5e7eb', borderRadius:8, padding:12, pointerEvents:'auto' }}>
+              <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                <input type="date" value={tempBStart} min="2021-01-01" max="2025-12-31" onChange={e=>setTempBStart(e.target.value)} />
+                <span style={{ color:'#6b7280' }}>to</span>
+                <input type="date" value={tempBEnd} min="2021-01-01" max="2025-12-31" onChange={e=>setTempBEnd(e.target.value)} />
+              </div>
+              <div style={{ display:'flex', justifyContent:'flex-end', gap:8, marginTop:10 }}>
+                <button onClick={()=>setShowPickerB(false)} style={{ padding:'6px 10px', border:'1px solid #e5e7eb', borderRadius:6 }}>Cancel</button>
+                <button onClick={()=>{ if (tempBStart && tempBEnd){ setPeriodBStart(tempBStart); setPeriodBEnd(tempBEnd);} setShowPickerB(false) }} style={{ padding:'6px 10px', background:'#1e293b', color:'white', borderRadius:6 }}>Apply</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+
+  return (
+    <Layout customSubHeader={customSubHeader}>
+      <Frame variant="standard">
+        {/* Content Container with proper spacing and scroll */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '20px',
+          marginTop: '20px',
+          height: 'calc(100vh - 200px)',
+          overflowY: 'auto',
+          paddingRight: '8px'
+        }}>
+          {loading && (
+            <div className="flex items-center justify-center min-h-screen">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto mb-6"></div>
+                <div className="space-y-2">
+                  <p className="text-lg font-semibold text-gray-800">Loading Brand Performance Trends</p>
+                  <p className="text-sm text-gray-500">Fetching real-time data from database...</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="error-container">
+              <p>Error: {error}</p>
+            </div>
+          )}
+
+          {!loading && !error && data && (
+            <>
+              {/* BARIS 1: KPI CARDS (6 CARDS HORIZONTAL ROW) */}
+              <div className="kpi-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '18px', marginBottom: '24px' }}>
+                <StatCard
+                  title="Active Member"
+                  value={`${formatKPIValue(data.comparison.periodA.activeMember, 'count')} | ${formatKPIValue(data.comparison.periodB.activeMember, 'count')}`}
+                  additionalKpi={{
+                    label: "Compare (B-A)",
+                    value: formatKPIValue(data.comparison.difference.activeMember, 'count'),
+                    isPositive: data.comparison.difference.activeMember > 0
+                  } as any}
+                  comparison={{
+                    percentage: formatKPIValue(data.comparison.percentageChange.activeMember, 'percentage'),
+                    isPositive: data.comparison.percentageChange.activeMember > 0
+                  }}
+                  icon="Active Member"
+                />
+                <StatCard
+                  title="Deposit Amount"
+                  value={`${formatKPIValue(data.comparison.periodA.depositAmount, 'currency')} | ${formatKPIValue(data.comparison.periodB.depositAmount, 'currency')}`}
+                  additionalKpi={{
+                    label: "Compare (B-A)",
+                    value: formatKPIValue(data.comparison.difference.depositAmount, 'currency'),
+                    isPositive: data.comparison.difference.depositAmount > 0
+                  } as any}
+                  comparison={{
+                    percentage: formatKPIValue(data.comparison.percentageChange.depositAmount, 'percentage'),
+                    isPositive: data.comparison.percentageChange.depositAmount > 0
+                  }}
+                  icon="Deposit Amount"
+                />
+                <StatCard
+                  title="Deposit Cases"
+                  value={`${formatKPIValue(data.comparison.periodA.depositCases, 'count')} | ${formatKPIValue(data.comparison.periodB.depositCases, 'count')}`}
+                  additionalKpi={{
+                    label: "Compare (B-A)",
+                    value: formatKPIValue(data.comparison.difference.depositCases, 'count'),
+                    isPositive: data.comparison.difference.depositCases > 0
+                  } as any}
+                  comparison={{
+                    percentage: formatKPIValue(data.comparison.percentageChange.depositCases, 'percentage'),
+                    isPositive: data.comparison.percentageChange.depositCases > 0
+                  }}
+                  icon="Deposit Cases"
+                />
+                <StatCard
+                  title="Net Profit"
+                  value={`${formatKPIValue(data.comparison.periodA.netProfit, 'currency')} | ${formatKPIValue(data.comparison.periodB.netProfit, 'currency')}`}
+                  additionalKpi={{
+                    label: "Compare (B-A)",
+                    value: formatKPIValue(data.comparison.difference.netProfit, 'currency'),
+                    isPositive: data.comparison.difference.netProfit > 0
+                  } as any}
+                  comparison={{
+                    percentage: formatKPIValue(data.comparison.percentageChange.netProfit, 'percentage'),
+                    isPositive: data.comparison.percentageChange.netProfit > 0
+                  }}
+                  icon="Net Profit"
+                />
+                <StatCard
+                  title="DA User"
+                  value={`${formatKPIValue(data.comparison.periodA.daUser, 'currency')} | ${formatKPIValue(data.comparison.periodB.daUser, 'currency')}`}
+                  additionalKpi={{
+                    label: "Compare (B-A)",
+                    value: formatKPIValue(data.comparison.difference.daUser, 'currency'),
+                    isPositive: data.comparison.difference.daUser > 0
+                  } as any}
+                  comparison={{
+                    percentage: formatKPIValue(data.comparison.percentageChange.daUser, 'percentage'),
+                    isPositive: data.comparison.percentageChange.daUser > 0
+                  }}
+                  icon="DA User"
+                />
+                <StatCard
+                  title="GGR User"
+                  value={`${formatKPIValue(data.comparison.periodA.ggrUser, 'currency')} | ${formatKPIValue(data.comparison.periodB.ggrUser, 'currency')}`}
+                  additionalKpi={{
+                    label: "Compare (B-A)",
+                    value: formatKPIValue(data.comparison.difference.ggrUser, 'currency'),
+                    isPositive: data.comparison.difference.ggrUser > 0
+                  } as any}
+                  comparison={{
+                    percentage: formatKPIValue(data.comparison.percentageChange.ggrUser, 'percentage'),
+                    isPositive: data.comparison.percentageChange.ggrUser > 0
+                  }}
+                  icon="GGR User"
+                />
+              </div>
+
+              {/* Row 2: Active Member & Deposit Cases Charts */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <BarChart
+                  title="Active Member Performance Comparison"
+                  series={data.charts.activeMemberComparison.series}
+                  categories={data.charts.activeMemberComparison.categories.periodA}
+                  currency="MEMBER"
+                  showDataLabels={true}
+                  chartIcon={getChartIcon('Active Member')}
+                  customLegend={[
+                    { label: 'PERIOD A', color: '#3B82F6' },
+                    { label: 'PERIOD B', color: '#FF8C00' }
+                  ]}
+                />
+                <BarChart
+                  title="Deposit Cases Performance Comparison"
+                  series={data.charts.depositCasesComparison.series}
+                  categories={data.charts.depositCasesComparison.categories.periodA}
+                  currency="CASES"
+                  showDataLabels={true}
+                  chartIcon={getChartIcon('Deposit Amount')}
+                  customLegend={[
+                    { label: 'PERIOD A', color: '#3B82F6' },
+                    { label: 'PERIOD B', color: '#FF8C00' }
+                  ]}
+                />
+              </div>
+
+              {/* Row 3: Deposit Amount & Net Profit Charts */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <LineChart
+                  title="Deposit Amount Period A vs Period B"
+                  series={data.charts.depositAmountTrend.series}
+                  categories={data.charts.depositAmountTrend.categories.periodA}
+                  currency="MYR"
+                  showDataLabels={true}
+                  chartIcon={getChartIcon('Deposit Amount')}
+                  customLegend={[
+                    { label: 'PERIOD A', color: '#3B82F6' },
+                    { label: 'PERIOD B', color: '#FF8C00' }
+                  ]}
+                />
+                <LineChart
+                  title="Net Profit Period A vs Period B"
+                  series={data.charts.netProfitTrend.series}
+                  categories={data.charts.netProfitTrend.categories.periodA}
+                  currency="MYR"
+                  showDataLabels={true}
+                  chartIcon={getChartIcon('Net Profit')}
+                  customLegend={[
+                    { label: 'PERIOD A', color: '#3B82F6' },
+                    { label: 'PERIOD B', color: '#FF8C00' }
+                  ]}
+                />
+              </div>
+
+              {/* Row 4: GGR User & DA User Charts */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <BarChart
+                  title="GGR User Performance Comparison"
+                  series={data.charts.ggrUserComparison.series}
+                  categories={data.charts.ggrUserComparison.categories.periodA}
+                  currency="MYR"
+                  showDataLabels={true}
+                  chartIcon={getChartIcon('GGR User')}
+                  customLegend={[
+                    { label: 'PERIOD A', color: '#3B82F6' },
+                    { label: 'PERIOD B', color: '#FF8C00' }
+                  ]}
+                />
+                <BarChart
+                  title="DA User Performance Comparison"
+                  series={data.charts.daUserComparison.series}
+                  categories={data.charts.daUserComparison.categories.periodA}
+                  currency="MYR"
+                  showDataLabels={true}
+                  chartIcon={getChartIcon('DA User Trend')}
+                  customLegend={[
+                    { label: 'PERIOD A', color: '#3B82F6' },
+                    { label: 'PERIOD B', color: '#FF8C00' }
+                  ]}
+                />
+              </div>
+
+              {/* Row 5: ATV & Purchase Frequency Charts */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <LineChart
+                  title="Average Transaction Value Period A vs Period B"
+                  series={data.charts.atvTrend.series}
+                  categories={data.charts.atvTrend.categories.periodA}
+                  currency="MYR"
+                  showDataLabels={true}
+                  chartIcon={getChartIcon('Average Transaction Value')}
+                  customLegend={[
+                    { label: 'PERIOD A', color: '#3B82F6' },
+                    { label: 'PERIOD B', color: '#FF8C00' }
+                  ]}
+                />
+                <LineChart
+                  title="Purchase Frequency Period A vs Period B"
+                  series={data.charts.purchaseFrequencyTrend.series}
+                  categories={data.charts.purchaseFrequencyTrend.categories.periodA}
+                  currency="CASES"
+                  showDataLabels={true}
+                  chartIcon={getChartIcon('Purchase Frequency')}
+                  customLegend={[
+                    { label: 'PERIOD A', color: '#3B82F6' },
+                    { label: 'PERIOD B', color: '#FF8C00' }
+                  ]}
+                />
+              </div>
+
+              {/* Row 6: Brand Comparison Table */}
+              <div className="grid grid-cols-1 gap-6 mb-6">
+                <div className="overflow-x-auto">
+                  <table className="w-full" style={{
+                    borderCollapse: 'collapse',
+                    border: '1px solid #e0e0e0'
+                  }}>
+                    <thead className="sticky top-0" style={{ zIndex: 10 }}>
+                      <tr>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          position: 'sticky',
+                          left: 0,
+                          zIndex: 20,
+                          boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
+                        }}>Brand/Line</th>
+                        <th colSpan={9} style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white'
+                        }}>Period A ({periodAStart} to {periodAEnd})</th>
+                        <th colSpan={9} style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white'
+                        }}>Period B ({periodBStart} to {periodBEnd})</th>
+                        <th colSpan={9} style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white'
+                        }}>Compare (Diff)</th>
+                        <th colSpan={9} style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white'
+                        }}>Compare (%)</th>
+                      </tr>
+                      <tr>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          position: 'sticky',
+                          left: 0,
+                          zIndex: 20,
+                          boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
+                        }}></th>
+                        {/* Period A headers */}
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>Count</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>ATV</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>PF</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>DC</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>DA</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>GGR</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>Winrate</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>GGR User</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>DA User</th>
+                        {/* Period B headers */}
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>Count</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>ATV</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>PF</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>DC</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>DA</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>GGR</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>Winrate</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>GGR User</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>DA User</th>
+                        {/* Compare Diff headers */}
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>Count</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>ATV</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>PF</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>DC</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>DA</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>GGR</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>Winrate</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>GGR User</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>DA User</th>
+                        {/* Compare % headers */}
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>Count</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>ATV</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>PF</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>DC</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>DA</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>GGR</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>Winrate</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>GGR User</th>
+                        <th style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontWeight: '600',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          backgroundColor: '#374151',
+                          color: 'white',
+                          whiteSpace: 'nowrap'
+                        }}>DA User</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tableData.map((row: any, index: number) => (
+                        <tr key={row.brand} style={{ 
+                          backgroundColor: index % 2 === 0 ? '#f9fafb' : 'white' 
+                        }}>
+                          <td style={{ 
+                            padding: '8px 12px',
+                            border: '1px solid #e0e0e0',
+                            fontWeight: row.brand === 'TOTAL' ? 'bold' : 'normal',
+                            position: 'sticky',
+                            left: 0,
+                            backgroundColor: index % 2 === 0 ? '#f9fafb' : 'white',
+                            zIndex: 10,
+                            boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
+                          }}>{row.brand}</td>
+                          {/* Period A data */}
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
+                            {row.periodA?.activeMember?.toLocaleString() || '0'}
+                          </td>
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
+                            {(row.periodA?.avgTransactionValue || 0).toFixed(2)}
+                          </td>
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
+                            {(row.periodA?.purchaseFrequency || 0).toFixed(2)}
+                          </td>
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
+                            {row.periodA?.depositCases?.toLocaleString() || '0'}
+                          </td>
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
+                            {(row.periodA?.depositAmount || 0).toLocaleString('en-US', { 
+                              minimumFractionDigits: 2, 
+                              maximumFractionDigits: 2 
+                            })}
+                          </td>
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
+                            {(row.periodA?.ggr || 0).toLocaleString('en-US', { 
+                              minimumFractionDigits: 2, 
+                              maximumFractionDigits: 2 
+                            })}
+                          </td>
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
+                            {(row.periodA?.winrate || 0).toFixed(2)}
+                          </td>
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
+                            {(row.periodA?.ggrPerUser || 0).toFixed(2)}
+                          </td>
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
+                            {(row.periodA?.depositAmountPerUser || 0).toFixed(2)}
+                          </td>
+                          {/* Period B data */}
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
+                            {row.periodB?.activeMember?.toLocaleString() || '0'}
+                          </td>
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
+                            {(row.periodB?.avgTransactionValue || 0).toFixed(2)}
+                          </td>
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
+                            {(row.periodB?.purchaseFrequency || 0).toFixed(2)}
+                          </td>
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
+                            {row.periodB?.depositCases?.toLocaleString() || '0'}
+                          </td>
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
+                            {(row.periodB?.depositAmount || 0).toLocaleString('en-US', { 
+                              minimumFractionDigits: 2, 
+                              maximumFractionDigits: 2 
+                            })}
+                          </td>
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
+                            {(row.periodB?.ggr || 0).toLocaleString('en-US', { 
+                              minimumFractionDigits: 2, 
+                              maximumFractionDigits: 2 
+                            })}
+                          </td>
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
+                            {(row.periodB?.winrate || 0).toFixed(2)}
+                          </td>
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
+                            {(row.periodB?.ggrPerUser || 0).toFixed(2)}
+                          </td>
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
+                            {(row.periodB?.depositAmountPerUser || 0).toFixed(2)}
+                          </td>
+                          {/* Compare Diff data */}
+                          <td style={{ 
+                            padding: '8px 12px', 
+                            border: '1px solid #e0e0e0',
+                            color: (row.diff?.activeMember || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: 'bold'
+                          }}>
+                            {((row.diff?.activeMember || 0) >= 0 ? '+' : '') + (row.diff?.activeMember || 0)}
+                          </td>
+                          <td style={{ 
+                            padding: '8px 12px', 
+                            border: '1px solid #e0e0e0',
+                            color: (row.diff?.avgTransactionValue || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: 'bold'
+                          }}>
+                            {((row.diff?.avgTransactionValue || 0) >= 0 ? '+' : '') + (row.diff?.avgTransactionValue || 0).toFixed(2)}
+                          </td>
+                          <td style={{ 
+                            padding: '8px 12px', 
+                            border: '1px solid #e0e0e0',
+                            color: (row.diff?.purchaseFrequency || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: 'bold'
+                          }}>
+                            {((row.diff?.purchaseFrequency || 0) >= 0 ? '+' : '') + (row.diff?.purchaseFrequency || 0).toFixed(2)}
+                          </td>
+                          <td style={{ 
+                            padding: '8px 12px', 
+                            border: '1px solid #e0e0e0',
+                            color: (row.diff?.depositCases || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: 'bold'
+                          }}>
+                            {((row.diff?.depositCases || 0) >= 0 ? '+' : '') + (row.diff?.depositCases || 0)}
+                          </td>
+                          <td style={{ 
+                            padding: '8px 12px', 
+                            border: '1px solid #e0e0e0',
+                            color: (row.diff?.depositAmount || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: 'bold'
+                          }}>
+                            {((row.diff?.depositAmount || 0) >= 0 ? '+' : '') + (row.diff?.depositAmount || 0).toFixed(2)}
+                          </td>
+                          <td style={{ 
+                            padding: '8px 12px', 
+                            border: '1px solid #e0e0e0',
+                            color: (row.diff?.ggr || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: 'bold'
+                          }}>
+                            {((row.diff?.ggr || 0) >= 0 ? '+' : '') + (row.diff?.ggr || 0).toFixed(2)}
+                          </td>
+                          <td style={{ 
+                            padding: '8px 12px', 
+                            border: '1px solid #e0e0e0',
+                            color: (row.diff?.winrate || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: 'bold'
+                          }}>
+                            {((row.diff?.winrate || 0) >= 0 ? '+' : '') + (row.diff?.winrate || 0).toFixed(2)}
+                          </td>
+                          <td style={{ 
+                            padding: '8px 12px', 
+                            border: '1px solid #e0e0e0',
+                            color: (row.diff?.ggrPerUser || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: 'bold'
+                          }}>
+                            {((row.diff?.ggrPerUser || 0) >= 0 ? '+' : '') + (row.diff?.ggrPerUser || 0).toFixed(2)}
+                          </td>
+                          <td style={{ 
+                            padding: '8px 12px', 
+                            border: '1px solid #e0e0e0',
+                            color: (row.diff?.depositAmountPerUser || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: 'bold'
+                          }}>
+                            {((row.diff?.depositAmountPerUser || 0) >= 0 ? '+' : '') + (row.diff?.depositAmountPerUser || 0).toFixed(2)}
+                          </td>
+                          {/* Compare % data */}
+                          <td style={{ 
+                            padding: '8px 12px', 
+                            border: '1px solid #e0e0e0',
+                            color: (row.percent?.activeMember || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: 'bold'
+                          }}>
+                            {((row.percent?.activeMember || 0) >= 0 ? '+' : '') + (row.percent?.activeMember || 0).toFixed(2)}%
+                          </td>
+                          <td style={{ 
+                            padding: '8px 12px', 
+                            border: '1px solid #e0e0e0',
+                            color: (row.percent?.avgTransactionValue || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: 'bold'
+                          }}>
+                            {((row.percent?.avgTransactionValue || 0) >= 0 ? '+' : '') + (row.percent?.avgTransactionValue || 0).toFixed(2)}%
+                          </td>
+                          <td style={{ 
+                            padding: '8px 12px', 
+                            border: '1px solid #e0e0e0',
+                            color: (row.percent?.purchaseFrequency || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: 'bold'
+                          }}>
+                            {((row.percent?.purchaseFrequency || 0) >= 0 ? '+' : '') + (row.percent?.purchaseFrequency || 0).toFixed(2)}%
+                          </td>
+                          <td style={{ 
+                            padding: '8px 12px', 
+                            border: '1px solid #e0e0e0',
+                            color: (row.percent?.depositCases || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: 'bold'
+                          }}>
+                            {((row.percent?.depositCases || 0) >= 0 ? '+' : '') + (row.percent?.depositCases || 0).toFixed(2)}%
+                          </td>
+                          <td style={{ 
+                            padding: '8px 12px', 
+                            border: '1px solid #e0e0e0',
+                            color: (row.percent?.depositAmount || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: 'bold'
+                          }}>
+                            {((row.percent?.depositAmount || 0) >= 0 ? '+' : '') + (row.percent?.depositAmount || 0).toFixed(2)}%
+                          </td>
+                          <td style={{ 
+                            padding: '8px 12px', 
+                            border: '1px solid #e0e0e0',
+                            color: (row.percent?.ggr || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: 'bold'
+                          }}>
+                            {((row.percent?.ggr || 0) >= 0 ? '+' : '') + (row.percent?.ggr || 0).toFixed(2)}%
+                          </td>
+                          <td style={{ 
+                            padding: '8px 12px', 
+                            border: '1px solid #e0e0e0',
+                            color: (row.percent?.winrate || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: 'bold'
+                          }}>
+                            {((row.percent?.winrate || 0) >= 0 ? '+' : '') + (row.percent?.winrate || 0).toFixed(2)}%
+                          </td>
+                          <td style={{ 
+                            padding: '8px 12px', 
+                            border: '1px solid #e0e0e0',
+                            color: (row.percent?.ggrPerUser || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: 'bold'
+                          }}>
+                            {((row.percent?.ggrPerUser || 0) >= 0 ? '+' : '') + (row.percent?.ggrPerUser || 0).toFixed(2)}%
+                          </td>
+                          <td style={{ 
+                            padding: '8px 12px', 
+                            border: '1px solid #e0e0e0',
+                            color: (row.percent?.depositAmountPerUser || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: 'bold'
+                          }}>
+                            {((row.percent?.depositAmountPerUser || 0) >= 0 ? '+' : '') + (row.percent?.depositAmountPerUser || 0).toFixed(2)}%
+                          </td>
+                        </tr>
+                      ))}
+                      {/* TOTAL Row */}
+                      <tr style={{ 
+                        backgroundColor: '#f3f4f6',
+                        borderTop: '2px solid #374151'
+                      }}>
+                        <td style={{ 
+                          padding: '8px 12px',
+                          border: '1px solid #e0e0e0',
+                          fontWeight: 'bold',
+                          position: 'sticky',
+                          left: 0,
+                          backgroundColor: '#f3f4f6',
+                          zIndex: 10,
+                          boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
+                        }}>TOTAL</td>
+                        {/* Period A totals */}
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
+                          {totalPeriodA.activeMember.toLocaleString()}
+                        </td>
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
+                          {totalPeriodA.avgTransactionValue.toFixed(2)}
+                        </td>
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
+                          {totalPeriodA.purchaseFrequency.toFixed(2)}
+                        </td>
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
+                          {totalPeriodA.depositCases.toLocaleString()}
+                        </td>
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
+                          {totalPeriodA.depositAmount.toLocaleString('en-US', { 
+                            minimumFractionDigits: 2, 
+                            maximumFractionDigits: 2 
+                          })}
+                        </td>
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
+                          {totalPeriodA.ggr.toLocaleString('en-US', { 
+                            minimumFractionDigits: 2, 
+                            maximumFractionDigits: 2 
+                          })}
+                        </td>
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
+                          {totalPeriodA.winrate.toFixed(2)}
+                        </td>
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
+                          {totalPeriodA.ggrPerUser.toFixed(2)}
+                        </td>
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
+                          {totalPeriodA.depositAmountPerUser.toFixed(2)}
+                        </td>
+                        {/* Period B totals */}
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
+                          {totalPeriodB.activeMember.toLocaleString()}
+                        </td>
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
+                          {totalPeriodB.avgTransactionValue.toFixed(2)}
+                        </td>
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
+                          {totalPeriodB.purchaseFrequency.toFixed(2)}
+                        </td>
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
+                          {totalPeriodB.depositCases.toLocaleString()}
+                        </td>
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
+                          {totalPeriodB.depositAmount.toLocaleString('en-US', { 
+                            minimumFractionDigits: 2, 
+                            maximumFractionDigits: 2 
+                          })}
+                        </td>
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
+                          {totalPeriodB.ggr.toLocaleString('en-US', { 
+                            minimumFractionDigits: 2, 
+                            maximumFractionDigits: 2 
+                          })}
+                        </td>
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
+                          {totalPeriodB.winrate.toFixed(2)}
+                        </td>
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
+                          {totalPeriodB.ggrPerUser.toFixed(2)}
+                        </td>
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
+                          {totalPeriodB.depositAmountPerUser.toFixed(2)}
+                        </td>
+                        {/* Compare Diff totals */}
+                        <td style={{ 
+                          padding: '8px 12px', 
+                          border: '1px solid #e0e0e0',
+                          color: totalDiff.activeMember >= 0 ? '#059669' : '#dc2626',
+                          fontWeight: 'bold'
+                        }}>
+                          {(totalDiff.activeMember >= 0 ? '+' : '') + totalDiff.activeMember}
+                        </td>
+                        <td style={{ 
+                          padding: '8px 12px', 
+                          border: '1px solid #e0e0e0',
+                          color: totalDiff.avgTransactionValue >= 0 ? '#059669' : '#dc2626',
+                          fontWeight: 'bold'
+                        }}>
+                          {(totalDiff.avgTransactionValue >= 0 ? '+' : '') + totalDiff.avgTransactionValue.toFixed(2)}
+                        </td>
+                        <td style={{ 
+                          padding: '8px 12px', 
+                          border: '1px solid #e0e0e0',
+                          color: totalDiff.purchaseFrequency >= 0 ? '#059669' : '#dc2626',
+                          fontWeight: 'bold'
+                        }}>
+                          {(totalDiff.purchaseFrequency >= 0 ? '+' : '') + totalDiff.purchaseFrequency.toFixed(2)}
+                        </td>
+                        <td style={{ 
+                          padding: '8px 12px', 
+                          border: '1px solid #e0e0e0',
+                          color: totalDiff.depositCases >= 0 ? '#059669' : '#dc2626',
+                          fontWeight: 'bold'
+                        }}>
+                          {(totalDiff.depositCases >= 0 ? '+' : '') + totalDiff.depositCases}
+                        </td>
+                        <td style={{ 
+                          padding: '8px 12px', 
+                          border: '1px solid #e0e0e0',
+                          color: totalDiff.depositAmount >= 0 ? '#059669' : '#dc2626',
+                          fontWeight: 'bold'
+                        }}>
+                          {(totalDiff.depositAmount >= 0 ? '+' : '') + totalDiff.depositAmount.toFixed(2)}
+                        </td>
+                        <td style={{ 
+                          padding: '8px 12px', 
+                          border: '1px solid #e0e0e0',
+                          color: totalDiff.ggr >= 0 ? '#059669' : '#dc2626',
+                          fontWeight: 'bold'
+                        }}>
+                          {(totalDiff.ggr >= 0 ? '+' : '') + totalDiff.ggr.toFixed(2)}
+                        </td>
+                        <td style={{ 
+                          padding: '8px 12px', 
+                          border: '1px solid #e0e0e0',
+                          color: totalDiff.winrate >= 0 ? '#059669' : '#dc2626',
+                          fontWeight: 'bold'
+                        }}>
+                          {(totalDiff.winrate >= 0 ? '+' : '') + totalDiff.winrate.toFixed(2)}
+                        </td>
+                        <td style={{ 
+                          padding: '8px 12px', 
+                          border: '1px solid #e0e0e0',
+                          color: totalDiff.ggrPerUser >= 0 ? '#059669' : '#dc2626',
+                          fontWeight: 'bold'
+                        }}>
+                          {(totalDiff.ggrPerUser >= 0 ? '+' : '') + totalDiff.ggrPerUser.toFixed(2)}
+                        </td>
+                        <td style={{ 
+                          padding: '8px 12px', 
+                          border: '1px solid #e0e0e0',
+                          color: totalDiff.depositAmountPerUser >= 0 ? '#059669' : '#dc2626',
+                          fontWeight: 'bold'
+                        }}>
+                          {(totalDiff.depositAmountPerUser >= 0 ? '+' : '') + totalDiff.depositAmountPerUser.toFixed(2)}
+                        </td>
+                        {/* Compare % totals */}
+                        <td style={{ 
+                          padding: '8px 12px', 
+                          border: '1px solid #e0e0e0',
+                          color: totalPercent.activeMember >= 0 ? '#059669' : '#dc2626',
+                          fontWeight: 'bold'
+                        }}>
+                          {(totalPercent.activeMember >= 0 ? '+' : '') + totalPercent.activeMember.toFixed(2)}%
+                        </td>
+                        <td style={{ 
+                          padding: '8px 12px', 
+                          border: '1px solid #e0e0e0',
+                          color: totalPercent.avgTransactionValue >= 0 ? '#059669' : '#dc2626',
+                          fontWeight: 'bold'
+                        }}>
+                          {(totalPercent.avgTransactionValue >= 0 ? '+' : '') + totalPercent.avgTransactionValue.toFixed(2)}%
+                        </td>
+                        <td style={{ 
+                          padding: '8px 12px', 
+                          border: '1px solid #e0e0e0',
+                          color: totalPercent.purchaseFrequency >= 0 ? '#059669' : '#dc2626',
+                          fontWeight: 'bold'
+                        }}>
+                          {(totalPercent.purchaseFrequency >= 0 ? '+' : '') + totalPercent.purchaseFrequency.toFixed(2)}%
+                        </td>
+                        <td style={{ 
+                          padding: '8px 12px', 
+                          border: '1px solid #e0e0e0',
+                          color: totalPercent.depositCases >= 0 ? '#059669' : '#dc2626',
+                          fontWeight: 'bold'
+                        }}>
+                          {(totalPercent.depositCases >= 0 ? '+' : '') + totalPercent.depositCases.toFixed(2)}%
+                        </td>
+                        <td style={{ 
+                          padding: '8px 12px', 
+                          border: '1px solid #e0e0e0',
+                          color: totalPercent.depositAmount >= 0 ? '#059669' : '#dc2626',
+                          fontWeight: 'bold'
+                        }}>
+                          {(totalPercent.depositAmount >= 0 ? '+' : '') + totalPercent.depositAmount.toFixed(2)}%
+                        </td>
+                        <td style={{ 
+                          padding: '8px 12px', 
+                          border: '1px solid #e0e0e0',
+                          color: totalPercent.ggr >= 0 ? '#059669' : '#dc2626',
+                          fontWeight: 'bold'
+                        }}>
+                          {(totalPercent.ggr >= 0 ? '+' : '') + totalPercent.ggr.toFixed(2)}%
+                        </td>
+                        <td style={{ 
+                          padding: '8px 12px', 
+                          border: '1px solid #e0e0e0',
+                          color: totalPercent.winrate >= 0 ? '#059669' : '#dc2626',
+                          fontWeight: 'bold'
+                        }}>
+                          {(totalPercent.winrate >= 0 ? '+' : '') + totalPercent.winrate.toFixed(2)}%
+                        </td>
+                        <td style={{ 
+                          padding: '8px 12px', 
+                          border: '1px solid #e0e0e0',
+                          color: totalPercent.ggrPerUser >= 0 ? '#059669' : '#dc2626',
+                          fontWeight: 'bold'
+                        }}>
+                          {(totalPercent.ggrPerUser >= 0 ? '+' : '') + totalPercent.ggrPerUser.toFixed(2)}%
+                        </td>
+                        <td style={{ 
+                          padding: '8px 12px', 
+                          border: '1px solid #e0e0e0',
+                          color: totalPercent.depositAmountPerUser >= 0 ? '#059669' : '#dc2626',
+                          fontWeight: 'bold'
+                        }}>
+                          {(totalPercent.depositAmountPerUser >= 0 ? '+' : '') + totalPercent.depositAmountPerUser.toFixed(2)}%
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Data Source Info */}
+              <div className="slicer-info">
+                <p>Showing data for: MYR | Period A: {periodAStart} to {periodAEnd} | Period B: {periodBStart} to {periodBEnd}</p>
+              </div>
+            </>
+          )}
+        </div>
+      </Frame>
+
+      <style jsx>{`
+        .slicer-info {
+          background: #f3f4f6;
+          padding: 16px;
+          border-radius: 8px;
+          border: 1px solid #e5e7eb;
+          text-align: center;
+          margin-top: 20px;
+        }
+
+        .slicer-info p {
+          margin: 0;
+          color: #6b7280;
+          font-size: 14px;
+        }
+      `}</style>
+    </Layout>
+  )
+}

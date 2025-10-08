@@ -62,27 +62,26 @@ export default function BarChart({
       case 'MYR': return 'RM';
       case 'SGD': return 'SGD';
       case 'USC': return 'USD';
+      case 'MEMBER': return '';
+      case 'CASES': return '';
       default: return 'RM';
     }
   };
 
   const formatValue = (value: number, datasetLabel?: string): string => {
-    // Check if this is a count/integer type (New Depositor, Active Member, etc.)
-    const isCountType = datasetLabel && (
-      datasetLabel.toLowerCase().includes('depositor') || 
-      datasetLabel.toLowerCase().includes('member') ||
-      datasetLabel.toLowerCase().includes('user') ||
-      datasetLabel.toLowerCase().includes('count') ||
-      datasetLabel.toLowerCase().includes('register')
+    // Check if this is a count/integer type based on currency
+    const isCountType = currency === 'MEMBER' || currency === 'CASES' || (
+      datasetLabel && (
+        datasetLabel.toLowerCase().includes('depositor') || 
+        datasetLabel.toLowerCase().includes('member') ||
+        datasetLabel.toLowerCase().includes('user') ||
+        datasetLabel.toLowerCase().includes('count') ||
+        datasetLabel.toLowerCase().includes('register')
+      )
     );
     
     if (isCountType) {
-      // For count/integer - no currency symbol
-      if (value >= 1000000) {
-        return (value / 1000000).toFixed(1) + 'M';
-      } else if (value >= 1000) {
-        return (value / 1000).toFixed(0) + 'K';
-      }
+      // For count/integer - no currency symbol, show all digits
       return value.toLocaleString();
     } else {
       // For amount/numeric - with currency symbol
@@ -97,20 +96,61 @@ export default function BarChart({
 
   // Full value formatter for tooltip using standard KPI format
   const formatFullValue = (value: number, datasetLabel?: string): string => {
-    const isCountType = datasetLabel && (
-      datasetLabel.toLowerCase().includes('depositor') || 
-      datasetLabel.toLowerCase().includes('member') ||
-      datasetLabel.toLowerCase().includes('user') ||
-      datasetLabel.toLowerCase().includes('count') ||
-      datasetLabel.toLowerCase().includes('register')
+    // Check if this is a formula/numeric type (GGR User, DA User, ATV, etc.)
+    const isFormulaNumericType = datasetLabel && (
+      datasetLabel.toLowerCase().includes('ggr user') ||
+      datasetLabel.toLowerCase().includes('da user') ||
+      datasetLabel.toLowerCase().includes('atv') ||
+      datasetLabel.toLowerCase().includes('average transaction value') ||
+      datasetLabel.toLowerCase().includes('net profit') ||
+      datasetLabel.toLowerCase().includes('deposit amount')
+    );
+    
+    const isCountType = currency === 'MEMBER' || currency === 'CASES' || (
+      datasetLabel && (
+        datasetLabel.toLowerCase().includes('depositor') || 
+        (datasetLabel.toLowerCase().includes('member') && !datasetLabel.toLowerCase().includes('user')) ||
+        datasetLabel.toLowerCase().includes('count') ||
+        datasetLabel.toLowerCase().includes('register') ||
+        datasetLabel.toLowerCase().includes('cases')
+      ) && !isFormulaNumericType // EXCLUDE formula numeric types
+    );
+    
+    // Check if this is an amount/currency type (Deposit, Withdraw, Revenue, CLV, etc.)
+    const isAmountType = datasetLabel && (
+      datasetLabel.toLowerCase().includes('amount') ||
+      datasetLabel.toLowerCase().includes('deposit') ||
+      datasetLabel.toLowerCase().includes('withdraw') ||
+      datasetLabel.toLowerCase().includes('revenue') ||
+      datasetLabel.toLowerCase().includes('ggr') ||
+      datasetLabel.toLowerCase().includes('gaming') ||
+      datasetLabel.toLowerCase().includes('lifetime') ||
+      datasetLabel.toLowerCase().includes('clv') ||
+      datasetLabel.toLowerCase().includes('value') ||
+      datasetLabel.toLowerCase().includes('transaction') ||
+      datasetLabel.toLowerCase().includes('income') ||
+      datasetLabel.toLowerCase().includes('cost') ||
+      datasetLabel.toLowerCase().includes('profit') ||
+      datasetLabel.toLowerCase().includes('gross gaming revenue') ||
+      datasetLabel.toLowerCase().includes('per user') ||
+      datasetLabel.toLowerCase().includes('pure user') ||
+      datasetLabel.toLowerCase().includes('user') // Add user for GGR User, DA User
     );
     
     if (isCountType) {
-      // For count/integer - using standard format: 0,000
+      // For count/integer - using standard format: 0,000 (no currency symbol)
+      if (currency === 'MEMBER') {
+        return formatIntegerKPI(value) + ' members';
+      } else if (currency === 'CASES') {
+        return formatIntegerKPI(value) + ' cases';
+      }
       return formatIntegerKPI(value) + ' members';
-    } else {
-      // For amount/numeric - using standard format: RM 0,000.00
+    } else if (isAmountType || isFormulaNumericType) {
+      // For amount/currency/formula - using standard format: RM 0,000.00
       return formatCurrencyKPI(value, currency);
+    } else {
+      // Default - using standard format: 0,000
+      return formatIntegerKPI(value);
     }
   };
 
@@ -160,9 +200,37 @@ export default function BarChart({
             return formatIntegerKPI(value) + 'c';
           }
           
-          // For cases type, use "cases" suffix
+          // For cases type, use "c" suffix
           if (datasetLabel && datasetLabel.toLowerCase().includes('cases')) {
-            return formatIntegerKPI(value) + ' cases';
+            return formatIntegerKPI(value) + 'c';
+          }
+          
+          // For purchase frequency, use 2 decimal places without unit
+          if (datasetLabel && datasetLabel.toLowerCase().includes('purchase frequency')) {
+            return value.toFixed(2);
+          }
+          
+          // For member type, do not use "Member" suffix
+          if (datasetLabel && (
+            datasetLabel.toLowerCase().includes('active member') ||
+            datasetLabel.toLowerCase().includes('member')
+          )) {
+            return formatIntegerKPI(value);
+          }
+          
+          // For currency/amount types, use currency format
+          if (datasetLabel && (
+            datasetLabel.toLowerCase().includes('amount') ||
+            datasetLabel.toLowerCase().includes('deposit') ||
+            datasetLabel.toLowerCase().includes('withdraw') ||
+            datasetLabel.toLowerCase().includes('revenue') ||
+            datasetLabel.toLowerCase().includes('ggr') ||
+            datasetLabel.toLowerCase().includes('profit') ||
+            datasetLabel.toLowerCase().includes('user') ||
+            datasetLabel.toLowerCase().includes('atv') ||
+            datasetLabel.toLowerCase().includes('value')
+          )) {
+            return formatCurrencyKPI(value, currency);
           }
           
           // Default formatting
@@ -192,13 +260,21 @@ export default function BarChart({
             );
             
             // Check if this is a count/integer type (New Depositor, Active Member, etc.)
+            const isFormulaNumericType = datasetLabel && (
+              datasetLabel.toLowerCase().includes('ggr user') ||
+              datasetLabel.toLowerCase().includes('da user') ||
+              datasetLabel.toLowerCase().includes('atv') ||
+              datasetLabel.toLowerCase().includes('average transaction value') ||
+              datasetLabel.toLowerCase().includes('net profit') ||
+              datasetLabel.toLowerCase().includes('deposit amount')
+            );
+            
             const isCountType = datasetLabel && (
               datasetLabel.toLowerCase().includes('depositor') || 
-              datasetLabel.toLowerCase().includes('member') ||
-              datasetLabel.toLowerCase().includes('user') ||
+              (datasetLabel.toLowerCase().includes('member') && !datasetLabel.toLowerCase().includes('user')) ||
               datasetLabel.toLowerCase().includes('count') ||
               datasetLabel.toLowerCase().includes('register')
-            );
+            ) && !isFormulaNumericType;
             
             if (isCasesType) {
               // For cases - using standard format: 0,000
@@ -225,15 +301,32 @@ export default function BarChart({
           drawBorder: false
         },
         ticks: {
+          // ✅ IMPROVED: Professional step calculation for better Y-axis labels
+          stepSize: (() => {
+            const allValues = series.flatMap(s => s.data);
+            const maxValue = Math.max(...allValues);
+            const suggestedMax = maxValue * 1.2;
+            
+            // Calculate appropriate step size based on data range
+            if (suggestedMax >= 1000000) {
+              return Math.ceil(suggestedMax / 1000000 / 5) * 200000; // Steps of 200K, 400K, etc.
+            } else if (suggestedMax >= 10000) {
+              return Math.ceil(suggestedMax / 10000 / 5) * 10000; // Steps of 10K, 20K, etc.
+            } else if (suggestedMax >= 1000) {
+              return Math.ceil(suggestedMax / 1000 / 5) * 1000; // Steps of 1K, 2K, etc.
+            } else {
+              return Math.ceil(suggestedMax / 5); // Steps of 100, 200, etc.
+            }
+          })(),
           callback: function(tickValue: string | number) {
-            // For all bar charts - plain numbers without currency
+            // For all bar charts - professional formatting
             const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
             if (value >= 1000000) {
               return (value / 1000000).toFixed(1) + 'M';
             } else if (value >= 1000) {
-              return (value / 1000).toFixed(0) + 'K';
+              return (value / 1000).toFixed(1) + 'K'; // Show decimal for better precision
             }
-            return value;
+            return value.toString();
           },
           font: {
             weight: 'bold' as const,
@@ -276,6 +369,13 @@ export default function BarChart({
       },
       y: {
         beginAtZero: true,
+        // ✅ IMPROVED: Dynamic scaling based on data maximum
+        suggestedMax: (() => {
+          const allValues = series.flatMap(s => s.data);
+          const maxValue = Math.max(...allValues);
+          // Add 20% padding above maximum value for better visualization
+          return maxValue * 1.2;
+        })(),
         grid: {
           display: true,
           color: 'rgba(229, 231, 235, 0.5)', // ✅ IMPROVED: Softer grid lines
@@ -283,15 +383,32 @@ export default function BarChart({
           drawBorder: false
         },
         ticks: {
+          // ✅ IMPROVED: Professional step calculation for better Y-axis labels
+          stepSize: (() => {
+            const allValues = series.flatMap(s => s.data);
+            const maxValue = Math.max(...allValues);
+            const suggestedMax = maxValue * 1.2;
+            
+            // Calculate appropriate step size based on data range
+            if (suggestedMax >= 1000000) {
+              return Math.ceil(suggestedMax / 1000000 / 5) * 200000; // Steps of 200K, 400K, etc.
+            } else if (suggestedMax >= 10000) {
+              return Math.ceil(suggestedMax / 10000 / 5) * 10000; // Steps of 10K, 20K, etc.
+            } else if (suggestedMax >= 1000) {
+              return Math.ceil(suggestedMax / 1000 / 5) * 1000; // Steps of 1K, 2K, etc.
+            } else {
+              return Math.ceil(suggestedMax / 5); // Steps of 100, 200, etc.
+            }
+          })(),
           callback: function(tickValue: string | number) {
-            // For all bar charts - plain numbers without currency
+            // For all bar charts - professional formatting
             const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
             if (value >= 1000000) {
               return (value / 1000000).toFixed(1) + 'M';
             } else if (value >= 1000) {
-              return (value / 1000).toFixed(0) + 'K';
+              return (value / 1000).toFixed(1) + 'K'; // Show decimal for better precision
             }
-            return value;
+            return value.toString();
           },
           font: {
             weight: 'bold' as const,

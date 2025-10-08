@@ -11,6 +11,7 @@ interface StatCardProps {
   additionalKpi?: {  // New prop for additional KPI (Daily Average)
     label: string
     value: string | number
+    isPositive?: boolean
   }
   comparison?: {
     percentage: string
@@ -68,7 +69,16 @@ export default function StatCard({
         {additionalKpi && (
           <div className="stat-card-additional-kpi">
             <span className="additional-kpi-label">{additionalKpi.label}</span>
-            <span className="additional-kpi-value">{additionalKpi.value}</span>
+            <span 
+              className="additional-kpi-value"
+              style={{ 
+                color: additionalKpi.isPositive !== undefined 
+                  ? (additionalKpi.isPositive ? '#059669' : '#dc2626')
+                  : 'inherit'
+              }}
+            >
+              {additionalKpi.value}
+            </span>
           </div>
         )}
         

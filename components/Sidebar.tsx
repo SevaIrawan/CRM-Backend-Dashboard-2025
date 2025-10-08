@@ -250,10 +250,10 @@ export default function Sidebar({
         submenu: [
           { title: 'Overview', path: '/myr/overview' },
           { title: 'Member Analytic', path: '/myr/member-analytic' },
+          { title: 'Brand Performance Trends', path: '/myr/brand-performance-trends' },
+          { title: 'KPI Comparison', path: '/myr/kpi-comparison' },
           { title: 'Deposit Auto‑Approval', path: '/myr/auto-approval-monitor' },
           { title: 'Withdrawal Auto‑Approval', path: '/myr/auto-approval-withdraw' },
-          { title: 'Brand Comparison', path: '/myr/brand-comparison' },
-          { title: 'KPI Comparison', path: '/myr/kpi-comparison' },
           { title: 'Customer Retention', path: '/myr/customer-retention' },
           { title: 'Churn Member', path: '/myr/churn-member' },
           { title: 'Member Report', path: '/myr/member-report' }
