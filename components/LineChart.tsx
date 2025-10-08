@@ -827,7 +827,7 @@ export default function LineChart({
               gap: '12px'
             }}>
               {(customLegend || series).map((item, index) => {
-                const legendItem = customLegend ? customLegend[index] : { name: item.name, color: index === 0 ? '#3B82F6' : '#F97316' };
+                const legendItem = customLegend ? customLegend[index] : { name: (item as any).name, color: index === 0 ? '#3B82F6' : '#F97316' };
                 return (
                   <div key={index} style={{
                     display: 'flex',
