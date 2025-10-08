@@ -827,7 +827,10 @@ export default function LineChart({
               gap: '12px'
             }}>
               {(customLegend || series).map((item, index) => {
-                const legendItem = customLegend ? customLegend[index] : { name: (item as any).name, color: index === 0 ? '#3B82F6' : '#F97316' };
+                const isCustomLegend = !!customLegend;
+                const label = isCustomLegend ? (customLegend![index] as any).label : (item as any).name;
+                const color = isCustomLegend ? (customLegend![index] as any).color : (index === 0 ? '#3B82F6' : '#F97316');
+                
                 return (
                   <div key={index} style={{
                     display: 'flex',
@@ -837,7 +840,7 @@ export default function LineChart({
                     <div style={{
                       width: '12px',
                       height: '3px',
-                      backgroundColor: customLegend ? legendItem.color : (index === 0 ? '#3B82F6' : '#F97316'),
+                      backgroundColor: color,
                       borderRadius: '2px'
                     }} />
                     <span style={{
@@ -847,7 +850,7 @@ export default function LineChart({
                       textTransform: 'uppercase',
                       letterSpacing: '0.5px'
                     }}>
-                      {customLegend ? legendItem.label : (item as any).name}
+                      {label}
                     </span>
                   </div>
                 );
