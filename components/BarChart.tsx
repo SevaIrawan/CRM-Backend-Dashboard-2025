@@ -41,7 +41,7 @@ interface BarChartProps {
   color?: string;
   chartIcon?: string;
   horizontal?: boolean;
-  showDataLabels?: boolean; // Add prop for showing data labels
+  showDataLabels?: boolean; // Show data labels (default: true)
   customLegend?: { label: string; color: string }[]; // Optional custom legend (rendered in header)
 }
 
@@ -54,7 +54,7 @@ export default function BarChart({
   color = '#3B82F6',
   chartIcon,
   horizontal = false,
-  showDataLabels = false, // Default false
+  showDataLabels = true, // ✅ DEFAULT TRUE - SHOW ALL LABELS!
   customLegend
 }: BarChartProps) {
   const getCurrencySymbol = (curr: string): string => {
@@ -177,15 +177,15 @@ export default function BarChart({
         display: false  // HAPUS LEGEND
       },
       datalabels: {
-        display: showDataLabels,
-        color: '#374151',
+        display: true, // ✅ ALWAYS SHOW LABELS - NO EXCEPTION!
+        color: '#374151', // ✅ ALWAYS DARK COLOR - all labels on top!
         font: {
           weight: 'bold' as const,
           size: 10
         },
-        anchor: 'end' as const,
-        align: horizontal ? 'end' as const : 'top' as const,
-        offset: 4,
+        anchor: 'end' as const, // Always anchor at end of bar
+        align: horizontal ? 'end' as const : 'top' as const, // ✅ ALWAYS TOP - SEMUA LABELS KELUAR!
+        offset: -2, // Small negative offset to place ABOVE bar top
         formatter: function(value: number, context: any) {
           const datasetLabel = context.dataset.label;
           
@@ -294,45 +294,104 @@ export default function BarChart({
       // For horizontal bar chart
       x: {
         beginAtZero: true,
+        // ✅ CONSISTENT X-AXIS: ALL bars use SAME min/max for proportional display
+        min: (() => {
+          // Get ALL values from ALL series (all bars in this chart)
+          const allValues = series.flatMap(s => s.data);
+          const minValue = Math.min(...allValues);
+          
+          // Always start from 0 for positive data, floor for negative
+          return minValue >= 0 ? 0 : Math.floor(minValue * 1.1);
+        })(),
+        max: (() => {
+          // Get MAX from ALL values in ALL series (all bars)
+          const allValues = series.flatMap(s => s.data);
+          const maxValue = Math.max(...allValues);
+          
+          // Add small 8% padding - NOT TOO MUCH!
+          const targetMax = maxValue * 1.08;
+          
+          // Smart rounding - find nearest nice number WITHOUT wasting space
+          if (targetMax >= 10000000) {
+            // For 10M+: round to nearest 1M
+            return Math.ceil(targetMax / 1000000) * 1000000;
+          } else if (targetMax >= 1000000) {
+            // For 1M-10M: round to nearest 250K (more precise!)
+            return Math.ceil(targetMax / 250000) * 250000;
+          } else if (targetMax >= 100000) {
+            // For 100K-1M: round to nearest 25K
+            return Math.ceil(targetMax / 25000) * 25000;
+          } else if (targetMax >= 10000) {
+            // For 10K-100K: round to nearest 2.5K
+            return Math.ceil(targetMax / 2500) * 2500;
+          } else if (targetMax >= 1000) {
+            // For 1K-10K: round to nearest 250
+            return Math.ceil(targetMax / 250) * 250;
+          } else if (targetMax >= 100) {
+            // For 100-1K: round to nearest 25
+            return Math.ceil(targetMax / 25) * 25;
+          } else if (targetMax >= 10) {
+            // For 10-100: round to nearest 5
+            return Math.ceil(targetMax / 5) * 5;
+          } else {
+            return Math.ceil(targetMax);
+          }
+        })(),
         grid: {
           display: true,
-          color: 'rgba(229, 231, 235, 0.5)', // ✅ IMPROVED: Softer grid lines
+          color: 'rgba(229, 231, 235, 0.5)',
           lineWidth: 1,
           drawBorder: false
         },
         ticks: {
-          // ✅ IMPROVED: Professional step calculation for better Y-axis labels
+          // ✅ CONSISTENT STEPS: Divide max by 5 for clean intervals
           stepSize: (() => {
             const allValues = series.flatMap(s => s.data);
             const maxValue = Math.max(...allValues);
-            const suggestedMax = maxValue * 1.2;
+            const targetMax = maxValue * 1.08;
             
-            // Calculate appropriate step size based on data range
-            if (suggestedMax >= 1000000) {
-              return Math.ceil(suggestedMax / 1000000 / 5) * 200000; // Steps of 200K, 400K, etc.
-            } else if (suggestedMax >= 10000) {
-              return Math.ceil(suggestedMax / 10000 / 5) * 10000; // Steps of 10K, 20K, etc.
-            } else if (suggestedMax >= 1000) {
-              return Math.ceil(suggestedMax / 1000 / 5) * 1000; // Steps of 1K, 2K, etc.
+            // Calculate nice round max (SAME logic as max calculation)
+            let niceMax;
+            if (targetMax >= 10000000) {
+              niceMax = Math.ceil(targetMax / 1000000) * 1000000;
+            } else if (targetMax >= 1000000) {
+              niceMax = Math.ceil(targetMax / 250000) * 250000;
+            } else if (targetMax >= 100000) {
+              niceMax = Math.ceil(targetMax / 25000) * 25000;
+            } else if (targetMax >= 10000) {
+              niceMax = Math.ceil(targetMax / 2500) * 2500;
+            } else if (targetMax >= 1000) {
+              niceMax = Math.ceil(targetMax / 250) * 250;
+            } else if (targetMax >= 100) {
+              niceMax = Math.ceil(targetMax / 25) * 25;
+            } else if (targetMax >= 10) {
+              niceMax = Math.ceil(targetMax / 5) * 5;
             } else {
-              return Math.ceil(suggestedMax / 5); // Steps of 100, 200, etc.
+              niceMax = Math.ceil(targetMax);
             }
+            
+            // Divide by 5 for consistent 5 steps: 0, 20%, 40%, 60%, 80%, 100%
+            return niceMax / 5;
           })(),
           callback: function(tickValue: string | number) {
-            // For all bar charts - professional formatting
             const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
+            
+            // Clean formatting for easy reading
             if (value >= 1000000) {
-              return (value / 1000000).toFixed(1) + 'M';
+              const mValue = value / 1000000;
+              return mValue % 1 === 0 ? mValue.toFixed(0) + 'M' : mValue.toFixed(1) + 'M';
             } else if (value >= 1000) {
-              return (value / 1000).toFixed(1) + 'K'; // Show decimal for better precision
+              const kValue = value / 1000;
+              return kValue % 1 === 0 ? kValue.toFixed(0) + 'K' : kValue.toFixed(1) + 'K';
+            } else {
+              return value.toFixed(0);
             }
-            return value.toString();
           },
           font: {
             weight: 'bold' as const,
             size: 10
           },
-          color: '#6b7280' // ✅ IMPROVED: Better text color
+          color: '#6b7280'
         }
       },
       y: {
@@ -369,52 +428,104 @@ export default function BarChart({
       },
       y: {
         beginAtZero: true,
-        // ✅ IMPROVED: Dynamic scaling based on data maximum
-        suggestedMax: (() => {
+        // ✅ CONSISTENT Y-AXIS: ALL bars use SAME min/max for proportional display
+        min: (() => {
+          // Get ALL values from ALL series (all bars in this chart)
+          const allValues = series.flatMap(s => s.data);
+          const minValue = Math.min(...allValues);
+          
+          // Always start from 0 for positive data, floor for negative
+          return minValue >= 0 ? 0 : Math.floor(minValue * 1.1);
+        })(),
+        max: (() => {
+          // Get MAX from ALL values in ALL series (all bars)
           const allValues = series.flatMap(s => s.data);
           const maxValue = Math.max(...allValues);
-          // Add 20% padding above maximum value for better visualization
-          return maxValue * 1.2;
+          
+          // Add small 8% padding - NOT TOO MUCH!
+          const targetMax = maxValue * 1.08;
+          
+          // Smart rounding - find nearest nice number WITHOUT wasting space
+          if (targetMax >= 10000000) {
+            // For 10M+: round to nearest 1M
+            return Math.ceil(targetMax / 1000000) * 1000000;
+          } else if (targetMax >= 1000000) {
+            // For 1M-10M: round to nearest 250K (more precise!)
+            return Math.ceil(targetMax / 250000) * 250000;
+          } else if (targetMax >= 100000) {
+            // For 100K-1M: round to nearest 25K
+            return Math.ceil(targetMax / 25000) * 25000;
+          } else if (targetMax >= 10000) {
+            // For 10K-100K: round to nearest 2.5K
+            return Math.ceil(targetMax / 2500) * 2500;
+          } else if (targetMax >= 1000) {
+            // For 1K-10K: round to nearest 250
+            return Math.ceil(targetMax / 250) * 250;
+          } else if (targetMax >= 100) {
+            // For 100-1K: round to nearest 25
+            return Math.ceil(targetMax / 25) * 25;
+          } else if (targetMax >= 10) {
+            // For 10-100: round to nearest 5
+            return Math.ceil(targetMax / 5) * 5;
+          } else {
+            return Math.ceil(targetMax);
+          }
         })(),
         grid: {
           display: true,
-          color: 'rgba(229, 231, 235, 0.5)', // ✅ IMPROVED: Softer grid lines
+          color: 'rgba(229, 231, 235, 0.5)',
           lineWidth: 1,
           drawBorder: false
         },
         ticks: {
-          // ✅ IMPROVED: Professional step calculation for better Y-axis labels
+          // ✅ CONSISTENT STEPS: Divide max by 5 for clean intervals
           stepSize: (() => {
             const allValues = series.flatMap(s => s.data);
             const maxValue = Math.max(...allValues);
-            const suggestedMax = maxValue * 1.2;
+            const targetMax = maxValue * 1.08;
             
-            // Calculate appropriate step size based on data range
-            if (suggestedMax >= 1000000) {
-              return Math.ceil(suggestedMax / 1000000 / 5) * 200000; // Steps of 200K, 400K, etc.
-            } else if (suggestedMax >= 10000) {
-              return Math.ceil(suggestedMax / 10000 / 5) * 10000; // Steps of 10K, 20K, etc.
-            } else if (suggestedMax >= 1000) {
-              return Math.ceil(suggestedMax / 1000 / 5) * 1000; // Steps of 1K, 2K, etc.
+            // Calculate nice round max (SAME logic as max calculation)
+            let niceMax;
+            if (targetMax >= 10000000) {
+              niceMax = Math.ceil(targetMax / 1000000) * 1000000;
+            } else if (targetMax >= 1000000) {
+              niceMax = Math.ceil(targetMax / 250000) * 250000;
+            } else if (targetMax >= 100000) {
+              niceMax = Math.ceil(targetMax / 25000) * 25000;
+            } else if (targetMax >= 10000) {
+              niceMax = Math.ceil(targetMax / 2500) * 2500;
+            } else if (targetMax >= 1000) {
+              niceMax = Math.ceil(targetMax / 250) * 250;
+            } else if (targetMax >= 100) {
+              niceMax = Math.ceil(targetMax / 25) * 25;
+            } else if (targetMax >= 10) {
+              niceMax = Math.ceil(targetMax / 5) * 5;
             } else {
-              return Math.ceil(suggestedMax / 5); // Steps of 100, 200, etc.
+              niceMax = Math.ceil(targetMax);
             }
+            
+            // Divide by 5 for consistent 5 steps: 0, 20%, 40%, 60%, 80%, 100%
+            return niceMax / 5;
           })(),
           callback: function(tickValue: string | number) {
-            // For all bar charts - professional formatting
             const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
+            
+            // Clean formatting for easy reading
             if (value >= 1000000) {
-              return (value / 1000000).toFixed(1) + 'M';
+              const mValue = value / 1000000;
+              return mValue % 1 === 0 ? mValue.toFixed(0) + 'M' : mValue.toFixed(1) + 'M';
             } else if (value >= 1000) {
-              return (value / 1000).toFixed(1) + 'K'; // Show decimal for better precision
+              const kValue = value / 1000;
+              return kValue % 1 === 0 ? kValue.toFixed(0) + 'K' : kValue.toFixed(1) + 'K';
+            } else {
+              return value.toFixed(0);
             }
-            return value.toString();
           },
           font: {
             weight: 'bold' as const,
             size: 10
           },
-          color: '#6b7280' // ✅ IMPROVED: Better text color
+          color: '#6b7280'
         }
       }
     }

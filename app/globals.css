@@ -1179,7 +1179,7 @@ body {
   font-size: 22px; /* Reduced from 24px */
   font-weight: 600;
   color: #111827;
-  margin: 0 0 8px 0; /* Professional spacing */
+  margin: 0 0 4px 0; /* ✅ Reduced spacing - push bottom row UP */
   line-height: 1.1;
 }
 
@@ -1197,7 +1197,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 8px; /* Professional spacing */
+  margin-top: 4px; /* ✅ Reduced spacing - move row UP, away from bottom */
   gap: 8px;
 }
 

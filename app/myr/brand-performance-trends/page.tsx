@@ -278,7 +278,8 @@ export default function BrandPerformanceTrendsPage() {
                   } as any}
                   comparison={{
                     percentage: formatKPIValue(data.comparison.percentageChange.activeMember, 'percentage'),
-                    isPositive: data.comparison.percentageChange.activeMember > 0
+                    isPositive: data.comparison.percentageChange.activeMember > 0,
+                    text: "(B-A)" // % dari Compare (B-A), bukan MoM
                   }}
                   icon="Active Member"
                 />
@@ -292,7 +293,8 @@ export default function BrandPerformanceTrendsPage() {
                   } as any}
                   comparison={{
                     percentage: formatKPIValue(data.comparison.percentageChange.depositAmount, 'percentage'),
-                    isPositive: data.comparison.percentageChange.depositAmount > 0
+                    isPositive: data.comparison.percentageChange.depositAmount > 0,
+                    text: "(B-A)" // % dari Compare (B-A), bukan MoM
                   }}
                   icon="Deposit Amount"
                 />
@@ -306,7 +308,8 @@ export default function BrandPerformanceTrendsPage() {
                   } as any}
                   comparison={{
                     percentage: formatKPIValue(data.comparison.percentageChange.depositCases, 'percentage'),
-                    isPositive: data.comparison.percentageChange.depositCases > 0
+                    isPositive: data.comparison.percentageChange.depositCases > 0,
+                    text: "(B-A)" // % dari Compare (B-A), bukan MoM
                   }}
                   icon="Deposit Cases"
                 />
@@ -320,7 +323,8 @@ export default function BrandPerformanceTrendsPage() {
                   } as any}
                   comparison={{
                     percentage: formatKPIValue(data.comparison.percentageChange.netProfit, 'percentage'),
-                    isPositive: data.comparison.percentageChange.netProfit > 0
+                    isPositive: data.comparison.percentageChange.netProfit > 0,
+                    text: "(B-A)" // % dari Compare (B-A), bukan MoM
                   }}
                   icon="Net Profit"
                 />
@@ -334,7 +338,8 @@ export default function BrandPerformanceTrendsPage() {
                   } as any}
                   comparison={{
                     percentage: formatKPIValue(data.comparison.percentageChange.daUser, 'percentage'),
-                    isPositive: data.comparison.percentageChange.daUser > 0
+                    isPositive: data.comparison.percentageChange.daUser > 0,
+                    text: "(B-A)" // % dari Compare (B-A), bukan MoM
                   }}
                   icon="DA User"
                 />
@@ -348,7 +353,8 @@ export default function BrandPerformanceTrendsPage() {
                   } as any}
                   comparison={{
                     percentage: formatKPIValue(data.comparison.percentageChange.ggrUser, 'percentage'),
-                    isPositive: data.comparison.percentageChange.ggrUser > 0
+                    isPositive: data.comparison.percentageChange.ggrUser > 0,
+                    text: "(B-A)" // % dari Compare (B-A), bukan MoM
                   }}
                   icon="GGR User"
                 />
