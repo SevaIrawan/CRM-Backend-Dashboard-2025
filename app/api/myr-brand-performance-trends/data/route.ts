@@ -145,20 +145,20 @@ export async function GET(request: NextRequest) {
     }
 
     const percentageChange = {
-      activeMember: periodAKPIs.activeMember > 0 ? ((periodBKPIs.activeMember - periodAKPIs.activeMember) / periodAKPIs.activeMember) * 100 : 0,
-      pureUser: periodAKPIs.pureUser > 0 ? ((periodBKPIs.pureUser - periodAKPIs.pureUser) / periodAKPIs.pureUser) * 100 : 0,
-      depositAmount: periodAKPIs.depositAmount > 0 ? ((periodBKPIs.depositAmount - periodAKPIs.depositAmount) / periodAKPIs.depositAmount) * 100 : 0,
-      depositCases: periodAKPIs.depositCases > 0 ? ((periodBKPIs.depositCases - periodAKPIs.depositCases) / periodAKPIs.depositCases) * 100 : 0,
-      withdrawCases: periodAKPIs.withdrawCases > 0 ? ((periodBKPIs.withdrawCases - periodAKPIs.withdrawCases) / periodAKPIs.withdrawCases) * 100 : 0,
-      withdrawAmount: periodAKPIs.withdrawAmount > 0 ? ((periodBKPIs.withdrawAmount - periodAKPIs.withdrawAmount) / periodAKPIs.withdrawAmount) * 100 : 0,
-      addTransaction: periodAKPIs.addTransaction > 0 ? ((periodBKPIs.addTransaction - periodAKPIs.addTransaction) / periodAKPIs.addTransaction) * 100 : 0,
-      deductTransaction: periodAKPIs.deductTransaction > 0 ? ((periodBKPIs.deductTransaction - periodAKPIs.deductTransaction) / periodAKPIs.deductTransaction) * 100 : 0,
-      grossGamingRevenue: periodAKPIs.grossGamingRevenue > 0 ? ((periodBKPIs.grossGamingRevenue - periodAKPIs.grossGamingRevenue) / periodAKPIs.grossGamingRevenue) * 100 : 0,
-      netProfit: periodAKPIs.netProfit > 0 ? ((periodBKPIs.netProfit - periodAKPIs.netProfit) / periodAKPIs.netProfit) * 100 : 0,
-      atv: periodAKPIs.atv > 0 ? ((periodBKPIs.atv - periodAKPIs.atv) / periodAKPIs.atv) * 100 : 0,
-      ggrUser: periodAKPIs.ggrUser > 0 ? ((periodBKPIs.ggrUser - periodAKPIs.ggrUser) / periodAKPIs.ggrUser) * 100 : 0,
-      daUser: periodAKPIs.daUser > 0 ? ((periodBKPIs.daUser - periodAKPIs.daUser) / periodAKPIs.daUser) * 100 : 0,
-      purchaseFrequency: periodAKPIs.purchaseFrequency > 0 ? ((periodBKPIs.purchaseFrequency - periodAKPIs.purchaseFrequency) / periodAKPIs.purchaseFrequency) * 100 : 0
+      activeMember: periodAKPIs.activeMember !== 0 ? ((periodBKPIs.activeMember - periodAKPIs.activeMember) / periodAKPIs.activeMember) * 100 : 0,
+      pureUser: periodAKPIs.pureUser !== 0 ? ((periodBKPIs.pureUser - periodAKPIs.pureUser) / periodAKPIs.pureUser) * 100 : 0,
+      depositAmount: periodAKPIs.depositAmount !== 0 ? ((periodBKPIs.depositAmount - periodAKPIs.depositAmount) / periodAKPIs.depositAmount) * 100 : 0,
+      depositCases: periodAKPIs.depositCases !== 0 ? ((periodBKPIs.depositCases - periodAKPIs.depositCases) / periodAKPIs.depositCases) * 100 : 0,
+      withdrawCases: periodAKPIs.withdrawCases !== 0 ? ((periodBKPIs.withdrawCases - periodAKPIs.withdrawCases) / periodAKPIs.withdrawCases) * 100 : 0,
+      withdrawAmount: periodAKPIs.withdrawAmount !== 0 ? ((periodBKPIs.withdrawAmount - periodAKPIs.withdrawAmount) / periodAKPIs.withdrawAmount) * 100 : 0,
+      addTransaction: periodAKPIs.addTransaction !== 0 ? ((periodBKPIs.addTransaction - periodAKPIs.addTransaction) / periodAKPIs.addTransaction) * 100 : 0,
+      deductTransaction: periodAKPIs.deductTransaction !== 0 ? ((periodBKPIs.deductTransaction - periodAKPIs.deductTransaction) / periodAKPIs.deductTransaction) * 100 : 0,
+      grossGamingRevenue: periodAKPIs.grossGamingRevenue !== 0 ? ((periodBKPIs.grossGamingRevenue - periodAKPIs.grossGamingRevenue) / periodAKPIs.grossGamingRevenue) * 100 : 0,
+      netProfit: periodAKPIs.netProfit !== 0 ? ((periodBKPIs.netProfit - periodAKPIs.netProfit) / periodAKPIs.netProfit) * 100 : 0,
+      atv: periodAKPIs.atv !== 0 ? ((periodBKPIs.atv - periodAKPIs.atv) / periodAKPIs.atv) * 100 : 0,
+      ggrUser: periodAKPIs.ggrUser !== 0 ? ((periodBKPIs.ggrUser - periodAKPIs.ggrUser) / periodAKPIs.ggrUser) * 100 : 0,
+      daUser: periodAKPIs.daUser !== 0 ? ((periodBKPIs.daUser - periodAKPIs.daUser) / periodAKPIs.daUser) * 100 : 0,
+      purchaseFrequency: periodAKPIs.purchaseFrequency !== 0 ? ((periodBKPIs.purchaseFrequency - periodAKPIs.purchaseFrequency) / periodAKPIs.purchaseFrequency) * 100 : 0
     }
 
     // Get brand-specific data for charts - only for available brands
@@ -365,6 +365,40 @@ export async function GET(request: NextRequest) {
       const periodA = brand.periodA
       const periodB = brand.periodB
       
+      // Calculate derived values for Period A
+      const periodAWinrate = periodA?.netProfit && periodA?.depositAmount > 0 ? ((periodA.depositAmount - periodA.withdrawAmount) / periodA.depositAmount) * 100 : 0
+      
+      // Calculate derived values for Period B
+      const periodBWinrate = periodB?.netProfit && periodB?.depositAmount > 0 ? ((periodB.depositAmount - periodB.withdrawAmount) / periodB.depositAmount) * 100 : 0
+      
+      // ✅ CALCULATE DIFFERENCE (B - A) FOR EACH LINE
+      const difference = {
+        activeMember: (periodB?.activeMember || 0) - (periodA?.activeMember || 0),
+        avgTransactionValue: (periodB?.atv || 0) - (periodA?.atv || 0),
+        purchaseFrequency: (periodB?.purchaseFrequency || 0) - (periodA?.purchaseFrequency || 0),
+        depositCases: (periodB?.depositCases || 0) - (periodA?.depositCases || 0),
+        depositAmount: (periodB?.depositAmount || 0) - (periodA?.depositAmount || 0),
+        withdrawAmount: (periodB?.withdrawAmount || 0) - (periodA?.withdrawAmount || 0),
+        ggr: (periodB?.grossGamingRevenue || 0) - (periodA?.grossGamingRevenue || 0),
+        winrate: periodBWinrate - periodAWinrate,
+        ggrPerUser: (periodB?.ggrUser || 0) - (periodA?.ggrUser || 0),
+        depositAmountPerUser: (periodB?.daUser || 0) - (periodA?.daUser || 0)
+      }
+      
+      // ✅ CALCULATE PERCENTAGE CHANGE (%) FOR EACH LINE
+      const percentageChange = {
+        activeMember: (periodA?.activeMember || 0) !== 0 ? (difference.activeMember / (periodA?.activeMember || 1)) * 100 : 0,
+        avgTransactionValue: (periodA?.atv || 0) !== 0 ? (difference.avgTransactionValue / (periodA?.atv || 1)) * 100 : 0,
+        purchaseFrequency: (periodA?.purchaseFrequency || 0) !== 0 ? (difference.purchaseFrequency / (periodA?.purchaseFrequency || 1)) * 100 : 0,
+        depositCases: (periodA?.depositCases || 0) !== 0 ? (difference.depositCases / (periodA?.depositCases || 1)) * 100 : 0,
+        depositAmount: (periodA?.depositAmount || 0) !== 0 ? (difference.depositAmount / (periodA?.depositAmount || 1)) * 100 : 0,
+        withdrawAmount: (periodA?.withdrawAmount || 0) !== 0 ? (difference.withdrawAmount / (periodA?.withdrawAmount || 1)) * 100 : 0,
+        ggr: (periodA?.grossGamingRevenue || 0) !== 0 ? (difference.ggr / (periodA?.grossGamingRevenue || 1)) * 100 : 0,
+        winrate: periodAWinrate !== 0 ? (difference.winrate / periodAWinrate) * 100 : 0,
+        ggrPerUser: (periodA?.ggrUser || 0) !== 0 ? (difference.ggrPerUser / (periodA?.ggrUser || 1)) * 100 : 0,
+        depositAmountPerUser: (periodA?.daUser || 0) !== 0 ? (difference.depositAmountPerUser / (periodA?.daUser || 1)) * 100 : 0
+      }
+      
       return {
         brand: brand.brand,
         periodA: {
@@ -375,7 +409,7 @@ export async function GET(request: NextRequest) {
           depositAmount: periodA?.depositAmount || 0,
           withdrawAmount: periodA?.withdrawAmount || 0,
           ggr: periodA?.grossGamingRevenue || 0,
-          winrate: periodA?.netProfit && periodA?.depositAmount > 0 ? ((periodA.depositAmount - periodA.withdrawAmount) / periodA.depositAmount) * 100 : 0,
+          winrate: periodAWinrate,
           ggrPerUser: periodA?.ggrUser || 0,
           depositAmountPerUser: periodA?.daUser || 0
         },
@@ -387,10 +421,12 @@ export async function GET(request: NextRequest) {
           depositAmount: periodB?.depositAmount || 0,
           withdrawAmount: periodB?.withdrawAmount || 0,
           ggr: periodB?.grossGamingRevenue || 0,
-          winrate: periodB?.netProfit && periodB?.depositAmount > 0 ? ((periodB.depositAmount - periodB.withdrawAmount) / periodB.depositAmount) * 100 : 0,
+          winrate: periodBWinrate,
           ggrPerUser: periodB?.ggrUser || 0,
           depositAmountPerUser: periodB?.daUser || 0
-        }
+        },
+        diff: difference,  // ✅ Match frontend property name
+        percent: percentageChange  // ✅ Match frontend property name
       }
     })
 

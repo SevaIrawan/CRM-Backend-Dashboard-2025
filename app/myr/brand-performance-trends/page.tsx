@@ -51,6 +51,38 @@ export default function BrandPerformanceTrendsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // ✅ FORMATTING HELPERS
+  // Integer/Count format: 0,000 (no decimal)
+  const formatInteger = (value: number): string => {
+    return value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+  }
+
+  // Numeric/Amount format: 0,000.00 (with comma and 2 decimals)
+  const formatNumeric = (value: number): string => {
+    return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  }
+
+  // PF format: 0.00 (2 decimals, NO comma)
+  const formatPF = (value: number): string => {
+    return value.toFixed(2)
+  }
+
+  // For DIFF columns (with +/- sign)
+  const formatIntegerDiff = (value: number): string => {
+    const sign = value >= 0 ? '+' : ''
+    return sign + formatInteger(value)
+  }
+
+  const formatNumericDiff = (value: number): string => {
+    const sign = value >= 0 ? '+' : ''
+    return sign + formatNumeric(value)
+  }
+
+  const formatPFDiff = (value: number): string => {
+    const sign = value >= 0 ? '+' : ''
+    return sign + formatPF(value)
+  }
+
   // Calculate totals for the footer - using proper logic for each KPI
   const totalPeriodA = {
     activeMember: tableData.reduce((sum, r) => sum + (r.periodA?.activeMember || 0), 0),
@@ -927,150 +959,148 @@ export default function BrandPerformanceTrendsPage() {
                             boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
                           }}>{row.brand}</td>
                           {/* Period A data */}
-                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
-                            {row.periodA?.activeMember?.toLocaleString() || '0'}
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right' }}>
+                            {formatInteger(row.periodA?.activeMember || 0)}
                           </td>
-                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
-                            {(row.periodA?.avgTransactionValue || 0).toFixed(2)}
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right' }}>
+                            {formatNumeric(row.periodA?.avgTransactionValue || 0)}
                           </td>
-                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
-                            {(row.periodA?.purchaseFrequency || 0).toFixed(2)}
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right' }}>
+                            {formatPF(row.periodA?.purchaseFrequency || 0)}
                           </td>
-                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
-                            {row.periodA?.depositCases?.toLocaleString() || '0'}
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right' }}>
+                            {formatInteger(row.periodA?.depositCases || 0)}
                           </td>
-                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
-                            {(row.periodA?.depositAmount || 0).toLocaleString('en-US', { 
-                              minimumFractionDigits: 2, 
-                              maximumFractionDigits: 2 
-                            })}
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right' }}>
+                            {formatNumeric(row.periodA?.depositAmount || 0)}
                           </td>
-                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
-                            {(row.periodA?.ggr || 0).toLocaleString('en-US', { 
-                              minimumFractionDigits: 2, 
-                              maximumFractionDigits: 2 
-                            })}
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right' }}>
+                            {formatNumeric(row.periodA?.ggr || 0)}
                           </td>
-                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
-                            {(row.periodA?.winrate || 0).toFixed(2)}
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right' }}>
+                            {formatPF(row.periodA?.winrate || 0)}
                           </td>
-                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
-                            {(row.periodA?.ggrPerUser || 0).toFixed(2)}
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right' }}>
+                            {formatNumeric(row.periodA?.ggrPerUser || 0)}
                           </td>
-                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
-                            {(row.periodA?.depositAmountPerUser || 0).toFixed(2)}
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right' }}>
+                            {formatNumeric(row.periodA?.depositAmountPerUser || 0)}
                           </td>
                           {/* Period B data */}
-                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
-                            {row.periodB?.activeMember?.toLocaleString() || '0'}
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right' }}>
+                            {formatInteger(row.periodB?.activeMember || 0)}
                           </td>
-                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
-                            {(row.periodB?.avgTransactionValue || 0).toFixed(2)}
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right' }}>
+                            {formatNumeric(row.periodB?.avgTransactionValue || 0)}
                           </td>
-                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
-                            {(row.periodB?.purchaseFrequency || 0).toFixed(2)}
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right' }}>
+                            {formatPF(row.periodB?.purchaseFrequency || 0)}
                           </td>
-                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
-                            {row.periodB?.depositCases?.toLocaleString() || '0'}
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right' }}>
+                            {formatInteger(row.periodB?.depositCases || 0)}
                           </td>
-                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
-                            {(row.periodB?.depositAmount || 0).toLocaleString('en-US', { 
-                              minimumFractionDigits: 2, 
-                              maximumFractionDigits: 2 
-                            })}
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right' }}>
+                            {formatNumeric(row.periodB?.depositAmount || 0)}
                           </td>
-                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
-                            {(row.periodB?.ggr || 0).toLocaleString('en-US', { 
-                              minimumFractionDigits: 2, 
-                              maximumFractionDigits: 2 
-                            })}
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right' }}>
+                            {formatNumeric(row.periodB?.ggr || 0)}
                           </td>
-                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
-                            {(row.periodB?.winrate || 0).toFixed(2)}
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right' }}>
+                            {formatPF(row.periodB?.winrate || 0)}
                           </td>
-                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
-                            {(row.periodB?.ggrPerUser || 0).toFixed(2)}
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right' }}>
+                            {formatNumeric(row.periodB?.ggrPerUser || 0)}
                           </td>
-                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0' }}>
-                            {(row.periodB?.depositAmountPerUser || 0).toFixed(2)}
+                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right' }}>
+                            {formatNumeric(row.periodB?.depositAmountPerUser || 0)}
                           </td>
                           {/* Compare Diff data */}
                           <td style={{ 
                             padding: '8px 12px', 
                             border: '1px solid #e0e0e0',
+                            textAlign: 'right',
                             color: (row.diff?.activeMember || 0) >= 0 ? '#059669' : '#dc2626',
                             fontWeight: 'bold'
                           }}>
-                            {((row.diff?.activeMember || 0) >= 0 ? '+' : '') + (row.diff?.activeMember || 0)}
+                            {formatIntegerDiff(row.diff?.activeMember || 0)}
                           </td>
                           <td style={{ 
                             padding: '8px 12px', 
                             border: '1px solid #e0e0e0',
+                            textAlign: 'right',
                             color: (row.diff?.avgTransactionValue || 0) >= 0 ? '#059669' : '#dc2626',
                             fontWeight: 'bold'
                           }}>
-                            {((row.diff?.avgTransactionValue || 0) >= 0 ? '+' : '') + (row.diff?.avgTransactionValue || 0).toFixed(2)}
+                            {formatNumericDiff(row.diff?.avgTransactionValue || 0)}
                           </td>
                           <td style={{ 
                             padding: '8px 12px', 
                             border: '1px solid #e0e0e0',
+                            textAlign: 'right',
                             color: (row.diff?.purchaseFrequency || 0) >= 0 ? '#059669' : '#dc2626',
                             fontWeight: 'bold'
                           }}>
-                            {((row.diff?.purchaseFrequency || 0) >= 0 ? '+' : '') + (row.diff?.purchaseFrequency || 0).toFixed(2)}
+                            {formatPFDiff(row.diff?.purchaseFrequency || 0)}
                           </td>
                           <td style={{ 
                             padding: '8px 12px', 
                             border: '1px solid #e0e0e0',
+                            textAlign: 'right',
                             color: (row.diff?.depositCases || 0) >= 0 ? '#059669' : '#dc2626',
                             fontWeight: 'bold'
                           }}>
-                            {((row.diff?.depositCases || 0) >= 0 ? '+' : '') + (row.diff?.depositCases || 0)}
+                            {formatIntegerDiff(row.diff?.depositCases || 0)}
                           </td>
                           <td style={{ 
                             padding: '8px 12px', 
                             border: '1px solid #e0e0e0',
+                            textAlign: 'right',
                             color: (row.diff?.depositAmount || 0) >= 0 ? '#059669' : '#dc2626',
                             fontWeight: 'bold'
                           }}>
-                            {((row.diff?.depositAmount || 0) >= 0 ? '+' : '') + (row.diff?.depositAmount || 0).toFixed(2)}
+                            {formatNumericDiff(row.diff?.depositAmount || 0)}
                           </td>
                           <td style={{ 
                             padding: '8px 12px', 
                             border: '1px solid #e0e0e0',
+                            textAlign: 'right',
                             color: (row.diff?.ggr || 0) >= 0 ? '#059669' : '#dc2626',
                             fontWeight: 'bold'
                           }}>
-                            {((row.diff?.ggr || 0) >= 0 ? '+' : '') + (row.diff?.ggr || 0).toFixed(2)}
+                            {formatNumericDiff(row.diff?.ggr || 0)}
                           </td>
                           <td style={{ 
                             padding: '8px 12px', 
                             border: '1px solid #e0e0e0',
+                            textAlign: 'right',
                             color: (row.diff?.winrate || 0) >= 0 ? '#059669' : '#dc2626',
                             fontWeight: 'bold'
                           }}>
-                            {((row.diff?.winrate || 0) >= 0 ? '+' : '') + (row.diff?.winrate || 0).toFixed(2)}
+                            {formatPFDiff(row.diff?.winrate || 0)}
                           </td>
                           <td style={{ 
                             padding: '8px 12px', 
                             border: '1px solid #e0e0e0',
+                            textAlign: 'right',
                             color: (row.diff?.ggrPerUser || 0) >= 0 ? '#059669' : '#dc2626',
                             fontWeight: 'bold'
                           }}>
-                            {((row.diff?.ggrPerUser || 0) >= 0 ? '+' : '') + (row.diff?.ggrPerUser || 0).toFixed(2)}
+                            {formatNumericDiff(row.diff?.ggrPerUser || 0)}
                           </td>
                           <td style={{ 
                             padding: '8px 12px', 
                             border: '1px solid #e0e0e0',
+                            textAlign: 'right',
                             color: (row.diff?.depositAmountPerUser || 0) >= 0 ? '#059669' : '#dc2626',
                             fontWeight: 'bold'
                           }}>
-                            {((row.diff?.depositAmountPerUser || 0) >= 0 ? '+' : '') + (row.diff?.depositAmountPerUser || 0).toFixed(2)}
+                            {formatNumericDiff(row.diff?.depositAmountPerUser || 0)}
                           </td>
                           {/* Compare % data */}
                           <td style={{ 
                             padding: '8px 12px', 
                             border: '1px solid #e0e0e0',
+                            textAlign: 'right',
                             color: (row.percent?.activeMember || 0) >= 0 ? '#059669' : '#dc2626',
                             fontWeight: 'bold'
                           }}>
@@ -1079,6 +1109,7 @@ export default function BrandPerformanceTrendsPage() {
                           <td style={{ 
                             padding: '8px 12px', 
                             border: '1px solid #e0e0e0',
+                            textAlign: 'right',
                             color: (row.percent?.avgTransactionValue || 0) >= 0 ? '#059669' : '#dc2626',
                             fontWeight: 'bold'
                           }}>
@@ -1087,6 +1118,7 @@ export default function BrandPerformanceTrendsPage() {
                           <td style={{ 
                             padding: '8px 12px', 
                             border: '1px solid #e0e0e0',
+                            textAlign: 'right',
                             color: (row.percent?.purchaseFrequency || 0) >= 0 ? '#059669' : '#dc2626',
                             fontWeight: 'bold'
                           }}>
@@ -1095,6 +1127,7 @@ export default function BrandPerformanceTrendsPage() {
                           <td style={{ 
                             padding: '8px 12px', 
                             border: '1px solid #e0e0e0',
+                            textAlign: 'right',
                             color: (row.percent?.depositCases || 0) >= 0 ? '#059669' : '#dc2626',
                             fontWeight: 'bold'
                           }}>
@@ -1103,6 +1136,7 @@ export default function BrandPerformanceTrendsPage() {
                           <td style={{ 
                             padding: '8px 12px', 
                             border: '1px solid #e0e0e0',
+                            textAlign: 'right',
                             color: (row.percent?.depositAmount || 0) >= 0 ? '#059669' : '#dc2626',
                             fontWeight: 'bold'
                           }}>
@@ -1111,6 +1145,7 @@ export default function BrandPerformanceTrendsPage() {
                           <td style={{ 
                             padding: '8px 12px', 
                             border: '1px solid #e0e0e0',
+                            textAlign: 'right',
                             color: (row.percent?.ggr || 0) >= 0 ? '#059669' : '#dc2626',
                             fontWeight: 'bold'
                           }}>
@@ -1119,6 +1154,7 @@ export default function BrandPerformanceTrendsPage() {
                           <td style={{ 
                             padding: '8px 12px', 
                             border: '1px solid #e0e0e0',
+                            textAlign: 'right',
                             color: (row.percent?.winrate || 0) >= 0 ? '#059669' : '#dc2626',
                             fontWeight: 'bold'
                           }}>
@@ -1127,6 +1163,7 @@ export default function BrandPerformanceTrendsPage() {
                           <td style={{ 
                             padding: '8px 12px', 
                             border: '1px solid #e0e0e0',
+                            textAlign: 'right',
                             color: (row.percent?.ggrPerUser || 0) >= 0 ? '#059669' : '#dc2626',
                             fontWeight: 'bold'
                           }}>
@@ -1135,6 +1172,7 @@ export default function BrandPerformanceTrendsPage() {
                           <td style={{ 
                             padding: '8px 12px', 
                             border: '1px solid #e0e0e0',
+                            textAlign: 'right',
                             color: (row.percent?.depositAmountPerUser || 0) >= 0 ? '#059669' : '#dc2626',
                             fontWeight: 'bold'
                           }}>
@@ -1158,150 +1196,148 @@ export default function BrandPerformanceTrendsPage() {
                           boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
                         }}>TOTAL</td>
                         {/* Period A totals */}
-                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
-                          {totalPeriodA.activeMember.toLocaleString()}
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right', fontWeight: 'bold' }}>
+                          {formatInteger(totalPeriodA.activeMember)}
                         </td>
-                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
-                          {totalPeriodA.avgTransactionValue.toFixed(2)}
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right', fontWeight: 'bold' }}>
+                          {formatNumeric(totalPeriodA.avgTransactionValue)}
                         </td>
-                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
-                          {totalPeriodA.purchaseFrequency.toFixed(2)}
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right', fontWeight: 'bold' }}>
+                          {formatPF(totalPeriodA.purchaseFrequency)}
                         </td>
-                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
-                          {totalPeriodA.depositCases.toLocaleString()}
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right', fontWeight: 'bold' }}>
+                          {formatInteger(totalPeriodA.depositCases)}
                         </td>
-                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
-                          {totalPeriodA.depositAmount.toLocaleString('en-US', { 
-                            minimumFractionDigits: 2, 
-                            maximumFractionDigits: 2 
-                          })}
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right', fontWeight: 'bold' }}>
+                          {formatNumeric(totalPeriodA.depositAmount)}
                         </td>
-                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
-                          {totalPeriodA.ggr.toLocaleString('en-US', { 
-                            minimumFractionDigits: 2, 
-                            maximumFractionDigits: 2 
-                          })}
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right', fontWeight: 'bold' }}>
+                          {formatNumeric(totalPeriodA.ggr)}
                         </td>
-                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
-                          {totalPeriodA.winrate.toFixed(2)}
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right', fontWeight: 'bold' }}>
+                          {formatPF(totalPeriodA.winrate)}
                         </td>
-                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
-                          {totalPeriodA.ggrPerUser.toFixed(2)}
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right', fontWeight: 'bold' }}>
+                          {formatNumeric(totalPeriodA.ggrPerUser)}
                         </td>
-                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
-                          {totalPeriodA.depositAmountPerUser.toFixed(2)}
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right', fontWeight: 'bold' }}>
+                          {formatNumeric(totalPeriodA.depositAmountPerUser)}
                         </td>
                         {/* Period B totals */}
-                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
-                          {totalPeriodB.activeMember.toLocaleString()}
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right', fontWeight: 'bold' }}>
+                          {formatInteger(totalPeriodB.activeMember)}
                         </td>
-                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
-                          {totalPeriodB.avgTransactionValue.toFixed(2)}
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right', fontWeight: 'bold' }}>
+                          {formatNumeric(totalPeriodB.avgTransactionValue)}
                         </td>
-                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
-                          {totalPeriodB.purchaseFrequency.toFixed(2)}
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right', fontWeight: 'bold' }}>
+                          {formatPF(totalPeriodB.purchaseFrequency)}
                         </td>
-                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
-                          {totalPeriodB.depositCases.toLocaleString()}
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right', fontWeight: 'bold' }}>
+                          {formatInteger(totalPeriodB.depositCases)}
                         </td>
-                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
-                          {totalPeriodB.depositAmount.toLocaleString('en-US', { 
-                            minimumFractionDigits: 2, 
-                            maximumFractionDigits: 2 
-                          })}
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right', fontWeight: 'bold' }}>
+                          {formatNumeric(totalPeriodB.depositAmount)}
                         </td>
-                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
-                          {totalPeriodB.ggr.toLocaleString('en-US', { 
-                            minimumFractionDigits: 2, 
-                            maximumFractionDigits: 2 
-                          })}
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right', fontWeight: 'bold' }}>
+                          {formatNumeric(totalPeriodB.ggr)}
                         </td>
-                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
-                          {totalPeriodB.winrate.toFixed(2)}
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right', fontWeight: 'bold' }}>
+                          {formatPF(totalPeriodB.winrate)}
                         </td>
-                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
-                          {totalPeriodB.ggrPerUser.toFixed(2)}
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right', fontWeight: 'bold' }}>
+                          {formatNumeric(totalPeriodB.ggrPerUser)}
                         </td>
-                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', fontWeight: 'bold' }}>
-                          {totalPeriodB.depositAmountPerUser.toFixed(2)}
+                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right', fontWeight: 'bold' }}>
+                          {formatNumeric(totalPeriodB.depositAmountPerUser)}
                         </td>
                         {/* Compare Diff totals */}
                         <td style={{ 
                           padding: '8px 12px', 
                           border: '1px solid #e0e0e0',
+                          textAlign: 'right',
                           color: totalDiff.activeMember >= 0 ? '#059669' : '#dc2626',
                           fontWeight: 'bold'
                         }}>
-                          {(totalDiff.activeMember >= 0 ? '+' : '') + totalDiff.activeMember}
+                          {formatIntegerDiff(totalDiff.activeMember)}
                         </td>
                         <td style={{ 
                           padding: '8px 12px', 
                           border: '1px solid #e0e0e0',
+                          textAlign: 'right',
                           color: totalDiff.avgTransactionValue >= 0 ? '#059669' : '#dc2626',
                           fontWeight: 'bold'
                         }}>
-                          {(totalDiff.avgTransactionValue >= 0 ? '+' : '') + totalDiff.avgTransactionValue.toFixed(2)}
+                          {formatNumericDiff(totalDiff.avgTransactionValue)}
                         </td>
                         <td style={{ 
                           padding: '8px 12px', 
                           border: '1px solid #e0e0e0',
+                          textAlign: 'right',
                           color: totalDiff.purchaseFrequency >= 0 ? '#059669' : '#dc2626',
                           fontWeight: 'bold'
                         }}>
-                          {(totalDiff.purchaseFrequency >= 0 ? '+' : '') + totalDiff.purchaseFrequency.toFixed(2)}
+                          {formatPFDiff(totalDiff.purchaseFrequency)}
                         </td>
                         <td style={{ 
                           padding: '8px 12px', 
                           border: '1px solid #e0e0e0',
+                          textAlign: 'right',
                           color: totalDiff.depositCases >= 0 ? '#059669' : '#dc2626',
                           fontWeight: 'bold'
                         }}>
-                          {(totalDiff.depositCases >= 0 ? '+' : '') + totalDiff.depositCases}
+                          {formatIntegerDiff(totalDiff.depositCases)}
                         </td>
                         <td style={{ 
                           padding: '8px 12px', 
                           border: '1px solid #e0e0e0',
+                          textAlign: 'right',
                           color: totalDiff.depositAmount >= 0 ? '#059669' : '#dc2626',
                           fontWeight: 'bold'
                         }}>
-                          {(totalDiff.depositAmount >= 0 ? '+' : '') + totalDiff.depositAmount.toFixed(2)}
+                          {formatNumericDiff(totalDiff.depositAmount)}
                         </td>
                         <td style={{ 
                           padding: '8px 12px', 
                           border: '1px solid #e0e0e0',
+                          textAlign: 'right',
                           color: totalDiff.ggr >= 0 ? '#059669' : '#dc2626',
                           fontWeight: 'bold'
                         }}>
-                          {(totalDiff.ggr >= 0 ? '+' : '') + totalDiff.ggr.toFixed(2)}
+                          {formatNumericDiff(totalDiff.ggr)}
                         </td>
                         <td style={{ 
                           padding: '8px 12px', 
                           border: '1px solid #e0e0e0',
+                          textAlign: 'right',
                           color: totalDiff.winrate >= 0 ? '#059669' : '#dc2626',
                           fontWeight: 'bold'
                         }}>
-                          {(totalDiff.winrate >= 0 ? '+' : '') + totalDiff.winrate.toFixed(2)}
+                          {formatPFDiff(totalDiff.winrate)}
                         </td>
                         <td style={{ 
                           padding: '8px 12px', 
                           border: '1px solid #e0e0e0',
+                          textAlign: 'right',
                           color: totalDiff.ggrPerUser >= 0 ? '#059669' : '#dc2626',
                           fontWeight: 'bold'
                         }}>
-                          {(totalDiff.ggrPerUser >= 0 ? '+' : '') + totalDiff.ggrPerUser.toFixed(2)}
+                          {formatNumericDiff(totalDiff.ggrPerUser)}
                         </td>
                         <td style={{ 
                           padding: '8px 12px', 
                           border: '1px solid #e0e0e0',
+                          textAlign: 'right',
                           color: totalDiff.depositAmountPerUser >= 0 ? '#059669' : '#dc2626',
                           fontWeight: 'bold'
                         }}>
-                          {(totalDiff.depositAmountPerUser >= 0 ? '+' : '') + totalDiff.depositAmountPerUser.toFixed(2)}
+                          {formatNumericDiff(totalDiff.depositAmountPerUser)}
                         </td>
                         {/* Compare % totals */}
                         <td style={{ 
                           padding: '8px 12px', 
                           border: '1px solid #e0e0e0',
+                          textAlign: 'right',
                           color: totalPercent.activeMember >= 0 ? '#059669' : '#dc2626',
                           fontWeight: 'bold'
                         }}>
@@ -1310,6 +1346,7 @@ export default function BrandPerformanceTrendsPage() {
                         <td style={{ 
                           padding: '8px 12px', 
                           border: '1px solid #e0e0e0',
+                          textAlign: 'right',
                           color: totalPercent.avgTransactionValue >= 0 ? '#059669' : '#dc2626',
                           fontWeight: 'bold'
                         }}>
@@ -1318,6 +1355,7 @@ export default function BrandPerformanceTrendsPage() {
                         <td style={{ 
                           padding: '8px 12px', 
                           border: '1px solid #e0e0e0',
+                          textAlign: 'right',
                           color: totalPercent.purchaseFrequency >= 0 ? '#059669' : '#dc2626',
                           fontWeight: 'bold'
                         }}>
@@ -1326,6 +1364,7 @@ export default function BrandPerformanceTrendsPage() {
                         <td style={{ 
                           padding: '8px 12px', 
                           border: '1px solid #e0e0e0',
+                          textAlign: 'right',
                           color: totalPercent.depositCases >= 0 ? '#059669' : '#dc2626',
                           fontWeight: 'bold'
                         }}>
@@ -1334,6 +1373,7 @@ export default function BrandPerformanceTrendsPage() {
                         <td style={{ 
                           padding: '8px 12px', 
                           border: '1px solid #e0e0e0',
+                          textAlign: 'right',
                           color: totalPercent.depositAmount >= 0 ? '#059669' : '#dc2626',
                           fontWeight: 'bold'
                         }}>
@@ -1342,6 +1382,7 @@ export default function BrandPerformanceTrendsPage() {
                         <td style={{ 
                           padding: '8px 12px', 
                           border: '1px solid #e0e0e0',
+                          textAlign: 'right',
                           color: totalPercent.ggr >= 0 ? '#059669' : '#dc2626',
                           fontWeight: 'bold'
                         }}>
@@ -1350,6 +1391,7 @@ export default function BrandPerformanceTrendsPage() {
                         <td style={{ 
                           padding: '8px 12px', 
                           border: '1px solid #e0e0e0',
+                          textAlign: 'right',
                           color: totalPercent.winrate >= 0 ? '#059669' : '#dc2626',
                           fontWeight: 'bold'
                         }}>
@@ -1358,6 +1400,7 @@ export default function BrandPerformanceTrendsPage() {
                         <td style={{ 
                           padding: '8px 12px', 
                           border: '1px solid #e0e0e0',
+                          textAlign: 'right',
                           color: totalPercent.ggrPerUser >= 0 ? '#059669' : '#dc2626',
                           fontWeight: 'bold'
                         }}>
@@ -1366,6 +1409,7 @@ export default function BrandPerformanceTrendsPage() {
                         <td style={{ 
                           padding: '8px 12px', 
                           border: '1px solid #e0e0e0',
+                          textAlign: 'right',
                           color: totalPercent.depositAmountPerUser >= 0 ? '#059669' : '#dc2626',
                           fontWeight: 'bold'
                         }}>
