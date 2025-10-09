@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     }
 
     // ✅ Get UNIQUE userkeys to ensure NO DUPLICATES
-    const uniqueUserKeys = Array.from(new Set(activeUsers.map(u => u.userkey).filter(Boolean)))
+    const uniqueUserKeys: string[] = Array.from(new Set(activeUsers.map(u => u.userkey).filter(Boolean)))
     
     console.log('👥 [Customer Details API] Found unique userkeys:', uniqueUserKeys.length)
     console.log('📊 [DEBUG] Total records vs unique userkeys:', {
