@@ -41,6 +41,7 @@ interface LineChartProps {
   color?: string; // Add color prop for customizable line and area color (used for single series)
   showDataLabels?: boolean; // Add prop for showing data labels
   customLegend?: Array<{ label: string; color: string }>; // Add custom legend support
+  useDenominationLabels?: boolean; // Use K, M denomination for data labels (for Brand Performance Trends only)
   peakHourData?: Array<{
     period: string;
     peakHour: string;
@@ -60,6 +61,7 @@ export default function LineChart({
   color = '#3B82F6', // Default blue color
   showDataLabels = false, // Default false
   customLegend,
+  useDenominationLabels = false, // Default false - only true for Brand Performance Trends
   peakHourData // Peak hour data for detailed tooltip
 }: LineChartProps) {
   
@@ -70,6 +72,25 @@ export default function LineChart({
     series: series,
     categories: categories
   })
+
+  // Helper function to format values with denomination (K, M) for Brand Performance Trends
+  const formatWithDenomination = (value: number): string => {
+    const isNegative = value < 0
+    const absValue = Math.abs(value)
+    
+    let formatted: string
+    if (absValue >= 1000000) {
+      formatted = `${(absValue / 1000000).toFixed(2)}M`
+    } else if (absValue >= 1000) {
+      formatted = `${(absValue / 1000).toFixed(2)}K`
+    } else {
+      formatted = absValue.toLocaleString('en-US', { 
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2 
+      })
+    }
+    return isNegative ? `-${formatted}` : formatted
+  }
 
   // Error handling for empty data
   if (!series || series.length === 0 || !categories || categories.length === 0) {
@@ -433,6 +454,10 @@ export default function LineChart({
             datasetLabel.toLowerCase().includes('atv') ||
             datasetLabel.toLowerCase().includes('value')
           )) {
+            // Use denomination format (K, M) for Brand Performance Trends only
+            if (useDenominationLabels) {
+              return formatWithDenomination(value);
+            }
             return formatCurrencyKPI(value, currency);
           }
            

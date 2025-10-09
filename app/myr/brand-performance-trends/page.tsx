@@ -6,6 +6,7 @@ import Frame from '@/components/Frame'
 import StatCard from '@/components/StatCard'
 import BarChart from '@/components/BarChart'
 import LineChart from '@/components/LineChart'
+import CustomerDetailModal from '@/components/CustomerDetailModal'
 import { formatKPIValue } from '@/lib/brandPerformanceTrendsLogic'
 import { getChartIcon } from '@/lib/CentralIcon'
 
@@ -50,6 +51,24 @@ export default function BrandPerformanceTrendsPage() {
   const [tableData, setTableData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  
+  // ✅ MODAL STATE for Customer Details Drill-Down
+  const [showCustomerModal, setShowCustomerModal] = useState(false)
+  const [modalConfig, setModalConfig] = useState<{
+    brand: string
+    period: 'A' | 'B'
+    dateRange: { start: string; end: string }
+  } | null>(null)
+
+  // ✅ HANDLE CLICK ON COUNT/ACTIVE MEMBER for drill-down
+  const handleCountClick = (brand: string, period: 'A' | 'B') => {
+    const dateRange = period === 'A' 
+      ? { start: periodAStart, end: periodAEnd }
+      : { start: periodBStart, end: periodBEnd }
+    
+    setModalConfig({ brand, period, dateRange })
+    setShowCustomerModal(true)
+  }
 
   // ✅ FORMATTING HELPERS
   // Integer/Count format: 0,000 (no decimal)
@@ -428,6 +447,7 @@ export default function BrandPerformanceTrendsPage() {
                   categories={data.charts.depositAmountTrend.categories.periodA}
                   currency="MYR"
                   showDataLabels={true}
+                  useDenominationLabels={true}
                   chartIcon={getChartIcon('Deposit Amount')}
                   customLegend={[
                     { label: 'PERIOD A', color: '#3B82F6' },
@@ -440,6 +460,7 @@ export default function BrandPerformanceTrendsPage() {
                   categories={data.charts.netProfitTrend.categories.periodA}
                   currency="MYR"
                   showDataLabels={true}
+                  useDenominationLabels={true}
                   chartIcon={getChartIcon('Net Profit')}
                   customLegend={[
                     { label: 'PERIOD A', color: '#3B82F6' },
@@ -534,7 +555,7 @@ export default function BrandPerformanceTrendsPage() {
                           borderBottom: '2px solid #d0d0d0',
                           backgroundColor: '#374151',
                           color: 'white'
-                        }}>Period A ({periodAStart} to {periodAEnd})</th>
+                        }}>Period A</th>
                         <th colSpan={9} style={{ 
                           padding: '8px 12px',
                           textAlign: 'left',
@@ -543,7 +564,7 @@ export default function BrandPerformanceTrendsPage() {
                           borderBottom: '2px solid #d0d0d0',
                           backgroundColor: '#374151',
                           color: 'white'
-                        }}>Period B ({periodBStart} to {periodBEnd})</th>
+                        }}>Period B</th>
                         <th colSpan={9} style={{ 
                           padding: '8px 12px',
                           textAlign: 'left',
@@ -552,7 +573,7 @@ export default function BrandPerformanceTrendsPage() {
                           borderBottom: '2px solid #d0d0d0',
                           backgroundColor: '#374151',
                           color: 'white'
-                        }}>Compare (Diff)</th>
+                        }}>Compare (B-A)</th>
                         <th colSpan={9} style={{ 
                           padding: '8px 12px',
                           textAlign: 'left',
@@ -959,7 +980,18 @@ export default function BrandPerformanceTrendsPage() {
                             boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
                           }}>{row.brand}</td>
                           {/* Period A data */}
-                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right' }}>
+                          <td 
+                            style={{ 
+                              padding: '8px 12px', 
+                              border: '1px solid #e0e0e0', 
+                              textAlign: 'right',
+                              cursor: 'pointer',
+                              color: '#2563eb',
+                              fontWeight: '500'
+                            }}
+                            onClick={() => handleCountClick(row.brand, 'A')}
+                            title="Click to view customer details"
+                          >
                             {formatInteger(row.periodA?.activeMember || 0)}
                           </td>
                           <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right' }}>
@@ -987,7 +1019,18 @@ export default function BrandPerformanceTrendsPage() {
                             {formatNumeric(row.periodA?.depositAmountPerUser || 0)}
                           </td>
                           {/* Period B data */}
-                          <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right' }}>
+                          <td 
+                            style={{ 
+                              padding: '8px 12px', 
+                              border: '1px solid #e0e0e0', 
+                              textAlign: 'right',
+                              cursor: 'pointer',
+                              color: '#2563eb',
+                              fontWeight: '500'
+                            }}
+                            onClick={() => handleCountClick(row.brand, 'B')}
+                            title="Click to view customer details"
+                          >
                             {formatInteger(row.periodB?.activeMember || 0)}
                           </td>
                           <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right' }}>
@@ -1196,7 +1239,18 @@ export default function BrandPerformanceTrendsPage() {
                           boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
                         }}>TOTAL</td>
                         {/* Period A totals */}
-                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right', fontWeight: 'bold' }}>
+                        <td 
+                          style={{ 
+                            padding: '8px 12px', 
+                            border: '1px solid #e0e0e0', 
+                            textAlign: 'right', 
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            color: '#2563eb'
+                          }}
+                          onClick={() => handleCountClick('ALL', 'A')}
+                          title="Click to view all customer details"
+                        >
                           {formatInteger(totalPeriodA.activeMember)}
                         </td>
                         <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right', fontWeight: 'bold' }}>
@@ -1224,7 +1278,18 @@ export default function BrandPerformanceTrendsPage() {
                           {formatNumeric(totalPeriodA.depositAmountPerUser)}
                         </td>
                         {/* Period B totals */}
-                        <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right', fontWeight: 'bold' }}>
+                        <td 
+                          style={{ 
+                            padding: '8px 12px', 
+                            border: '1px solid #e0e0e0', 
+                            textAlign: 'right', 
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            color: '#2563eb'
+                          }}
+                          onClick={() => handleCountClick('ALL', 'B')}
+                          title="Click to view all customer details"
+                        >
                           {formatInteger(totalPeriodB.activeMember)}
                         </td>
                         <td style={{ padding: '8px 12px', border: '1px solid #e0e0e0', textAlign: 'right', fontWeight: 'bold' }}>
@@ -1446,6 +1511,17 @@ export default function BrandPerformanceTrendsPage() {
           font-size: 14px;
         }
       `}</style>
+
+      {/* Customer Detail Modal for Drill-Down */}
+      {modalConfig && (
+        <CustomerDetailModal
+          isOpen={showCustomerModal}
+          onClose={() => setShowCustomerModal(false)}
+          brand={modalConfig.brand}
+          period={modalConfig.period}
+          dateRange={modalConfig.dateRange}
+        />
+      )}
     </Layout>
   )
 }
