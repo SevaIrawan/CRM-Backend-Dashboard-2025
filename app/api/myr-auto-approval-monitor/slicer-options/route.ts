@@ -5,17 +5,21 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔍 [MYR Auto Approval Monitor API] Fetching slicer options for MYR currency - FORCE MAX DATE')
     
-    // Get DISTINCT lines from deposit table for MYR currency
-    const { data: allLines, error: linesError } = await supabase
+    // Get ALL DISTINCT lines from deposit table for MYR currency
+    // Use .range() with very large number to get UNLIMITED data (bypass default 1000 limit)
+    const { data: allLines, error: linesError, count } = await supabase
       .from('deposit')
-      .select('line')
+      .select('line', { count: 'exact' })
       .eq('currency', 'MYR')
       .not('line', 'is', null)
+      .range(0, 999999) // Unlimited range
 
     console.log('📊 [DEBUG] Lines query result:', { 
+      totalCount: count,
       dataCount: allLines?.length, 
       error: linesError,
-      sampleData: allLines?.slice(0, 3)
+      sampleData: allLines?.slice(0, 10),
+      allUniqueLines: allLines ? Array.from(new Set(allLines.map(row => row.line))) : []
     })
 
     if (linesError) {
@@ -27,16 +31,23 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
+          // Extract unique lines from all records
           const uniqueLines = Array.from(new Set(allLines?.map(row => row.line).filter(Boolean) || []))
+          console.log('📊 [DEBUG] Unique lines extracted:', uniqueLines)
+          
           const cleanLines = uniqueLines.filter(line => line !== 'ALL' && line !== 'All')
+          console.log('📊 [DEBUG] Clean lines (without ALL):', cleanLines)
+          
           const linesWithAll = ['ALL', ...cleanLines.sort()]
+          console.log('📊 [DEBUG] Final lines with ALL:', linesWithAll)
 
-          // Get DISTINCT years from deposit table for MYR currency
+          // Get DISTINCT years from deposit table for MYR currency (UNLIMITED)
           const { data: yearData, error: yearsError } = await supabase
             .from('deposit')
             .select('year')
             .eq('currency', 'MYR')
             .not('year', 'is', null)
+            .range(0, 999999) // Unlimited range
 
           if (yearsError) {
             console.error('❌ Error fetching years:', yearsError)
@@ -47,12 +58,13 @@ export async function GET(request: NextRequest) {
             }, { status: 500 })
           }
 
-          // Get DISTINCT months from deposit table for MYR currency
+          // Get DISTINCT months from deposit table for MYR currency (UNLIMITED)
           const { data: monthData, error: monthsError } = await supabase
             .from('deposit')
             .select('month')
             .eq('currency', 'MYR')
             .not('month', 'is', null)
+            .range(0, 999999) // Unlimited range
 
           if (monthsError) {
             console.error('❌ Error fetching months:', monthsError)
@@ -83,7 +95,7 @@ export async function GET(request: NextRequest) {
       .order('date', { ascending: false })
       .order('year', { ascending: false })
       .order('month', { ascending: false })
-      .limit(1)
+      .limit(1) // Only need 1 latest record for defaults
 
     console.log('🔍 [FORCE MAX DATE] Latest record:', latestRecord?.[0])
 
