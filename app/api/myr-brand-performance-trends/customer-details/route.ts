@@ -105,53 +105,48 @@ export async function GET(request: NextRequest) {
         const depositAmount = transactions.reduce((sum, t) => sum + (Number(t.deposit_amount) || 0), 0)
         const depositCases = transactions.reduce((sum, t) => sum + (Number(t.deposit_cases) || 0), 0)
         const withdrawAmount = transactions.reduce((sum, t) => sum + (Number(t.withdraw_amount) || 0), 0)
+        const withdrawCases = transactions.reduce((sum, t) => sum + (Number(t.withdraw_cases) || 0), 0)
         const addTransaction = transactions.reduce((sum, t) => sum + (Number(t.add_transaction) || 0), 0)
         const deductTransaction = transactions.reduce((sum, t) => sum + (Number(t.deduct_transaction) || 0), 0)
+        const bonus = transactions.reduce((sum, t) => sum + (Number(t.bonus) || 0), 0)
+
+        // Last Deposit Date - Max date where deposit_cases > 0
+        const depositsWithDate = transactions
+          .filter(t => (Number(t.deposit_cases) || 0) > 0)
+          .map(t => t.date)
+        const lastDepositDate = depositsWithDate.length > 0 
+          ? depositsWithDate.reduce((max, date) => date > max ? date : max, depositsWithDate[0])
+          : ''
+
+        // Days Active - Count distinct days where deposit_cases > 0
+        const activeDates = Array.from(new Set(
+          transactions
+            .filter(t => (Number(t.deposit_cases) || 0) > 0)
+            .map(t => t.date)
+        ))
+        const daysActive = activeDates.length
 
         const netProfit = (depositAmount + addTransaction) - (withdrawAmount + deductTransaction)
         
-        // ✅ Log transaction details for verification
-        console.log('💰 [CUSTOMER CALC]', {
-          uniqueCode,
-          userkey,
-          transactionCount: transactions.length,
-          dateRange: `${startDate} to ${endDate}`,
-          transactionDates: transactions.map(t => t.date),
-          sums: {
-            depositAmount,
-            depositCases,
-            withdrawAmount,
-            addTransaction,
-            deductTransaction,
-            netProfit
-          }
-        })
         // ✅ FORMULA SESUAI REQUIREMENT:
         // ATV = deposit_amount / deposit_cases (per customer)
         const atv = depositCases > 0 ? depositAmount / depositCases : 0
-        
-        // PF = deposit_cases / Active Member (untuk per customer, Active Member = 1)
-        const pf = depositCases / 1 // = depositCases
-        
-        // GGR User = Net Profit / Active Member (untuk per customer, Active Member = 1)
-        const ggrUser = netProfit / 1 // = netProfit
-        
-        // DA User = Deposit Amount / Active Member (untuk per customer, Active Member = 1)
-        const daUser = depositAmount / 1 // = depositAmount
 
         // ✅ User Name dari field 'user_name' BUKAN 'unique_code'
         const userName = transactions[0]?.user_name || ''
 
         return {
-          uniqueCode,
           userName,
+          uniqueCode,
+          lastDepositDate,
+          daysActive,
           atv,
-          pf,
           depositCases,
           depositAmount,
-          netProfit,
-          ggrUser,
-          daUser
+          withdrawCases,
+          withdrawAmount,
+          bonus,
+          netProfit
         }
       })
     )

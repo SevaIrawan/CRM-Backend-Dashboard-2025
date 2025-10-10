@@ -4,15 +4,17 @@ import { useEffect, useState } from 'react'
 import './CustomerDetailModal.css'
 
 interface CustomerDetail {
-  uniqueCode: string
   userName: string
+  uniqueCode: string
+  lastDepositDate: string
+  daysActive: number
   atv: number
-  pf: number
   depositCases: number
   depositAmount: number
+  withdrawCases: number
+  withdrawAmount: number
+  bonus: number
   netProfit: number
-  ggrUser: number
-  daUser: number
 }
 
 interface CustomerDetailModalProps {
@@ -88,10 +90,6 @@ export default function CustomerDetailModal({
     return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   }
 
-  const formatPF = (value: number): string => {
-    return value.toFixed(2)
-  }
-
   // ✅ EXPORT ALL DATA function
   const handleExport = async () => {
     try {
@@ -116,21 +114,23 @@ export default function CustomerDetailModal({
       const allCustomers = json.data || []
 
       // Create CSV content
-      const headers = ['Unique Code', 'User Name', 'ATV', 'PF', 'DC', 'DA', 'Net Profit', 'GGR User', 'DA User']
+      const headers = ['User Name', 'Unique Code', 'Last Deposit Date', 'Days Active', 'ATV', 'DC', 'DA', 'WC', 'WA', 'Bonus', 'Net Profit']
       const csvRows: string[] = []
       csvRows.push(headers.join(','))
 
       allCustomers.forEach((customer: CustomerDetail) => {
         csvRows.push([
-          customer.uniqueCode,
           customer.userName || '',
+          customer.uniqueCode,
+          customer.lastDepositDate || '',
+          String(customer.daysActive),
           customer.atv.toFixed(2),
-          customer.pf.toFixed(2),
           String(customer.depositCases),
           customer.depositAmount.toFixed(2),
-          customer.netProfit.toFixed(2),
-          customer.ggrUser.toFixed(2),
-          customer.daUser.toFixed(2)
+          String(customer.withdrawCases),
+          customer.withdrawAmount.toFixed(2),
+          customer.bonus.toFixed(2),
+          customer.netProfit.toFixed(2)
         ].join(','))
       })
 
@@ -201,26 +201,32 @@ export default function CustomerDetailModal({
               <table className="customer-detail-table">
                 <thead>
                   <tr>
-                    <th style={{ textAlign: 'left' }}>Unique Code</th>
                     <th style={{ textAlign: 'left' }}>User Name</th>
+                    <th style={{ textAlign: 'left' }}>Unique Code</th>
+                    <th style={{ textAlign: 'left' }}>Last Deposit Date</th>
+                    <th style={{ textAlign: 'left' }}>Days Active</th>
                     <th style={{ textAlign: 'left' }}>ATV</th>
-                    <th style={{ textAlign: 'left' }}>PF</th>
                     <th style={{ textAlign: 'left' }}>DC</th>
                     <th style={{ textAlign: 'left' }}>DA</th>
+                    <th style={{ textAlign: 'left' }}>WC</th>
+                    <th style={{ textAlign: 'left' }}>WA</th>
+                    <th style={{ textAlign: 'left' }}>Bonus</th>
                     <th style={{ textAlign: 'left' }}>Net Profit</th>
-                    <th style={{ textAlign: 'left' }}>GGR User</th>
-                    <th style={{ textAlign: 'left' }}>DA User</th>
                   </tr>
                 </thead>
                 <tbody>
                   {customers.map((customer, index) => (
                     <tr key={customer.uniqueCode} style={{ backgroundColor: index % 2 === 0 ? '#f9fafb' : 'white' }}>
-                      <td style={{ textAlign: 'left' }}>{customer.uniqueCode}</td>
                       <td style={{ textAlign: 'left' }}>{customer.userName || '-'}</td>
+                      <td style={{ textAlign: 'left' }}>{customer.uniqueCode}</td>
+                      <td style={{ textAlign: 'left' }}>{customer.lastDepositDate || '-'}</td>
+                      <td style={{ textAlign: 'right' }}>{formatInteger(customer.daysActive)}</td>
                       <td style={{ textAlign: 'right' }}>{formatNumeric(customer.atv)}</td>
-                      <td style={{ textAlign: 'right' }}>{formatPF(customer.pf)}</td>
                       <td style={{ textAlign: 'right' }}>{formatInteger(customer.depositCases)}</td>
                       <td style={{ textAlign: 'right' }}>{formatNumeric(customer.depositAmount)}</td>
+                      <td style={{ textAlign: 'right' }}>{formatInteger(customer.withdrawCases)}</td>
+                      <td style={{ textAlign: 'right' }}>{formatNumeric(customer.withdrawAmount)}</td>
+                      <td style={{ textAlign: 'right' }}>{formatNumeric(customer.bonus)}</td>
                       <td style={{ 
                         textAlign: 'right',
                         color: customer.netProfit < 0 ? '#dc2626' : '#059669',
@@ -228,14 +234,6 @@ export default function CustomerDetailModal({
                       }}>
                         {formatNumeric(customer.netProfit)}
                       </td>
-                      <td style={{ 
-                        textAlign: 'right',
-                        color: customer.ggrUser < 0 ? '#dc2626' : '#059669',
-                        fontWeight: '500'
-                      }}>
-                        {formatNumeric(customer.ggrUser)}
-                      </td>
-                      <td style={{ textAlign: 'right' }}>{formatNumeric(customer.daUser)}</td>
                     </tr>
                   ))}
                 </tbody>

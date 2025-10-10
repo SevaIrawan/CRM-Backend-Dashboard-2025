@@ -102,72 +102,98 @@ export default function BrandPerformanceTrendsPage() {
     return sign + formatPF(value)
   }
 
-  // Calculate totals for the footer - using proper logic for each KPI
-  const totalPeriodA = {
-    activeMember: tableData.reduce((sum, r) => sum + (r.periodA?.activeMember || 0), 0),
-    depositCases: tableData.reduce((sum, r) => sum + (r.periodA?.depositCases || 0), 0),
-    depositAmount: tableData.reduce((sum, r) => sum + (r.periodA?.depositAmount || 0), 0),
-    withdrawAmount: tableData.reduce((sum, r) => sum + (r.periodA?.withdrawAmount || 0), 0),
-    ggr: tableData.reduce((sum, r) => sum + (r.periodA?.ggr || 0), 0),
-    // Calculate derived KPIs using same logic as individual rows
-    avgTransactionValue: 0, // Will be calculated below
-    purchaseFrequency: 0, // Will be calculated below
-    winrate: 0, // Will be calculated below
-    ggrPerUser: 0, // Will be calculated below
-    depositAmountPerUser: 0 // Will be calculated below
+  // ✅ USE API OVERALL DATA FOR TABLE TOTAL (100% MATCH WITH STATCARD)
+  const totalPeriodA = data && data.comparison ? {
+    activeMember: data.comparison.periodA.activeMember,
+    depositCases: data.comparison.periodA.depositCases,
+    depositAmount: data.comparison.periodA.depositAmount,
+    withdrawAmount: data.comparison.periodA.withdrawAmount,
+    ggr: data.comparison.periodA.netProfit, // ✅ Table GGR column = Net Profit (same as Net Profit StatCard)
+    avgTransactionValue: data.comparison.periodA.atv,
+    purchaseFrequency: data.comparison.periodA.purchaseFrequency,
+    winrate: data.comparison.periodA.depositAmount > 0 ? ((data.comparison.periodA.depositAmount - data.comparison.periodA.withdrawAmount) / data.comparison.periodA.depositAmount) * 100 : 0,
+    ggrPerUser: data.comparison.periodA.ggrUser,
+    depositAmountPerUser: data.comparison.periodA.daUser
+  } : {
+    activeMember: 0,
+    depositCases: 0,
+    depositAmount: 0,
+    withdrawAmount: 0,
+    ggr: 0,
+    avgTransactionValue: 0,
+    purchaseFrequency: 0,
+    winrate: 0,
+    ggrPerUser: 0,
+    depositAmountPerUser: 0
   }
 
-  // Calculate derived KPIs for Period A
-  totalPeriodA.avgTransactionValue = totalPeriodA.depositCases > 0 ? totalPeriodA.depositAmount / totalPeriodA.depositCases : 0
-  totalPeriodA.purchaseFrequency = totalPeriodA.activeMember > 0 ? totalPeriodA.depositCases / totalPeriodA.activeMember : 0
-  totalPeriodA.winrate = totalPeriodA.depositAmount > 0 ? ((totalPeriodA.depositAmount - totalPeriodA.withdrawAmount) / totalPeriodA.depositAmount) * 100 : 0
-  totalPeriodA.ggrPerUser = totalPeriodA.activeMember > 0 ? totalPeriodA.ggr / totalPeriodA.activeMember : 0
-  totalPeriodA.depositAmountPerUser = totalPeriodA.activeMember > 0 ? totalPeriodA.depositAmount / totalPeriodA.activeMember : 0
-
-  const totalPeriodB = {
-    activeMember: tableData.reduce((sum, r) => sum + (r.periodB?.activeMember || 0), 0),
-    depositCases: tableData.reduce((sum, r) => sum + (r.periodB?.depositCases || 0), 0),
-    depositAmount: tableData.reduce((sum, r) => sum + (r.periodB?.depositAmount || 0), 0),
-    withdrawAmount: tableData.reduce((sum, r) => sum + (r.periodB?.withdrawAmount || 0), 0),
-    ggr: tableData.reduce((sum, r) => sum + (r.periodB?.ggr || 0), 0),
-    // Calculate derived KPIs using same logic as individual rows
-    avgTransactionValue: 0, // Will be calculated below
-    purchaseFrequency: 0, // Will be calculated below
-    winrate: 0, // Will be calculated below
-    ggrPerUser: 0, // Will be calculated below
-    depositAmountPerUser: 0 // Will be calculated below
+  const totalPeriodB = data && data.comparison ? {
+    activeMember: data.comparison.periodB.activeMember,
+    depositCases: data.comparison.periodB.depositCases,
+    depositAmount: data.comparison.periodB.depositAmount,
+    withdrawAmount: data.comparison.periodB.withdrawAmount,
+    ggr: data.comparison.periodB.netProfit, // ✅ Table GGR column = Net Profit (same as Net Profit StatCard)
+    avgTransactionValue: data.comparison.periodB.atv,
+    purchaseFrequency: data.comparison.periodB.purchaseFrequency,
+    winrate: data.comparison.periodB.depositAmount > 0 ? ((data.comparison.periodB.depositAmount - data.comparison.periodB.withdrawAmount) / data.comparison.periodB.depositAmount) * 100 : 0,
+    ggrPerUser: data.comparison.periodB.ggrUser,
+    depositAmountPerUser: data.comparison.periodB.daUser
+  } : {
+    activeMember: 0,
+    depositCases: 0,
+    depositAmount: 0,
+    withdrawAmount: 0,
+    ggr: 0,
+    avgTransactionValue: 0,
+    purchaseFrequency: 0,
+    winrate: 0,
+    ggrPerUser: 0,
+    depositAmountPerUser: 0
   }
 
-  // Calculate derived KPIs for Period B
-  totalPeriodB.avgTransactionValue = totalPeriodB.depositCases > 0 ? totalPeriodB.depositAmount / totalPeriodB.depositCases : 0
-  totalPeriodB.purchaseFrequency = totalPeriodB.activeMember > 0 ? totalPeriodB.depositCases / totalPeriodB.activeMember : 0
-  totalPeriodB.winrate = totalPeriodB.depositAmount > 0 ? ((totalPeriodB.depositAmount - totalPeriodB.withdrawAmount) / totalPeriodB.depositAmount) * 100 : 0
-  totalPeriodB.ggrPerUser = totalPeriodB.activeMember > 0 ? totalPeriodB.ggr / totalPeriodB.activeMember : 0
-  totalPeriodB.depositAmountPerUser = totalPeriodB.activeMember > 0 ? totalPeriodB.depositAmount / totalPeriodB.activeMember : 0
-
-  // Calculate differences and percentages using proper logic
-  const totalDiff = {
-    activeMember: totalPeriodB.activeMember - totalPeriodA.activeMember,
-    avgTransactionValue: totalPeriodB.avgTransactionValue - totalPeriodA.avgTransactionValue,
-    purchaseFrequency: totalPeriodB.purchaseFrequency - totalPeriodA.purchaseFrequency,
-    depositCases: totalPeriodB.depositCases - totalPeriodA.depositCases,
-    depositAmount: totalPeriodB.depositAmount - totalPeriodA.depositAmount,
-    ggr: totalPeriodB.ggr - totalPeriodA.ggr,
-    winrate: totalPeriodB.winrate - totalPeriodA.winrate,
-    ggrPerUser: totalPeriodB.ggrPerUser - totalPeriodA.ggrPerUser,
-    depositAmountPerUser: totalPeriodB.depositAmountPerUser - totalPeriodA.depositAmountPerUser
+  // ✅ USE API DIFFERENCE & PERCENTAGE DATA (100% MATCH WITH STATCARD)
+  const totalDiff = data && data.comparison ? {
+    activeMember: data.comparison.difference.activeMember,
+    avgTransactionValue: data.comparison.difference.atv,
+    purchaseFrequency: data.comparison.difference.purchaseFrequency,
+    depositCases: data.comparison.difference.depositCases,
+    depositAmount: data.comparison.difference.depositAmount,
+    ggr: data.comparison.difference.netProfit, // ✅ Table GGR column = Net Profit difference (same as Net Profit StatCard)
+    winrate: (totalPeriodB.winrate - totalPeriodA.winrate), // Calculate from winrate
+    ggrPerUser: data.comparison.difference.ggrUser,
+    depositAmountPerUser: data.comparison.difference.daUser
+  } : {
+    activeMember: 0,
+    avgTransactionValue: 0,
+    purchaseFrequency: 0,
+    depositCases: 0,
+    depositAmount: 0,
+    ggr: 0,
+    winrate: 0,
+    ggrPerUser: 0,
+    depositAmountPerUser: 0
   }
 
-  const totalPercent = {
-    activeMember: totalPeriodA.activeMember === 0 ? 0 : (totalDiff.activeMember / totalPeriodA.activeMember) * 100,
-    avgTransactionValue: totalPeriodA.avgTransactionValue === 0 ? 0 : (totalDiff.avgTransactionValue / totalPeriodA.avgTransactionValue) * 100,
-    purchaseFrequency: totalPeriodA.purchaseFrequency === 0 ? 0 : (totalDiff.purchaseFrequency / totalPeriodA.purchaseFrequency) * 100,
-    depositCases: totalPeriodA.depositCases === 0 ? 0 : (totalDiff.depositCases / totalPeriodA.depositCases) * 100,
-    depositAmount: totalPeriodA.depositAmount === 0 ? 0 : (totalDiff.depositAmount / totalPeriodA.depositAmount) * 100,
-    ggr: totalPeriodA.ggr === 0 ? 0 : (totalDiff.ggr / totalPeriodA.ggr) * 100,
-    winrate: totalPeriodA.winrate === 0 ? 0 : (totalDiff.winrate / totalPeriodA.winrate) * 100,
-    ggrPerUser: totalPeriodA.ggrPerUser === 0 ? 0 : (totalDiff.ggrPerUser / totalPeriodA.ggrPerUser) * 100,
-    depositAmountPerUser: totalPeriodA.depositAmountPerUser === 0 ? 0 : (totalDiff.depositAmountPerUser / totalPeriodA.depositAmountPerUser) * 100
+  const totalPercent = data && data.comparison ? {
+    activeMember: data.comparison.percentageChange.activeMember,
+    avgTransactionValue: data.comparison.percentageChange.atv,
+    purchaseFrequency: data.comparison.percentageChange.purchaseFrequency,
+    depositCases: data.comparison.percentageChange.depositCases,
+    depositAmount: data.comparison.percentageChange.depositAmount,
+    ggr: data.comparison.percentageChange.netProfit, // ✅ Table GGR column = Net Profit % (same as Net Profit StatCard)
+    winrate: totalPeriodA.winrate !== 0 ? ((totalPeriodB.winrate - totalPeriodA.winrate) / totalPeriodA.winrate) * 100 : 0, // Calculate from winrate
+    ggrPerUser: data.comparison.percentageChange.ggrUser,
+    depositAmountPerUser: data.comparison.percentageChange.daUser
+  } : {
+    activeMember: 0,
+    avgTransactionValue: 0,
+    purchaseFrequency: 0,
+    depositCases: 0,
+    depositAmount: 0,
+    ggr: 0,
+    winrate: 0,
+    ggrPerUser: 0,
+    depositAmountPerUser: 0
   }
 
   useEffect(() => {
@@ -320,7 +346,7 @@ export default function BrandPerformanceTrendsPage() {
               {/* BARIS 1: KPI CARDS (6 CARDS HORIZONTAL ROW) */}
               <div className="kpi-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '18px', marginBottom: '24px' }}>
                 <StatCard
-                  title="Active Member"
+                  title="Active Member A|B"
                   value={`${formatKPIValue(data.comparison.periodA.activeMember, 'count')} | ${formatKPIValue(data.comparison.periodB.activeMember, 'count')}`}
                   additionalKpi={{
                     label: "Compare (B-A)",
@@ -335,7 +361,7 @@ export default function BrandPerformanceTrendsPage() {
                   icon="Active Member"
                 />
                 <StatCard
-                  title="Deposit Amount"
+                  title="Deposit Amount A|B"
                   value={`${formatKPIValue(data.comparison.periodA.depositAmount, 'currency')} | ${formatKPIValue(data.comparison.periodB.depositAmount, 'currency')}`}
                   additionalKpi={{
                     label: "Compare (B-A)",
@@ -350,7 +376,7 @@ export default function BrandPerformanceTrendsPage() {
                   icon="Deposit Amount"
                 />
                 <StatCard
-                  title="Deposit Cases"
+                  title="Deposit Cases A|B"
                   value={`${formatKPIValue(data.comparison.periodA.depositCases, 'count')} | ${formatKPIValue(data.comparison.periodB.depositCases, 'count')}`}
                   additionalKpi={{
                     label: "Compare (B-A)",
@@ -365,7 +391,7 @@ export default function BrandPerformanceTrendsPage() {
                   icon="Deposit Cases"
                 />
                 <StatCard
-                  title="Net Profit"
+                  title="Net Profit A|B"
                   value={`${formatKPIValue(data.comparison.periodA.netProfit, 'currency')} | ${formatKPIValue(data.comparison.periodB.netProfit, 'currency')}`}
                   additionalKpi={{
                     label: "Compare (B-A)",
@@ -380,7 +406,7 @@ export default function BrandPerformanceTrendsPage() {
                   icon="Net Profit"
                 />
                 <StatCard
-                  title="DA User"
+                  title="DA USER A|B"
                   value={`${formatKPIValue(data.comparison.periodA.daUser, 'currency')} | ${formatKPIValue(data.comparison.periodB.daUser, 'currency')}`}
                   additionalKpi={{
                     label: "Compare (B-A)",
@@ -395,7 +421,7 @@ export default function BrandPerformanceTrendsPage() {
                   icon="DA User"
                 />
                 <StatCard
-                  title="GGR User"
+                  title="GGR USER A|B"
                   value={`${formatKPIValue(data.comparison.periodA.ggrUser, 'currency')} | ${formatKPIValue(data.comparison.periodB.ggrUser, 'currency')}`}
                   additionalKpi={{
                     label: "Compare (B-A)",
