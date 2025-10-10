@@ -114,8 +114,9 @@ export async function GET(request: NextRequest) {
         const depositsWithDate = transactions
           .filter(t => (Number(t.deposit_cases) || 0) > 0)
           .map(t => t.date)
+          .filter((date): date is string => typeof date === 'string')
         const lastDepositDate = depositsWithDate.length > 0 
-          ? depositsWithDate.reduce((max, date) => date > max ? date : max, depositsWithDate[0])
+          ? depositsWithDate.reduce((max: string, date: string) => date > max ? date : max, depositsWithDate[0])
           : ''
 
         // Days Active - Count distinct days where deposit_cases > 0
