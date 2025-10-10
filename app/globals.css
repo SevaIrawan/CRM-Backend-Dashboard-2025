@@ -1152,16 +1152,15 @@ body {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  color: #3b82f6;
   flex-shrink: 0;
   width: 20px;
   height: 20px;
 }
 
 .stat-card-icon svg {
-  color: #3b82f6;
   width: 20px;
   height: 20px;
+  fill: currentColor;
 }
 
 .stat-card-title {

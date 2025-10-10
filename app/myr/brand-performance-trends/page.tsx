@@ -468,7 +468,7 @@ export default function BrandPerformanceTrendsPage() {
               {/* Row 3: Deposit Amount & Net Profit Charts */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <LineChart
-                  title="Deposit Amount Period A vs Period B"
+                  title="Deposit Amount Performance Comparison"
                   series={data.charts.depositAmountTrend.series}
                   categories={data.charts.depositAmountTrend.categories.periodA}
                   currency="MYR"
@@ -481,7 +481,7 @@ export default function BrandPerformanceTrendsPage() {
                   ]}
                 />
                 <LineChart
-                  title="Net Profit Period A vs Period B"
+                  title="Net Profit Performance Comparison"
                   series={data.charts.netProfitTrend.series}
                   categories={data.charts.netProfitTrend.categories.periodA}
                   currency="MYR"
@@ -526,7 +526,7 @@ export default function BrandPerformanceTrendsPage() {
               {/* Row 5: ATV & Purchase Frequency Charts */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <LineChart
-                  title="Average Transaction Value Period A vs Period B"
+                  title="Average Transaction Value Performance Comparison"
                   series={data.charts.atvTrend.series}
                   categories={data.charts.atvTrend.categories.periodA}
                   currency="MYR"
@@ -538,7 +538,7 @@ export default function BrandPerformanceTrendsPage() {
                   ]}
                 />
                 <LineChart
-                  title="Purchase Frequency Period A vs Period B"
+                  title="Purchase Frequency Performance Comparison"
                   series={data.charts.purchaseFrequencyTrend.series}
                   categories={data.charts.purchaseFrequencyTrend.categories.periodA}
                   currency="CASES"

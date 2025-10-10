@@ -8,7 +8,7 @@ import StatCard from '@/components/StatCard'
 import LineChart from '@/components/LineChart'
 import BarChart from '@/components/BarChart'
 import OverdueDetailsModal from '@/components/OverdueDetailsModal'
-import { getChartIcon, getKpiIcon } from '@/lib/CentralIcon'
+import { getChartIcon } from '@/lib/CentralIcon'
 import { formatCurrencyKPI, formatIntegerKPI, formatMoMChange, formatNumericKPI, formatPercentageKPI } from '@/lib/formatHelpers'
 
 // Types for slicer options API
@@ -518,10 +518,10 @@ export default function MYRAutoApprovalWithdrawPage() {
         }}>
                  {/* BARIS 1: KPI CARDS (6 CARDS ROW) */}
                  <div className="kpi-row">
-                   <StatCard
-                     title="TOTAL TRANSACTIONS"
-                     value={formatIntegerKPI(data?.withdrawCases || 0)}
-                     icon={getKpiIcon('Withdraw Cases')}
+                  <StatCard
+                    title="TOTAL TRANSACTIONS"
+                    value={formatIntegerKPI(data?.withdrawCases || 0)}
+                    icon="TOTAL TRANSACTIONS"
                      additionalKpi={{
                        label: "DAILY AVERAGE",
                        value: formatIntegerKPI(Math.round((data?.withdrawCases || 0) / calculateActiveDays()))
@@ -531,10 +531,10 @@ export default function MYRAutoApprovalWithdrawPage() {
                        isPositive: (data?.momComparison?.totalTransactions || 0) >= 0
                      }}
                    />
-                   <StatCard
-                     title="TOTAL TRANS AUTOMATION"
-                     value={formatIntegerKPI(data?.automation?.automationTransactions || 0)}
-                     icon={getKpiIcon('Automation Transactions')}
+                  <StatCard
+                    title="TOTAL TRANS AUTOMATION"
+                    value={formatIntegerKPI(data?.automation?.automationTransactions || 0)}
+                    icon="TOTAL TRANS AUTOMATION"
                      additionalKpi={{
                        label: "DAILY AVERAGE",
                        value: formatIntegerKPI(Math.round((data?.automation?.automationTransactions || 0) / calculateActiveDays()))
@@ -544,10 +544,10 @@ export default function MYRAutoApprovalWithdrawPage() {
                        isPositive: (data?.momComparison?.automationTransactions || 0) >= 0
                      }}
                    />
-                   <StatCard
-                     title="AVG PROC TIME AUTOMATION"
-                     value={`${(data?.processingTime?.avgAutomation || 0).toFixed(1)} sec`}
-                     icon={getKpiIcon('Processing Time')}
+                  <StatCard
+                    title="AVG PROC TIME AUTOMATION"
+                    value={`${(data?.processingTime?.avgAutomation || 0).toFixed(1)} sec`}
+                    icon="AVG PROC TIME AUTOMATION"
                      additionalKpi={{
                        label: "DAILY AVERAGE",
                        value: "-"
@@ -557,10 +557,10 @@ export default function MYRAutoApprovalWithdrawPage() {
                        isPositive: (data?.momComparison?.avgAutomationProcessingTime || 0) >= 0
                      }}
                    />
-                  <StatCard
-                    title="OVERDUE TRANS AUTOMATION"
-                    value={formatIntegerKPI(data?.performance?.automationOverdue || 0)}
-                    icon={getKpiIcon('Overdue Transactions')}
+                 <StatCard
+                   title="OVERDUE TRANS AUTOMATION"
+                   value={formatIntegerKPI(data?.performance?.automationOverdue || 0)}
+                   icon="OVERDUE TRANS AUTOMATION"
                     additionalKpi={{
                       label: "DAILY AVERAGE",
                       value: formatIntegerKPI(Math.round((data?.performance?.automationOverdue || 0) / calculateActiveDays()))
@@ -572,10 +572,10 @@ export default function MYRAutoApprovalWithdrawPage() {
                     onClick={() => setShowOverdueModal(true)}
                     clickable={true}
                   />
-                   <StatCard
-                     title="COVERAGE RATE"
-                     value={formatPercentageKPI(data?.coverageRate || 0)}
-                     icon={getKpiIcon('Coverage Rate')}
+                  <StatCard
+                    title="COVERAGE RATE"
+                    value={formatPercentageKPI(data?.coverageRate || 0)}
+                    icon="COVERAGE RATE"
                      additionalKpi={{
                        label: "DAILY AVERAGE",
                        value: "-"
@@ -585,10 +585,10 @@ export default function MYRAutoApprovalWithdrawPage() {
                        isPositive: (data?.momComparison?.coverageRate || 0) >= 0
                      }}
                    />
-                   <StatCard
-                     title="MANUAL TIME SAVED"
-                     value={`${(data?.manualTimeSaved || 0).toFixed(1)} hrs`}
-                     icon={getKpiIcon('Time Saved')}
+                  <StatCard
+                    title="MANUAL TIME SAVED"
+                    value={`${(data?.manualTimeSaved || 0).toFixed(1)} hrs`}
+                    icon="MANUAL TIME SAVED"
                      additionalKpi={{
                        label: "DAILY AVERAGE",
                        value: `${((data?.manualTimeSaved || 0) / calculateActiveDays()).toFixed(1)} hrs`
