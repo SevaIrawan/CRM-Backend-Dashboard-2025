@@ -10,43 +10,74 @@ export async function GET(request: NextRequest) {
   try {
     console.log('📊 Fetching KPI data with filters:', { line, grouping })
 
-    // Build query with filters
-    let query = supabase.from('overall_label_myr_mv').select('label')
-
-    if (line && line !== 'ALL') {
-      query = query.filter('line', 'eq', line)
+    // Validate grouping (mandatory for this function)
+    if (!grouping || grouping === 'ALL') {
+      console.log('⚠️ Grouping is ALL, returning zero KPIs')
+      return NextResponse.json({
+        success: true,
+        kpis: {
+          activeMultipleBrand: 0,
+          priorityContinue: 0,
+          continueBusiness: 0,
+          continue: 0,
+          priorityReactivate: 0,
+          reactivate: 0
+        },
+        message: 'Please select a specific grouping (A, B, C, or D)'
+      })
     }
 
-    if (grouping && grouping !== 'ALL') {
-      query = query.filter('grouping', 'eq', grouping)
+    // Call Supabase RPC function overall_label_myr_kpi(p_group, p_line)
+    const rpcParams = {
+      p_group: grouping,
+      p_line: (line && line !== 'ALL') ? line : null
     }
 
-    const result = await query
+    console.log('🔧 Calling Supabase RPC overall_label_myr_kpi with params:', rpcParams)
 
-    if (result.error) {
-      console.error('❌ Supabase query error:', result.error)
+    const { data, error } = await supabase.rpc('overall_label_myr_kpi', rpcParams)
+
+    if (error) {
+      console.error('❌ Supabase RPC error:', error)
       return NextResponse.json({ 
         success: false, 
-        error: 'Database error while fetching KPI data',
-        message: result.error.message 
+        error: 'Database error while calling overall_label_myr_kpi',
+        message: error.message,
+        details: error
       }, { status: 500 })
     }
 
-    // Calculate KPIs from data
-    const kpis = calculateKPIs(result.data || [])
+    console.log(`✅ RPC function returned ${data?.length || 0} records`)
+    
+    // Log first 5 records for debugging
+    if (data && data.length > 0) {
+      console.log('📊 Sample records from RPC (first 5):')
+      data.slice(0, 5).forEach((r: any) => {
+        console.log(`  ${r.unique_code}: ${r.base_label} → ${r.final_label}`)
+      })
+    }
+
+    // Calculate KPIs from final_label
+    const kpis = calculateKPIs(data || [])
 
     console.log('✅ KPIs calculated:', kpis)
 
     return NextResponse.json({
       success: true,
-      kpis
+      kpis,
+      filters: {
+        line: line === 'ALL' ? null : line,
+        grouping
+      },
+      totalRecords: data?.length || 0
     })
 
   } catch (error) {
     console.error('❌ Error fetching KPI data:', error)
     return NextResponse.json({ 
       success: false, 
-      error: 'Internal server error while fetching KPI data' 
+      error: 'Internal server error while fetching KPI data',
+      details: error instanceof Error ? error.message : String(error)
     }, { status: 500 })
   }
 }
@@ -62,19 +93,19 @@ function calculateKPIs(data: any[]) {
   }
 
   data.forEach(row => {
-    const label = row.label || ''
+    const finalLabel = row.final_label || ''
     
-    if (label === 'Active Multiple Brand') {
+    if (finalLabel === 'Active Multiple Brands') {
       kpis.activeMultipleBrand++
-    } else if (label === 'Priority Continue') {
+    } else if (finalLabel === 'Priority Continue') {
       kpis.priorityContinue++
-    } else if (label === 'Continue Business') {
+    } else if (finalLabel === 'Continue Business') {
       kpis.continueBusiness++
-    } else if (label === 'Continue') {
+    } else if (finalLabel === 'Continue') {
       kpis.continue++
-    } else if (label === 'Priority Reactivate') {
+    } else if (finalLabel === 'Priority Reactivate') {
       kpis.priorityReactivate++
-    } else if (label === 'Reactivate') {
+    } else if (finalLabel === 'Reactivate') {
       kpis.reactivate++
     }
   })

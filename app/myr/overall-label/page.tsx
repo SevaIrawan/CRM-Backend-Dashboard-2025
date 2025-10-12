@@ -69,7 +69,7 @@ export default function MYROverallLabelPage() {
   const getGroupingFromLine = (selectedLine: string): string => {
     const lineGroupingMap: { [key: string]: string } = {
       'SBMY': 'A',
-      'LVMY': 'A',
+      'LVMY': 'B',
       'STMY': 'C',
       'FWMY': 'C',
       'JMMY': 'D',
@@ -202,18 +202,38 @@ export default function MYROverallLabelPage() {
   }
 
   const fetchKPIs = async () => {
+    // Skip if grouping is ALL
+    if (grouping === 'ALL') {
+      console.log('⚠️ Grouping is ALL, skipping KPI fetch')
+      setKpis({
+        activeMultipleBrand: 0,
+        priorityContinue: 0,
+        continueBusiness: 0,
+        continue: 0,
+        priorityReactivate: 0,
+        reactivate: 0
+      })
+      return
+    }
+
     try {
       const params = new URLSearchParams({
         line,
         grouping
       })
 
+      console.log('🔍 Fetching KPIs with params:', { line, grouping })
+
       const response = await fetch(`/api/myr-overall-label/kpis?${params}`)
       const result = await response.json()
       
+      console.log('📊 KPI API Response:', result)
+      
       if (result.success) {
+        console.log('✅ KPIs received:', result.kpis)
         setKpis(result.kpis)
       } else {
+        console.error('❌ KPI fetch failed:', result.error, result.message)
         setKpis({
           activeMultipleBrand: 0,
           priorityContinue: 0,
@@ -224,7 +244,7 @@ export default function MYROverallLabelPage() {
         })
       }
     } catch (error) {
-      console.error('Error fetching KPIs:', error)
+      console.error('❌ Error fetching KPIs:', error)
       setKpis({
         activeMultipleBrand: 0,
         priorityContinue: 0,
