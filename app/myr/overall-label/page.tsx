@@ -35,6 +35,10 @@ interface KPIs {
   reactivate: number
 }
 
+interface FinalLabelCounts {
+  [key: string]: number
+}
+
 export default function MYROverallLabelPage() {
   const [line, setLine] = useState('ALL')
   const [grouping, setGrouping] = useState('ALL')
@@ -48,6 +52,7 @@ export default function MYROverallLabelPage() {
     priorityReactivate: 0,
     reactivate: 0
   })
+  const [finalLabelCounts, setFinalLabelCounts] = useState<FinalLabelCounts>({})
   const [pagination, setPagination] = useState<Pagination>({
     currentPage: 1,
     totalPages: 1,
@@ -213,6 +218,7 @@ export default function MYROverallLabelPage() {
         priorityReactivate: 0,
         reactivate: 0
       })
+      setFinalLabelCounts({})
       return
     }
 
@@ -231,7 +237,9 @@ export default function MYROverallLabelPage() {
       
       if (result.success) {
         console.log('✅ KPIs received:', result.kpis)
+        console.log('✅ Final Label Counts received:', result.finalLabelCounts)
         setKpis(result.kpis)
+        setFinalLabelCounts(result.finalLabelCounts || {})
       } else {
         console.error('❌ KPI fetch failed:', result.error, result.message)
         setKpis({
@@ -242,6 +250,7 @@ export default function MYROverallLabelPage() {
           priorityReactivate: 0,
           reactivate: 0
         })
+        setFinalLabelCounts({})
       }
     } catch (error) {
       console.error('❌ Error fetching KPIs:', error)
@@ -253,6 +262,7 @@ export default function MYROverallLabelPage() {
         priorityReactivate: 0,
         reactivate: 0
       })
+      setFinalLabelCounts({})
     }
   }
 
@@ -433,19 +443,22 @@ export default function MYROverallLabelPage() {
                 />
               </div>
 
-              {/* ROW 2: 2 Bar Charts (Coming Soon) */}
+              {/* ROW 2: 2 Bar Charts */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div style={{
-                  border: '2px dashed #e5e7eb',
-                  borderRadius: '8px',
-                  padding: '40px',
-                  textAlign: 'center',
-                  backgroundColor: '#f9fafb'
-                }}>
-                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>📊</div>
-                  <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>Final Label</h3>
-                  <p style={{ color: '#6b7280', fontSize: '14px' }}>Chart Coming Soon</p>
-                </div>
+                {/* Bar Chart 1: Final Label - Display ALL final labels except Remove */}
+                <BarChart
+                  title="Final Label"
+                  chartIcon={getChartIcon('Final Label')}
+                  series={[{
+                    name: 'Count',
+                    data: Object.values(finalLabelCounts),
+                    color: '#3b82f6'
+                  }]}
+                  categories={Object.keys(finalLabelCounts)}
+                  currency="MEMBER"
+                />
+                
+                {/* Bar Chart 2: Label (Coming Soon) */}
                 <div style={{
                   border: '2px dashed #e5e7eb',
                   borderRadius: '8px',
