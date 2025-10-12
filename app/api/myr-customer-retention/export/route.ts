@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     const rawData = result.data || []
     console.log(`📊 Raw data for export: ${rawData.length} records`)
 
-    // Process data for customer retention
+    // Process data for customer retention (aggregate per user)
     const processedData = processCustomerRetentionData(rawData)
     console.log(`📊 Processed customer retention data: ${processedData.length} users`)
 
@@ -80,7 +80,12 @@ export async function POST(request: NextRequest) {
           return '-'
         }
         if (typeof value === 'number') {
-          return value.toLocaleString()
+          // For integers, return as-is (no decimal)
+          if (Number.isInteger(value)) {
+            return value.toString()
+          }
+          // For decimals, return with 2 decimal places (no comma separator)
+          return value.toFixed(2)
         }
         // Escape commas and quotes in string values
         return `"${String(value).replace(/"/g, '""')}"`
@@ -89,16 +94,19 @@ export async function POST(request: NextRequest) {
 
     // Combine header and rows
     const csvContent = [csvHeader, ...csvRows].join('\n')
+    
+    // Add BOM (Byte Order Mark) for proper UTF-8 encoding in Excel
+    const csvWithBOM = '\ufeff' + csvContent
 
     // Create filename with timestamp
     const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
     const filename = `myr_customer_retention_export_${timestamp}.csv`
 
     // Return CSV file
-    return new NextResponse(csvContent, {
+    return new NextResponse(csvWithBOM, {
       status: 200,
       headers: {
-        'Content-Type': 'text/csv',
+        'Content-Type': 'text/csv; charset=utf-8',
         'Content-Disposition': `attachment; filename="${filename}"`,
         'Cache-Control': 'no-cache'
       }
@@ -127,14 +135,13 @@ function processCustomerRetentionData(rawData: any[]) {
         user_name: row.user_name,
         unique_code: row.unique_code,
         last_deposit_date: row.date,
-        active_days: 0,
+        activeDates: new Set(),
         deposit_cases: 0,
         deposit_amount: 0,
         withdraw_cases: 0,
         withdraw_amount: 0,
         bonus: 0,
-        net_profit: 0,
-        activeDates: new Set()
+        net_profit: 0
       })
     }
     
@@ -159,11 +166,18 @@ function processCustomerRetentionData(rawData: any[]) {
     userData.net_profit += row.net_profit || 0
   })
   
-  // Convert to array and calculate active_days
+  // Convert to array and calculate active_days - only include retention columns
   const processedData = Array.from(userGroups.values()).map(user => ({
-    ...user,
+    user_name: user.user_name,
+    unique_code: user.unique_code,
+    last_deposit_date: user.last_deposit_date,
     active_days: user.activeDates.size,
-    activeDates: undefined // Remove from final data
+    deposit_cases: user.deposit_cases,
+    deposit_amount: user.deposit_amount,
+    withdraw_cases: user.withdraw_cases,
+    withdraw_amount: user.withdraw_amount,
+    bonus: user.bonus,
+    net_profit: user.net_profit
   }))
   
   // Sort by active_days DESC, net_profit DESC

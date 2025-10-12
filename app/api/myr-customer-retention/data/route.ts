@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
     console.log(`📊 Raw blue_whale_myr records found: ${rawData.length}`)
     console.log(`📊 Sample raw data:`, rawData.slice(0, 3))
 
-    // Process data for customer retention
+    // Process data for customer retention (aggregate per user)
     const processedData = processCustomerRetentionData(rawData)
     console.log(`📊 Processed customer retention data: ${processedData.length} users`)
     
@@ -107,17 +107,8 @@ export async function GET(request: NextRequest) {
 }
 
 function processCustomerRetentionData(rawData: any[]) {
-  console.log(`🔍 Processing ${rawData.length} raw records for customer retention`)
-  
-  // Check data structure
-  if (rawData.length > 0) {
-    console.log(`🔍 Sample record structure:`, Object.keys(rawData[0]))
-    console.log(`🔍 Sample deposit_cases value:`, rawData[0].deposit_cases)
-  }
-  
   // Filter only users with deposit_cases > 0
   const filteredData = rawData.filter(row => row.deposit_cases > 0)
-  console.log(`🔍 Filtered ${filteredData.length} records with deposit_cases > 0`)
   
   // Group by userkey (unique_code) and aggregate data
   const userGroups = new Map<string, any>()
@@ -130,14 +121,13 @@ function processCustomerRetentionData(rawData: any[]) {
         user_name: row.user_name,
         unique_code: row.unique_code,
         last_deposit_date: row.date,
-        active_days: 0,
+        activeDates: new Set(),
         deposit_cases: 0,
         deposit_amount: 0,
         withdraw_cases: 0,
         withdraw_amount: 0,
         bonus: 0,
-        net_profit: 0,
-        activeDates: new Set()
+        net_profit: 0
       })
     }
     
@@ -162,14 +152,19 @@ function processCustomerRetentionData(rawData: any[]) {
     userData.net_profit += row.net_profit || 0
   })
   
-  // Convert to array and calculate active_days
+  // Convert to array and calculate active_days - only include retention columns
   const processedData = Array.from(userGroups.values()).map(user => ({
-    ...user,
+    user_name: user.user_name,
+    unique_code: user.unique_code,
+    last_deposit_date: user.last_deposit_date,
     active_days: user.activeDates.size,
-    activeDates: undefined // Remove from final data
+    deposit_cases: user.deposit_cases,
+    deposit_amount: user.deposit_amount,
+    withdraw_cases: user.withdraw_cases,
+    withdraw_amount: user.withdraw_amount,
+    bonus: user.bonus,
+    net_profit: user.net_profit
   }))
-  
-  console.log(`🔍 Processed ${processedData.length} users for customer retention`)
   
   // Sort by active_days DESC, net_profit DESC
   processedData.sort((a, b) => {
@@ -178,8 +173,6 @@ function processCustomerRetentionData(rawData: any[]) {
     }
     return b.net_profit - a.net_profit
   })
-  
-  console.log(`🔍 Sample processed data:`, processedData.slice(0, 2))
   
   return processedData
 }
