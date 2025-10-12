@@ -47,18 +47,19 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log(`✅ RPC function returned ${data?.length || 0} records`)
+    const records = (data || []) as any[]
+    console.log(`✅ RPC function returned ${records.length} records`)
     
     // Log first 5 records for debugging
-    if (data && data.length > 0) {
+    if (records.length > 0) {
       console.log('📊 Sample records from RPC (first 5):')
-      data.slice(0, 5).forEach((r: any) => {
+      records.slice(0, 5).forEach((r: any) => {
         console.log(`  ${r.unique_code}: ${r.base_label} → ${r.final_label}`)
       })
     }
 
     // Calculate KPIs from final_label
-    const kpis = calculateKPIs(data || [])
+    const kpis = calculateKPIs(records)
 
     console.log('✅ KPIs calculated:', kpis)
 
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest) {
         line: line === 'ALL' ? null : line,
         grouping
       },
-      totalRecords: data?.length || 0
+      totalRecords: records.length
     })
 
   } catch (error) {
