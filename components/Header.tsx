@@ -75,6 +75,7 @@ export default function Header({
         'brand-comparison': 'Brand Comparison',
         'brand-performance-trends': 'Brand Performance Trends',
         'kpi-comparison': 'KPI Comparison',
+        'overall-label': 'Overall Label',
         'customer-retention': 'Customer Retention',
         'member-report': 'Member Report',
         'churn-member': 'Churn Member',

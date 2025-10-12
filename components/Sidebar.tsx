@@ -252,6 +252,7 @@ export default function Sidebar({
           { title: 'Member Analytic', path: '/myr/member-analytic' },
           { title: 'Brand Performance Trends', path: '/myr/brand-performance-trends' },
           { title: 'KPI Comparison', path: '/myr/kpi-comparison' },
+          { title: 'Overall Label', path: '/myr/overall-label' },
           { title: 'Deposit Auto‑Approval', path: '/myr/auto-approval-monitor' },
           { title: 'Withdrawal Auto‑Approval', path: '/myr/auto-approval-withdraw' },
           { title: 'Customer Retention', path: '/myr/customer-retention' },
