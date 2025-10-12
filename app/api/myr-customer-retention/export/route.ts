@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     // Create CSV rows
     const csvRows = processedData.map(row => {
       return retentionColumns.map(col => {
-        const value = row[col]
+        const value = (row as any)[col]
         // Format numbers and handle null values
         if (value === null || value === undefined || value === '') {
           return '-'
