@@ -545,8 +545,32 @@ export default function KPIComparisonPage() {
               <p className="text-gray-600">Please select date ranges to view comparison data.</p>
             </div>
           )}
+
+          {/* Slicer Info */}
+          {!loading && comparisonData && (
+            <div className="slicer-info">
+              <p>Showing data for: {selectedLine} | Period A: {periodAStart} to {periodAEnd} | Period B: {periodBStart} to {periodBEnd}</p>
+            </div>
+          )}
         </div>
       </Frame>
+
+      <style jsx>{`
+        .slicer-info {
+          background: #f3f4f6;
+          padding: 16px;
+          border-radius: 8px;
+          border: 1px solid #e5e7eb;
+          text-align: center;
+          margin-top: 20px;
+        }
+
+        .slicer-info p {
+          margin: 0;
+          color: #6b7280;
+          font-size: 14px;
+        }
+      `}</style>
     </Layout>
   );
 }

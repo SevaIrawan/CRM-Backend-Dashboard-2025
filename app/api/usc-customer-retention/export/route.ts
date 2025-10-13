@@ -80,7 +80,12 @@ export async function POST(request: NextRequest) {
           return '-'
         }
         if (typeof value === 'number') {
-          return value.toLocaleString()
+          // For integers, return as-is (no decimal)
+          if (Number.isInteger(value)) {
+            return value.toString()
+          }
+          // For decimals, return with 2 decimal places (no comma separator)
+          return value.toFixed(2)
         }
         // Escape commas and quotes in string values
         return `"${String(value).replace(/"/g, '""')}"`
@@ -89,16 +94,19 @@ export async function POST(request: NextRequest) {
 
     // Combine header and rows
     const csvContent = [csvHeader, ...csvRows].join('\n')
+    
+    // Add BOM (Byte Order Mark) for proper UTF-8 encoding in Excel
+    const csvWithBOM = '\ufeff' + csvContent
 
     // Create filename with timestamp
     const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
     const filename = `usc_customer_retention_export_${timestamp}.csv`
 
     // Return CSV file
-    return new NextResponse(csvContent, {
+    return new NextResponse(csvWithBOM, {
       status: 200,
       headers: {
-        'Content-Type': 'text/csv',
+        'Content-Type': 'text/csv; charset=utf-8',
         'Content-Disposition': `attachment; filename="${filename}"`,
         'Cache-Control': 'no-cache'
       }
