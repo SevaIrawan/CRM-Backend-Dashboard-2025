@@ -255,8 +255,8 @@ export default function MYROverallLabelPage() {
           priorityContinue: 0,
           continueBusiness: 0,
           continue: 0,
-          priorityReactivate: 0,
-          reactivate: 0
+          ggrNegative: 0,
+          underReview: 0
         })
         setFinalLabelCounts({})
         setBaseLabelCounts({})
