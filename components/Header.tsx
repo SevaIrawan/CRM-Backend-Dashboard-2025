@@ -76,6 +76,7 @@ export default function Header({
         'brand-performance-trends': 'Brand Performance Trends',
         'kpi-comparison': 'KPI Comparison',
         'overall-label': 'Overall Label',
+        'aia-candy-tracking': 'AIA Candy Tracking',
         'customer-retention': 'Customer Retention',
         'member-report': 'Member Report',
         'churn-member': 'Churn Member',
