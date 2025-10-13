@@ -31,17 +31,21 @@ interface KPIs {
   priorityContinue: number
   continueBusiness: number
   continue: number
-  priorityReactivate: number
-  reactivate: number
+  ggrNegative: number
+  underReview: number
 }
 
 interface FinalLabelCounts {
   [key: string]: number
 }
 
+interface BaseLabelCounts {
+  [key: string]: number
+}
+
 export default function MYROverallLabelPage() {
-  const [line, setLine] = useState('ALL')
-  const [grouping, setGrouping] = useState('ALL')
+  const [line, setLine] = useState('SBMY')
+  const [grouping, setGrouping] = useState('A')
 
   const [overallLabelData, setOverallLabelData] = useState<OverallLabelData[]>([])
   const [kpis, setKpis] = useState<KPIs>({
@@ -49,10 +53,11 @@ export default function MYROverallLabelPage() {
     priorityContinue: 0,
     continueBusiness: 0,
     continue: 0,
-    priorityReactivate: 0,
-    reactivate: 0
+    ggrNegative: 0,
+    underReview: 0
   })
   const [finalLabelCounts, setFinalLabelCounts] = useState<FinalLabelCounts>({})
+  const [baseLabelCounts, setBaseLabelCounts] = useState<BaseLabelCounts>({})
   const [pagination, setPagination] = useState<Pagination>({
     currentPage: 1,
     totalPages: 1,
@@ -215,10 +220,11 @@ export default function MYROverallLabelPage() {
         priorityContinue: 0,
         continueBusiness: 0,
         continue: 0,
-        priorityReactivate: 0,
-        reactivate: 0
+        ggrNegative: 0,
+        underReview: 0
       })
       setFinalLabelCounts({})
+      setBaseLabelCounts({})
       return
     }
 
@@ -238,8 +244,10 @@ export default function MYROverallLabelPage() {
       if (result.success) {
         console.log('✅ KPIs received:', result.kpis)
         console.log('✅ Final Label Counts received:', result.finalLabelCounts)
+        console.log('✅ Base Label Counts received:', result.baseLabelCounts)
         setKpis(result.kpis)
         setFinalLabelCounts(result.finalLabelCounts || {})
+        setBaseLabelCounts(result.baseLabelCounts || {})
       } else {
         console.error('❌ KPI fetch failed:', result.error, result.message)
         setKpis({
@@ -251,6 +259,7 @@ export default function MYROverallLabelPage() {
           reactivate: 0
         })
         setFinalLabelCounts({})
+        setBaseLabelCounts({})
       }
     } catch (error) {
       console.error('❌ Error fetching KPIs:', error)
@@ -259,10 +268,11 @@ export default function MYROverallLabelPage() {
         priorityContinue: 0,
         continueBusiness: 0,
         continue: 0,
-        priorityReactivate: 0,
-        reactivate: 0
+        ggrNegative: 0,
+        underReview: 0
       })
       setFinalLabelCounts({})
+      setBaseLabelCounts({})
     }
   }
 
@@ -432,14 +442,14 @@ export default function MYROverallLabelPage() {
                   icon="Continue"
                 />
                 <StatCard
-                  title="PRIORITY REACTIVATE"
-                  value={formatIntegerKPI(kpis.priorityReactivate)}
-                  icon="Priority Reactivate"
+                  title="GGR NEGATIVE"
+                  value={formatIntegerKPI(kpis.ggrNegative)}
+                  icon="GGR Negative"
                 />
                 <StatCard
-                  title="REACTIVATE"
-                  value={formatIntegerKPI(kpis.reactivate)}
-                  icon="Reactivate"
+                  title="UNDER REVIEW"
+                  value={formatIntegerKPI(kpis.underReview)}
+                  icon="Under Review"
                 />
               </div>
 
@@ -458,18 +468,18 @@ export default function MYROverallLabelPage() {
                   currency="MEMBER"
                 />
                 
-                {/* Bar Chart 2: Label (Coming Soon) */}
-                <div style={{
-                  border: '2px dashed #e5e7eb',
-                  borderRadius: '8px',
-                  padding: '40px',
-                  textAlign: 'center',
-                  backgroundColor: '#f9fafb'
-                }}>
-                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>📊</div>
-                  <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>Label</h3>
-                  <p style={{ color: '#6b7280', fontSize: '14px' }}>Chart Coming Soon</p>
-                </div>
+                {/* Bar Chart 2: Label (Base Label) */}
+                <BarChart
+                  title="Label"
+                  chartIcon={getChartIcon('Label')}
+                  series={[{
+                    name: 'Count',
+                    data: Object.values(baseLabelCounts),
+                    color: '#f97316'
+                  }]}
+                  categories={Object.keys(baseLabelCounts)}
+                  currency="MEMBER"
+                />
               </div>
 
               {/* ROW 3: Table */}

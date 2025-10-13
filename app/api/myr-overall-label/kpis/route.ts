@@ -20,8 +20,8 @@ export async function GET(request: NextRequest) {
           priorityContinue: 0,
           continueBusiness: 0,
           continue: 0,
-          priorityReactivate: 0,
-          reactivate: 0
+          ggrNegative: 0,
+          underReview: 0
         },
         message: 'Please select a specific grouping (A, B, C, or D)'
       })
@@ -58,19 +58,24 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Calculate KPIs from final_label (for 6 KPI cards)
+    // Calculate KPIs from final_label
     const kpis = calculateKPIs(records)
 
     // Calculate ALL final labels count for chart (exclude Remove)
     const finalLabelCounts = calculateAllFinalLabels(records)
 
+    // Calculate base labels count for chart 2 (include all)
+    const baseLabelCounts = calculateBaseLabels(records)
+
     console.log('✅ KPIs calculated:', kpis)
     console.log('✅ Final label counts for chart:', finalLabelCounts)
+    console.log('✅ Base label counts for chart 2:', baseLabelCounts)
 
     return NextResponse.json({
       success: true,
       kpis,
-      finalLabelCounts, // For chart display
+      finalLabelCounts, // For Bar Chart 1: Final Label
+      baseLabelCounts,  // For Bar Chart 2: Label (Base Label)
       filters: {
         line: line === 'ALL' ? null : line,
         grouping
@@ -94,8 +99,8 @@ function calculateKPIs(data: any[]) {
     priorityContinue: 0,
     continueBusiness: 0,
     continue: 0,
-    priorityReactivate: 0,
-    reactivate: 0
+    ggrNegative: 0,
+    underReview: 0
   }
 
   data.forEach(row => {
@@ -109,10 +114,10 @@ function calculateKPIs(data: any[]) {
       kpis.continueBusiness++
     } else if (finalLabel === 'Continue') {
       kpis.continue++
-    } else if (finalLabel === 'Priority Reactivate') {
-      kpis.priorityReactivate++
-    } else if (finalLabel === 'Reactivate') {
-      kpis.reactivate++
+    } else if (finalLabel === 'GGR Negative') {
+      kpis.ggrNegative++
+    } else if (finalLabel === 'Under Review') {
+      kpis.underReview++
     }
   })
 
@@ -131,6 +136,32 @@ function calculateAllFinalLabels(data: any[]) {
         labelCounts[finalLabel] = 0
       }
       labelCounts[finalLabel]++
+    }
+  })
+
+  // Sort by count (descending) for better chart display
+  const sortedLabels = Object.entries(labelCounts)
+    .sort((a, b) => b[1] - a[1])
+    .reduce((acc, [label, count]) => {
+      acc[label] = count
+      return acc
+    }, {} as { [key: string]: number })
+
+  return sortedLabels
+}
+
+function calculateBaseLabels(data: any[]) {
+  const labelCounts: { [key: string]: number } = {}
+
+  data.forEach(row => {
+    const baseLabel = row.base_label || ''
+    
+    // Include ALL base labels (Positive, GGR Negative, Under Review, Remove)
+    if (baseLabel) {
+      if (!labelCounts[baseLabel]) {
+        labelCounts[baseLabel] = 0
+      }
+      labelCounts[baseLabel]++
     }
   })
 
