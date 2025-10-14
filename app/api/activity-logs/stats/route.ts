@@ -113,8 +113,10 @@ export async function GET(request: NextRequest) {
     
     const roleCounts: { [key: string]: number } = {}
     roleActivities?.forEach(activity => {
-      const role = activity.role
-      roleCounts[role] = (roleCounts[role] || 0) + 1
+      const role = activity.role as string
+      if (role) {
+        roleCounts[role] = (roleCounts[role] || 0) + 1
+      }
     })
     
     const activityByRole = Object.entries(roleCounts)
