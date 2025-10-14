@@ -12,7 +12,6 @@ import {
   SalesIcon, 
   ExecutiveOptimizationIcon, 
   ManagementIcon, 
-  TransactionIcon, 
   SupabaseIcon, 
   UserIcon,
   USCIcon,
@@ -109,9 +108,7 @@ export default function Sidebar({
   // 4. Highlight icon ketika sub menu aktif
   // 5. Scroll hanya untuk sub menu dengan styling konsisten
   useEffect(() => {
-    if (pathname.startsWith('/transaction/')) {
-      setOpenSubmenu('Transaction')
-    } else if (pathname.startsWith('/usc/')) {
+    if (pathname.startsWith('/usc/')) {
       setOpenSubmenu('USC')
     } else if (pathname.startsWith('/myr/')) {
       setOpenSubmenu('MYR')
@@ -315,23 +312,6 @@ export default function Sidebar({
         ]
       },
       {
-        title: 'Transaction',
-        icon: <TransactionIcon size={18} color="#ffffff" />,
-        permission: 'transaction',
-        submenu: [
-          { title: 'Adjustment', path: '/transaction/adjustment' },
-          { title: 'Deposit', path: '/transaction/deposit' },
-          { title: 'Withdraw', path: '/transaction/withdraw' },
-          { title: 'Exchange', path: '/transaction/exchange' },
-          { title: 'Headcount', path: '/transaction/headcount' },
-          { title: 'Member Report', path: '/transaction/member-report' },
-          { title: 'New Depositor', path: '/transaction/new-depositor' },
-          { title: 'New Register', path: '/transaction/new-register' },
-          { title: 'VIP Program', path: '/transaction/vip-program' },
-          { title: 'Master Data', path: '/transaction/master-data' }
-        ]
-      },
-      {
         title: 'Supabase',
         path: '/supabase',
         icon: <SupabaseIcon size={18} color="#ffffff" />,
@@ -407,13 +387,12 @@ export default function Sidebar({
   // Helper function untuk mendeteksi sub menu secara dinamis
   // Tambahkan path baru di sini untuk menambah sub menu baru
   const isSubmenuPath = (path: string) => {
-    return path.startsWith('/transaction/') || path.startsWith('/usc/') || path.startsWith('/myr/') || path.startsWith('/sgd/')
+    return path.startsWith('/usc/') || path.startsWith('/myr/') || path.startsWith('/sgd/')
   }
 
   // Helper function untuk mendapatkan parent menu dari path
   // Tambahkan mapping baru di sini untuk menambah sub menu baru
   const getParentMenuFromPath = (path: string) => {
-    if (path.startsWith('/transaction/')) return 'Transaction'
     if (path.startsWith('/usc/')) return 'USC'
     if (path.startsWith('/myr/')) return 'MYR'
     if (path.startsWith('/sgd/')) return 'SGD'
