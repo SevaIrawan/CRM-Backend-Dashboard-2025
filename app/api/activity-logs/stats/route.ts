@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
       .not('session_duration', 'is', null)
     
     const avgSessionDuration = logoutEvents?.length 
-      ? Math.round(logoutEvents.reduce((sum, event) => sum + (event.session_duration || 0), 0) / logoutEvents.length)
+      ? Math.round(logoutEvents.reduce((sum, event) => sum + (Number(event.session_duration) || 0), 0) / logoutEvents.length)
       : 0
     
     // 4. Most visited pages
