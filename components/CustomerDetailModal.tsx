@@ -26,6 +26,7 @@ interface CustomerDetailModalProps {
     start: string
     end: string
   }
+  apiEndpoint: string
 }
 
 export default function CustomerDetailModal({ 
@@ -33,7 +34,8 @@ export default function CustomerDetailModal({
   onClose, 
   brand, 
   period, 
-  dateRange 
+  dateRange,
+  apiEndpoint
 }: CustomerDetailModalProps) {
   const [customers, setCustomers] = useState<CustomerDetail[]>([])
   const [loading, setLoading] = useState(false)
@@ -59,7 +61,7 @@ export default function CustomerDetailModal({
           limit: String(rowsPerPage)
         })
         
-        const res = await fetch(`/api/myr-brand-performance-trends/customer-details?${params}`)
+        const res = await fetch(`${apiEndpoint}?${params}`)
         const json = await res.json()
         
         if (!json.success) {
@@ -104,7 +106,7 @@ export default function CustomerDetailModal({
         limit: '999999' // Get all records
       })
       
-      const res = await fetch(`/api/myr-brand-performance-trends/customer-details?${params}`)
+      const res = await fetch(`${apiEndpoint}?${params}`)
       const json = await res.json()
       
       if (!json.success) {

@@ -1546,6 +1546,7 @@ export default function BrandPerformanceTrendsPage() {
           brand={modalConfig.brand}
           period={modalConfig.period}
           dateRange={modalConfig.dateRange}
+          apiEndpoint="/api/myr-brand-performance-trends/customer-details"
         />
       )}
     </Layout>

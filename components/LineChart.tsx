@@ -310,6 +310,9 @@ export default function LineChart({
     } else if (isFrequencyType) {
       // For frequency - using standard format: 0,000.00
       return formatNumericKPI(value);
+    } else if (isFormulaNumericType) {
+      // For formula/numeric types (ATV, GGR User, DA User, etc.) - using standard format: RM 0,000.00
+      return formatCurrencyKPI(value, currency);
     } else if (isCountType) {
       // For count/integer - using standard format: 0,000 (no currency symbol)
       if (currency === 'MEMBER') {
