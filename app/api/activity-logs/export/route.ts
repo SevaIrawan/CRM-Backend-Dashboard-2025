@@ -131,9 +131,19 @@ export async function POST(request: NextRequest) {
           return value.toString()
         }
         
-        // Format timestamp
+        // Format timestamp in GMT+7
         if (col === 'timestamp') {
-          return new Date(value).toLocaleString()
+          const date = new Date(value)
+          const gmt7Time = new Date(date.getTime() + (7 * 60 * 60 * 1000))
+          return gmt7Time.toLocaleString('id-ID', {
+            timeZone: 'Asia/Jakarta',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+          })
         }
         
         // Escape commas and quotes in string values

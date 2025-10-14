@@ -170,9 +170,19 @@ export default function ActivityLogsPage() {
     }
   }
 
-  // Format timestamp
+  // Format timestamp in GMT+7
   const formatTimestamp = (timestamp: string) => {
-    return new Date(timestamp).toLocaleString()
+    const date = new Date(timestamp)
+    const gmt7Time = new Date(date.getTime() + (7 * 60 * 60 * 1000))
+    return gmt7Time.toLocaleString('id-ID', {
+      timeZone: 'Asia/Jakarta',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    })
   }
 
   // Format session duration
@@ -208,7 +218,7 @@ export default function ActivityLogsPage() {
       <div style={{ padding: '20px' }}>
         {/* Stats Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-          <Frame title="📊 Activity Statistics" icon="📈">
+          <Frame>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
               <select 
                 value={selectedPeriod} 
@@ -240,7 +250,7 @@ export default function ActivityLogsPage() {
             </div>
           </Frame>
 
-          <Frame title="🔍 Filters" icon="⚙️">
+          <Frame>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <input
                 type="text"
@@ -290,7 +300,7 @@ export default function ActivityLogsPage() {
             </div>
           </Frame>
 
-          <Frame title="📅 Date Range" icon="🗓️">
+          <Frame>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <input
                 type="date"
@@ -330,7 +340,7 @@ export default function ActivityLogsPage() {
             </div>
           </Frame>
 
-          <Frame title="📤 Export" icon="💾">
+          <Frame>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <button
                 onClick={handleExport}
@@ -355,7 +365,7 @@ export default function ActivityLogsPage() {
         </div>
 
         {/* Activity Logs Table */}
-        <Frame title="📋 Activity Logs" icon="📊">
+        <Frame>
           {loading ? (
             <div style={{ textAlign: 'center', padding: '40px' }}>Loading activity logs...</div>
           ) : logs.length === 0 ? (

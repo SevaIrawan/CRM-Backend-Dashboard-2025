@@ -7,13 +7,16 @@ const RealtimeTimestamp = () => {
 
   useEffect(() => {
     const updateTime = () => {
+      // Create date in GMT+7 (Asia/Jakarta timezone)
       const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      const seconds = String(now.getSeconds()).padStart(2, '0');
+      const gmt7Time = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+      
+      const year = gmt7Time.getUTCFullYear();
+      const month = String(gmt7Time.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(gmt7Time.getUTCDate()).padStart(2, '0');
+      const hours = String(gmt7Time.getUTCHours()).padStart(2, '0');
+      const minutes = String(gmt7Time.getUTCMinutes()).padStart(2, '0');
+      const seconds = String(gmt7Time.getUTCSeconds()).padStart(2, '0');
       
       setCurrentTime(`${year}-${month}-${day} ${hours}:${minutes}:${seconds}`);
     };
