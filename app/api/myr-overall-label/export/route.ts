@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       }, { status: 404 })
     }
 
-    // Define columns to export (in order)
+    // Define columns to export (in order) - SYNC with displayColumns in page.tsx
     const exportColumns = [
       'unique_code',
       'label',
@@ -43,10 +43,19 @@ export async function POST(request: NextRequest) {
       'brand_active',
       'active_period_months',
       'avg_deposit_amount',
+      // Avg Monthly metrics (after AVG DEPOSIT AMOUNT)
+      'avg_monthly_da',
+      'avg_monthly_cases',
       'monthly_avg_net_profit',
       'total_net_profit',
       'total_da',
       'total_dc',
+      // Withdraw metrics (after Total DC)
+      'total_withdraw_cases',
+      'total_withdraw_amount',
+      // Percentage metrics (after Total Withdraw Amount)
+      'winrate',
+      'withdrawal_rate',
       'first_deposit_date',
       'last_deposit_date',
       'active_group_count',
@@ -68,6 +77,12 @@ export async function POST(request: NextRequest) {
           return '-'
         }
         if (typeof value === 'number') {
+          // Special formatting for percentage columns
+          if (col === 'winrate' || col === 'withdrawal_rate') {
+            // Convert to percentage with 2 decimal places
+            const pct = value <= 1 && value >= 0 ? value * 100 : value
+            return `${pct.toFixed(2)}%`
+          }
           // For integers, return as-is (no decimal)
           if (Number.isInteger(value)) {
             return value.toString()
