@@ -18,7 +18,6 @@ import {
 import {
   playNotificationSound,
   formatRelativeTime,
-  formatAbsoluteTime,
   getUserSession,
   scrollToBottom
 } from '@/lib/feedbackUtils'
@@ -263,11 +262,6 @@ export default function AdminFeedbackPage() {
     }
   }
 
-  // Real-time subscription (disabled for now - using polling)
-  // useEffect(() => {
-  //   // Real-time subscriptions temporarily disabled
-  // }, [userSession, selectedFeedback])
-
   // Polling backup (30 seconds)
   useEffect(() => {
     if (!userSession || userSession.role !== 'admin') return
@@ -303,35 +297,53 @@ export default function AdminFeedbackPage() {
   return (
     <Layout pageTitle="Feedback & Support Management">
       <div style={{ padding: '20px' }}>
-        {/* Stats & Filters */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-          {/* Unread Count */}
-          <Frame>
-            <div style={{ textAlign: 'center' }}>
-              <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', color: '#6b7280' }}>Unread Messages</h3>
-              <div style={{ fontSize: '36px', fontWeight: 'bold', color: '#ef4444' }}>
-                {unreadCount}
-              </div>
-            </div>
-          </Frame>
+        {/* Header */}
+        <div style={{ marginBottom: '30px' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '8px', color: '#111827' }}>
+            Feedback & Support Management
+          </h1>
+          <p style={{ color: '#6b7280', fontSize: '16px' }}>
+            Manage user feedback and support requests ({feedbacks.length} total • Unread: {unreadCount})
+          </p>
+        </div>
 
-          {/* Filters */}
+        {/* Filters */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '30px' }}>
           <Frame>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Status</label>
               <select
                 value={filters.status}
                 onChange={(e) => setFilters({ ...filters, status: e.target.value as any })}
-                style={{ padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '14px' }}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid #d1d5db',
+                  backgroundColor: 'white',
+                  fontSize: '14px'
+                }}
               >
                 <option value="all">All Status</option>
                 {Object.entries(FEEDBACK_STATUS_CONFIG).map(([key, config]) => (
                   <option key={key} value={key}>{config.label}</option>
                 ))}
               </select>
+            </div>
+          </Frame>
+
+          <Frame>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Priority</label>
               <select
                 value={filters.priority}
                 onChange={(e) => setFilters({ ...filters, priority: e.target.value as any })}
-                style={{ padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '14px' }}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid #d1d5db',
+                  backgroundColor: 'white',
+                  fontSize: '14px'
+                }}
               >
                 <option value="all">All Priority</option>
                 {Object.entries(FEEDBACK_PRIORITY_CONFIG).map(([key, config]) => (
@@ -343,60 +355,43 @@ export default function AdminFeedbackPage() {
 
           <Frame>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <select
-                value={filters.category}
-                onChange={(e) => setFilters({ ...filters, category: e.target.value as any })}
-                style={{ padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '14px' }}
-              >
-                <option value="all">All Categories</option>
-                {Object.entries(FEEDBACK_CATEGORY_LABELS).map(([key, label]) => (
-                  <option key={key} value={key}>{label}</option>
-                ))}
-              </select>
+              <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Search</label>
               <input
                 type="text"
                 placeholder="Search feedbacks..."
                 value={filters.search}
                 onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                style={{ padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '14px' }}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid #d1d5db',
+                  backgroundColor: 'white',
+                  fontSize: '14px'
+                }}
               />
             </div>
           </Frame>
         </div>
 
-        {/* Main Content */}
-        <div style={{ display: 'grid', gridTemplateColumns: selectedFeedback ? '1fr 2fr' : '1fr', gap: '20px' }}>
-          {/* Feedback List */}
+        {/* Main Content - Split Layout */}
+        <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '20px', height: '600px' }}>
+          {/* Notifications List */}
           <Frame>
-            <div style={{ 
-              padding: '20px', 
-              height: '70vh', 
-              display: 'flex', 
-              flexDirection: 'column',
-              overflow: 'hidden'
-            }}>
-              <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', fontWeight: 'bold', color: '#1f2937' }}>
-                📋 Feedback List ({feedbacks.length})
+            <div style={{ padding: '20px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '20px', color: '#111827' }}>
+                📬 Notifications ({feedbacks.length})
               </h3>
               
-              {/* Debug Info */}
-              <div style={{ fontSize: '14px', color: '#666', marginBottom: '15px', padding: '10px', backgroundColor: '#f3f4f6', borderRadius: '4px' }}>
-                <strong>Debug Info:</strong><br/>
-                • Loading: {loading.toString()}<br/>
-                • Feedbacks Count: {feedbacks.length}<br/>
-                • Selected Feedback: {selectedFeedback ? selectedFeedback.id : 'None'}
-              </div>
-
               {loading ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
-                  Loading feedbacks...
+                <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+                  Loading notifications...
                 </div>
               ) : feedbacks.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
-                  No feedbacks found
+                <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+                  No notifications found
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', maxHeight: '500px', overflowY: 'auto' }}>
+                <div style={{ flex: 1, overflowY: 'auto' }}>
                   {feedbacks.map(feedback => (
                     <div
                       key={feedback.id}
@@ -405,13 +400,13 @@ export default function AdminFeedbackPage() {
                         fetchReplies(feedback.id)
                       }}
                       style={{
-                        padding: '15px',
-                        border: '1px solid #e5e7eb',
+                        padding: '12px',
                         borderRadius: '8px',
+                        border: selectedFeedback?.id === feedback.id ? '2px solid #3b82f6' : '1px solid #e5e7eb',
+                        backgroundColor: selectedFeedback?.id === feedback.id ? '#eff6ff' : 'white',
                         cursor: 'pointer',
-                        backgroundColor: selectedFeedback?.id === feedback.id ? '#f0f9ff' : 'white',
-                        borderColor: selectedFeedback?.id === feedback.id ? '#3b82f6' : '#e5e7eb',
-                        transition: 'all 0.2s ease',
+                        marginBottom: '12px',
+                        transition: 'all 0.2s',
                         position: 'relative'
                       }}
                     >
@@ -421,69 +416,65 @@ export default function AdminFeedbackPage() {
                           position: 'absolute',
                           top: '8px',
                           right: '8px',
-                          backgroundColor: '#ef4444',
+                          backgroundColor: '#dc2626',
                           color: 'white',
-                          fontSize: '10px',
-                          padding: '2px 6px',
-                          borderRadius: '10px',
+                          fontSize: '12px',
+                          padding: '4px 8px',
+                          borderRadius: '12px',
                           fontWeight: 'bold'
                         }}>
-                          {feedback.unread_count} new
+                          {feedback.unread_count}
                         </div>
                       )}
 
-                      {/* Header */}
-                      <div style={{ display: 'flex', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
-                        <span style={{
-                          padding: '2px 8px',
-                          borderRadius: '4px',
-                          fontSize: '11px',
-                          fontWeight: 'bold',
-                          backgroundColor: FEEDBACK_PRIORITY_CONFIG[feedback.priority].color,
-                          color: 'white'
-                        }}>
+                      {/* Header Tags */}
+                      <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                        <span 
+                          style={{
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            fontWeight: 'bold',
+                            color: 'white',
+                            backgroundColor: FEEDBACK_PRIORITY_CONFIG[feedback.priority].color
+                          }}
+                        >
                           {FEEDBACK_PRIORITY_CONFIG[feedback.priority].label}
                         </span>
-                        <span style={{
-                          padding: '2px 8px',
-                          borderRadius: '4px',
-                          fontSize: '11px',
-                          fontWeight: 'bold',
-                          backgroundColor: FEEDBACK_STATUS_CONFIG[feedback.status].color,
-                          color: 'white'
-                        }}>
+                        <span 
+                          style={{
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            fontWeight: 'bold',
+                            color: 'white',
+                            backgroundColor: FEEDBACK_STATUS_CONFIG[feedback.status].color
+                          }}
+                        >
                           {FEEDBACK_STATUS_CONFIG[feedback.status].label}
-                        </span>
-                        <span style={{
-                          padding: '2px 8px',
-                          borderRadius: '4px',
-                          fontSize: '11px',
-                          backgroundColor: '#f3f4f6',
-                          color: '#374151'
-                        }}>
-                          {FEEDBACK_CATEGORY_LABELS[feedback.category]}
                         </span>
                       </div>
 
                       {/* User Info */}
-                      <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#374151', marginBottom: '5px' }}>
+                      <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '4px', color: '#111827' }}>
                         {feedback.username} ({feedback.role})
                       </div>
 
                       {/* Message Preview */}
                       <div style={{ 
                         fontSize: '13px', 
-                        color: '#6b7280', 
-                        lineHeight: '1.4',
-                        maxHeight: '40px',
+                        color: '#6b7280',
                         overflow: 'hidden',
-                        textOverflow: 'ellipsis'
+                        textOverflow: 'ellipsis',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical'
                       }}>
                         {feedback.initial_message}
                       </div>
 
                       {/* Time */}
-                      <div style={{ fontSize: '11px', color: '#9ca3af' }}>
+                      <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '8px' }}>
                         {formatRelativeTime(feedback.updated_at)}
                       </div>
                     </div>
@@ -493,154 +484,168 @@ export default function AdminFeedbackPage() {
             </div>
           </Frame>
 
-          {/* Conversation Detail */}
-          {selectedFeedback && (
-            <Frame>
-              <div style={{ display: 'flex', flexDirection: 'column', height: '70vh' }}>
-                {/* Header */}
-                <div style={{ padding: '15px', borderBottom: '1px solid #e5e7eb' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '10px' }}>
-                    <div>
-                      <h3 style={{ margin: '0 0 5px 0', fontSize: '18px', fontWeight: 'bold' }}>
-                        #{selectedFeedback.id} - {selectedFeedback.username}
-                      </h3>
-                      <div style={{ fontSize: '13px', color: '#6b7280' }}>
-                        {selectedFeedback.email} • {selectedFeedback.page_title || selectedFeedback.page_url}
+          {/* Chat Box */}
+          <Frame>
+            <div style={{ padding: '20px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+              {selectedFeedback ? (
+                <>
+                  <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '20px', color: '#111827' }}>
+                    💬 Chat with {selectedFeedback.username}
+                  </h3>
+                  <div style={{ flex: 1, border: '1px solid #e5e7eb', borderRadius: '8px', display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: 'white' }}>
+                    {/* Chat Header */}
+                    <div style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
+                            #{selectedFeedback.id} - {selectedFeedback.username} ({selectedFeedback.role})
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                            {selectedFeedback.page_title || selectedFeedback.page_url}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setSelectedFeedback(null)
+                            setReplies([])
+                          }}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: '#dc2626',
+                            color: 'white',
+                            fontSize: '12px',
+                            borderRadius: '4px',
+                            border: 'none',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ✕ Close
+                        </button>
                       </div>
-                      <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '5px' }}>
-                        Created: {formatAbsoluteTime(selectedFeedback.created_at)}
+
+                      {/* Status & Priority Controls */}
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <select
+                          value={selectedFeedback.status}
+                          onChange={(e) => updateStatus(selectedFeedback.id, e.target.value as FeedbackStatus)}
+                          style={{
+                            padding: '4px 8px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            backgroundColor: 'white'
+                          }}
+                        >
+                          {Object.entries(FEEDBACK_STATUS_CONFIG).map(([key, config]) => (
+                            <option key={key} value={key}>{config.label}</option>
+                          ))}
+                        </select>
+                        <select
+                          value={selectedFeedback.priority}
+                          onChange={(e) => updatePriority(selectedFeedback.id, e.target.value as FeedbackPriority)}
+                          style={{
+                            padding: '4px 8px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            backgroundColor: 'white'
+                          }}
+                        >
+                          {Object.entries(FEEDBACK_PRIORITY_CONFIG).map(([key, config]) => (
+                            <option key={key} value={key}>{config.label}</option>
+                          ))}
+                        </select>
                       </div>
                     </div>
-                    <button
-                      onClick={() => {
-                        setSelectedFeedback(null)
-                        setReplies([])
-                      }}
-                      style={{
-                        padding: '8px 12px',
-                        backgroundColor: '#ef4444',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '12px'
-                      }}
-                    >
-                      ✕ Close
-                    </button>
-                  </div>
 
-                  {/* Status & Priority Controls */}
-                  <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                    <select
-                      value={selectedFeedback.status}
-                      onChange={(e) => updateStatus(selectedFeedback.id, e.target.value as FeedbackStatus)}
-                      style={{
-                        padding: '6px 8px',
-                        borderRadius: '4px',
-                        border: '1px solid #d1d5db',
-                        fontSize: '12px',
-                        backgroundColor: 'white'
-                      }}
+                    {/* Messages */}
+                    <div 
+                      id="admin-feedback-messages"
+                      style={{ flex: 1, padding: '16px', overflowY: 'auto', backgroundColor: '#f9fafb' }}
                     >
-                      {Object.entries(FEEDBACK_STATUS_CONFIG).map(([key, config]) => (
-                        <option key={key} value={key}>{config.label}</option>
+                      {replies.map(reply => (
+                        <div
+                          key={reply.id}
+                          style={{
+                            padding: '12px',
+                            borderRadius: '8px',
+                            maxWidth: '85%',
+                            marginBottom: '8px',
+                            backgroundColor: reply.sender_type === 'admin' ? '#3b82f6' : 'white',
+                            color: reply.sender_type === 'admin' ? 'white' : '#111827',
+                            border: reply.sender_type === 'user' ? '1px solid #e5e7eb' : 'none',
+                            marginLeft: reply.sender_type === 'admin' ? 'auto' : '0'
+                          }}
+                        >
+                          <div style={{ fontSize: '12px', opacity: 0.75, marginBottom: '4px' }}>
+                            {reply.sender_username} {reply.sender_type === 'admin' && '(You)'}
+                          </div>
+                          <div style={{ fontSize: '14px', whiteSpace: 'pre-wrap' }}>
+                            {reply.message}
+                          </div>
+                          <div style={{ fontSize: '12px', opacity: 0.75, marginTop: '4px' }}>
+                            {formatRelativeTime(reply.created_at)}
+                          </div>
+                        </div>
                       ))}
-                    </select>
-                    <select
-                      value={selectedFeedback.priority}
-                      onChange={(e) => updatePriority(selectedFeedback.id, e.target.value as FeedbackPriority)}
-                      style={{
-                        padding: '6px 8px',
-                        borderRadius: '4px',
-                        border: '1px solid #d1d5db',
-                        fontSize: '12px',
-                        backgroundColor: 'white'
-                      }}
-                    >
-                      {Object.entries(FEEDBACK_PRIORITY_CONFIG).map(([key, config]) => (
-                        <option key={key} value={key}>{config.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Messages */}
-                <div 
-                  id="admin-feedback-messages"
-                  style={{
-                    flex: 1,
-                    padding: '15px',
-                    overflowY: 'auto',
-                    backgroundColor: '#f9fafb',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '10px'
-                  }}
-                >
-                  {replies.map(reply => (
-                    <div
-                      key={reply.id}
-                      style={{
-                        padding: '12px',
-                        borderRadius: '8px',
-                        backgroundColor: reply.sender_type === 'admin' ? '#dbeafe' : 'white',
-                        border: '1px solid #e5e7eb',
-                        maxWidth: '80%',
-                        alignSelf: reply.sender_type === 'admin' ? 'flex-end' : 'flex-start'
-                      }}
-                    >
-                      <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px', fontWeight: '500' }}>
-                        {reply.sender_username} {reply.sender_type === 'admin' && '(You)'}
-                      </div>
-                      <div style={{ fontSize: '14px', whiteSpace: 'pre-wrap' }}>
-                        {reply.message}
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px' }}>
-                        {formatRelativeTime(reply.created_at)}
-                      </div>
                     </div>
-                  ))}
-                </div>
 
-                {/* Reply Form */}
-                <div style={{ padding: '15px', borderTop: '1px solid #e5e7eb', backgroundColor: 'white' }}>
-                  <form onSubmit={handleSendReply} style={{ display: 'flex', gap: '10px' }}>
-                    <textarea
-                      placeholder="Type your reply..."
-                      value={replyMessage}
-                      onChange={(e) => setReplyMessage(e.target.value)}
-                      style={{
-                        flex: 1,
-                        padding: '10px',
-                        borderRadius: '6px',
-                        border: '1px solid #d1d5db',
-                        fontSize: '14px',
-                        resize: 'vertical',
-                        minHeight: '60px'
-                      }}
-                    />
-                    <button
-                      type="submit"
-                      disabled={sending || !replyMessage.trim()}
-                      style={{
-                        padding: '10px 20px',
-                        backgroundColor: sending || !replyMessage.trim() ? '#9ca3af' : '#3b82f6',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: sending || !replyMessage.trim() ? 'not-allowed' : 'pointer',
-                        fontSize: '14px',
-                        fontWeight: '500'
-                      }}
-                    >
-                      {sending ? 'Sending...' : 'Send Reply'}
-                    </button>
-                  </form>
+                    {/* Reply Form */}
+                    <div style={{ padding: '12px', borderTop: '1px solid #e5e7eb', backgroundColor: 'white' }}>
+                      <form onSubmit={handleSendReply} style={{ display: 'flex', gap: '8px' }}>
+                        <textarea
+                          placeholder="Type your reply..."
+                          value={replyMessage}
+                          onChange={(e) => setReplyMessage(e.target.value)}
+                          style={{
+                            flex: 1,
+                            padding: '8px 12px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '4px',
+                            fontSize: '14px',
+                            resize: 'none',
+                            minHeight: '60px'
+                          }}
+                          rows={2}
+                        />
+                        <button
+                          type="submit"
+                          disabled={sending || !replyMessage.trim()}
+                          style={{
+                            padding: '8px 16px',
+                            backgroundColor: sending || !replyMessage.trim() ? '#9ca3af' : '#3b82f6',
+                            color: 'white',
+                            fontSize: '14px',
+                            borderRadius: '4px',
+                            border: 'none',
+                            cursor: sending || !replyMessage.trim() ? 'not-allowed' : 'pointer'
+                          }}
+                        >
+                          {sending ? 'Sending...' : 'Send'}
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  height: '100%', 
+                  color: '#6b7280',
+                  fontSize: '16px',
+                  textAlign: 'center'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>💬</div>
+                    <div style={{ fontSize: '18px', fontWeight: '500', marginBottom: '8px' }}>Select a notification to start chat</div>
+                    <div style={{ fontSize: '14px' }}>Choose from the notifications on the left to view and reply</div>
+                  </div>
                 </div>
-              </div>
-            </Frame>
-          )}
+              )}
+            </div>
+          </Frame>
         </div>
       </div>
     </Layout>
