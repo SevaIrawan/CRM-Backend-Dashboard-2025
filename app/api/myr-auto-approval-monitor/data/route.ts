@@ -892,7 +892,7 @@ export async function GET(request: NextRequest) {
               
               if (altData && altData.length > 0) {
                 console.log('🔍 [MoM] Found data without line filter:', {
-                  availableLines: [...new Set(altData.map(d => d.line))],
+                  availableLines: Array.from(new Set(altData.map(d => d.line))),
                   sampleData: altData
                 })
               } else {
