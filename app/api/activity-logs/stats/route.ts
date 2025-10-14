@@ -92,11 +92,11 @@ export async function GET(request: NextRequest) {
     
     const userCounts: { [key: string]: { count: number, role: string } } = {}
     allActivities?.forEach(activity => {
-      const username = activity.username
-      if (userCounts[username]) {
+      const username = activity.username as string
+      if (username && userCounts[username]) {
         userCounts[username].count++
-      } else {
-        userCounts[username] = { count: 1, role: activity.role }
+      } else if (username) {
+        userCounts[username] = { count: 1, role: activity.role as string }
       }
     })
     
