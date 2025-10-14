@@ -322,6 +322,12 @@ export default function Sidebar({
         path: '/users',
         icon: <UserIcon size={18} color="#ffffff" />,
         permission: 'users'
+      },
+      {
+        title: 'Activity Logs',
+        path: '/admin/activity-logs',
+        icon: <ManagementIcon size={18} color="#ffffff" />,
+        permission: 'admin'
       }
     ]
 

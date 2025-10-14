@@ -1,0 +1,130 @@
+'use client'
+
+import { useEffect, useRef } from 'react'
+import { usePathname } from 'next/navigation'
+import { logActivityViaAPI, getStoredSessionId } from '@/lib/activityLogger'
+
+interface ActivityTrackerProps {
+  children: React.ReactNode
+}
+
+/**
+ * ActivityTracker Component
+ * 
+ * Purpose: Automatically track page views for non-admin users
+ * Usage: Wrap around Layout component
+ */
+export default function ActivityTracker({ children }: ActivityTrackerProps) {
+  const pathname = usePathname()
+  const lastTrackedPath = useRef<string | null>(null)
+  const sessionStarted = useRef<boolean>(false)
+
+  useEffect(() => {
+    const trackPageView = async () => {
+      try {
+        // Skip tracking for admin users
+        const session = localStorage.getItem('nexmax_session')
+        if (!session) return
+
+        const sessionData = JSON.parse(session)
+        if (sessionData.role === 'admin') return
+
+        // Skip if already tracked this page
+        if (lastTrackedPath.current === pathname) return
+
+        // Skip login page (handled separately)
+        if (pathname === '/login') return
+
+        // Get session ID (should exist from login)
+        const sessionId = getStoredSessionId()
+        if (!sessionId) {
+          console.warn('⚠️ No session ID found for page tracking')
+          return
+        }
+
+        // Generate page title
+        const pageTitle = generatePageTitle(pathname)
+
+        // Track page view
+        await logActivityViaAPI({
+          username: sessionData.username,
+          email: sessionData.email,
+          role: sessionData.role,
+          userId: sessionData.id,
+          activityType: 'page_view',
+          accessedPage: pathname,
+          pageTitle,
+          sessionId,
+          metadata: {
+            previousPage: lastTrackedPath.current,
+            timestamp: new Date().toISOString()
+          }
+        })
+
+        // Update last tracked path
+        lastTrackedPath.current = pathname
+        console.log(`📊 [ActivityTracker] Tracked page view: ${pathname}`)
+
+      } catch (error) {
+        console.error('❌ [ActivityTracker] Page tracking error:', error)
+        // Don't throw - tracking should not break the app
+      }
+    }
+
+    // Track page view with small delay to ensure page is loaded
+    const timer = setTimeout(trackPageView, 500)
+    
+    return () => clearTimeout(timer)
+  }, [pathname])
+
+  return <>{children}</>
+}
+
+/**
+ * Generate user-friendly page title from pathname
+ */
+function generatePageTitle(pathname: string): string {
+  // Remove leading slash and split by '/'
+  const segments = pathname.replace(/^\//, '').split('/')
+  
+  // Handle empty pathname
+  if (segments.length === 0 || segments[0] === '') {
+    return 'Dashboard'
+  }
+
+  // Handle currency-specific pages
+  const currencies = ['myr', 'sgd', 'usc']
+  if (currencies.includes(segments[0])) {
+    const currency = segments[0].toUpperCase()
+    const page = segments[1] || 'Overview'
+    
+    // Convert page names to user-friendly format
+    const pageNames: { [key: string]: string } = {
+      'overview': 'Overview',
+      'member-analytic': 'Member Analytic',
+      'brand-performance-trends': 'Brand Performance Trends',
+      'churn-member': 'Churn Member',
+      'customer-retention': 'Customer Retention',
+      'kpi-comparison': 'KPI Comparison',
+      'member-report': 'Member Report',
+      'auto-approval-monitor': 'Auto Approval Monitor',
+      'auto-approval-withdraw': 'Auto Approval Withdraw',
+      'aia-candy-tracking': 'AIA Candy Tracking',
+      'overall-label': 'Overall Label'
+    }
+    
+    const friendlyPageName = pageNames[page] || page.charAt(0).toUpperCase() + page.slice(1)
+    return `${currency} - ${friendlyPageName}`
+  }
+
+  // Handle other pages
+  const pageNames: { [key: string]: string } = {
+    'dashboard': 'Dashboard',
+    'transaction': 'Transactions',
+    'users': 'Users',
+    'supabase': 'Supabase'
+  }
+
+  const page = segments[0]
+  return pageNames[page] || page.charAt(0).toUpperCase() + page.slice(1)
+}

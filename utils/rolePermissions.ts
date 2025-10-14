@@ -28,7 +28,8 @@ export const USER_ROLES: { [key: string]: UserRole } = {
       'usc',
       'transaction',
       'supabase',
-      'users'
+      'users',
+      'admin'
     ],
     canAccessUserManagement: true,
     isReadOnly: false
@@ -199,7 +200,8 @@ export const getMenuItemsByRole = (userRole: string) => {
     { title: 'USC', path: '/usc', permission: 'usc', hasSubmenu: true },
     { title: 'Transaction', path: '/transaction', permission: 'transaction', hasSubmenu: true },
     { title: 'Supabase', path: '/supabase', permission: 'supabase' },
-    { title: 'User Management', path: '/users', permission: 'users' }
+    { title: 'User Management', path: '/users', permission: 'users' },
+    { title: 'Activity Logs', path: '/admin/activity-logs', permission: 'admin' }
   ]
 
   const filteredItems = allMenuItems.filter(item => 

@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { getRoleDisplayName } from '@/utils/rolePermissions'
 import RealtimeTimestamp from './RealtimeTimestamp'
+import { logActivityViaAPI, getStoredSessionId, clearStoredSessionId, calculateSessionDuration } from '@/lib/activityLogger'
 
 interface HeaderProps {
   pageTitle?: string
@@ -131,6 +132,43 @@ export default function Header({
   const handleLogout = async () => {
     try {
       console.log('🔄 Starting logout...')
+      
+      // ✅ ACTIVITY TRACKING: Log logout activity (except admin)
+      if (userInfo && userInfo.role !== 'admin') {
+        try {
+          const sessionId = getStoredSessionId()
+          const sessionDuration = calculateSessionDuration()
+          
+          // Get user data from session
+          const session = localStorage.getItem('nexmax_session')
+          if (session) {
+            const sessionData = JSON.parse(session)
+            
+            // Log logout activity
+            await logActivityViaAPI({
+              username: sessionData.username,
+              email: sessionData.email,
+              role: sessionData.role,
+              userId: sessionData.id,
+              activityType: 'logout',
+              accessedPage: window.location.pathname,
+              sessionId,
+              sessionDuration,
+              metadata: {
+                logoutMethod: 'manual',
+                lastPage: window.location.pathname
+              }
+            })
+          }
+          
+          // Clear session ID
+          clearStoredSessionId()
+        } catch (trackingError) {
+          console.error('❌ Logout tracking error:', trackingError)
+          // Continue with logout even if tracking fails
+        }
+      }
+      
       if (typeof window !== 'undefined') {
         localStorage.removeItem('nexmax_session')
         document.cookie = 'user_id=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT'

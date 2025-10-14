@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 import Image from 'next/image'
+import { logActivityViaAPI, generateSessionId, storeSessionId } from '@/lib/activityLogger'
 
 // Supabase configuration with correct API key
 const supabaseUrl = 'https://bbuxfnchflhtulainndm.supabase.co'
@@ -76,6 +77,45 @@ export default function LoginPage() {
         role: users.role,
         email: users.email
       }))
+
+      // ✅ ACTIVITY TRACKING: Log login activity (except admin)
+      console.log('🔍 [LOGIN] User role:', users.role)
+      if (users.role !== 'admin') {
+        console.log('🔍 [LOGIN] Starting activity tracking for:', users.username)
+        
+        try {
+          const sessionId = generateSessionId()
+          storeSessionId(sessionId)
+          
+          console.log('📝 [LOGIN] Logging activity:', {
+            username: users.username,
+            role: users.role,
+            userId: users.id,
+            sessionId
+          })
+          
+          // Log login activity
+          const trackingResult = await logActivityViaAPI({
+            username: users.username,
+            email: users.email,
+            role: users.role,
+            userId: users.id,
+            activityType: 'login',
+            accessedPage: '/login',
+            sessionId,
+            metadata: {
+              loginMethod: 'password',
+              rememberMe: rememberMe
+            }
+          })
+          
+          console.log('✅ [LOGIN] Tracking result:', trackingResult)
+        } catch (trackingError) {
+          console.error('❌ [LOGIN] Tracking failed:', trackingError)
+        }
+      } else {
+        console.log('ℹ️ [LOGIN] Admin login - no tracking')
+      }
 
       // Redirect based on user role
       setTimeout(() => {

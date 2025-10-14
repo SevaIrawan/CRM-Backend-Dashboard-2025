@@ -7,6 +7,7 @@ import SubHeader from './SubHeader'
 import AccessControl from './AccessControl'
 import PageTransition from './PageTransition'
 import NavPrefetch from './NavPrefetch'
+import ActivityTracker from './ActivityTracker'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -32,40 +33,42 @@ export default function Layout({
   const [sidebarOpen, setSidebarOpen] = useState(sidebarExpanded)
 
   return (
-    <AccessControl>
-      <div className="main-container">
-        <NavPrefetch />
-        
-        <Sidebar 
-          sidebarOpen={sidebarOpen} 
-          setSidebarOpen={setSidebarOpen}
-          darkMode={darkMode}
-          onToggleDarkMode={onToggleDarkMode}
-          onLogout={onLogout}
-          sidebarExpanded={sidebarExpanded}
-        />
-        
-        <Header 
-          pageTitle={pageTitle}
-          sidebarOpen={sidebarOpen}
-          setSidebarOpen={setSidebarOpen}
-          darkMode={darkMode}
-          onToggleDarkMode={onToggleDarkMode}
-          onLogout={onLogout}
-        />
-        
-        {customSubHeader && (
-          <div className={`subheader ${!sidebarOpen ? 'collapsed' : ''}`}>
-            {customSubHeader}
+    <ActivityTracker>
+      <AccessControl>
+        <div className="main-container">
+          <NavPrefetch />
+          
+          <Sidebar 
+            sidebarOpen={sidebarOpen} 
+            setSidebarOpen={setSidebarOpen}
+            darkMode={darkMode}
+            onToggleDarkMode={onToggleDarkMode}
+            onLogout={onLogout}
+            sidebarExpanded={sidebarExpanded}
+          />
+          
+          <Header 
+            pageTitle={pageTitle}
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={setSidebarOpen}
+            darkMode={darkMode}
+            onToggleDarkMode={onToggleDarkMode}
+            onLogout={onLogout}
+          />
+          
+          {customSubHeader && (
+            <div className={`subheader ${!sidebarOpen ? 'collapsed' : ''}`}>
+              {customSubHeader}
+            </div>
+          )}
+          
+          <div className={`main-content ${!sidebarOpen ? 'collapsed' : ''} ${customSubHeader ? 'has-subheader' : ''}`}>
+            <PageTransition>
+              {children}
+            </PageTransition>
           </div>
-        )}
-        
-        <div className={`main-content ${!sidebarOpen ? 'collapsed' : ''} ${customSubHeader ? 'has-subheader' : ''}`}>
-          <PageTransition>
-            {children}
-          </PageTransition>
         </div>
-      </div>
-    </AccessControl>
+      </AccessControl>
+    </ActivityTracker>
   )
 } 
