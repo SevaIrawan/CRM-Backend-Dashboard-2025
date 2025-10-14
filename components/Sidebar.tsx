@@ -328,6 +328,12 @@ export default function Sidebar({
         path: '/admin/activity-logs',
         icon: <ManagementIcon size={18} color="#ffffff" />,
         permission: 'admin'
+      },
+      {
+        title: 'Feedback & Support',
+        path: '/admin/feedback',
+        icon: <ManagementIcon size={18} color="#ffffff" />,
+        permission: 'admin'
       }
     ]
 

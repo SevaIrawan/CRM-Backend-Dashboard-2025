@@ -8,6 +8,7 @@ import AccessControl from './AccessControl'
 import PageTransition from './PageTransition'
 import NavPrefetch from './NavPrefetch'
 import ActivityTracker from './ActivityTracker'
+import FeedbackWidget from './FeedbackWidget'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -67,6 +68,9 @@ export default function Layout({
               {children}
             </PageTransition>
           </div>
+          
+          {/* Feedback Widget - Available on all pages */}
+          <FeedbackWidget />
         </div>
       </AccessControl>
     </ActivityTracker>

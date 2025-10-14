@@ -70,12 +70,20 @@ export default function LoginPage() {
         return
       }
 
+      // Validate role exists in system
+      const validRoles = ['admin', 'executive', 'manager_myr', 'manager_sgd', 'manager_usc', 'sq_myr', 'sq_sgd', 'sq_usc']
+      if (!validRoles.includes(users.role)) {
+        setError(`Invalid user role: ${users.role}. Please contact administrator.`)
+        setLoading(false)
+        return
+      }
+
       // Store user data in localStorage
       localStorage.setItem('nexmax_session', JSON.stringify({
         id: users.id,
         username: users.username,
         role: users.role,
-        email: users.email
+        email: users.email || `${users.username}@nexmax.com`
       }))
 
       // ✅ ACTIVITY TRACKING: Log login activity (except admin)
@@ -97,7 +105,7 @@ export default function LoginPage() {
           // Log login activity
           const trackingResult = await logActivityViaAPI({
             username: users.username,
-            email: users.email,
+            email: users.email || `${users.username}@nexmax.com`,
             role: users.role,
             userId: users.id,
             activityType: 'login',
