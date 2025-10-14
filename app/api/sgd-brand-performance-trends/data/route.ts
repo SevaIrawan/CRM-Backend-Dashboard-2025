@@ -21,16 +21,16 @@ export async function GET(request: NextRequest) {
       periodB: { start: periodBStart, end: periodBEnd }
     })
 
-    // Get REAL DATA from database - all possible brands
-    const allBrands = ['SBMY', 'LVMY', 'STMY', 'JMMY', 'UVMY', 'FWMY']
+    // Get REAL DATA from database - all possible brands (SGD)
+    const allBrands = ['ABSG', 'AMSG', 'OK188', 'UWSG', 'OXSG', 'KBSG', 'FWSG', 'JMSG', 'WBSG', 'M8SG', 'M24SG', '17SG']
     
     // Calculate overall KPIs for both periods
     const calculateOverallKPIs = async (startDate: string, endDate: string) => {
       // Get summary data for all brands
       const { data: summaryData, error: summaryError } = await supabase
-        .from('blue_whale_myr_summary')
+        .from('blue_whale_sgd_summary')
         .select('*')
-        .eq('currency', 'MYR')
+        .eq('currency', 'SGD')
         .in('line', allBrands)
         .gte('date', startDate)
         .lte('date', endDate)
@@ -39,9 +39,9 @@ export async function GET(request: NextRequest) {
 
       // Get member data for active member calculation
       const { data: memberData, error: memberError } = await supabase
-        .from('blue_whale_myr')
+        .from('blue_whale_sgd')
         .select('userkey, unique_code')
-        .eq('currency', 'MYR')
+        .eq('currency', 'SGD')
         .in('line', allBrands)
         .gte('date', startDate)
         .lte('date', endDate)
@@ -103,9 +103,9 @@ export async function GET(request: NextRequest) {
       for (const brand of allBrands) {
         // Check if brand has active members (deposit_cases > 0) in the period
         const { data, error } = await supabase
-          .from('blue_whale_myr')
+          .from('blue_whale_sgd')
           .select('userkey')
-          .eq('currency', 'MYR')
+          .eq('currency', 'SGD')
           .eq('line', brand)
           .gte('date', startDate)
           .lte('date', endDate)
@@ -168,17 +168,17 @@ export async function GET(request: NextRequest) {
       allBrands.map(async (brand) => {
         // Period A data
         const { data: periodASummary, error: periodASummaryError } = await supabase
-          .from('blue_whale_myr_summary')
+          .from('blue_whale_sgd_summary')
           .select('*')
-          .eq('currency', 'MYR')
+          .eq('currency', 'SGD')
           .eq('line', brand)
           .gte('date', periodAStart)
           .lte('date', periodAEnd)
 
         const { data: periodAMembers, error: periodAMembersError } = await supabase
-          .from('blue_whale_myr')
+          .from('blue_whale_sgd')
           .select('userkey, unique_code')
-          .eq('currency', 'MYR')
+          .eq('currency', 'SGD')
           .eq('line', brand)
           .gte('date', periodAStart)
           .lte('date', periodAEnd)
@@ -186,17 +186,17 @@ export async function GET(request: NextRequest) {
 
         // Period B data
         const { data: periodBSummary, error: periodBSummaryError } = await supabase
-          .from('blue_whale_myr_summary')
+          .from('blue_whale_sgd_summary')
           .select('*')
-          .eq('currency', 'MYR')
+          .eq('currency', 'SGD')
           .eq('line', brand)
           .gte('date', periodBStart)
           .lte('date', periodBEnd)
 
         const { data: periodBMembers, error: periodBMembersError } = await supabase
-          .from('blue_whale_myr')
+          .from('blue_whale_sgd')
           .select('userkey, unique_code')
-          .eq('currency', 'MYR')
+          .eq('currency', 'SGD')
           .eq('line', brand)
           .gte('date', periodBStart)
           .lte('date', periodBEnd)

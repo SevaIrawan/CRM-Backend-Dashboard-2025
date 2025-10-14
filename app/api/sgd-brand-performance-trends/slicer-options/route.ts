@@ -3,25 +3,25 @@ import { supabase } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
   try {
-    // Ambil min dan max date dari master table USC (real-time data)
+    // Ambil min dan max date dari table blue_whale_sgd (real-time data)
     const { data: minRecord, error: minErr } = await supabase
-      .from('blue_whale_usc')
+      .from('blue_whale_sgd')
       .select('date')
-      .eq('currency', 'USC')
+      .eq('currency', 'SGD')
       .order('date', { ascending: true })
       .limit(1)
     if (minErr) throw minErr
 
     const { data: maxRecord, error: maxErr } = await supabase
-      .from('blue_whale_usc')
+      .from('blue_whale_sgd')
       .select('date')
-      .eq('currency', 'USC')
+      .eq('currency', 'SGD')
       .order('date', { ascending: false })
       .limit(1)
     if (maxErr) throw maxErr
 
     const minDate = minRecord?.[0]?.date || '2021-01-01'
-    const maxDate = maxRecord?.[0]?.date || '2025-12-31'
+    const maxDate = maxRecord?.[0]?.date || new Date().toISOString().split('T')[0]
 
     return NextResponse.json({
       success: true,

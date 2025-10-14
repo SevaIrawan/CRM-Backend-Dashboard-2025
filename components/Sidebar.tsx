@@ -21,32 +21,55 @@ import {
 } from './Icons'
 import { getMenuItemsByRole, hasPermission } from '@/utils/rolePermissions'
 
-// Function to filter menu items based on role for MYR pages
+// Function to filter menu items based on role for MYR, SGD, and USC pages
 const filterMenuItemsByRole = (menuItems: any[], userRole: string) => {
   // Pages to hide for MYR roles (manager_myr, sq_myr) - still in development
   const hiddenPagesForMYRRoles = ['/myr/overview', '/myr/member-analytic', '/myr/churn-member']
   
-  // Only admin can see these pages
+  // Pages to hide for SGD roles (manager_sgd, sq_sgd, executive)
+  const hiddenPagesForSGDRoles = ['/sgd/overview', '/sgd/member-analytic', '/sgd/churn-member']
+  
+  // Pages to hide for USC roles (manager_usc, sq_usc, executive)
+  const hiddenPagesForUSCRoles = ['/usc/overview', '/usc/member-analytic', '/usc/churn-member']
+  
+  // Only admin can see all pages
   if (userRole === 'admin') {
     return menuItems
   }
   
-  // Filter out hidden pages for MYR roles
-  if (userRole === 'manager_myr' || userRole === 'sq_myr') {
-    return menuItems.map(item => {
-      if (item.title === 'MYR' && item.submenu) {
-        return {
-          ...item,
-          submenu: item.submenu.filter((subItem: any) => 
-            !hiddenPagesForMYRRoles.includes(subItem.path)
-          )
-        }
+  return menuItems.map(item => {
+    // Filter MYR pages for MYR roles and executive
+    if (item.title === 'MYR' && item.submenu && (userRole === 'manager_myr' || userRole === 'sq_myr' || userRole === 'executive')) {
+      return {
+        ...item,
+        submenu: item.submenu.filter((subItem: any) => 
+          !hiddenPagesForMYRRoles.includes(subItem.path)
+        )
       }
-      return item
-    })
-  }
-  
-  return menuItems
+    }
+    
+    // Filter SGD pages for SGD roles and executive
+    if (item.title === 'SGD' && item.submenu && (userRole === 'manager_sgd' || userRole === 'sq_sgd' || userRole === 'executive')) {
+      return {
+        ...item,
+        submenu: item.submenu.filter((subItem: any) => 
+          !hiddenPagesForSGDRoles.includes(subItem.path)
+        )
+      }
+    }
+    
+    // Filter USC pages for USC roles and executive
+    if (item.title === 'USC' && item.submenu && (userRole === 'manager_usc' || userRole === 'sq_usc' || userRole === 'executive')) {
+      return {
+        ...item,
+        submenu: item.submenu.filter((subItem: any) => 
+          !hiddenPagesForUSCRoles.includes(subItem.path)
+        )
+      }
+    }
+    
+    return item
+  })
 }
 
 interface SidebarProps {
@@ -266,11 +289,12 @@ export default function Sidebar({
         icon: <SGDIcon size={18} color="#ffffff" />,
         permission: 'sgd',
         submenu: [
-          { title: 'Overview', path: '/sgd/overview' },
-          { title: 'Member Analytic', path: '/sgd/member-analytic' },
-          { title: 'Brand Comparison', path: '/sgd/brand-comparison' },
-          { title: 'KPI Comparison', path: '/sgd/kpi-comparison' },
-          { title: 'Customer Retention', path: '/sgd/customer-retention' },
+        { title: 'Overview', path: '/sgd/overview' },
+        { title: 'Member Analytic', path: '/sgd/member-analytic' },
+        { title: 'Brand Performance Trends', path: '/sgd/brand-performance-trends' },
+        { title: 'KPI Comparison', path: '/sgd/kpi-comparison' },
+        { title: 'Auto-Approval Monitor', path: '/sgd/auto-approval-monitor' },
+        { title: 'Customer Retention', path: '/sgd/customer-retention' },
           { title: 'Churn Member', path: '/sgd/churn-member' },
           { title: 'Member Report', path: '/sgd/member-report' }
         ]
@@ -280,11 +304,12 @@ export default function Sidebar({
         icon: <USCIcon size={18} color="#ffffff" />,
         permission: 'usc',
         submenu: [
-          { title: 'Overview', path: '/usc/overview' },
-          { title: 'Member Analytic', path: '/usc/member-analytic' },
-          { title: 'Brand Comparison', path: '/usc/brand-comparison' },
-          { title: 'KPI Comparison', path: '/usc/kpi-comparison' },
-          { title: 'Customer Retention', path: '/usc/customer-retention' },
+        { title: 'Overview', path: '/usc/overview' },
+        { title: 'Member Analytic', path: '/usc/member-analytic' },
+        { title: 'Brand Performance Trends', path: '/usc/brand-performance-trends' },
+        { title: 'KPI Comparison', path: '/usc/kpi-comparison' },
+        { title: 'Auto-Approval Monitor', path: '/usc/auto-approval-monitor' },
+        { title: 'Customer Retention', path: '/usc/customer-retention' },
           { title: 'Churn Member', path: '/usc/churn-member' },
           { title: 'Member Report', path: '/usc/member-report' }
         ]
