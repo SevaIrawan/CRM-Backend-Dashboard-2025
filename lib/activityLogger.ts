@@ -35,8 +35,8 @@ export interface ActivityLogData {
   referrer?: string
   
   // Session Info
-  sessionId?: string
-  sessionDuration?: number // in seconds (for logout)
+  sessionId?: string | null
+  sessionDuration?: number | null // in seconds (for logout)
   
   // Additional metadata
   metadata?: any
