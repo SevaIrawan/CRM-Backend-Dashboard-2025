@@ -362,8 +362,12 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Prepare table data (same format as brand comparison)
-    const tableRows = brandData.map(brand => {
+    // Prepare table data (same format as brand comparison) - FILTERED like charts
+    // Only show brands that have active members in at least one period
+    const availableBrandsForTable = Array.from(new Set([...periodAAvailableBrands, ...periodBAvailableBrands]))
+    const tableRows = brandData
+      .filter(brand => availableBrandsForTable.includes(brand.brand))
+      .map(brand => {
       const periodA = brand.periodA
       const periodB = brand.periodB
       
