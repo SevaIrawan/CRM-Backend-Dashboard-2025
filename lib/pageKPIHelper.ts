@@ -1,4 +1,5 @@
-import { getAllKPIsWithMoM, SlicerFilters } from './KPILogic'
+import { SlicerFilters } from './KPILogic'
+import { getAllKPIsWithMoM } from './momLogic'
 
 // ========================================
 // PAGE KPI HELPER - UNTUK SEMUA PAGE VISUALISASI

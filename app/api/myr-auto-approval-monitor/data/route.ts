@@ -845,7 +845,25 @@ export async function GET(request: NextRequest) {
               prevMonthQuery = prevMonthQuery.eq('line', line)
             }
             
+            // 🔍 DEBUG: Log query parameters for troubleshooting
+            console.log('🔍 [MoM] Query parameters:', {
+              currency: 'MYR',
+              year: parseInt(prevYear),
+              month: prevMonth,
+              line: line || 'all',
+              prevYear,
+              prevMonth
+            })
+            
             const { data: prevMonthData, error: prevMonthError } = await prevMonthQuery
+            
+            // 🔍 DEBUG: Log query results for troubleshooting
+            console.log('🔍 [MoM] Query results:', {
+              dataCount: prevMonthData?.length || 0,
+              hasError: !!prevMonthError,
+              error: prevMonthError?.message || null,
+              sampleData: prevMonthData?.slice(0, 2) || null
+            })
             
             if (prevMonthError) {
               console.error('❌ [MoM] Error fetching previous month data:', prevMonthError)
@@ -861,6 +879,31 @@ export async function GET(request: NextRequest) {
             
             if (!prevMonthData || prevMonthData.length === 0) {
               console.log('⚠️ [MoM] No previous month data found')
+              
+              // 🔍 DEBUG: Try alternative query without line filter to see if data exists
+              console.log('🔍 [MoM] Trying alternative query without line filter...')
+              const { data: altData, error: altError } = await supabase
+                .from('deposit')
+                .select('id, line, year, month, currency')
+                .eq('currency', 'MYR')
+                .eq('year', parseInt(prevYear))
+                .eq('month', prevMonth)
+                .limit(5)
+              
+              if (altData && altData.length > 0) {
+                console.log('🔍 [MoM] Found data without line filter:', {
+                  availableLines: [...new Set(altData.map(d => d.line))],
+                  sampleData: altData
+                })
+              } else {
+                console.log('🔍 [MoM] No data found even without line filter for:', {
+                  year: parseInt(prevYear),
+                  month: prevMonth,
+                  currency: 'MYR'
+                })
+              }
+              
+              // Return zero values for MoM comparison (this is expected behavior when no previous data)
               return {
                 totalTransactions: 0,
                 automationTransactions: 0,
