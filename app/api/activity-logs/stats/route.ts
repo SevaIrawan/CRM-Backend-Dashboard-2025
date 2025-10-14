@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
     // Count page visits
     const pageCounts: { [key: string]: number } = {}
     pageViews?.forEach(view => {
-      const key = view.page_title || view.accessed_page || 'Unknown'
+      const key = (view.page_title || view.accessed_page || 'Unknown') as string
       pageCounts[key] = (pageCounts[key] || 0) + 1
     })
     
