@@ -116,26 +116,26 @@ export default function BarChart({
       ) && !isFormulaNumericType // EXCLUDE formula numeric types
     );
     
-    // Check if this is an amount/currency type (Deposit, Withdraw, Revenue, CLV, etc.)
-    const isAmountType = datasetLabel && (
-      datasetLabel.toLowerCase().includes('amount') ||
-      datasetLabel.toLowerCase().includes('deposit') ||
-      datasetLabel.toLowerCase().includes('withdraw') ||
-      datasetLabel.toLowerCase().includes('revenue') ||
-      datasetLabel.toLowerCase().includes('ggr') ||
-      datasetLabel.toLowerCase().includes('gaming') ||
-      datasetLabel.toLowerCase().includes('lifetime') ||
-      datasetLabel.toLowerCase().includes('clv') ||
-      datasetLabel.toLowerCase().includes('value') ||
-      datasetLabel.toLowerCase().includes('transaction') ||
-      datasetLabel.toLowerCase().includes('income') ||
-      datasetLabel.toLowerCase().includes('cost') ||
-      datasetLabel.toLowerCase().includes('profit') ||
-      datasetLabel.toLowerCase().includes('gross gaming revenue') ||
-      datasetLabel.toLowerCase().includes('per user') ||
-      datasetLabel.toLowerCase().includes('pure user') ||
-      datasetLabel.toLowerCase().includes('user') // Add user for GGR User, DA User
-    );
+            // Check if this is an amount/currency type (Deposit, Withdraw, Revenue, CLV, etc.)
+            const isAmountType = datasetLabel && (
+              datasetLabel.toLowerCase().includes('amount') ||
+              (datasetLabel.toLowerCase().includes('deposit') && !datasetLabel.toLowerCase().includes('depositor')) ||
+              datasetLabel.toLowerCase().includes('withdraw') ||
+              datasetLabel.toLowerCase().includes('revenue') ||
+              datasetLabel.toLowerCase().includes('ggr') ||
+              datasetLabel.toLowerCase().includes('gaming') ||
+              datasetLabel.toLowerCase().includes('lifetime') ||
+              datasetLabel.toLowerCase().includes('clv') ||
+              datasetLabel.toLowerCase().includes('value') ||
+              datasetLabel.toLowerCase().includes('transaction') ||
+              datasetLabel.toLowerCase().includes('income') ||
+              datasetLabel.toLowerCase().includes('cost') ||
+              datasetLabel.toLowerCase().includes('profit') ||
+              datasetLabel.toLowerCase().includes('gross gaming revenue') ||
+              datasetLabel.toLowerCase().includes('per user') ||
+              datasetLabel.toLowerCase().includes('pure user') ||
+              datasetLabel.toLowerCase().includes('user') // Add user for GGR User, DA User
+            );
     
     if (isCountType) {
       // For count/integer - using standard format: 0,000 (no currency symbol)
@@ -221,7 +221,7 @@ export default function BarChart({
           // For currency/amount types, use currency format
           if (datasetLabel && (
             datasetLabel.toLowerCase().includes('amount') ||
-            datasetLabel.toLowerCase().includes('deposit') ||
+            (datasetLabel.toLowerCase().includes('deposit') && !datasetLabel.toLowerCase().includes('depositor')) ||
             datasetLabel.toLowerCase().includes('withdraw') ||
             datasetLabel.toLowerCase().includes('revenue') ||
             datasetLabel.toLowerCase().includes('ggr') ||

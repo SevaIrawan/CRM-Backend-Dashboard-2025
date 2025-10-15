@@ -72,6 +72,15 @@ export default function LineChart({
     series: series,
     categories: categories
   })
+  
+  // Debug for percentage charts
+  if (title && (title.includes('PERCENTAGE') || title.includes('CONVERSION'))) {
+    console.log('🔍 [LineChart] Percentage Chart Debug:', {
+      title,
+      currency,
+      seriesData: series?.map(s => ({ name: s.name, data: s.data }))
+    })
+  }
 
   // Helper function to format values with denomination (K, M) for Brand Performance Trends
   const formatWithDenomination = (value: number): string => {
@@ -143,11 +152,13 @@ export default function LineChart({
   };
 
   const formatValue = (value: number, datasetLabel?: string): string => {
-    // Check if this is a percentage type (Retention Rate, Churn Rate)
+    // Check if this is a percentage type (Retention Rate, Churn Rate, Hold Percentage, Conversion Rate)
     const isPercentageType = datasetLabel && (
       datasetLabel.toLowerCase().includes('rate') ||
       datasetLabel.toLowerCase().includes('retention') ||
-      datasetLabel.toLowerCase().includes('churn')
+      datasetLabel.toLowerCase().includes('churn') ||
+      datasetLabel.toLowerCase().includes('percentage') ||
+      datasetLabel.toLowerCase().includes('conversion')
     );
     
     // Check if this is a frequency/ratio type (Purchase Frequency)
@@ -238,13 +249,15 @@ export default function LineChart({
 
   // Full value formatter for tooltip using standard KPI format
   const formatFullValue = (value: number, datasetLabel?: string): string => {
-    // Check if this is a percentage type (Retention Rate, Churn Rate, Winrate)
+    // Check if this is a percentage type (Retention Rate, Churn Rate, Winrate, Hold Percentage, Conversion Rate)
     const isPercentageType = datasetLabel && (
       datasetLabel.toLowerCase().includes('rate') ||
       datasetLabel.toLowerCase().includes('retention') ||
       datasetLabel.toLowerCase().includes('churn') ||
       datasetLabel.toLowerCase().includes('winrate') ||
-      datasetLabel.toLowerCase().includes('win rate')
+      datasetLabel.toLowerCase().includes('win rate') ||
+      datasetLabel.toLowerCase().includes('percentage') ||
+      datasetLabel.toLowerCase().includes('conversion')
     );
     
     // Check if this is a frequency/ratio/average type (Purchase Frequency, ACL)
