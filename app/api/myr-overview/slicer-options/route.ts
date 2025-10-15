@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
     // Convert month number to month name
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
                        'July', 'August', 'September', 'October', 'November', 'December']
-    const defaultMonthNum = latestRecord?.[0]?.month || 9
+    const defaultMonthNum = (latestRecord?.[0]?.month as number) || 9
     const defaultMonth = monthNames[defaultMonthNum - 1] || 'September'
 
     // Get months WITH year mapping for dynamic filtering
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
     // Build month-year mapping for dynamic filtering
     const monthYearMap: Record<string, Set<string>> = {}
     allMonthsData?.forEach(row => {
-      const monthNum = row.month
+      const monthNum = row.month as number
       const monthName = monthNames[monthNum - 1]
       const yearValue = String(row.year)
       if (monthName && yearValue) {

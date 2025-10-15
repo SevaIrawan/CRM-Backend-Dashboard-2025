@@ -57,35 +57,35 @@ export async function GET(request: NextRequest) {
     const monthlyData: Record<string, any> = {}
     
     data?.forEach(row => {
-      const monthName = monthNames[row.month - 1]
+      const monthName = monthNames[(row.month as number) - 1]
       if (monthName) {
         monthlyData[monthName] = {
           // Basic amounts
-          deposit_amount: row.deposit_amount || 0,
-          withdraw_amount: row.withdraw_amount || 0,
-          net_profit: row.net_profit || 0,
-          ggr: row.ggr || 0,
-          valid_amount: row.valid_amount || 0,
+          deposit_amount: (row.deposit_amount as number) || 0,
+          withdraw_amount: (row.withdraw_amount as number) || 0,
+          net_profit: (row.net_profit as number) || 0,
+          ggr: (row.ggr as number) || 0,
+          valid_amount: (row.valid_amount as number) || 0,
           
           // Cases
-          deposit_cases: row.deposit_cases || 0,
-          withdraw_cases: row.withdraw_cases || 0,
+          deposit_cases: (row.deposit_cases as number) || 0,
+          withdraw_cases: (row.withdraw_cases as number) || 0,
           
           // Members
-          active_member: row.active_member || 0,
-          pure_member: row.pure_member || 0,
-          new_register: row.new_register || 0,
-          new_depositor: row.new_depositor || 0,
+          active_member: (row.active_member as number) || 0,
+          pure_member: (row.pure_member as number) || 0,
+          new_register: (row.new_register as number) || 0,
+          new_depositor: (row.new_depositor as number) || 0,
           
           // Ratios/Metrics
-          atv: row.atv || 0,
-          purchase_frequency: row.purchase_frequency || 0,
-          da_user: row.da_user || 0,
-          ggr_user: row.ggr_user || 0,
-          winrate: row.winrate || 0,
-          withdrawal_rate: row.withdrawal_rate || 0,
-          conversion_rate: row.conversion_rate || 0,
-          hold_percentage: row.hold_percentage || 0
+          atv: (row.atv as number) || 0,
+          purchase_frequency: (row.purchase_frequency as number) || 0,
+          da_user: (row.da_user as number) || 0,
+          ggr_user: (row.ggr_user as number) || 0,
+          winrate: (row.winrate as number) || 0,
+          withdrawal_rate: (row.withdrawal_rate as number) || 0,
+          conversion_rate: (row.conversion_rate as number) || 0,
+          hold_percentage: (row.hold_percentage as number) || 0
         }
       }
     })
