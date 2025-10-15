@@ -57,6 +57,13 @@ export default function PageStatusPage() {
   const [user, setUser] = useState<any>(null)
   const [darkMode, setDarkMode] = useState(false)
   const [sidebarExpanded, setSidebarExpanded] = useState(true)
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newPageData, setNewPageData] = useState({
+    page_path: '',
+    page_name: '',
+    page_section: 'Admin'
+  })
+  const [isAddingPage, setIsAddingPage] = useState(false)
   const router = useRouter()
 
   // Available roles for toggling
@@ -177,6 +184,57 @@ export default function PageStatusPage() {
     }
   }
 
+  const handleAddNewPage = async () => {
+    // Validation
+    if (!newPageData.page_path || !newPageData.page_name) {
+      alert('Please fill in all required fields')
+      return
+    }
+
+    // Confirmation dialog for safety
+    const confirmMessage = `Are you sure you want to add this new page?\n\nPath: ${newPageData.page_path}\nName: ${newPageData.page_name}\nSection: ${newPageData.page_section}\n\nThis page will start with "Building" status (admin only).`
+    
+    if (!confirm(confirmMessage)) {
+      return
+    }
+
+    try {
+      setIsAddingPage(true)
+      
+      const response = await fetch('/api/page-visibility/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newPageData)
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        // Reset form
+        setNewPageData({
+          page_path: '',
+          page_name: '',
+          page_section: 'Admin'
+        })
+        setShowAddForm(false)
+        
+        // Refresh data
+        await fetchPageVisibility()
+        
+        alert('✅ Page added successfully!\n\nStatus: Building (admin only)\nYou can now manage access permissions.')
+      } else {
+        alert(`❌ Failed to add page: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Error adding page:', error)
+      alert('❌ Error adding page')
+    } finally {
+      setIsAddingPage(false)
+    }
+  }
+
   const handleLogout = () => {
     localStorage.removeItem('nexmax_session')
     document.cookie = 'user_id=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT'
@@ -233,6 +291,13 @@ export default function PageStatusPage() {
           <div className="frame-header">
             <h2 className="frame-title">Page Status Management</h2>
             <div className="header-actions">
+              <button 
+                onClick={() => setShowAddForm(true)}
+                className="add-page-btn"
+                title="Add New Page"
+              >
+                ➕ Add Page
+              </button>
               <button 
                 onClick={fetchPageVisibility}
                 className="refresh-btn"
@@ -817,7 +882,261 @@ export default function PageStatusPage() {
             gap: 2px;
           }
         }
+
+        /* Modal Styles */
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+        }
+
+        .modal-content {
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+          max-width: 500px;
+          width: 90%;
+          max-height: 90vh;
+          overflow-y: auto;
+        }
+
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 20px 24px;
+          border-bottom: 1px solid #e5e7eb;
+        }
+
+        .modal-header h3 {
+          margin: 0;
+          font-size: 18px;
+          font-weight: 600;
+          color: #1f2937;
+        }
+
+        .modal-close {
+          background: none;
+          border: none;
+          font-size: 20px;
+          cursor: pointer;
+          color: #6b7280;
+          padding: 4px;
+        }
+
+        .modal-close:hover {
+          color: #374151;
+        }
+
+        .modal-body {
+          padding: 24px;
+        }
+
+        .form-group {
+          margin-bottom: 20px;
+        }
+
+        .form-group label {
+          display: block;
+          margin-bottom: 6px;
+          font-weight: 500;
+          color: #374151;
+        }
+
+        .form-input, .form-select {
+          width: 100%;
+          padding: 10px 12px;
+          border: 1px solid #d1d5db;
+          border-radius: 6px;
+          font-size: 14px;
+          transition: border-color 0.2s;
+        }
+
+        .form-input:focus, .form-select:focus {
+          outline: none;
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-hint {
+          display: block;
+          margin-top: 4px;
+          font-size: 12px;
+          color: #6b7280;
+        }
+
+        .safety-notice {
+          background: #fef3c7;
+          border: 1px solid #f59e0b;
+          border-radius: 8px;
+          padding: 16px;
+          margin-top: 20px;
+        }
+
+        .safety-notice h4 {
+          margin: 0 0 8px 0;
+          color: #92400e;
+          font-size: 14px;
+        }
+
+        .safety-notice p {
+          margin: 0;
+          color: #92400e;
+          font-size: 13px;
+          line-height: 1.4;
+        }
+
+        .modal-footer {
+          display: flex;
+          justify-content: flex-end;
+          gap: 12px;
+          padding: 20px 24px;
+          border-top: 1px solid #e5e7eb;
+        }
+
+        .btn-cancel {
+          padding: 10px 20px;
+          border: 1px solid #d1d5db;
+          background: white;
+          color: #374151;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: 500;
+        }
+
+        .btn-cancel:hover {
+          background: #f9fafb;
+        }
+
+        .btn-add {
+          padding: 10px 20px;
+          border: none;
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          color: white;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: 500;
+          transition: opacity 0.2s;
+        }
+
+        .btn-add:hover:not(:disabled) {
+          opacity: 0.9;
+        }
+
+        .btn-add:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .add-page-btn {
+          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+          color: white;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 6px;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: opacity 0.2s;
+          margin-right: 8px;
+        }
+
+        .add-page-btn:hover {
+          opacity: 0.9;
+        }
       `}</style>
+
+      {/* Add New Page Modal */}
+      {showAddForm && (
+        <div className="modal-overlay" onClick={() => setShowAddForm(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Add New Page</h3>
+              <button 
+                className="modal-close" 
+                onClick={() => setShowAddForm(false)}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="form-group">
+                <label htmlFor="page_path">Page Path *</label>
+                <input
+                  id="page_path"
+                  type="text"
+                  value={newPageData.page_path}
+                  onChange={(e) => setNewPageData({...newPageData, page_path: e.target.value})}
+                  placeholder="/new-page-path"
+                  className="form-input"
+                />
+                <small className="form-hint">Must start with "/" (e.g., /admin/new-feature)</small>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="page_name">Page Name *</label>
+                <input
+                  id="page_name"
+                  type="text"
+                  value={newPageData.page_name}
+                  onChange={(e) => setNewPageData({...newPageData, page_name: e.target.value})}
+                  placeholder="New Feature Name"
+                  className="form-input"
+                />
+                <small className="form-hint">Display name for the page</small>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="page_section">Section</label>
+                <select
+                  id="page_section"
+                  value={newPageData.page_section}
+                  onChange={(e) => setNewPageData({...newPageData, page_section: e.target.value})}
+                  className="form-select"
+                >
+                  <option value="Admin">Admin</option>
+                  <option value="MYR">MYR</option>
+                  <option value="SGD">SGD</option>
+                  <option value="USC">USC</option>
+                  <option value="Other">Other</option>
+                </select>
+                <small className="form-hint">Section/category for this page</small>
+              </div>
+
+              <div className="safety-notice">
+                <h4>🛡️ Safety Notice</h4>
+                <p>New pages will be created with <strong>"Building"</strong> status, meaning only admin users can access them initially. You can manage access permissions after creation.</p>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button 
+                className="btn-cancel" 
+                onClick={() => setShowAddForm(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn-add" 
+                onClick={handleAddNewPage}
+                disabled={isAddingPage || !newPageData.page_path || !newPageData.page_name}
+              >
+                {isAddingPage ? 'Adding...' : 'Add Page'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   )
 }
