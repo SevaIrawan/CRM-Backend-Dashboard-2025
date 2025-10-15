@@ -520,6 +520,8 @@ export default function MYROverviewPage() {
               title="DA USER TREND"
               currency={selectedCurrency}
               hideLegend={true}
+              showDataLabels={true}
+              useDenominationLabels={true}
               chartIcon={getChartIcon('Deposit Amount')}
             />
             <LineChart
@@ -528,6 +530,8 @@ export default function MYROverviewPage() {
               title="GGR USER TREND"
               currency={selectedCurrency}
               hideLegend={true}
+              showDataLabels={true}
+              useDenominationLabels={true}
               color="#F97316"
               chartIcon={getChartIcon('Net Profit')}
             />
@@ -566,6 +570,8 @@ export default function MYROverviewPage() {
               categories={chartData?.depositWithdrawTrend?.categories || []}
               title="DEPOSIT AMOUNT VS WITHDRAW AMOUNT TREND"
               currency={selectedCurrency}
+              showDataLabels={true}
+              useDenominationLabels={true}
               chartIcon={getChartIcon('Deposit Amount')}
             />
             <LineChart
@@ -573,6 +579,8 @@ export default function MYROverviewPage() {
               categories={chartData?.ggrNetProfitTrend?.categories || []}
               title="GROSS GAMING REVENUE VS NET PROFIT TREND"
               currency={selectedCurrency}
+              showDataLabels={true}
+              useDenominationLabels={true}
               chartIcon={getChartIcon('Gross Gaming Revenue')}
             />
           </div>
@@ -585,6 +593,8 @@ export default function MYROverviewPage() {
               title="AVERAGE TRANSACTION VALUE TREND"
               currency={selectedCurrency}
               hideLegend={true}
+              showDataLabels={true}
+              useDenominationLabels={true}
               color="#3B82F6"
               chartIcon={getChartIcon('Average Transaction Value')}
             />
@@ -594,6 +604,7 @@ export default function MYROverviewPage() {
               title="PURCHASE FREQUENCY TREND"
               currency={selectedCurrency}
               hideLegend={true}
+              showDataLabels={true}
               color="#F97316"
               chartIcon={getChartIcon('Purchase Frequency')}
             />
@@ -626,6 +637,7 @@ export default function MYROverviewPage() {
               title="WINRATE TREND"
               currency="PERCENTAGE"
               hideLegend={true}
+              showDataLabels={true}
               color="#3B82F6"
               chartIcon={getChartIcon('Winrate')}
             />
@@ -635,6 +647,7 @@ export default function MYROverviewPage() {
               title="WITHDRAWAL RATE TREND"
               currency="PERCENTAGE"
               hideLegend={true}
+              showDataLabels={true}
               color="#F97316"
               chartIcon={getChartIcon('Withdraw Amount')}
             />
@@ -648,6 +661,7 @@ export default function MYROverviewPage() {
               title="CONVERSION RATE TREND"
               currency="PERCENTAGE"
               hideLegend={true}
+              showDataLabels={true}
               color="#3B82F6"
               chartIcon={getChartIcon('New Register')}
             />
@@ -657,6 +671,7 @@ export default function MYROverviewPage() {
               title="HOLD PERCENTAGE TREND"
               currency="PERCENTAGE"
               hideLegend={true}
+              showDataLabels={true}
               color="#F97316"
               chartIcon={getChartIcon('Net Profit')}
             />

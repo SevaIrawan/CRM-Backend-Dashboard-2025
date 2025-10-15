@@ -10,11 +10,7 @@ import { getChartIcon } from '@/lib/CentralIcon';
 import { formatCurrencyKPI, formatIntegerKPI, formatMoMChange, formatNumericKPI, formatPercentageKPI } from '@/lib/formatHelpers';
 import { getAllUSCKPIsWithMoM } from '@/lib/USCDailyAverageAndMoM';
 
-// USC-specific types
-// Import USCKPIData from the source of truth
-import { USCKPIData, USCMoMData } from '@/lib/USCDailyAverageAndMoM'
-
-// ✅ FIX HYDRATION: Dynamic import untuk chart components
+// Dynamic imports for charts (SSR fix)
 const LineChart = dynamic(() => import('@/components/LineChart'), {
   ssr: false,
   loading: () => (
@@ -47,11 +43,11 @@ interface SlicerOptions {
 }
 
 export default function USCOverviewPage() {
-  // ✅ FIX HYDRATION: Client-side only state
+  // Hydration fix
   const [isMounted, setIsMounted] = useState(false);
   
-  const [kpiData, setKpiData] = useState<USCKPIData | null>(null);
-  const [momData, setMomData] = useState<USCKPIData | null>(null);
+  const [kpiData, setKpiData] = useState<any>(null);
+  const [momData, setMomData] = useState<any>(null);
   const [slicerOptions, setSlicerOptions] = useState<SlicerOptions | null>(null);
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('');
@@ -60,25 +56,25 @@ export default function USCOverviewPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // ✅ FIX HYDRATION: Ensure client-side only rendering
+  // Chart data states
+  const [chartData, setChartData] = useState<any>(null);
+  const [chartError, setChartError] = useState<string | null>(null);
+
+  // Daily average calculations
+  const [dailyAverages, setDailyAverages] = useState({
+    depositAmount: 0,
+    withdrawAmount: 0,
+    netProfit: 0,
+    activeMember: 0,
+    purchaseFrequency: 0,
+    avgTransactionValue: 0
+  });
+
+  // Hydration fix
   useEffect(() => {
     setIsMounted(true);
   }, []);
   
-  // Chart data states
-  const [srChartData, setSrChartData] = useState<any>(null);
-  const [chartError, setChartError] = useState<string | null>(null);
-
-  // Add state for daily average calculations
-  const [dailyAverages, setDailyAverages] = useState({
-    depositAmount: 0,
-    withdrawAmount: 0,
-    grossGamingRevenue: 0,
-    activeMember: 0,
-    purchaseFrequency: 0,
-    customerMaturityIndex: 0
-  });
-
   // Load slicer options on component mount
   useEffect(() => {
     const loadSlicerOptions = async () => {
@@ -97,7 +93,6 @@ export default function USCOverviewPage() {
           });
           
           setSlicerOptions(result.data);
-          // Auto-set defaults from API
           setSelectedYear(result.data.defaults.year);
           setSelectedMonth(result.data.defaults.month);
           setSelectedLine(result.data.defaults.line);
@@ -124,23 +119,16 @@ export default function USCOverviewPage() {
         setIsLoading(true);
         setLoadError(null);
         
-        console.log('🔄 [USC Overview] Loading KPI data with MoM and Daily Average...');
+        console.log('🔄 [USC Overview] Loading KPI data using STANDARD LOGIC...');
 
-        // Get ALL USC KPIs with MoM and Daily Average
-        const result = await getAllUSCKPIsWithMoM(selectedYear, selectedMonth, selectedLine === 'ALL' ? undefined : selectedLine);
-        
+        // Use STANDARD LOGIC FILE - getAllUSCKPIsWithMoM
+        const result = await getAllUSCKPIsWithMoM(selectedYear, selectedMonth, selectedLine);
+
         setKpiData(result.current);
-        setMomData(result.mom as any);
-        setDailyAverages({
-          depositAmount: result.dailyAverage.depositAmount,
-          withdrawAmount: result.dailyAverage.withdrawAmount,
-          grossGamingRevenue: result.dailyAverage.grossGamingRevenue,
-          activeMember: result.dailyAverage.activeMember,
-          purchaseFrequency: result.dailyAverage.purchaseFrequency,
-          customerMaturityIndex: result.dailyAverage.customerMaturityIndex
-        });
-        
-        console.log('✅ [USC Overview] KPI data loaded successfully');
+        setMomData(result.mom);
+        setDailyAverages(result.dailyAverage);
+
+        console.log('✅ [USC Overview] KPI data loaded using STANDARD LOGIC');
 
       } catch (error) {
         console.error('Error loading KPI data:', error);
@@ -154,6 +142,8 @@ export default function USCOverviewPage() {
     return () => clearTimeout(timeoutId);
   }, [selectedYear, selectedMonth, selectedLine]);
 
+  // Helper functions removed - now using STANDARD LOGIC FILE
+
   // Load Chart data when year or line changes (MONTHLY data for entire year)
   useEffect(() => {
     if (!selectedYear || !selectedLine) return;
@@ -164,7 +154,7 @@ export default function USCOverviewPage() {
         
         console.log('🔄 [USC Overview] Loading Chart data (MONTHLY for entire year)...');
         
-        // Get chart data dari MV table (pre-aggregated)
+        // Get chart data from MV table (pre-aggregated)
         const chartResponse = await fetch(`/api/usc-overview/chart-data?line=${selectedLine}&year=${selectedYear}`);
         const chartResult = await chartResponse.json();
         
@@ -178,6 +168,16 @@ export default function USCOverviewPage() {
         
         console.log('📊 [USC Overview] Monthly data from MV:', monthlyData);
         
+        // Debug hold_percentage values
+        const holdPercentageDebug = Object.keys(monthlyData).map(month => ({
+          month,
+          hold_percentage: monthlyData[month].hold_percentage,
+          conversion_rate: monthlyData[month].conversion_rate,
+          net_profit: monthlyData[month].net_profit,
+          valid_amount: monthlyData[month].valid_amount
+        }));
+        console.log('🔍 [USC Overview] Hold Percentage Debug:', holdPercentageDebug);
+        
         if (Object.keys(monthlyData).length > 0) {
           // Sort months chronologically
           const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 
@@ -186,63 +186,92 @@ export default function USCOverviewPage() {
             monthOrder.indexOf(a) - monthOrder.indexOf(b)
           );
 
-          // Create chart data from aggregated monthly data using precision KPIs
-          const chartData = {
-            depositAmountTrend: {
-              series: [{ name: 'Deposit Amount', data: sortedMonths.map(month => monthlyData[month].deposit_amount) }],
+          // Create chart data from aggregated monthly data
+          const preparedChartData = {
+            // ROW 2: Single Line Charts
+            daUserTrend: {
+              series: [{ name: 'DA User', data: sortedMonths.map(month => monthlyData[month].da_user) }],
               categories: sortedMonths.map(month => month.substring(0, 3))
             },
-            withdrawAmountTrend: {
-              series: [{ name: 'Withdraw Amount', data: sortedMonths.map(month => monthlyData[month].withdraw_amount) }],
+            ggrUserTrend: {
+              series: [{ name: 'GGR User', data: sortedMonths.map(month => monthlyData[month].ggr_user) }],
               categories: sortedMonths.map(month => month.substring(0, 3))
             },
-            grossGamingRevenueTrend: {
-              series: [{ name: 'Gross Gaming Revenue', data: sortedMonths.map(month => monthlyData[month].ggr) }],
+            
+            // ROW 3: Double Bar Charts
+            activePureMemberTrend: {
+              series: [
+                { name: 'Active Member', data: sortedMonths.map(month => monthlyData[month].active_member), color: '#3B82F6' },
+                { name: 'Pure Member', data: sortedMonths.map(month => monthlyData[month].pure_member), color: '#F97316' }
+              ],
               categories: sortedMonths.map(month => month.substring(0, 3))
             },
-            depositCasesBarChart: {
-              series: [{ name: 'Deposit Cases', data: sortedMonths.map(month => monthlyData[month].deposit_cases) }],
+            registerDepositorTrend: {
+              series: [
+                { name: 'New Register', data: sortedMonths.map(month => monthlyData[month].new_register), color: '#3B82F6' },
+                { name: 'New Depositor', data: sortedMonths.map(month => monthlyData[month].new_depositor), color: '#F97316' }
+              ],
               categories: sortedMonths.map(month => month.substring(0, 3))
             },
-            withdrawCasesLineChart: {
-              series: [{ name: 'Withdraw Cases', data: sortedMonths.map(month => monthlyData[month].withdraw_cases) }],
+            
+            // ROW 4: Double Line Charts
+            depositWithdrawTrend: {
+              series: [
+                { name: 'Deposit Amount', data: sortedMonths.map(month => monthlyData[month].deposit_amount) },
+                { name: 'Withdraw Amount', data: sortedMonths.map(month => monthlyData[month].withdraw_amount) }
+              ],
               categories: sortedMonths.map(month => month.substring(0, 3))
             },
-            netProfitTrend: {
-              series: [{ name: 'Net Profit', data: sortedMonths.map(month => monthlyData[month].net_profit) }],
+            ggrNetProfitTrend: {
+              series: [
+                { name: 'Gross Gaming Revenue', data: sortedMonths.map(month => monthlyData[month].ggr) },
+                { name: 'Net Profit', data: sortedMonths.map(month => monthlyData[month].net_profit) }
+              ],
               categories: sortedMonths.map(month => month.substring(0, 3))
             },
-            avgTransactionValueTrend: {
+            
+            // ROW 5: Single Line Charts
+            atvTrend: {
               series: [{ name: 'Average Transaction Value', data: sortedMonths.map(month => monthlyData[month].atv) }],
               categories: sortedMonths.map(month => month.substring(0, 3))
             },
             purchaseFrequencyTrend: {
-              series: [{ name: 'Purchase Frequency', data: sortedMonths.map(month => monthlyData[month].pf) }],
+              series: [{ name: 'Purchase Frequency', data: sortedMonths.map(month => monthlyData[month].purchase_frequency) }],
               categories: sortedMonths.map(month => month.substring(0, 3))
             },
-            avgCustomerLifespanTrend: {
-              series: [{ name: 'Average Customer Lifespan', data: sortedMonths.map(month => monthlyData[month]?.acl || 0) }], // Calculated from Master table via USCLogic
+            
+            // ROW 6: Single Bar Charts
+            depositCasesTrend: {
+              series: [{ name: 'Deposit Cases', data: sortedMonths.map(month => monthlyData[month].deposit_cases) }],
               categories: sortedMonths.map(month => month.substring(0, 3))
             },
-            customerLifetimeValueTrend: {
-              series: [{ name: 'Customer Lifetime Value', data: sortedMonths.map(month => monthlyData[month]?.clv || 0) }], // Calculated from Master table via USCLogic
+            withdrawCasesTrend: {
+              series: [{ name: 'Withdraw Cases', data: sortedMonths.map(month => monthlyData[month].withdraw_cases) }],
               categories: sortedMonths.map(month => month.substring(0, 3))
             },
-            customerMaturityIndexTrend: {
-              series: [{ name: 'Customer Maturity Index', data: sortedMonths.map(month => monthlyData[month]?.cmi || 0) }], // Calculated from Master table via USCLogic
-              categories: sortedMonths.map(month => month.substring(0, 3))
-            },
+            
+            // ROW 7: Single Line Charts
             winrateTrend: {
-              series: [{ name: 'Winrate', data: sortedMonths.map(month => {
-                // Winrate = GGR / Deposit Amount * 100
-                const ggr = monthlyData[month]?.ggr || 0;
-                const depositAmount = monthlyData[month]?.deposit_amount || 0;
-                return depositAmount > 0 ? (ggr / depositAmount) * 100 : 0;
-              }) }],
+              series: [{ name: 'Winrate', data: sortedMonths.map(month => monthlyData[month].winrate) }],
+              categories: sortedMonths.map(month => month.substring(0, 3))
+            },
+            withdrawalRateTrend: {
+              series: [{ name: 'Withdrawal Rate', data: sortedMonths.map(month => monthlyData[month].withdrawal_rate) }],
+              categories: sortedMonths.map(month => month.substring(0, 3))
+            },
+            
+            // ROW 8: Single Line Charts
+            conversionRateTrend: {
+              series: [{ name: 'Conversion Rate', data: sortedMonths.map(month => monthlyData[month].conversion_rate) }],
+              categories: sortedMonths.map(month => month.substring(0, 3))
+            },
+            holdPercentageTrend: {
+              series: [{ name: 'Hold Percentage', data: sortedMonths.map(month => monthlyData[month].hold_percentage) }],
               categories: sortedMonths.map(month => month.substring(0, 3))
             }
           };
-          setSrChartData(chartData);
+          
+          setChartData(preparedChartData);
         }
         
         console.log('✅ [USC Overview] Chart data loaded successfully (MONTHLY)');
@@ -255,7 +284,7 @@ export default function USCOverviewPage() {
 
     const timeoutId = setTimeout(loadChartData, 100);
     return () => clearTimeout(timeoutId);
-  }, [selectedYear, selectedLine]); // Only depends on year and line, not month
+  }, [selectedYear, selectedLine]);
 
 
   const customSubHeader = (
@@ -293,8 +322,6 @@ export default function USCOverviewPage() {
           </select>
         </div>
         
-        {/* Currency locked to USC - slicer hidden */}
-        
         <div className="slicer-group">
           <label className="slicer-label">MONTH:</label>
           <select
@@ -317,13 +344,8 @@ export default function USCOverviewPage() {
           >
             {slicerOptions?.months
               ?.filter((month: any) => {
-                // Show ALL option always
                 if (month.value === 'ALL') return true;
-                
-                // Filter months based on selected year (DYNAMIC)
                 if (!selectedYear) return true;
-                
-                // Check if this month exists in the selected year
                 return month.years && month.years.includes(selectedYear);
               })
               ?.map((month: any) => (
@@ -346,7 +368,7 @@ export default function USCOverviewPage() {
     </div>
   );
 
-  // ✅ FIX HYDRATION: Prevent hydration mismatch
+  // Hydration fix
   if (!isMounted) {
     return (
       <Layout>
@@ -398,7 +420,6 @@ export default function USCOverviewPage() {
     <Layout customSubHeader={customSubHeader}>
       <Frame variant="standard">
 
-
         {/* Content Container with proper spacing and scroll */}
         <div style={{
           display: 'flex',
@@ -409,7 +430,7 @@ export default function USCOverviewPage() {
           overflowY: 'auto',
           paddingRight: '8px'
         }}>
-          {/* BARIS 1: KPI CARDS (STANDARD ROW) */}
+          {/* ROW 1: KPI CARDS (6 cards) */}
           <div className="kpi-row">
             <StatCard
               title="DEPOSIT AMOUNT"
@@ -438,16 +459,16 @@ export default function USCOverviewPage() {
               }}
             />
             <StatCard
-              title="GROSS GAMING REVENUE"
-              value={formatCurrencyKPI(kpiData?.grossGamingRevenue || 0, selectedCurrency)}
-              icon="Gross Gaming Revenue"
+              title="NET PROFIT"
+              value={formatCurrencyKPI(kpiData?.netProfit || 0, selectedCurrency)}
+              icon="Net Profit"
               additionalKpi={{
                 label: "DAILY AVERAGE",
-                value: formatCurrencyKPI(dailyAverages.grossGamingRevenue, selectedCurrency)
+                value: formatCurrencyKPI(dailyAverages.netProfit, selectedCurrency)
               }}
               comparison={{
-                percentage: formatMoMChange(momData?.grossGamingRevenue || 0),
-                isPositive: Boolean(momData?.grossGamingRevenue && momData.grossGamingRevenue > 0)
+                percentage: formatMoMChange(momData?.netProfit || 0),
+                isPositive: Boolean(momData?.netProfit && momData.netProfit > 0)
               }}
             />
             <StatCard
@@ -477,133 +498,182 @@ export default function USCOverviewPage() {
               }}
             />
             <StatCard
-              title="CUSTOMER MATURITY INDEX"
-              value={formatPercentageKPI(kpiData?.customerMaturityIndex || 0)}
-              icon="Customer Maturity Index"
+              title="AVERAGE TRANSACTION VALUE"
+              value={formatCurrencyKPI(kpiData?.avgTransactionValue || 0, selectedCurrency)}
+              icon="Average Transaction Value"
               additionalKpi={{
                 label: "DAILY AVERAGE",
-                value: formatPercentageKPI(dailyAverages.customerMaturityIndex)
+                value: formatCurrencyKPI(dailyAverages.avgTransactionValue, selectedCurrency)
               }}
               comparison={{
-                percentage: formatMoMChange(momData?.customerMaturityIndex || 0),
-                isPositive: Boolean(momData?.customerMaturityIndex && momData.customerMaturityIndex > 0)
+                percentage: formatMoMChange(momData?.avgTransactionValue || 0),
+                isPositive: Boolean(momData?.avgTransactionValue && momData.avgTransactionValue > 0)
               }}
             />
           </div>
 
-          {/* Row 2: Financial Performance Charts */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          {/* ROW 2: DA USER & GGR USER (Single Line Charts) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <LineChart
-              series={srChartData?.depositAmountTrend?.series || []}
-              categories={srChartData?.depositAmountTrend?.categories || []}
-              title="DEPOSIT AMOUNT TREND"
+              series={chartData?.daUserTrend?.series || []}
+              categories={chartData?.daUserTrend?.categories || []}
+              title="DA USER TREND"
               currency={selectedCurrency}
               hideLegend={true}
+              showDataLabels={true}
+              useDenominationLabels={true}
               chartIcon={getChartIcon('Deposit Amount')}
             />
             <LineChart
-              series={srChartData?.withdrawAmountTrend?.series || []}
-              categories={srChartData?.withdrawAmountTrend?.categories || []}
-              title="WITHDRAW AMOUNT TREND"
+              series={chartData?.ggrUserTrend?.series || []}
+              categories={chartData?.ggrUserTrend?.categories || []}
+              title="GGR USER TREND"
               currency={selectedCurrency}
               hideLegend={true}
-              color="#FF8C00"
-              chartIcon={getChartIcon('Withdraw Amount')}
-            />
-            <LineChart
-              series={srChartData?.grossGamingRevenueTrend?.series || []}
-              categories={srChartData?.grossGamingRevenueTrend?.categories || []}
-              title="GROSS GAMING REVENUE TREND"
-              currency={selectedCurrency}
-              hideLegend={true}
-              color="#FF8C00"
-              chartIcon={getChartIcon('Gross Gaming Revenue')}
-            />
-          </div>
-
-          {/* Row 3: Transaction Cases Charts */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <BarChart
-              series={srChartData?.depositCasesBarChart?.series || []}
-              categories={srChartData?.depositCasesBarChart?.categories || []}
-              title="DEPOSIT CASES TREND"
-              currency={selectedCurrency}
-              chartIcon={getChartIcon('deposits')}
-            />
-            <BarChart
-              series={srChartData?.withdrawCasesLineChart?.series || []}
-              categories={srChartData?.withdrawCasesLineChart?.categories || []}
-              title="WITHDRAW CASES TREND"
-              currency={selectedCurrency}
-              color="#FF8C00"
-              chartIcon={getChartIcon('Withdraw Amount')}
-            />
-            <LineChart
-              series={srChartData?.netProfitTrend?.series || []}
-              categories={srChartData?.netProfitTrend?.categories || []}
-              title="NET PROFIT TREND"
-              currency={selectedCurrency}
-              hideLegend={true}
+              showDataLabels={true}
+              useDenominationLabels={true}
+              color="#F97316"
               chartIcon={getChartIcon('Net Profit')}
             />
           </div>
 
-          {/* Row 4: User Behavior Analytics */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          {/* ROW 3: ACTIVE vs PURE MEMBER, NEW REGISTER vs NEW DEPOSITOR (Double Bar Charts) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <BarChart
+              series={chartData?.activePureMemberTrend?.series || []}
+              categories={chartData?.activePureMemberTrend?.categories || []}
+              title="ACTIVE MEMBER VS PURE MEMBER TREND"
+              currency="MEMBER"
+              chartIcon={getChartIcon('Active Member')}
+              customLegend={[
+                { label: 'Active Member', color: '#3B82F6' },
+                { label: 'Pure Member', color: '#F97316' }
+              ]}
+            />
+            <BarChart
+              series={chartData?.registerDepositorTrend?.series || []}
+              categories={chartData?.registerDepositorTrend?.categories || []}
+              title="NEW REGISTER VS NEW DEPOSITOR TREND"
+              currency="MEMBER"
+              chartIcon={getChartIcon('New Register')}
+              customLegend={[
+                { label: 'New Register', color: '#3B82F6' },
+                { label: 'New Depositor', color: '#F97316' }
+              ]}
+            />
+          </div>
+
+          {/* ROW 4: DEPOSIT vs WITHDRAW, GGR vs NET PROFIT (Double Line Charts) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <LineChart
-              series={srChartData?.avgTransactionValueTrend?.series || []}
-              categories={srChartData?.avgTransactionValueTrend?.categories || []}
+              series={chartData?.depositWithdrawTrend?.series || []}
+              categories={chartData?.depositWithdrawTrend?.categories || []}
+              title="DEPOSIT AMOUNT VS WITHDRAW AMOUNT TREND"
+              currency={selectedCurrency}
+              showDataLabels={true}
+              useDenominationLabels={true}
+              chartIcon={getChartIcon('Deposit Amount')}
+            />
+            <LineChart
+              series={chartData?.ggrNetProfitTrend?.series || []}
+              categories={chartData?.ggrNetProfitTrend?.categories || []}
+              title="GROSS GAMING REVENUE VS NET PROFIT TREND"
+              currency={selectedCurrency}
+              showDataLabels={true}
+              useDenominationLabels={true}
+              chartIcon={getChartIcon('Gross Gaming Revenue')}
+            />
+          </div>
+
+          {/* ROW 5: ATV & PURCHASE FREQUENCY (Single Line Charts) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <LineChart
+              series={chartData?.atvTrend?.series || []}
+              categories={chartData?.atvTrend?.categories || []}
               title="AVERAGE TRANSACTION VALUE TREND"
               currency={selectedCurrency}
               hideLegend={true}
+              showDataLabels={true}
+              useDenominationLabels={true}
               color="#3B82F6"
               chartIcon={getChartIcon('Average Transaction Value')}
             />
             <LineChart
-              series={srChartData?.purchaseFrequencyTrend?.series || []}
-              categories={srChartData?.purchaseFrequencyTrend?.categories || []}
+              series={chartData?.purchaseFrequencyTrend?.series || []}
+              categories={chartData?.purchaseFrequencyTrend?.categories || []}
               title="PURCHASE FREQUENCY TREND"
               currency={selectedCurrency}
               hideLegend={true}
-              color="#FF8C00"
+              showDataLabels={true}
+              color="#F97316"
               chartIcon={getChartIcon('Purchase Frequency')}
-            />
-            <LineChart
-              series={srChartData?.avgCustomerLifespanTrend?.series || []}
-              categories={srChartData?.avgCustomerLifespanTrend?.categories || []}
-              title="AVERAGE CUSTOMER LIFESPAN TREND (ACL)"
-              currency={selectedCurrency}
-              hideLegend={true}
-              chartIcon={getChartIcon('Average Customer Lifespan')}
             />
           </div>
 
-          {/* Row 5: Advanced Analytics Charts */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <LineChart
-              series={srChartData?.customerLifetimeValueTrend?.series || []}
-              categories={srChartData?.customerLifetimeValueTrend?.categories || []}
-              title="CUSTOMER LIFETIME VALUE TREND"
-              currency={selectedCurrency}
-              hideLegend={true}
-              chartIcon={getChartIcon('Customer Lifetime Value')}
+          {/* ROW 6: DEPOSIT CASES & WITHDRAW CASES (Single Bar Charts) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <BarChart
+              series={chartData?.depositCasesTrend?.series || []}
+              categories={chartData?.depositCasesTrend?.categories || []}
+              title="DEPOSIT CASES TREND"
+              currency="CASES"
+              chartIcon={getChartIcon('deposits')}
             />
-            <LineChart
-              series={srChartData?.customerMaturityIndexTrend?.series || []}
-              categories={srChartData?.customerMaturityIndexTrend?.categories || []}
-              title="CUSTOMER MATURITY INDEX TREND"
-              currency={selectedCurrency}
-              hideLegend={true}
-              chartIcon={getChartIcon('Customer Maturity Index')}
+            <BarChart
+              series={chartData?.withdrawCasesTrend?.series || []}
+              categories={chartData?.withdrawCasesTrend?.categories || []}
+              title="WITHDRAW CASES TREND"
+              currency="CASES"
+              color="#F97316"
+              chartIcon={getChartIcon('Withdraw Amount')}
             />
+          </div>
+
+          {/* ROW 7: WINRATE & WITHDRAWAL RATE (Single Line Charts) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <LineChart
-              series={srChartData?.winrateTrend?.series || []}
-              categories={srChartData?.winrateTrend?.categories || []}
+              series={chartData?.winrateTrend?.series || []}
+              categories={chartData?.winrateTrend?.categories || []}
               title="WINRATE TREND"
-              currency={selectedCurrency}
+              currency="PERCENTAGE"
               hideLegend={true}
-              color="#FF8C00"
+              showDataLabels={true}
+              color="#3B82F6"
               chartIcon={getChartIcon('Winrate')}
+            />
+            <LineChart
+              series={chartData?.withdrawalRateTrend?.series || []}
+              categories={chartData?.withdrawalRateTrend?.categories || []}
+              title="WITHDRAWAL RATE TREND"
+              currency="PERCENTAGE"
+              hideLegend={true}
+              showDataLabels={true}
+              color="#F97316"
+              chartIcon={getChartIcon('Withdraw Amount')}
+            />
+          </div>
+
+          {/* ROW 8: CONVERSION RATE & HOLD PERCENTAGE (Single Line Charts) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <LineChart
+              series={chartData?.conversionRateTrend?.series || []}
+              categories={chartData?.conversionRateTrend?.categories || []}
+              title="CONVERSION RATE TREND"
+              currency="PERCENTAGE"
+              hideLegend={true}
+              showDataLabels={true}
+              color="#3B82F6"
+              chartIcon={getChartIcon('New Register')}
+            />
+            <LineChart
+              series={chartData?.holdPercentageTrend?.series || []}
+              categories={chartData?.holdPercentageTrend?.categories || []}
+              title="HOLD PERCENTAGE TREND"
+              currency="PERCENTAGE"
+              hideLegend={true}
+              showDataLabels={true}
+              color="#F97316"
+              chartIcon={getChartIcon('Net Profit')}
             />
           </div>
 

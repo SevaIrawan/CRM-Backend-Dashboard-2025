@@ -91,7 +91,21 @@ export default function AiaCandyTrackingPage() {
 
   const customSubHeader = (
     <div className="dashboard-subheader">
-      <div className="subheader-title"></div>
+      <div className="subheader-title">
+        <div style={{ 
+          fontSize: '12px', 
+          color: '#000000', 
+          fontWeight: '600',
+          backgroundColor: '#ffd700',
+          padding: '6px 12px',
+          borderRadius: '8px',
+          border: '2px solid #ff8c00',
+          display: 'inline-block',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+        }}>
+          ⚠️ DEMO DATA - This page is currently displaying sample data for demonstration purposes
+        </div>
+      </div>
       <div className="subheader-controls">
         <div className="slicer-group">
           <label className="slicer-label">LINE:</label>

@@ -14,13 +14,13 @@ export async function GET(request: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log('🔄 [USC Overview Chart API] Fetching chart data for:', { year, line })
+    console.log('🔄 [SGD Overview Chart API] Fetching chart data for:', { year, line })
 
     // Query monthly data for entire year from MV
     let query = supabase
-      .from('blue_whale_usc_monthly_summary')
+      .from('blue_whale_sgd_monthly_summary')
       .select('*')
-      .eq('currency', 'USC')
+      .eq('currency', 'SGD')
       .eq('year', parseInt(year))
       .gt('month', 0)  // Exclude rollup (month=0)
 
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query.order('month', { ascending: true })
 
     if (error) {
-      console.error('❌ [USC Overview Chart API] Error fetching data:', error)
+      console.error('❌ [SGD Overview Chart API] Error fetching data:', error)
       return NextResponse.json({
         success: false,
         error: 'Database error',
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log('📊 [USC Overview Chart API] Raw data from MV:', {
+    console.log('📊 [SGD Overview Chart API] Raw data from MV:', {
       rowCount: data?.length,
       sampleRow: data?.[0],
       holdPercentageSample: data?.[0]?.hold_percentage,
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    console.log('✅ [USC Overview Chart API] Monthly data prepared:', {
+    console.log('✅ [SGD Overview Chart API] Monthly data prepared:', {
       monthCount: Object.keys(monthlyData).length,
       months: Object.keys(monthlyData)
     })
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ [USC Overview Chart API] Error:', error)
+    console.error('❌ [SGD Overview Chart API] Error:', error)
     return NextResponse.json({
       success: false,
       error: 'Internal server error',
@@ -109,4 +109,3 @@ export async function GET(request: NextRequest) {
     }, { status: 500 })
   }
 }
-

@@ -23,13 +23,13 @@ import { getMenuItemsByRole, hasPermission } from '@/utils/rolePermissions'
 // Function to filter menu items based on role for MYR, SGD, and USC pages
 const filterMenuItemsByRole = (menuItems: any[], userRole: string) => {
   // Pages to hide for MYR roles (manager_myr, sq_myr) - still in development
-  const hiddenPagesForMYRRoles = ['/myr/overview', '/myr/member-analytic', '/myr/churn-member']
+  const hiddenPagesForMYRRoles = ['/myr/member-analytic', '/myr/churn-member']
   
   // Pages to hide for SGD roles (manager_sgd, sq_sgd, executive)
-  const hiddenPagesForSGDRoles = ['/sgd/overview', '/sgd/member-analytic', '/sgd/churn-member']
+  const hiddenPagesForSGDRoles = ['/sgd/member-analytic', '/sgd/churn-member']
   
   // Pages to hide for USC roles (manager_usc, sq_usc, executive)
-  const hiddenPagesForUSCRoles = ['/usc/overview', '/usc/member-analytic', '/usc/churn-member']
+  const hiddenPagesForUSCRoles = ['/usc/member-analytic', '/usc/churn-member']
   
   // Only admin can see all pages
   if (userRole === 'admin') {

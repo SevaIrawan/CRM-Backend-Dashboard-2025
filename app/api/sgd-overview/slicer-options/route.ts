@@ -6,18 +6,18 @@ export async function GET(request: NextRequest) {
   const selectedCurrency = searchParams.get('selectedCurrency')
 
   try {
-    console.log('🔍 [USC Overview API] Fetching slicer options for USC currency lock')
+    console.log('🔍 [SGD Overview API] Fetching slicer options for SGD currency lock')
 
-    // Currency is LOCKED to USC for this page
-    const currencies = ['USC']
+    // Currency is LOCKED to SGD for this page
+    const currencies = ['SGD']
 
-    console.log('📊 [DEBUG] Querying blue_whale_usc_monthly_summary for lines...')
+    console.log('📊 [DEBUG] Querying blue_whale_sgd_monthly_summary for lines...')
     
     // Get DISTINCT lines from MV - NO LIMIT
     const { data: allLines, error: linesError } = await supabase
-      .from('blue_whale_usc_monthly_summary')
+      .from('blue_whale_sgd_monthly_summary')
       .select('line')
-      .eq('currency', 'USC')
+      .eq('currency', 'SGD')
       .not('line', 'is', null)
 
     console.log('📊 [DEBUG] Lines query result:', { 
@@ -41,9 +41,9 @@ export async function GET(request: NextRequest) {
 
     // Get years from MV - NO LIMIT
     const { data: allYears, error: yearsError } = await supabase
-      .from('blue_whale_usc_monthly_summary')
+      .from('blue_whale_sgd_monthly_summary')
       .select('year')
-      .eq('currency', 'USC')
+      .eq('currency', 'SGD')
       .not('year', 'is', null)
 
     if (yearsError) {
@@ -60,9 +60,9 @@ export async function GET(request: NextRequest) {
 
     // Get latest record first to determine defaults
     const { data: latestRecord } = await supabase
-      .from('blue_whale_usc_monthly_summary')
+      .from('blue_whale_sgd_monthly_summary')
       .select('year, month')
-      .eq('currency', 'USC')
+      .eq('currency', 'SGD')
       .gt('month', 0)  // Exclude rollup (month=0)
       .order('year', { ascending: false })
       .order('month', { ascending: false })
@@ -78,9 +78,9 @@ export async function GET(request: NextRequest) {
 
     // Get months WITH year mapping for dynamic filtering
     const { data: allMonthsData, error: monthsError } = await supabase
-      .from('blue_whale_usc_monthly_summary')
+      .from('blue_whale_sgd_monthly_summary')
       .select('month, year')
-      .eq('currency', 'USC')
+      .eq('currency', 'SGD')
       .gt('month', 0)  // Exclude rollup (month=0)
       .not('month', 'is', null)
 
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log('🔍 [USC Slicer] Raw months data from DB:', {
+    console.log('🔍 [SGD Slicer] Raw months data from DB:', {
       totalRows: allMonthsData?.length,
       sampleData: allMonthsData?.slice(0, 20)
     })
@@ -129,10 +129,10 @@ export async function GET(request: NextRequest) {
       ...monthsWithYearInfo
     ]
 
-    console.log('🔍 [USC Slicer] Month-year mapping:', monthYearMap)
+    console.log('🔍 [SGD Slicer] Month-year mapping:', monthYearMap)
 
     const slicerOptions = {
-      currencies, // Locked to USC
+      currencies, // Locked to SGD
       lines: linesWithAll,
       years: sortedYears,
       months: monthsWithAll,
@@ -141,14 +141,14 @@ export async function GET(request: NextRequest) {
         max: '2025-12-31'
       },
       defaults: {
-        currency: 'USC',
+        currency: 'SGD',
         line: 'ALL',
         year: defaultYear,
         month: defaultMonth
       }
     }
 
-    console.log('✅ [USC Overview API] Slicer options loaded with USC currency lock:', {
+    console.log('✅ [SGD Overview API] Slicer options loaded with SGD currency lock:', {
       currencies: currencies.length,
       lines: linesWithAll.length,
       years: sortedYears.length,
@@ -161,7 +161,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ [USC Overview API] Error getting slicer options:', error)
+    console.error('❌ [SGD Overview API] Error getting slicer options:', error)
     return NextResponse.json({ 
       success: false, 
       error: 'Internal server error',
@@ -169,4 +169,3 @@ export async function GET(request: NextRequest) {
     }, { status: 500 })
   }
 }
-

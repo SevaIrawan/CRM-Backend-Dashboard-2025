@@ -1,13 +1,12 @@
 /**
  * USC Daily Average dan MoM Comparison Logic
- * Menggunakan table blue_whale_usc dan blue_whale_usc_summary
- * Mengikuti pattern yang sudah ada di dailyAverageHelper.ts dan KPILogic.tsx
+ * Menggunakan table blue_whale_usc_monthly_summary (MV)
+ * Mengikuti pattern yang sudah ada di USCDailyAverageAndMoM.ts
  */
 
 import { supabase } from '@/lib/supabase'
-import { calculateUSCKPIs, USCKPIData as USCLogicKPIData } from '@/lib/USCLogic'
 
-// USC-specific types - SYNC with USCLogic.ts
+// USC-specific types - SYNC with blue_whale_usc_monthly_summary MV
 export interface USCKPIData {
   activeMember: number
   newDepositor: number
@@ -216,7 +215,7 @@ async function calculateUSCDailyAverage(monthlyValue: number, year: string, mont
 }
 
 /**
- * Calculate MoM percentage change (same as KPILogic.tsx)
+ * Calculate MoM percentage change (same as USCDailyAverageAndMoM.ts)
  */
 function calculateUSCMoM(current: number, previous: number): number {
   if (previous === 0) return current > 0 ? 100 : 0
@@ -224,18 +223,81 @@ function calculateUSCMoM(current: number, previous: number): number {
 }
 
 /**
- * Get USC KPI data using USCLogic (hybrid approach)
+ * Get USC KPI data from MV table
  */
 async function getUSCKPIData(year: string, month: string, line?: string): Promise<USCKPIData> {
   try {
-    console.log(`🔍 [USC KPI] Getting KPI data for ${month} ${year} using USCLogic...`)
+    console.log(`🔍 [USC KPI] Getting KPI data for ${month} ${year} from MV...`)
     
-    // Use calculateUSCKPIs from USCLogic.ts (hybrid MV + Master table)
-    const kpiData = await calculateUSCKPIs({
-      year,
-      month,
-      line
-    })
+    const monthIndex = getMonthIndex(month)
+    const monthNumber = monthIndex === -1 ? 0 : monthIndex + 1 // Handle 'ALL' month as 0
+    
+    let query = supabase
+      .from('blue_whale_usc_monthly_summary')
+      .select('*')
+      .eq('currency', 'USC')
+      .eq('year', parseInt(year))
+      .eq('month', monthNumber)
+      .limit(1)
+
+    if (line && line !== 'ALL') {
+      query = query.eq('line', line)
+    } else {
+      query = query.eq('line', 'ALL')
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error('❌ [USC KPI] Error fetching KPI data:', error)
+      throw error
+    }
+
+    if (!data || data.length === 0) {
+      console.warn(`⚠️ [USC KPI] No data found for ${month} ${year}, line: ${line}`)
+      return getEmptyUSCKPIData()
+    }
+
+    const row = data[0]
+    
+    // Map MV columns to KPI data structure
+    const kpiData: USCKPIData = {
+      activeMember: (row.active_member as number) || 0,
+      newDepositor: (row.new_depositor as number) || 0,
+      depositAmount: (row.deposit_amount as number) || 0,
+      grossGamingRevenue: (row.ggr as number) || 0,
+      netProfit: (row.net_profit as number) || 0,
+      withdrawAmount: (row.withdraw_amount as number) || 0,
+      addTransaction: (row.add_transaction as number) || 0,
+      deductTransaction: (row.deduct_transaction as number) || 0,
+      validBetAmount: (row.valid_amount as number) || 0,
+      pureMember: (row.pure_member as number) || 0,
+      pureUser: (row.pure_user as number) || 0,
+      newRegister: (row.new_register as number) || 0,
+      churnMember: 0, // Not available in MV
+      depositCases: (row.deposit_cases as number) || 0,
+      withdrawCases: (row.withdraw_cases as number) || 0,
+      winrate: (row.winrate as number) || 0,
+      churnRate: 0, // Not available in MV
+      retentionRate: 0, // Not available in MV
+      growthRate: 0, // Not available in MV
+      avgTransactionValue: (row.atv as number) || 0,
+      purchaseFrequency: (row.purchase_frequency as number) || 0,
+      customerLifetimeValue: 0, // Not available in MV
+      avgCustomerLifespan: 0, // Not available in MV
+      customerMaturityIndex: 0, // Not available in MV
+      ggrPerUser: (row.ggr_user as number) || 0,
+      ggrPerPureUser: 0, // Not available in MV
+      addBonus: (row.add_bonus as number) || 0,
+      deductBonus: (row.deduct_bonus as number) || 0,
+      conversionRate: (row.conversion_rate as number) || 0,
+      holdPercentage: (row.hold_percentage as number) || 0,
+      depositAmountUser: (row.da_user as number) || 0,
+      withdrawRate: (row.withdrawal_rate as number) || 0,
+      highValueCustomers: 0, // Not available in MV
+      lowValueCustomers: 0, // Not available in MV
+      totalCustomers: 0 // Not available in MV
+    }
 
     console.log(`✅ [USC KPI] KPI data loaded for ${month} ${year}`)
     return kpiData
@@ -302,37 +364,37 @@ export async function calculateAllUSCDailyAverages(
     
     const dailyAverages: USCKPIData = {
       activeMember: await calculateUSCDailyAverage(monthlyData.activeMember, year, month),
-      newDepositor: await calculateUSCDailyAverage(monthlyData.newDepositor, year, month),
       depositAmount: await calculateUSCDailyAverage(monthlyData.depositAmount, year, month),
-      grossGamingRevenue: await calculateUSCDailyAverage(monthlyData.grossGamingRevenue, year, month),
-      netProfit: await calculateUSCDailyAverage(monthlyData.netProfit, year, month),
       withdrawAmount: await calculateUSCDailyAverage(monthlyData.withdrawAmount, year, month),
+      netProfit: await calculateUSCDailyAverage(monthlyData.netProfit, year, month),
+      purchaseFrequency: await calculateUSCDailyAverage(monthlyData.purchaseFrequency, year, month),
+      avgTransactionValue: await calculateUSCDailyAverage(monthlyData.avgTransactionValue, year, month),
+      pureMember: await calculateUSCDailyAverage(monthlyData.pureMember, year, month),
+      newRegister: await calculateUSCDailyAverage(monthlyData.newRegister, year, month),
+      newDepositor: await calculateUSCDailyAverage(monthlyData.newDepositor, year, month),
+      depositCases: await calculateUSCDailyAverage(monthlyData.depositCases, year, month),
+      withdrawCases: await calculateUSCDailyAverage(monthlyData.withdrawCases, year, month),
+      grossGamingRevenue: await calculateUSCDailyAverage(monthlyData.grossGamingRevenue, year, month),
+      winrate: await calculateUSCDailyAverage(monthlyData.winrate, year, month),
+      withdrawRate: await calculateUSCDailyAverage(monthlyData.withdrawRate, year, month),
+      depositAmountUser: await calculateUSCDailyAverage(monthlyData.depositAmountUser, year, month),
+      ggrPerUser: await calculateUSCDailyAverage(monthlyData.ggrPerUser, year, month),
+      addBonus: await calculateUSCDailyAverage(monthlyData.addBonus, year, month),
+      deductBonus: await calculateUSCDailyAverage(monthlyData.deductBonus, year, month),
       addTransaction: await calculateUSCDailyAverage(monthlyData.addTransaction, year, month),
       deductTransaction: await calculateUSCDailyAverage(monthlyData.deductTransaction, year, month),
       validBetAmount: await calculateUSCDailyAverage(monthlyData.validBetAmount, year, month),
-      pureMember: await calculateUSCDailyAverage(monthlyData.pureMember, year, month),
-      pureUser: await calculateUSCDailyAverage(monthlyData.pureUser, year, month),
-      newRegister: await calculateUSCDailyAverage(monthlyData.newRegister, year, month),
       churnMember: await calculateUSCDailyAverage(monthlyData.churnMember, year, month),
-      depositCases: await calculateUSCDailyAverage(monthlyData.depositCases, year, month),
-      withdrawCases: await calculateUSCDailyAverage(monthlyData.withdrawCases, year, month),
-      winrate: await calculateUSCDailyAverage(monthlyData.winrate, year, month),
       churnRate: await calculateUSCDailyAverage(monthlyData.churnRate, year, month),
       retentionRate: await calculateUSCDailyAverage(monthlyData.retentionRate, year, month),
       growthRate: await calculateUSCDailyAverage(monthlyData.growthRate, year, month),
-      avgTransactionValue: await calculateUSCDailyAverage(monthlyData.avgTransactionValue, year, month),
-      purchaseFrequency: await calculateUSCDailyAverage(monthlyData.purchaseFrequency, year, month),
+      pureUser: await calculateUSCDailyAverage(monthlyData.pureUser, year, month),
+      holdPercentage: await calculateUSCDailyAverage(monthlyData.holdPercentage, year, month),
+      conversionRate: await calculateUSCDailyAverage(monthlyData.conversionRate, year, month),
       customerLifetimeValue: await calculateUSCDailyAverage(monthlyData.customerLifetimeValue, year, month),
       avgCustomerLifespan: await calculateUSCDailyAverage(monthlyData.avgCustomerLifespan, year, month),
       customerMaturityIndex: await calculateUSCDailyAverage(monthlyData.customerMaturityIndex, year, month),
-      ggrPerUser: await calculateUSCDailyAverage(monthlyData.ggrPerUser, year, month),
       ggrPerPureUser: await calculateUSCDailyAverage(monthlyData.ggrPerPureUser, year, month),
-      addBonus: await calculateUSCDailyAverage(monthlyData.addBonus, year, month),
-      deductBonus: await calculateUSCDailyAverage(monthlyData.deductBonus, year, month),
-      conversionRate: await calculateUSCDailyAverage(monthlyData.conversionRate, year, month),
-      holdPercentage: await calculateUSCDailyAverage(monthlyData.holdPercentage, year, month),
-      depositAmountUser: await calculateUSCDailyAverage(monthlyData.depositAmountUser, year, month),
-      withdrawRate: await calculateUSCDailyAverage(monthlyData.withdrawRate, year, month),
       highValueCustomers: 0,
       lowValueCustomers: 0,
       totalCustomers: 0
@@ -348,7 +410,7 @@ export async function calculateAllUSCDailyAverages(
 }
 
 /**
- * Get ALL USC KPIs with MoM Comparison (same pattern as KPILogic.tsx)
+ * Get ALL USC KPIs with MoM Comparison (same pattern as USCDailyAverageAndMoM.ts)
  */
 export async function getAllUSCKPIsWithMoM(
   year: string,
@@ -365,40 +427,40 @@ export async function getAllUSCKPIsWithMoM(
     const { year: prevYear, month: prevMonth } = getPreviousMonth(year, month)
     const previousData = await getUSCKPIData(prevYear, prevMonth, line)
     
-    // Calculate MoM using same formula as KPILogic.tsx
+    // Calculate MoM using same formula as USCDailyAverageAndMoM.ts
     const mom: USCMoMData = {
       activeMember: calculateUSCMoM(currentData.activeMember, previousData.activeMember),
-      newDepositor: calculateUSCMoM(currentData.newDepositor, previousData.newDepositor),
       depositAmount: calculateUSCMoM(currentData.depositAmount, previousData.depositAmount),
-      grossGamingRevenue: calculateUSCMoM(currentData.grossGamingRevenue, previousData.grossGamingRevenue),
-      netProfit: calculateUSCMoM(currentData.netProfit, previousData.netProfit),
       withdrawAmount: calculateUSCMoM(currentData.withdrawAmount, previousData.withdrawAmount),
+      netProfit: calculateUSCMoM(currentData.netProfit, previousData.netProfit),
+      purchaseFrequency: calculateUSCMoM(currentData.purchaseFrequency, previousData.purchaseFrequency),
+      avgTransactionValue: calculateUSCMoM(currentData.avgTransactionValue, previousData.avgTransactionValue),
+      pureMember: calculateUSCMoM(currentData.pureMember, previousData.pureMember),
+      newRegister: calculateUSCMoM(currentData.newRegister, previousData.newRegister),
+      newDepositor: calculateUSCMoM(currentData.newDepositor, previousData.newDepositor),
+      depositCases: calculateUSCMoM(currentData.depositCases, previousData.depositCases),
+      withdrawCases: calculateUSCMoM(currentData.withdrawCases, previousData.withdrawCases),
+      grossGamingRevenue: calculateUSCMoM(currentData.grossGamingRevenue, previousData.grossGamingRevenue),
+      winrate: calculateUSCMoM(currentData.winrate, previousData.winrate),
+      withdrawRate: calculateUSCMoM(currentData.withdrawRate, previousData.withdrawRate),
+      depositAmountUser: calculateUSCMoM(currentData.depositAmountUser, previousData.depositAmountUser),
+      ggrPerUser: calculateUSCMoM(currentData.ggrPerUser, previousData.ggrPerUser),
+      addBonus: calculateUSCMoM(currentData.addBonus, previousData.addBonus),
+      deductBonus: calculateUSCMoM(currentData.deductBonus, previousData.deductBonus),
       addTransaction: calculateUSCMoM(currentData.addTransaction, previousData.addTransaction),
       deductTransaction: calculateUSCMoM(currentData.deductTransaction, previousData.deductTransaction),
       validBetAmount: calculateUSCMoM(currentData.validBetAmount, previousData.validBetAmount),
-      pureMember: calculateUSCMoM(currentData.pureMember, previousData.pureMember),
-      pureUser: calculateUSCMoM(currentData.pureUser, previousData.pureUser),
-      newRegister: calculateUSCMoM(currentData.newRegister, previousData.newRegister),
       churnMember: calculateUSCMoM(currentData.churnMember, previousData.churnMember),
-      depositCases: calculateUSCMoM(currentData.depositCases, previousData.depositCases),
-      withdrawCases: calculateUSCMoM(currentData.withdrawCases, previousData.withdrawCases),
-      winrate: calculateUSCMoM(currentData.winrate, previousData.winrate),
       churnRate: calculateUSCMoM(currentData.churnRate, previousData.churnRate),
       retentionRate: calculateUSCMoM(currentData.retentionRate, previousData.retentionRate),
       growthRate: calculateUSCMoM(currentData.growthRate, previousData.growthRate),
-      avgTransactionValue: calculateUSCMoM(currentData.avgTransactionValue, previousData.avgTransactionValue),
-      purchaseFrequency: calculateUSCMoM(currentData.purchaseFrequency, previousData.purchaseFrequency),
+      pureUser: calculateUSCMoM(currentData.pureUser, previousData.pureUser),
+      holdPercentage: calculateUSCMoM(currentData.holdPercentage, previousData.holdPercentage),
+      conversionRate: calculateUSCMoM(currentData.conversionRate, previousData.conversionRate),
       customerLifetimeValue: calculateUSCMoM(currentData.customerLifetimeValue, previousData.customerLifetimeValue),
       avgCustomerLifespan: calculateUSCMoM(currentData.avgCustomerLifespan, previousData.avgCustomerLifespan),
       customerMaturityIndex: calculateUSCMoM(currentData.customerMaturityIndex, previousData.customerMaturityIndex),
-      ggrPerUser: calculateUSCMoM(currentData.ggrPerUser, previousData.ggrPerUser),
-      ggrPerPureUser: calculateUSCMoM(currentData.ggrPerPureUser, previousData.ggrPerPureUser),
-      addBonus: calculateUSCMoM(currentData.addBonus, previousData.addBonus),
-      deductBonus: calculateUSCMoM(currentData.deductBonus, previousData.deductBonus),
-      conversionRate: calculateUSCMoM(currentData.conversionRate, previousData.conversionRate),
-      holdPercentage: calculateUSCMoM(currentData.holdPercentage, previousData.holdPercentage),
-      depositAmountUser: calculateUSCMoM(currentData.depositAmountUser, previousData.depositAmountUser),
-      withdrawRate: calculateUSCMoM(currentData.withdrawRate, previousData.withdrawRate)
+      ggrPerPureUser: calculateUSCMoM(currentData.ggrPerPureUser, previousData.ggrPerPureUser)
     }
     
     // Calculate daily averages
@@ -420,7 +482,7 @@ export async function getAllUSCKPIsWithMoM(
 }
 
 /**
- * Format MoM value (same as KPILogic.tsx)
+ * Format MoM value (same as USCDailyAverageAndMoM.ts)
  */
 export function formatUSCMoMValue(value: number): string {
   const num = Number(value) || 0
@@ -428,7 +490,7 @@ export function formatUSCMoMValue(value: number): string {
 }
 
 /**
- * Get comparison color (same as KPILogic.tsx)
+ * Get comparison color (same as USCDailyAverageAndMoM.ts)
  */
 export function getUSCComparisonColor(value: number): string {
   const num = Number(value) || 0
@@ -445,7 +507,7 @@ export function formatUSCDailyAverageValue(
   try {
     switch (type) {
       case 'currency':
-        return `USD ${new Intl.NumberFormat('en-US', {
+        return `USC ${new Intl.NumberFormat('en-US', {
           minimumFractionDigits: 0,
           maximumFractionDigits: 0
         }).format(value)}`

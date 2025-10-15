@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { getDefaultPageByRole } from '@/utils/rolePermissions'
 
 export default function HomePage() {
   const router = useRouter()
@@ -16,8 +17,13 @@ export default function HomePage() {
     try {
       const session = localStorage.getItem('nexmax_session')
       if (session) {
-        // User is logged in, redirect to USC overview (default page)
-        router.push('/usc/overview')
+        // User is logged in, get role and redirect to appropriate default page
+        const sessionData = JSON.parse(session)
+        const userRole = sessionData?.role || 'executive'
+        const defaultPage = getDefaultPageByRole(userRole)
+        
+        console.log('🔍 [HomePage] User role:', userRole, 'Default page:', defaultPage)
+        router.push(defaultPage)
       } else {
         // User is not logged in, redirect to login
         router.push('/login')

@@ -209,4 +209,24 @@ export const getMenuItemsByRole = (userRole: string) => {
   )
   console.log('✅ [getMenuItemsByRole] Filtered items:', filteredItems)
   return filteredItems
+}
+
+// Get default page based on user role
+export const getDefaultPageByRole = (userRole: string): string => {
+  switch (userRole) {
+    case 'executive':
+    case 'manager_myr':
+    case 'sq_myr':
+      return '/myr/overview'
+    case 'manager_sgd':
+    case 'sq_sgd':
+      return '/sgd/overview'
+    case 'manager_usc':
+    case 'sq_usc':
+      return '/usc/overview'
+    case 'admin':
+      return '/dashboard'
+    default:
+      return '/myr/overview' // fallback to MYR overview
+  }
 } 

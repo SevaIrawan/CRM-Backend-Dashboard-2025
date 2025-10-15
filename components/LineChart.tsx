@@ -405,9 +405,22 @@ export default function LineChart({
            weight: 'bold' as const,
            size: 10
          },
-         anchor: 'end' as const,
-         align: 'top' as const,
-         offset: 4,
+         anchor: function(context: any) {
+           // First dataset: anchor at end (top of line)
+           // Second dataset: anchor at start (bottom of line)
+           return context.datasetIndex === 0 ? 'end' : 'start';
+         },
+         align: function(context: any) {
+           // First dataset: align top
+           // Second dataset: align bottom
+           return context.datasetIndex === 0 ? 'top' : 'bottom';
+         },
+         offset: function(context: any) {
+           // Different offset for each dataset to prevent overlapping
+           // First dataset (index 0): offset up
+           // Second dataset (index 1): offset down
+           return context.datasetIndex === 0 ? 8 : -8;
+         },
          formatter: function(value: number, context: any) {
            const datasetLabel = context.dataset.label;
            
