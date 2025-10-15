@@ -8,7 +8,8 @@ import {
   hasPermission, 
   canAccessUserManagement, 
   isReadOnly, 
-  getAvailableRoles
+  getAvailableRoles,
+  getDefaultPageByRole
 } from '@/utils/rolePermissions'
 
 // Session utility functions
@@ -76,7 +77,8 @@ export default function UsersPage() {
     // Check if user has permission to access User Management
     if (!canAccessUserManagement(sessionData.role)) {
       console.log('❌ Access denied: User does not have permission to access User Management')
-      router.push('/usc/overview')
+      const defaultPage = getDefaultPageByRole(sessionData.role)
+      router.push(defaultPage)
       return
     }
 

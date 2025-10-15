@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 import Image from 'next/image'
 import { logActivityViaAPI, generateSessionId, storeSessionId } from '@/lib/activityLogger'
+import { getDefaultPageByRole } from '@/utils/rolePermissions'
 
 // Supabase configuration with correct API key
 const supabaseUrl = 'https://bbuxfnchflhtulainndm.supabase.co'
@@ -28,13 +29,9 @@ export default function LoginPage() {
         if (user) {
           try {
             const userData = JSON.parse(user) // Validate JSON
-            if (userData.role === 'admin') {
-              router.push('/dashboard')
-            } else if (userData.role === 'usc_dep' || userData.role === 'manager_usc' || userData.role === 'manager') {
-              router.push('/usc/overview')
-            } else {
-              router.push('/dashboard')
-            }
+            const defaultPage = getDefaultPageByRole(userData.role)
+            console.log('🔍 [LOGIN] User already logged in, redirecting to:', defaultPage)
+            router.push(defaultPage)
           } catch (error) {
             console.error('Invalid session data:', error)
             localStorage.removeItem('nexmax_session')
@@ -125,15 +122,11 @@ export default function LoginPage() {
         console.log('ℹ️ [LOGIN] Admin login - no tracking')
       }
 
-      // Redirect based on user role
+      // Redirect based on user role using centralized function
       setTimeout(() => {
-        if (users.role === 'admin') {
-          router.push('/dashboard')
-        } else if (users.role === 'usc_dep' || users.role === 'manager_usc' || users.role === 'manager') {
-          router.push('/usc/overview')
-        } else {
-          router.push('/dashboard')
-        }
+        const defaultPage = getDefaultPageByRole(users.role)
+        console.log('🔍 [LOGIN] Successful login, redirecting to:', defaultPage)
+        router.push(defaultPage)
       }, 100)
 
     } catch (err) {

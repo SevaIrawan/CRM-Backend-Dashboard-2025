@@ -161,6 +161,11 @@ export default function LineChart({
       datasetLabel.toLowerCase().includes('conversion')
     );
     
+    // DEBUG: Log percentage detection
+    if (datasetLabel && datasetLabel.toLowerCase().includes('percentage')) {
+      console.log('🔍 [LineChart] Percentage detected:', { datasetLabel, value, isPercentageType });
+    }
+    
     // Check if this is a frequency/ratio type (Purchase Frequency)
     const isFrequencyType = datasetLabel && (
       datasetLabel.toLowerCase().includes('frequency') ||
@@ -202,8 +207,8 @@ export default function LineChart({
     );
     
     if (isPercentageType) {
-      // For percentage - show % symbol
-      return value.toFixed(1) + '%';
+      // For percentage - show % symbol with 2 decimal places
+      return value.toFixed(2) + '%';
          } else if (isFrequencyType) {
        // For frequency - show as decimal number only (NO decimal places for Y-axis)
        return Math.round(value).toString();
@@ -429,12 +434,14 @@ export default function LineChart({
              return formatIntegerKPI(value) + 'c';
            }
            
-           // For rate/percentage charts (coverage rate), use % suffix
+           // For rate/percentage charts (coverage rate), use % suffix with 2 decimal
            if (datasetLabel && (
              datasetLabel.toLowerCase().includes('rate') ||
-             datasetLabel.toLowerCase().includes('coverage')
+             datasetLabel.toLowerCase().includes('coverage') ||
+             datasetLabel.toLowerCase().includes('percentage') ||
+             datasetLabel.toLowerCase().includes('conversion')
            )) {
-             return value.toFixed(1) + '%';
+             return value.toFixed(2) + '%';
            }
            
            // For time-related charts (processing time), use (s) suffix
