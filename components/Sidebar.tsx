@@ -19,6 +19,7 @@ import {
   SGDIcon
 } from './Icons'
 import { getMenuItemsByRole, hasPermission } from '@/utils/rolePermissions'
+import { getPageVisibilityData, filterMenuItemsByVisibility, PageVisibilityData } from '@/utils/pageVisibilityHelper'
 
 // Function to filter menu items based on role for MYR, SGD, and USC pages
 const filterMenuItemsByRole = (menuItems: any[], userRole: string) => {
@@ -93,13 +94,35 @@ export default function Sidebar({
   const [lastUpdate, setLastUpdate] = useState<string>('Loading...')
   const [isConnected, setIsConnected] = useState<boolean>(false)
   const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [pageVisibilityData, setPageVisibilityData] = useState<PageVisibilityData[]>([])
+  const [pageVisibilityLoading, setPageVisibilityLoading] = useState<boolean>(true)
 
   useEffect(() => {
     fetchLastUpdate()
+    loadPageVisibilityData()
     // Auto refresh setiap 30 detik
     const interval = setInterval(fetchLastUpdate, 30000)
     return () => clearInterval(interval)
   }, [pathname]) // Re-fetch when page changes (USC vs non-USC)
+
+  // Load page visibility data
+  const loadPageVisibilityData = async () => {
+    try {
+      setPageVisibilityLoading(true)
+      console.log('🔍 [Sidebar] Loading page visibility data...')
+      
+      const data = await getPageVisibilityData()
+      setPageVisibilityData(data)
+      
+      console.log('✅ [Sidebar] Page visibility data loaded:', data.length, 'pages')
+    } catch (error) {
+      console.error('❌ [Sidebar] Error loading page visibility:', error)
+      // Fallback will be handled by getPageVisibilityData
+      setPageVisibilityData([])
+    } finally {
+      setPageVisibilityLoading(false)
+    }
+  }
 
   // STANDARD SUB MENU RULES:
   // 1. Auto show sub menu ketika user berada di halaman sub menu
@@ -334,6 +357,12 @@ export default function Sidebar({
         path: '/admin/feedback',
         icon: <ManagementIcon size={18} color="#ffffff" />,
         permission: 'admin'
+      },
+      {
+        title: 'Page Status Management',
+        path: '/admin/page-status',
+        icon: <ManagementIcon size={18} color="#ffffff" />,
+        permission: 'admin'
       }
     ]
 
@@ -342,8 +371,16 @@ export default function Sidebar({
       roleMenuItems.some(roleItem => roleItem.permission === item.permission)
     )
     
-    // Apply additional filtering for MYR roles to hide development pages
-    const finalFilteredItems = filterMenuItemsByRole(filteredItems, userRole)
+    // Apply page visibility filtering (NEW SYSTEM with fallback)
+    let finalFilteredItems
+    if (pageVisibilityData.length > 0 && !pageVisibilityLoading) {
+      console.log('🆕 [Sidebar] Using database page visibility data')
+      finalFilteredItems = filterMenuItemsByVisibility(filteredItems, userRole, pageVisibilityData)
+    } else {
+      console.log('🔄 [Sidebar] Using fallback hardcoded filtering')
+      finalFilteredItems = filterMenuItemsByRole(filteredItems, userRole)
+    }
+    
     console.log('✅ [Sidebar] Filtered menu items:', finalFilteredItems)
     return finalFilteredItems
   }
