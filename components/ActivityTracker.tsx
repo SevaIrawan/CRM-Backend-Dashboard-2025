@@ -102,14 +102,14 @@ function generatePageTitle(pathname: string): string {
     const pageNames: { [key: string]: string } = {
       'overview': 'Overview',
       'member-analytic': 'Member Analytic',
-      'brand-performance-trends': 'Brand Performance Trends',
+      'brand-performance-trends': 'Brand Comparison Trends',
       'churn-member': 'Churn Member',
       'customer-retention': 'Customer Retention',
       'kpi-comparison': 'KPI Comparison',
       'member-report': 'Member Report',
       'auto-approval-monitor': 'Auto Approval Monitor',
       'auto-approval-withdraw': 'Auto Approval Withdraw',
-      'aia-candy-tracking': 'AIA Candy Tracking',
+      'aia-candy-tracking': 'AIA Candy Mechanism',
       'overall-label': 'Overall Label'
     }
     

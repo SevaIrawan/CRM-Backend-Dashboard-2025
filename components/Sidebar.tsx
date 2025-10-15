@@ -270,10 +270,10 @@ export default function Sidebar({
         submenu: [
           { title: 'Overview', path: '/myr/overview' },
           { title: 'Member Analytic', path: '/myr/member-analytic' },
-          { title: 'Brand Performance Trends', path: '/myr/brand-performance-trends' },
+          { title: 'Brand Comparison Trends', path: '/myr/brand-performance-trends' },
           { title: 'KPI Comparison', path: '/myr/kpi-comparison' },
           { title: 'Overall Label', path: '/myr/overall-label' },
-          { title: 'AIA Candy Tracking', path: '/myr/aia-candy-tracking' },
+          { title: 'AIA Candy Mechanism', path: '/myr/aia-candy-tracking' },
           { title: 'Deposit Auto‑Approval', path: '/myr/auto-approval-monitor' },
           { title: 'Withdrawal Auto‑Approval', path: '/myr/auto-approval-withdraw' },
           { title: 'Customer Retention', path: '/myr/customer-retention' },
@@ -288,7 +288,7 @@ export default function Sidebar({
         submenu: [
         { title: 'Overview', path: '/sgd/overview' },
         { title: 'Member Analytic', path: '/sgd/member-analytic' },
-        { title: 'Brand Performance Trends', path: '/sgd/brand-performance-trends' },
+        { title: 'Brand Comparison Trends', path: '/sgd/brand-performance-trends' },
         { title: 'KPI Comparison', path: '/sgd/kpi-comparison' },
         { title: 'Auto-Approval Monitor', path: '/sgd/auto-approval-monitor' },
         { title: 'Customer Retention', path: '/sgd/customer-retention' },
@@ -303,7 +303,7 @@ export default function Sidebar({
         submenu: [
         { title: 'Overview', path: '/usc/overview' },
         { title: 'Member Analytic', path: '/usc/member-analytic' },
-        { title: 'Brand Performance Trends', path: '/usc/brand-performance-trends' },
+        { title: 'Brand Comparison Trends', path: '/usc/brand-performance-trends' },
         { title: 'KPI Comparison', path: '/usc/kpi-comparison' },
         { title: 'Auto-Approval Monitor', path: '/usc/auto-approval-monitor' },
         { title: 'Customer Retention', path: '/usc/customer-retention' },

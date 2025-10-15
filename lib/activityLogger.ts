@@ -108,10 +108,10 @@ export function getPageTitle(path: string): string {
     '/myr/member-report': 'MYR Member Report',
     '/myr/customer-retention': 'MYR Customer Retention',
     '/myr/churn-member': 'MYR Churn Member',
-    '/myr/brand-performance-trends': 'MYR Brand Performance Trends',
+    '/myr/brand-performance-trends': 'MYR Brand Comparison Trends',
     '/myr/auto-approval-monitor': 'MYR Auto-Approval Monitor',
     '/myr/auto-approval-withdraw': 'MYR Auto-Approval Withdraw',
-    '/myr/aia-candy-tracking': 'MYR AIA Candy Tracking',
+    '/myr/aia-candy-tracking': 'MYR AIA Candy Mechanism',
     '/myr/overall-label': 'MYR Overall Label',
     
     // SGD Pages
@@ -120,7 +120,7 @@ export function getPageTitle(path: string): string {
     '/sgd/member-report': 'SGD Member Report',
     '/sgd/customer-retention': 'SGD Customer Retention',
     '/sgd/churn-member': 'SGD Churn Member',
-    '/sgd/brand-performance-trends': 'SGD Brand Performance Trends',
+    '/sgd/brand-performance-trends': 'SGD Brand Comparison Trends',
     
     // USC Pages
     '/usc': 'USC Dashboard',
@@ -130,7 +130,7 @@ export function getPageTitle(path: string): string {
     '/usc/member-report': 'USC Member Report',
     '/usc/customer-retention': 'USC Customer Retention',
     '/usc/churn-member': 'USC Churn Member',
-    '/usc/brand-performance-trends': 'USC Brand Performance Trends',
+    '/usc/brand-performance-trends': 'USC Brand Comparison Trends',
     
     // Supabase
     '/supabase': 'Supabase Management'
