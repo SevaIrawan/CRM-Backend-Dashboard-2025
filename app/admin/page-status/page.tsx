@@ -392,23 +392,23 @@ export default function PageStatusPage() {
                 <tbody>
                   {filteredPages.map((page) => (
                     <tr key={page.id}>
-                      <td style={{ border: '1px solid #e0e0e0' }}>
+                      <td style={{ border: '1px solid #e0e0e0', padding: '12px 20px' }}>
                         <div className="page-info">
                           <div className="page-name">{page.page_name}</div>
                           <div className="page-path">{page.page_path}</div>
                         </div>
                       </td>
-                      <td style={{ border: '1px solid #e0e0e0' }}>
+                      <td style={{ border: '1px solid #e0e0e0', textAlign: 'center', padding: '12px 20px' }}>
                         <span className={`section-badge section-${page.page_section.toLowerCase()}`}>
                           {page.page_section}
                         </span>
                       </td>
-                      <td style={{ border: '1px solid #e0e0e0' }}>
+                      <td style={{ border: '1px solid #e0e0e0', textAlign: 'center', padding: '12px 20px' }}>
                         <span className={`status-badge status-${page.status}`}>
                           {page.status === 'running' ? '🟢 Running' : '🟡 Building'}
                         </span>
                       </td>
-                      <td style={{ border: '1px solid #e0e0e0' }}>
+                      <td style={{ border: '1px solid #e0e0e0', padding: '12px 20px' }}>
                         <div className="roles-list">
                           {page.visible_for_roles.map(role => (
                             <span key={role} className="role-tag">
@@ -417,7 +417,7 @@ export default function PageStatusPage() {
                           ))}
                         </div>
                       </td>
-                      <td style={{ border: '1px solid #e0e0e0' }}>
+                      <td style={{ border: '1px solid #e0e0e0', padding: '12px 20px' }}>
                         <div className="toggle-actions">
                           {availableRoles.filter(role => role !== 'admin').map(role => {
                             const hasAccess = page.visible_for_roles.includes(role)

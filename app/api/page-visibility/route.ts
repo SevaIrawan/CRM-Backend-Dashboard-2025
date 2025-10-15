@@ -213,7 +213,7 @@ export async function POST(request: NextRequest) {
         visible_for_roles: Array.isArray(data.visible_for_roles) 
           ? data.visible_for_roles 
           : [],
-        status: data.visible_for_roles?.length <= 1 ? 'building' : 'running'
+        status: Array.isArray(data.visible_for_roles) && data.visible_for_roles.length <= 1 ? 'building' : 'running'
       },
       message: 'Page visibility entry created successfully'
     })
