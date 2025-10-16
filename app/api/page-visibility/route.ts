@@ -57,6 +57,24 @@ export async function GET(request: NextRequest) {
     
     if (error) {
       console.error('❌ [PageVisibility API] Supabase error:', error)
+      // Graceful fallback jika tabel belum ada atau tidak terdefinisi
+      // Postgres code 42P01 = undefined_table, PGRST116 = No rows found for single() (not applicable here)
+      const message = (error as any)?.message || ''
+      const code = (error as any)?.code || ''
+      const isTableMissing = code === '42P01' || message.toLowerCase().includes('does not exist')
+      if (isTableMissing) {
+        console.warn('⚠️ [PageVisibility API] Table page_visibility_config tidak ditemukan. Mengembalikan daftar kosong (fallback aman).')
+        return NextResponse.json({
+          success: true,
+          data: [],
+          count: 0,
+          total: 0,
+          filters: {
+            section: section || 'all',
+            status: status || 'all'
+          }
+        })
+      }
       return NextResponse.json(
         { 
           success: false, 

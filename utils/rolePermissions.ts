@@ -1,10 +1,11 @@
 // ROLE-BASED ACCESS CONTROL (RBAC) SYSTEM
 // User Management Level Rules:
-// 1. Admin = Full Access All Page + User Management
-// 2. Executive = Limited Access: Dashboard, Strategic Executive, Business Flow + Read Only
-// 3. Manager = Limited Access: Dashboard, Strategic Executive, Business Flow, BGO, SR, XOO, OS + Read Only
-// 4. USC_DEP = Limited Access: USC Page (Overview, Sales) + Read Only
-// 5. User = Limited Access (No User Management) + Read Only
+// 1. Admin = Full Access All Page + User Management + Admin Features
+// 2. Executive = Limited Access: Dashboard, MYR, SGD, USC + Read Only
+// 3. Manager = Limited Access: Currency Specific (MYR/SGD/USC) + Read Only
+// 4. SQ = Limited Access: Currency Specific (MYR/SGD/USC) + Read Only
+// 5. Analyst = Full Dashboard Access (Dashboard, MYR, SGD, USC) + Read Only + No Admin Features
+// 6. Ops = Full Dashboard Access (Dashboard, MYR, SGD, USC) + Read Only + No Admin Features
 
 export interface UserRole {
   id: string
@@ -109,6 +110,34 @@ export const USER_ROLES: { [key: string]: UserRole } = {
     name: 'sq_usc',
     displayName: 'SQ USC',
     permissions: [
+      'usc'
+    ],
+    canAccessUserManagement: false,
+    isReadOnly: true
+  },
+  // Analyst = Full Dashboard Access (No Admin Features)
+  'analyst': {
+    id: 'analyst',
+    name: 'analyst',
+    displayName: 'Analyst',
+    permissions: [
+      'dashboard',
+      'myr',
+      'sgd',
+      'usc'
+    ],
+    canAccessUserManagement: false,
+    isReadOnly: true
+  },
+  // Ops = Operations (Full Dashboard Access, No Admin Features)
+  'ops': {
+    id: 'ops',
+    name: 'ops',
+    displayName: 'Operations',
+    permissions: [
+      'dashboard',
+      'myr',
+      'sgd',
       'usc'
     ],
     canAccessUserManagement: false,
@@ -225,6 +254,8 @@ export const getDefaultPageByRole = (userRole: string): string => {
     case 'sq_usc':
       return '/usc/overview'
     case 'admin':
+    case 'analyst':
+    case 'ops':
       return '/dashboard'
     default:
       return '/myr/overview' // fallback to MYR overview

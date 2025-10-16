@@ -68,7 +68,7 @@ export default function LoginPage() {
       }
 
       // Validate role exists in system
-      const validRoles = ['admin', 'executive', 'manager_myr', 'manager_sgd', 'manager_usc', 'sq_myr', 'sq_sgd', 'sq_usc']
+      const validRoles = ['admin', 'executive', 'manager_myr', 'manager_sgd', 'manager_usc', 'sq_myr', 'sq_sgd', 'sq_usc', 'analyst', 'ops']
       if (!validRoles.includes(users.role)) {
         setError(`Invalid user role: ${users.role}. Please contact administrator.`)
         setLoading(false)
