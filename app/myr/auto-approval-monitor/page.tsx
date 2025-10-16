@@ -751,20 +751,6 @@ export default function MYRAutoApprovalMonitorPage() {
           margin-bottom: 20px;
         }
 
-        .slicer-info {
-          background: #f3f4f6;
-          padding: 16px;
-          border-radius: 8px;
-          border: 1px solid #e5e7eb;
-          text-align: center;
-          margin-top: 20px;
-        }
-
-        .slicer-info p {
-          margin: 0;
-          color: #6b7280;
-          font-size: 14px;
-        }
 
         @media (max-width: 1440px) {
           .kpi-row {

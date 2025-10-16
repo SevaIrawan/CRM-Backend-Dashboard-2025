@@ -641,8 +641,8 @@ export default function PageStatusPage() {
                   ))}
                 </tbody>
                 </table>
-              )}
-            </div>
+            )}
+          </div>
             
             {/* Table Footer */}
             <div className="table-footer" style={{ padding: '0 20px' }}>
@@ -672,8 +672,8 @@ export default function PageStatusPage() {
         </div>
       </div>
             </div>
-          </div>
         </div>
+      </div>
 
       {/* Slicer Info */}
       <div className="slicer-info">
@@ -909,20 +909,6 @@ export default function PageStatusPage() {
           overflow-y: auto;
         }
 
-        .slicer-info {
-          background: #f3f4f6;
-          padding: 16px;
-          border-radius: 8px;
-          border: 1px solid #e5e7eb;
-          text-align: center;
-          margin-top: 20px;
-        }
-
-        .slicer-info p {
-          margin: 0;
-          color: #6b7280;
-          font-size: 14px;
-        }
       `}</style>
     </Layout>
   )

@@ -280,8 +280,6 @@ export default function AiaCandyTrackingPage() {
 
         <style jsx>{`
           .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 15px; margin-bottom: 20px; }
-          .slicer-info { background: #f3f4f6; padding: 16px; border-radius: 8px; border: 1px solid #e5e7eb; text-align: center; }
-          .slicer-info p { margin: 0; color: #6b7280; font-size: 14px; }
         `}</style>
       </Frame>
     </Layout>

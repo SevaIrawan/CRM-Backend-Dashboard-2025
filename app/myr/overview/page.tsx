@@ -9,6 +9,7 @@ import StatCard from '@/components/StatCard';
 import { getChartIcon } from '@/lib/CentralIcon';
 import { formatCurrencyKPI, formatIntegerKPI, formatMoMChange, formatNumericKPI, formatPercentageKPI } from '@/lib/formatHelpers';
 import { getAllMYRKPIsWithMoM } from '@/lib/MYRDailyAverageAndMoM';
+import { logger } from '@/lib/logger';
 
 // Dynamic imports for charts (SSR fix)
 const LineChart = dynamic(() => import('@/components/LineChart'), {
@@ -119,7 +120,7 @@ export default function MYROverviewPage() {
         setIsLoading(true);
         setLoadError(null);
         
-        console.log('🔄 [MYR Overview] Loading KPI data using STANDARD LOGIC...');
+        logger.log('🔄 [MYR Overview] Loading KPI data using STANDARD LOGIC...');
 
         // Use STANDARD LOGIC FILE - getAllMYRKPIsWithMoM
         const result = await getAllMYRKPIsWithMoM(selectedYear, selectedMonth, selectedLine);
@@ -128,7 +129,7 @@ export default function MYROverviewPage() {
         setMomData(result.mom);
         setDailyAverages(result.dailyAverage);
 
-        console.log('✅ [MYR Overview] KPI data loaded using STANDARD LOGIC');
+        logger.log('✅ [MYR Overview] KPI data loaded using STANDARD LOGIC');
 
       } catch (error) {
         console.error('Error loading KPI data:', error);
@@ -691,79 +692,6 @@ export default function MYROverviewPage() {
         </div>
       </Frame>
 
-      <style jsx>{`
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 400px;
-          gap: 16px;
-        }
-
-        .error-container {
-          text-align: center;
-          padding: 48px;
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-
-        .error-message {
-          background: #fee;
-          border: 1px solid #fcc;
-          padding: 16px;
-          border-radius: 8px;
-          text-align: center;
-          color: #c33;
-        }
-
-        .kpi-row {
-          display: grid;
-          grid-template-columns: repeat(6, 1fr);
-          gap: 20px;
-          margin-bottom: 20px;
-        }
-
-        .slicer-info {
-          background: #f3f4f6;
-          padding: 16px;
-          border-radius: 8px;
-          border: 1px solid #e5e7eb;
-          text-align: center;
-          margin-top: 20px;
-        }
-
-        .slicer-info p {
-          margin: 0;
-          color: #6b7280;
-          font-size: 14px;
-        }
-
-        @media (max-width: 1440px) {
-          .chart-row {
-            grid-template-columns: repeat(2, 1fr);
-          }
-        }
-
-        @media (max-width: 1024px) {
-          .kpi-row {
-            grid-template-columns: repeat(3, 1fr);
-          }
-        }
-
-        @media (max-width: 768px) {
-          .kpi-row {
-            grid-template-columns: repeat(2, 1fr);
-          }
-        }
-
-        @media (max-width: 480px) {
-          .kpi-row {
-            grid-template-columns: 1fr;
-          }
-        }
-      `}</style>
     </Layout>
   );
 }

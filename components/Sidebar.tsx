@@ -21,6 +21,7 @@ import {
 import { getMenuItemsByRole, hasPermission } from '@/utils/rolePermissions'
 import { getPageVisibilityData, filterMenuItemsByVisibility, PageVisibilityData } from '@/utils/pageVisibilityHelper'
 import { getKpiIcon } from '@/lib/CentralIcon'
+import { logger } from '@/lib/logger'
 
 // Function to filter menu items based on role for MYR, SGD, and USC pages
 const filterMenuItemsByRole = (menuItems: any[], userRole: string) => {
@@ -110,12 +111,12 @@ export default function Sidebar({
   const loadPageVisibilityData = async () => {
     try {
       setPageVisibilityLoading(true)
-      console.log('🔍 [Sidebar] Loading page visibility data...')
+      logger.log('🔍 [Sidebar] Loading page visibility data...')
       
       const data = await getPageVisibilityData()
       setPageVisibilityData(data)
       
-      console.log('✅ [Sidebar] Page visibility data loaded:', data.length, 'pages')
+      logger.log('✅ [Sidebar] Page visibility data loaded:', data.length, 'pages')
     } catch (error) {
       console.error('❌ [Sidebar] Error loading page visibility:', error)
       // Fallback will be handled by getPageVisibilityData
@@ -277,9 +278,9 @@ export default function Sidebar({
   
   // Get menu items based on user role
   const getMenuItems = () => {
-    console.log('🔍 [Sidebar] Current userRole:', userRole)
+    logger.log('🔍 [Sidebar] Current userRole:', userRole)
     const roleMenuItems = getMenuItemsByRole(userRole)
-    console.log('📋 [Sidebar] Role menu items:', roleMenuItems)
+    logger.log('📋 [Sidebar] Role menu items:', roleMenuItems)
     
     // Map role menu items to full menu items with icons and submenus
     const fullMenuItems = [
@@ -359,14 +360,14 @@ export default function Sidebar({
     // Apply page visibility filtering (NEW SYSTEM with fallback)
     let finalFilteredItems
     if (pageVisibilityData.length > 0 && !pageVisibilityLoading) {
-      console.log('🆕 [Sidebar] Using database page visibility data')
+      logger.log('🆕 [Sidebar] Using database page visibility data')
       finalFilteredItems = filterMenuItemsByVisibility(filteredItems, userRole, pageVisibilityData)
     } else {
-      console.log('🔄 [Sidebar] Using fallback hardcoded filtering')
+      logger.log('🔄 [Sidebar] Using fallback hardcoded filtering')
       finalFilteredItems = filterMenuItemsByRole(filteredItems, userRole)
     }
     
-    console.log('✅ [Sidebar] Filtered menu items:', finalFilteredItems)
+    logger.log('✅ [Sidebar] Filtered menu items:', finalFilteredItems)
     return finalFilteredItems
   }
 
