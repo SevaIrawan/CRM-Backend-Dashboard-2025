@@ -20,6 +20,7 @@ import {
 } from './Icons'
 import { getMenuItemsByRole, hasPermission } from '@/utils/rolePermissions'
 import { getPageVisibilityData, filterMenuItemsByVisibility, PageVisibilityData } from '@/utils/pageVisibilityHelper'
+import { getKpiIcon } from '@/lib/CentralIcon'
 
 // Function to filter menu items based on role for MYR, SGD, and USC pages
 const filterMenuItemsByRole = (menuItems: any[], userRole: string) => {
@@ -137,6 +138,8 @@ export default function Sidebar({
       setOpenSubmenu('MYR')
     } else if (pathname.startsWith('/sgd/')) {
       setOpenSubmenu('SGD')
+    } else if (pathname.startsWith('/admin/') || pathname.startsWith('/users') || pathname.startsWith('/supabase')) {
+      setOpenSubmenu('Admin')
     }
   }, [pathname])
 
@@ -145,7 +148,7 @@ export default function Sidebar({
       setIsLoading(true)
       
       // Determine table based on current page
-      let tableName = 'member_report_daily' // default
+      let tableName = 'blue_whale_myr' // default - use blue_whale_myr instead of member_report_daily
       if (pathname.startsWith('/usc/')) {
         tableName = 'blue_whale_usc'
       } else if (pathname.startsWith('/myr/')) {
@@ -231,7 +234,7 @@ export default function Sidebar({
         }
       } else {
         const isUSCPage = pathname.startsWith('/usc/')
-        const tableName = isUSCPage ? 'blue_whale_usc' : 'member_report_daily'
+        const tableName = isUSCPage ? 'blue_whale_usc' : 'blue_whale_myr'
         console.log(`⚠️ Sidebar - No data found in ${tableName}`)
         setLastUpdate('No Data')
         setIsConnected(false)
@@ -335,34 +338,16 @@ export default function Sidebar({
         ]
       },
       {
-        title: 'Supabase',
-        path: '/supabase',
-        icon: <SupabaseIcon size={18} color="#ffffff" />,
-        permission: 'supabase'
-      },
-      {
-        title: 'User Management',
-        path: '/users',
+        title: 'Admin',
         icon: <UserIcon size={18} color="#ffffff" />,
-        permission: 'users'
-      },
-      {
-        title: 'Activity Logs',
-        path: '/admin/activity-logs',
-        icon: <ManagementIcon size={18} color="#ffffff" />,
-        permission: 'admin'
-      },
-      {
-        title: 'Feedback & Support',
-        path: '/admin/feedback',
-        icon: <ManagementIcon size={18} color="#ffffff" />,
-        permission: 'admin'
-      },
-      {
-        title: 'Page Status Management',
-        path: '/admin/page-status',
-        icon: <ManagementIcon size={18} color="#ffffff" />,
-        permission: 'admin'
+        permission: 'admin',
+        submenu: [
+          { title: 'User Management', path: '/users' },
+          { title: 'Supabase', path: '/supabase' },
+          { title: 'Activity Logs', path: '/admin/activity-logs' },
+          { title: 'Feedback & Support', path: '/admin/feedback' },
+          { title: 'Page Status Management', path: '/admin/page-status' }
+        ]
       }
     ]
 
@@ -436,7 +421,7 @@ export default function Sidebar({
   // Helper function untuk mendeteksi sub menu secara dinamis
   // Tambahkan path baru di sini untuk menambah sub menu baru
   const isSubmenuPath = (path: string) => {
-    return path.startsWith('/usc/') || path.startsWith('/myr/') || path.startsWith('/sgd/')
+    return path.startsWith('/usc/') || path.startsWith('/myr/') || path.startsWith('/sgd/') || path.startsWith('/admin/') || path.startsWith('/users') || path.startsWith('/supabase')
   }
 
   // Helper function untuk mendapatkan parent menu dari path
@@ -445,6 +430,7 @@ export default function Sidebar({
     if (path.startsWith('/usc/')) return 'USC'
     if (path.startsWith('/myr/')) return 'MYR'
     if (path.startsWith('/sgd/')) return 'SGD'
+    if (path.startsWith('/admin/') || path.startsWith('/users') || path.startsWith('/supabase')) return 'Admin'
     return null
   }
 

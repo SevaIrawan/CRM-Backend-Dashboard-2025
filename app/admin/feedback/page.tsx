@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Layout from '@/components/Layout'
 import Frame from '@/components/Frame'
+import StatCard from '@/components/StatCard'
 import { supabase } from '@/lib/supabase'
 import {
   Feedback,
@@ -41,6 +42,14 @@ export default function AdminFeedbackPage() {
   const [userSession, setUserSession] = useState<any>(null)
   const [isClient, setIsClient] = useState(false)
   const [lastUnreadCountRef, setLastUnreadCountRef] = useState(0)
+  
+  // Stats state
+  const [stats, setStats] = useState({
+    totalFeedbacks: 0,
+    unreadFeedbacks: 0,
+    openFeedbacks: 0,
+    closedFeedbacks: 0
+  })
 
   // Fix hydration issue by only getting session on client side
   useEffect(() => {
@@ -101,6 +110,19 @@ export default function AdminFeedbackPage() {
 
       console.log('📋 [AdminFeedback] Fetched feedbacks:', feedbacksWithUnread.length, feedbacksWithUnread)
       setFeedbacks(feedbacksWithUnread)
+      
+      // Calculate stats
+      const totalFeedbacks = feedbacksWithUnread.length
+      const unreadFeedbacks = feedbacksWithUnread.filter(f => f.unread_count > 0).length
+      const openFeedbacks = feedbacksWithUnread.filter(f => f.status === 'open').length
+      const closedFeedbacks = feedbacksWithUnread.filter(f => f.status === 'closed').length
+      
+      setStats({
+        totalFeedbacks,
+        unreadFeedbacks,
+        openFeedbacks,
+        closedFeedbacks
+      })
     } catch (error) {
       console.error('Error fetching feedbacks:', error)
     } finally {
@@ -294,87 +316,137 @@ export default function AdminFeedbackPage() {
     return null
   }
 
+  // Create custom SubHeader with filters using standard project classes
+  const customSubHeader = (
+    <div className="dashboard-subheader">
+      <div className="subheader-title">
+        {/* Title area - left side */}
+      </div>
+      
+      <div className="subheader-controls">
+        <div className="slicer-group">
+          <label className="slicer-label">STATUS:</label>
+          <select
+            value={filters.status}
+            onChange={(e) => setFilters({ ...filters, status: e.target.value as any })}
+            className="subheader-select"
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              backgroundColor: 'white',
+              fontSize: '14px',
+              color: '#374151',
+              cursor: 'pointer',
+              outline: 'none',
+              transition: 'all 0.2s ease',
+              minWidth: '120px',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+            }}
+          >
+            <option value="all">All Status</option>
+            {Object.entries(FEEDBACK_STATUS_CONFIG).map(([key, config]) => (
+              <option key={key} value={key}>{config.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="slicer-group">
+          <label className="slicer-label">PRIORITY:</label>
+          <select
+            value={filters.priority}
+            onChange={(e) => setFilters({ ...filters, priority: e.target.value as any })}
+            className="subheader-select"
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              backgroundColor: 'white',
+              fontSize: '14px',
+              color: '#374151',
+              cursor: 'pointer',
+              outline: 'none',
+              transition: 'all 0.2s ease',
+              minWidth: '120px',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+            }}
+          >
+            <option value="all">All Priority</option>
+            {Object.entries(FEEDBACK_PRIORITY_CONFIG).map(([key, config]) => (
+              <option key={key} value={key}>{config.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="slicer-group">
+          <label className="slicer-label">SEARCH:</label>
+          <input
+            type="text"
+            placeholder="Search feedbacks..."
+            value={filters.search}
+            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              backgroundColor: 'white',
+              fontSize: '14px',
+              color: '#374151',
+              outline: 'none',
+              transition: 'all 0.2s ease',
+              minWidth: '150px',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  )
+
   return (
-    <Layout pageTitle="Feedback & Support Management">
-      <div style={{ padding: '20px' }}>
-        {/* Header */}
-        <div style={{ marginBottom: '30px' }}>
-          <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '8px', color: '#111827' }}>
-            Feedback & Support Management
-          </h1>
-          <p style={{ color: '#6b7280', fontSize: '16px' }}>
-            Manage user feedback and support requests ({feedbacks.length} total • Unread: {unreadCount})
-          </p>
-        </div>
+    <Layout pageTitle="Feedback & Support" customSubHeader={customSubHeader}>
+      <Frame variant="standard">
+        {/* Content Container with proper spacing - NO SCROLL */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '18px',
+          marginTop: '18px',
+          height: 'calc(100vh - 200px)',
+          overflow: 'hidden'
+        }}>
+          {/* ROW 1: KPI CARDS (4 cards in 1 horizontal row) */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '18px' }}>
+            <StatCard
+              title="TOTAL FEEDBACKS"
+              value={stats.totalFeedbacks}
+              icon="Total Feedbacks"
+            />
+            <StatCard
+              title="UNREAD FEEDBACKS"
+              value={stats.unreadFeedbacks}
+              icon="Unread Feedbacks"
+            />
+            <StatCard
+              title="OPEN FEEDBACKS"
+              value={stats.openFeedbacks}
+              icon="Open Feedbacks"
+            />
+            <StatCard
+              title="CLOSED FEEDBACKS"
+              value={stats.closedFeedbacks}
+              icon="Closed Feedbacks"
+            />
+          </div>
 
-        {/* Filters */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-          <Frame>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Status</label>
-              <select
-                value={filters.status}
-                onChange={(e) => setFilters({ ...filters, status: e.target.value as any })}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #d1d5db',
-                  backgroundColor: 'white',
-                  fontSize: '14px'
-                }}
-              >
-                <option value="all">All Status</option>
-                {Object.entries(FEEDBACK_STATUS_CONFIG).map(([key, config]) => (
-                  <option key={key} value={key}>{config.label}</option>
-                ))}
-              </select>
-            </div>
-          </Frame>
-
-          <Frame>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Priority</label>
-              <select
-                value={filters.priority}
-                onChange={(e) => setFilters({ ...filters, priority: e.target.value as any })}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #d1d5db',
-                  backgroundColor: 'white',
-                  fontSize: '14px'
-                }}
-              >
-                <option value="all">All Priority</option>
-                {Object.entries(FEEDBACK_PRIORITY_CONFIG).map(([key, config]) => (
-                  <option key={key} value={key}>{config.label}</option>
-                ))}
-              </select>
-            </div>
-          </Frame>
-
-          <Frame>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Search</label>
-              <input
-                type="text"
-                placeholder="Search feedbacks..."
-                value={filters.search}
-                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #d1d5db',
-                  backgroundColor: 'white',
-                  fontSize: '14px'
-                }}
-              />
-            </div>
-          </Frame>
-        </div>
-
-        {/* Main Content - Split Layout */}
-        <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '20px', height: '600px' }}>
+          {/* Main Content - Split Layout */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: '350px 1fr', 
+            gap: '18px', 
+            flex: 1,
+            minHeight: 0
+          }}>
           {/* Notifications List */}
           <Frame>
             <div style={{ padding: '20px', height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -646,8 +718,31 @@ export default function AdminFeedbackPage() {
               )}
             </div>
           </Frame>
+          </div>
+
+          {/* Slicer Info */}
+          <div className="slicer-info">
+            <p>Showing data for: {filters.status || 'All Status'} | {filters.priority || 'All Priority'} | {filters.search ? `Search: "${filters.search}"` : 'All Feedbacks'}</p>
+          </div>
         </div>
-      </div>
+      </Frame>
+
+      <style jsx>{`
+        .slicer-info {
+          background: #f3f4f6;
+          padding: 16px;
+          border-radius: 8px;
+          border: 1px solid #e5e7eb;
+          text-align: center;
+          margin-top: 20px;
+        }
+
+        .slicer-info p {
+          margin: 0;
+          color: #6b7280;
+          font-size: 14px;
+        }
+      `}</style>
     </Layout>
   )
 }

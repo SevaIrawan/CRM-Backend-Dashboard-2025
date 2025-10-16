@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import Layout from '@/components/Layout'
 import Frame from '@/components/Frame'
+import SubHeader from '@/components/SubHeader'
+import StatCard from '@/components/StatCard'
 import { useRouter } from 'next/navigation'
 
 interface ActivityLog {
@@ -51,6 +53,7 @@ export default function ActivityLogsPage() {
     pageAccessed: ''
   })
   const [selectedPeriod, setSelectedPeriod] = useState('today')
+  const [rowsPerPage, setRowsPerPage] = useState(10)
 
   // Check admin access
   useEffect(() => {
@@ -75,7 +78,7 @@ export default function ActivityLogsPage() {
       
       const queryParams = new URLSearchParams({
         page: page.toString(),
-        limit: '100',
+        limit: rowsPerPage.toString(),
         ...Object.fromEntries(Object.entries(filters).filter(([_, value]) => value !== ''))
       })
 
@@ -126,7 +129,16 @@ export default function ActivityLogsPage() {
   // Load data on mount and filter changes
   useEffect(() => {
     fetchLogs(1)
-  }, [filters])
+  }, [filters, rowsPerPage])
+
+  // Auto-refresh logs every 30 seconds for realtime updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchLogs(currentPage)
+    }, 30000) // 30 seconds
+
+    return () => clearInterval(interval)
+  }, [currentPage, filters, rowsPerPage])
 
   useEffect(() => {
     fetchStats()
@@ -170,18 +182,21 @@ export default function ActivityLogsPage() {
     }
   }
 
-  // Format timestamp in GMT+7
+  // Format timestamp using Supabase timezone (UTC) with realtime updates
   const formatTimestamp = (timestamp: string) => {
+    // Parse Supabase timestamp (already in UTC)
     const date = new Date(timestamp)
-    const gmt7Time = new Date(date.getTime() + (7 * 60 * 60 * 1000))
-    return gmt7Time.toLocaleString('id-ID', {
+    
+    // Convert to Asia/Jakarta timezone (GMT+7)
+    return date.toLocaleString('en-GB', {
       timeZone: 'Asia/Jakarta',
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
-      second: '2-digit'
+      second: '2-digit',
+      hour12: false
     })
   }
 
@@ -213,65 +228,32 @@ export default function ActivityLogsPage() {
     }
   }
 
-  return (
-    <Layout pageTitle="Activity Logs">
-      <div style={{ padding: '20px' }}>
-        {/* Stats Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-          <Frame>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              <select 
-                value={selectedPeriod} 
-                onChange={(e) => setSelectedPeriod(e.target.value)}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #d1d5db',
-                  backgroundColor: 'white'
-                }}
-              >
-                <option value="today">Today</option>
-                <option value="week">Last 7 Days</option>
-                <option value="month">Last 30 Days</option>
-              </select>
-              
-              {statsLoading ? (
-                <div style={{ textAlign: 'center', padding: '20px' }}>Loading stats...</div>
-              ) : stats ? (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '14px' }}>
-                  <div><strong>Total Logins:</strong> {stats.totalLogins}</div>
-                  <div><strong>Active Users:</strong> {stats.activeUsersNow}</div>
-                  <div><strong>Avg Session:</strong> {stats.avgSessionDurationMinutes}m</div>
-                  <div><strong>Most Visited:</strong> {stats.mostVisitedPages[0]?.page || 'N/A'}</div>
-                </div>
-              ) : (
-                <div style={{ textAlign: 'center', color: '#ef4444' }}>Failed to load stats</div>
-              )}
+  // Create custom SubHeader with filters using standard project classes
+  const customSubHeader = (
+    <div className="dashboard-subheader">
+      <div className="subheader-title">
+        {/* Title area - left side */}
             </div>
-          </Frame>
-
-          <Frame>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <input
-                type="text"
-                placeholder="Username"
-                value={filters.username}
-                onChange={(e) => handleFilterChange('username', e.target.value)}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #d1d5db',
-                  fontSize: '14px'
-                }}
-              />
+      
+      <div className="subheader-controls">
+        <div className="slicer-group">
+          <label className="slicer-label">ROLES:</label>
               <select
                 value={filters.role}
                 onChange={(e) => handleFilterChange('role', e.target.value)}
+            className="subheader-select"
                 style={{
                   padding: '8px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #d1d5db',
-                  fontSize: '14px'
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              backgroundColor: 'white',
+              fontSize: '14px',
+              color: '#374151',
+              cursor: 'pointer',
+              outline: 'none',
+              transition: 'all 0.2s ease',
+              minWidth: '120px',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
                 }}
               >
                 <option value="">All Roles</option>
@@ -282,14 +264,26 @@ export default function ActivityLogsPage() {
                 <option value="sq_sgd">SQ SGD</option>
                 <option value="usc_dep">USC Dep</option>
               </select>
+        </div>
+
+        <div className="slicer-group">
+          <label className="slicer-label">ACTIVITY:</label>
               <select
                 value={filters.activityType}
                 onChange={(e) => handleFilterChange('activityType', e.target.value)}
+            className="subheader-select"
                 style={{
                   padding: '8px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #d1d5db',
-                  fontSize: '14px'
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              backgroundColor: 'white',
+              fontSize: '14px',
+              color: '#374151',
+              cursor: 'pointer',
+              outline: 'none',
+              transition: 'all 0.2s ease',
+              minWidth: '120px',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
                 }}
               >
                 <option value="">All Activities</option>
@@ -298,192 +292,440 @@ export default function ActivityLogsPage() {
                 <option value="page_view">Page View</option>
               </select>
             </div>
-          </Frame>
 
-          <Frame>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div className="slicer-group">
+          <label className="slicer-label">DATE RANGE:</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <input
                 type="date"
                 value={filters.startDate}
                 onChange={(e) => handleFilterChange('startDate', e.target.value)}
                 style={{
                   padding: '8px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #d1d5db',
-                  fontSize: '14px'
-                }}
-              />
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                backgroundColor: 'white',
+                fontSize: '14px',
+                color: '#374151',
+                outline: 'none',
+                transition: 'all 0.2s ease',
+                minWidth: '140px',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+              }}
+            />
+            <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: '500' }}>to</span>
               <input
                 type="date"
                 value={filters.endDate}
                 onChange={(e) => handleFilterChange('endDate', e.target.value)}
                 style={{
                   padding: '8px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #d1d5db',
-                  fontSize: '14px'
-                }}
-              />
-              <button
-                onClick={() => setFilters({ username: '', role: '', activityType: '', startDate: '', endDate: '', ipAddress: '', pageAccessed: '' })}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #d1d5db',
-                  backgroundColor: '#f3f4f6',
-                  cursor: 'pointer',
-                  fontSize: '14px'
-                }}
-              >
-                Clear Filters
-              </button>
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                backgroundColor: 'white',
+                fontSize: '14px',
+                color: '#374151',
+                outline: 'none',
+                transition: 'all 0.2s ease',
+                minWidth: '140px',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+              }}
+            />
+          </div>
             </div>
-          </Frame>
-
-          <Frame>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <button
-                onClick={handleExport}
-                style={{
-                  padding: '12px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  backgroundColor: '#10b981',
-                  color: 'white',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500'
-                }}
-              >
-                📥 Export to CSV
-              </button>
-              <div style={{ fontSize: '12px', color: '#6b7280', textAlign: 'center' }}>
-                Total Records: {totalRecords.toLocaleString()}
               </div>
             </div>
-          </Frame>
+  )
+
+  return (
+    <Layout pageTitle="Activity Logs" customSubHeader={customSubHeader}>
+      <Frame variant="standard">
+        {/* Content Container with proper spacing - NO SCROLL */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '18px',
+          marginTop: '18px',
+          height: 'calc(100vh - 200px)',
+          overflow: 'hidden'
+        }}>
+          {/* ROW 1: KPI CARDS (4 cards in 1 horizontal row) */}
+          <div className="kpi-row">
+            {statsLoading ? (
+              <div className="loading-stats">Loading stats...</div>
+            ) : stats ? (
+              <>
+                <StatCard
+                  title="TOTAL LOGINS"
+                  value={stats.totalLogins}
+                  icon="Total Logins"
+                />
+                <StatCard
+                  title="ACTIVE USERS"
+                  value={stats.activeUsersNow}
+                  icon="Active Users"
+                />
+                <StatCard
+                  title="AVG SESSION"
+                  value={`${stats.avgSessionDurationMinutes}m`}
+                  icon="Avg Session"
+                />
+                <StatCard
+                  title="MOST VISITED"
+                  value={stats.mostVisitedPages[0]?.page || 'N/A'}
+                  icon="Most Visited"
+                />
+              </>
+            ) : (
+              <div className="error-stats">Failed to load stats</div>
+            )}
         </div>
 
         {/* Activity Logs Table */}
-        <Frame>
+          <div className="simple-table-container">
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '40px' }}>Loading activity logs...</div>
+              <div className="loading-state">
+                <div className="loading-spinner"></div>
+                <span>Loading activity logs...</span>
+              </div>
           ) : logs.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-              No activity logs found
+              <div className="empty-state">
+                <span className="empty-icon">📋</span>
+                <span>No activity logs found</span>
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
-                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Timestamp</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>User</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Activity</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Page</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Device</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>IP Address</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Session</th>
-                  </tr>
-                </thead>
+              <div className="simple-table-wrapper" style={{ padding: '0 20px' }}>
+                <table className="simple-table">
+                  <thead>
+                    <tr>
+                      <th>Timestamp</th>
+                      <th>User</th>
+                      <th>Activity</th>
+                      <th>Page</th>
+                      <th>Device</th>
+                      <th>IP Address</th>
+                      <th>Session</th>
+                    </tr>
+                  </thead>
                 <tbody>
                   {logs.map((log) => (
-                    <tr key={log.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                      <td style={{ padding: '12px' }}>{formatTimestamp(log.timestamp)}</td>
-                      <td style={{ padding: '12px' }}>
-                        <div>
-                          <div style={{ fontWeight: '500' }}>{log.username}</div>
-                          <div style={{ fontSize: '12px', color: '#6b7280' }}>{log.role}</div>
+                      <tr key={log.id}>
+                        <td>{formatTimestamp(log.timestamp)}</td>
+                        <td>
+                          <div className="user-info">
+                            <div className="username">{log.username}</div>
+                            <div className="user-role">{log.role}</div>
                         </div>
                       </td>
-                      <td style={{ padding: '12px' }}>
-                        <span style={{
-                          padding: '4px 8px',
-                          borderRadius: '4px',
-                          backgroundColor: getActivityTypeColor(log.activity_type) + '20',
-                          color: getActivityTypeColor(log.activity_type),
-                          fontSize: '12px',
-                          fontWeight: '500'
-                        }}>
+                        <td>
+                          <span className={`activity-badge activity-${log.activity_type}`}>
                           {log.activity_type.toUpperCase()}
                         </span>
                       </td>
-                      <td style={{ padding: '12px' }}>
-                        <div>
-                          <div style={{ fontWeight: '500' }}>{log.page_title || log.accessed_page}</div>
-                          <div style={{ fontSize: '12px', color: '#6b7280' }}>{log.accessed_page}</div>
+                        <td>
+                          <div className="page-info">
+                            <div className="page-title">{log.page_title || log.accessed_page}</div>
+                            <div className="page-path">{log.accessed_page}</div>
                         </div>
                       </td>
-                      <td style={{ padding: '12px', textAlign: 'center' }}>
-                        <span style={{ fontSize: '18px' }}>{getDeviceIcon(log.device_type)}</span>
-                        <div style={{ fontSize: '12px', color: '#6b7280' }}>{log.device_type}</div>
+                        <td className="device-cell">
+                          <span className="device-icon">{getDeviceIcon(log.device_type)}</span>
+                          <div className="device-type">{log.device_type}</div>
                       </td>
-                      <td style={{ padding: '12px', fontFamily: 'monospace', fontSize: '12px' }}>
-                        {log.ip_address}
-                      </td>
-                      <td style={{ padding: '12px', textAlign: 'center' }}>
-                        {formatSessionDuration(log.session_duration)}
-                      </td>
+                        <td className="ip-address">{log.ip_address}</td>
+                        <td className="session-cell">{formatSessionDuration(log.session_duration)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              </div>
+            )}
 
-              {/* Pagination */}
+            {/* Table Footer - Records Info + Pagination + Export */}
+            <div className="table-footer" style={{ padding: '0 20px' }}>
+              <div className="records-info">
+                Showing {logs.length} of {totalRecords.toLocaleString()} records
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <label style={{ fontSize: '14px', color: '#6b7280' }}>Per Page:</label>
+                  <select
+                    value={rowsPerPage}
+                    onChange={(e) => {
+                      setRowsPerPage(Number(e.target.value))
+                      setCurrentPage(1)
+                    }}
+                    style={{
+                      padding: '4px 8px',
+                      fontSize: '14px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      backgroundColor: 'white',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
+
               {totalPages > 1 && (
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center', 
-                  padding: '20px',
-                  borderTop: '1px solid #e5e7eb'
-                }}>
-                  <div style={{ fontSize: '14px', color: '#6b7280' }}>
-                    Showing {((currentPage - 1) * 100) + 1} to {Math.min(currentPage * 100, totalRecords)} of {totalRecords.toLocaleString()} records
-                  </div>
-                  <div style={{ display: 'flex', gap: '10px' }}>
+                  <div className="pagination-controls">
                     <button
                       onClick={() => handlePageChange(currentPage - 1)}
                       disabled={currentPage === 1}
-                      style={{
-                        padding: '8px 16px',
-                        borderRadius: '6px',
-                        border: '1px solid #d1d5db',
-                        backgroundColor: currentPage === 1 ? '#f9fafb' : 'white',
-                        cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                        fontSize: '14px'
-                      }}
+                      className="pagination-btn"
                     >
-                      Previous
+                      ← Prev
                     </button>
-                    <span style={{ 
-                      padding: '8px 16px', 
-                      fontSize: '14px',
-                      color: '#374151'
-                    }}>
+                    <span className="pagination-info">
                       Page {currentPage} of {totalPages}
                     </span>
                     <button
                       onClick={() => handlePageChange(currentPage + 1)}
                       disabled={currentPage === totalPages}
-                      style={{
-                        padding: '8px 16px',
-                        borderRadius: '6px',
-                        border: '1px solid #d1d5db',
-                        backgroundColor: currentPage === totalPages ? '#f9fafb' : 'white',
-                        cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                        fontSize: '14px'
-                      }}
+                      className="pagination-btn"
                     >
-                      Next
+                      Next →
                     </button>
                   </div>
+                )}
+
+                <button 
+                  onClick={handleExport}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    transition: 'background-color 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
+                  title="Export to CSV"
+                >
+                  📥 Export
+                </button>
                 </div>
-              )}
             </div>
-          )}
+          </div>
+
+          {/* Slicer Info */}
+          <div className="slicer-info">
+            <p>Showing data for: {filters.role || 'All Roles'} | {filters.activityType || 'All Activities'} | Date: {filters.startDate || 'All Time'} to {filters.endDate || 'Now'}</p>
+          </div>
+        </div>
         </Frame>
-      </div>
+
+      <style jsx>{`
+        /* Ensure 4 StatCards in 1 horizontal row */
+        .kpi-row {
+          display: grid !important;
+          grid-template-columns: repeat(4, 1fr) !important;
+          gap: 18px !important;
+        }
+
+        .loading-stats {
+          text-align: center;
+          padding: 20px;
+          color: #6b7280;
+        }
+
+        .error-stats {
+          text-align: center;
+          color: #ef4444;
+          font-weight: 500;
+        }
+
+        .loading-state,
+        .empty-state {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 60px 20px;
+          color: #6b7280;
+        }
+
+        .loading-spinner {
+          width: 32px;
+          height: 32px;
+          border: 3px solid #e5e7eb;
+          border-top: 3px solid #3b82f6;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-bottom: 16px;
+        }
+
+        .empty-icon {
+          font-size: 48px;
+          margin-bottom: 16px;
+        }
+
+        /* Table Container - Fit dalam 1 frame */
+        .simple-table-container {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          min-height: 0; /* Important for flex child */
+          padding-top: 12px; /* Top padding like Page Status */
+        }
+
+        /* Table Wrapper - Scroll hanya di dalam table */
+        .simple-table-wrapper {
+          flex: 1;
+          overflow-y: auto;
+          min-height: 0; /* Important for flex child */
+        }
+
+        /* Table Footer - Fixed di bawah, tidak ikut scroll */
+        .table-footer {
+          flex-shrink: 0; /* Tidak menyusut */
+          margin-top: auto; /* Push ke bawah */
+        }
+
+        /* Table Content Styles */
+        .user-info {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .username {
+          font-weight: 500;
+          color: #1f2937;
+        }
+
+        .user-role {
+          font-size: 12px;
+          color: #6b7280;
+        }
+
+        .activity-badge {
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 12px;
+          font-weight: 500;
+        }
+
+        .activity-login {
+          background: rgba(16, 185, 129, 0.2);
+          color: #10b981;
+        }
+
+        .activity-logout {
+          background: rgba(239, 68, 68, 0.2);
+          color: #ef4444;
+        }
+
+        .activity-page_view {
+          background: rgba(59, 130, 246, 0.2);
+          color: #3b82f6;
+        }
+
+        .page-info {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .page-title {
+          font-weight: 500;
+          color: #1f2937;
+        }
+
+        .page-path {
+          font-size: 12px;
+          color: #6b7280;
+        }
+
+        .device-cell {
+          text-align: center;
+        }
+
+        .device-icon {
+          font-size: 18px;
+          display: block;
+        }
+
+        .device-type {
+          font-size: 12px;
+          color: #6b7280;
+          margin-top: 4px;
+        }
+
+        .ip-address {
+          font-family: monospace;
+          font-size: 12px;
+        }
+
+        .session-cell {
+          text-align: center;
+        }
+
+
+        /* Pagination Button Styles */
+        .pagination-btn {
+          padding: 6px 12px;
+          border: 1px solid #d1d5db;
+          border-radius: 4px;
+          background: white;
+          color: #374151;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+          background: #f9fafb;
+          border-color: #9ca3af;
+        }
+
+        .pagination-btn:disabled {
+          background: #f9fafb;
+          color: #9ca3af;
+          cursor: not-allowed;
+          opacity: 0.6;
+        }
+
+        .pagination-info {
+          font-size: 14px;
+          color: #374151;
+          font-weight: 500;
+          padding: 0 8px;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        .slicer-info {
+          background: #f3f4f6;
+          padding: 16px;
+          border-radius: 8px;
+          border: 1px solid #e5e7eb;
+          text-align: center;
+          margin-top: 20px;
+        }
+
+        .slicer-info p {
+          margin: 0;
+          color: #6b7280;
+          font-size: 14px;
+        }
+
+      `}</style>
     </Layout>
   )
 }
