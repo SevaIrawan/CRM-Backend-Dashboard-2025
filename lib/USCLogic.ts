@@ -294,7 +294,7 @@ async function retryRequest<T>(
 
 export async function getUSCRawKPIData(filters: USCSlicerFilters): Promise<USCRawKPIData> {
   const cacheKey = `usc_raw_kpi_USC_${filters.year}_${filters.month}_${filters.line || 'all'}`
-  const cached = uscCache.get(cacheKey)
+  const cached = uscCache.get(cacheKey) as USCRawKPIData | undefined
   if (cached) {
     console.log('🎯 [USCLogic] Using cached raw KPI data')
     return cached
@@ -761,16 +761,18 @@ export async function getUSCSlicerData(): Promise<USCSlicerData> {
       supabase.from('blue_whale_usc').select('line').eq('currency', 'USC')
     ])
 
-    const years = Array.from(new Set((yearsResult.data || []).map((item: Record<string, unknown>) => item.year).filter(Boolean))).sort()
-    const months = Array.from(new Set((monthsResult.data || []).map((item: Record<string, unknown>) => item.month).filter(Boolean)))
-    const lines = Array.from(new Set((linesResult.data || []).map((item: Record<string, unknown>) => item.line).filter(Boolean)))
+    const years = Array.from(new Set((yearsResult.data || []).map((item: Record<string, unknown>) => item.year).filter(Boolean))) as string[]
+    years.sort()
+    
+    const months = Array.from(new Set((monthsResult.data || []).map((item: Record<string, unknown>) => item.month).filter(Boolean))) as string[]
+    const lines = Array.from(new Set((linesResult.data || []).map((item: Record<string, unknown>) => item.line).filter(Boolean))) as string[]
 
     // Sort months chronologically
     const monthOrder: { [key: string]: number } = {
       'January': 1, 'February': 2, 'March': 3, 'April': 4, 'May': 5, 'June': 6,
       'July': 7, 'August': 8, 'September': 9, 'October': 10, 'November': 11, 'December': 12
     }
-    months.sort((a: string, b: string) => (monthOrder[a] || 0) - (monthOrder[b] || 0))
+    months.sort((a, b) => (monthOrder[a] || 0) - (monthOrder[b] || 0))
 
     console.log('✅ [USCLogic] USC Slicer data loaded:', { years: years.length, months: months.length, lines: lines.length })
 
@@ -804,7 +806,7 @@ export async function getUSCMonthsForYear(year: string, line?: string): Promise<
     const rawMonths = (data || []).map((item: Record<string, unknown>) => item.month).filter(Boolean)
     console.log('🔍 [getUSCMonthsForYear] Raw months from DB:', rawMonths)
     
-    const months = Array.from(new Set(rawMonths))
+    const months = Array.from(new Set(rawMonths)) as string[]
     console.log('🔍 [getUSCMonthsForYear] Unique months:', months)
     
     // Sort months chronologically
@@ -812,7 +814,7 @@ export async function getUSCMonthsForYear(year: string, line?: string): Promise<
       'January': 1, 'February': 2, 'March': 3, 'April': 4, 'May': 5, 'June': 6,
       'July': 7, 'August': 8, 'September': 9, 'October': 10, 'November': 11, 'December': 12
     }
-    months.sort((a: string, b: string) => (monthOrder[a] || 0) - (monthOrder[b] || 0))
+    months.sort((a, b) => (monthOrder[a] || 0) - (monthOrder[b] || 0))
 
     console.log('🔍 [getUSCMonthsForYear] FINAL SORTED MONTHS:', months)
     return months
@@ -838,7 +840,7 @@ export async function getUSCLinesForYear(year?: string): Promise<string[]> {
 
     if (error) throw error
 
-    const lines = Array.from(new Set((data || []).map((item: Record<string, unknown>) => item.line).filter(Boolean)))
+    const lines = Array.from(new Set((data || []).map((item: Record<string, unknown>) => item.line).filter(Boolean))) as string[]
     
     // Sort lines alphabetically
     lines.sort()
