@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
       headers.join(','),
       ...data.map(row => 
         headers.map(header => {
-          const value = row[header]
+          const value = (row as Record<string, unknown>)[header]
           if (value === null || value === undefined) return ''
           if (typeof value === 'string' && value.includes(',')) {
             return `"${value.replace(/"/g, '""')}"`
