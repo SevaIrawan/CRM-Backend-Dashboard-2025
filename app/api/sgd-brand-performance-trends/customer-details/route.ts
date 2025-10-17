@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
         // Get all transactions for this user in the date range
         let transactionsQuery = supabase
           .from('blue_whale_sgd')
-          .select('date, line, deposit_amount, withdraw_amount, deposit_cases, withdraw_cases, net_profit, ggr, valid_amount, bonus, add_transaction, deduct_transaction')
+          .select('userkey, unique_code, date, line, deposit_amount, withdraw_amount, deposit_cases, withdraw_cases, net_profit, ggr, valid_amount, bonus, add_transaction, deduct_transaction')
           .eq('currency', 'SGD')
           .eq('userkey', userkey)
           .gte('date', startDate)
