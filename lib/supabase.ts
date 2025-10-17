@@ -29,7 +29,8 @@ const createSupabaseClient = () => {
       },
       global: {
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Prefer': 'count=exact'
         }
       }
     })
@@ -51,7 +52,7 @@ export const testSupabaseConnection = async () => {
     // Test 1: Basic connection with timeout
     console.log('🔄 Test 1: Basic connection test...')
     const { data: testData, error: testError } = await supabase
-      .from('member_report_daily')
+      .from('blue_whale_usc')
       .select('count')
       .limit(1)
     
@@ -71,7 +72,7 @@ export const testSupabaseConnection = async () => {
     // Test 2: Check if table exists and has data - SIMPLIFIED
     console.log('🔄 Test 2: Table existence test...')
     const { data: tableData, error: tableError } = await supabase
-      .from('member_report_daily')
+      .from('blue_whale_usc')
       .select('count')
       .limit(1)
     
@@ -101,9 +102,9 @@ export const getLastUpdateDate = async () => {
       return null
     }
     
-    console.log('🔄 Querying member_report_daily table...')
+    console.log('🔄 Querying blue_whale_usc table...')
     const { data, error } = await supabase
-      .from('member_report_daily')
+      .from('blue_whale_usc')
       .select('date')
       .order('date', { ascending: false })
       .limit(1)
@@ -129,7 +130,7 @@ export const getLastUpdateDate = async () => {
       return lastDate
     }
     
-    console.log('⚠️ No data found in member_report_daily table')
+    console.log('⚠️ No data found in blue_whale_usc table')
     return null
     
   } catch (error) {

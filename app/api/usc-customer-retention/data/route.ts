@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Build base query for filtering - using blue_whale_usc table
-    let baseQuery = supabase.from('blue_whale_usc').select('*')
+    let baseQuery = supabase.from('blue_whale_usc').select('userkey, user_name, unique_code, date, line, year, month, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, net_profit')
 
     // No currency filter needed since table is blue_whale_usc
 

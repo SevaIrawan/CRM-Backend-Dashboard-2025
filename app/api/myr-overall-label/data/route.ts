@@ -16,10 +16,10 @@ export async function GET(request: NextRequest) {
     })
 
     // Build base query - NO SLICER FILTERS - Fetch ALL data
-    let baseQuery = supabase.from('overall_label_myr_mv').select('*')
+    let baseQuery = supabase.from('overall_label_myr_mv').select('unique_code, label, brand_count, brand_active, active_period_months, avg_deposit_amount, avg_monthly_da, avg_monthly_cases, monthly_avg_net_profit, total_net_profit, total_da, total_dc, total_withdraw_cases, total_withdraw_amount, winrate, withdrawal_rate, first_deposit_date, last_deposit_date, active_group_count, active_top_3_groups, historical_groups_count, historical_top_3_groups, net_profit_all_brand')
 
     // Get total count first (separate query) - NO FILTERS
-    let countQuery = supabase.from('overall_label_myr_mv').select('*', { count: 'exact', head: true })
+    let countQuery = supabase.from('overall_label_myr_mv').select('unique_code', { count: 'exact', head: true })
     
     const countResult = await countQuery
     const totalRecords = countResult.count || 0

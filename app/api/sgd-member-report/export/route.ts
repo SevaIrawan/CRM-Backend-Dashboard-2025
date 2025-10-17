@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Build query with same filters as data endpoint (no currency filter needed)
-    let query = supabase.from('blue_whale_sgd').select('*')
+    let query = supabase.from('blue_whale_sgd').select('userkey, user_name, unique_code, date, line, year, month, vip_level, operator, traffic, register_date, first_deposit_date, first_deposit_amount, last_deposit_date, days_inactive, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, add_transaction, deduct_transaction, cases_adjustment, cases_bets, bets_amount, valid_amount, ggr, net_profit, last_activity_days')
 
     if (line && line !== 'ALL') {
       query = query.filter('line', 'eq', line)

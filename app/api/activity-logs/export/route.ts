@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     // Build query
     let query = supabase
       .from('user_activity_logs')
-      .select('*')
+      .select('id, username, email, role, activity_type, ip_address, device_type, browser, os, accessed_page, page_title, session_duration, timestamp')
       .order('timestamp', { ascending: false })
       .limit(50000) // Limit to prevent memory issues
     

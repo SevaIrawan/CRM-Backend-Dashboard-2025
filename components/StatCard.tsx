@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { getComparisonColor } from '@/lib/KPILogic'
+import { getComparisonColor } from '@/lib/kpiHelpers'
 import { getKpiIcon, ComparisonIcon } from '@/lib/CentralIcon'
 
 interface StatCardProps {

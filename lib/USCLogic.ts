@@ -242,14 +242,14 @@ export const USC_KPI_FORMULAS = {
 // ===========================================
 
 class USCKPICache {
-  private cache = new Map<string, { data: any, timestamp: number }>()
+  private cache = new Map<string, { data: unknown, timestamp: number }>()
   private readonly TTL = 5 * 60 * 1000 // 5 minutes
 
-  set(key: string, data: any): void {
+  set(key: string, data: unknown): void {
     this.cache.set(key, { data, timestamp: Date.now() })
   }
 
-  get(key: string): any | null {
+  get(key: string): unknown | null {
     const item = this.cache.get(key)
     if (!item) return null
     
@@ -359,15 +359,15 @@ export async function getUSCRawKPIData(filters: USCSlicerFilters): Promise<USCRa
     })
 
     // 1. ACTIVE MEMBER = unique count dari blue_whale_usc[userkey] WHERE deposit_cases > 0 (Master table)
-    const uniqueUserKeys = Array.from(new Set(activeMemberData.map((item: any) => item.userkey).filter(Boolean)))
+    const uniqueUserKeys = Array.from(new Set(activeMemberData.map((item: Record<string, unknown>) => item.userkey).filter(Boolean)))
     const activeMembersCount = uniqueUserKeys.length
 
     // 2. PURE USER = count unique dari blue_whale_usc[unique_code] WHERE deposit_cases > 0 (Master table)
-    const uniqueCodes = Array.from(new Set(activeMemberData.map((item: any) => item.unique_code).filter(Boolean)))
+    const uniqueCodes = Array.from(new Set(activeMemberData.map((item: Record<string, unknown>) => item.unique_code).filter(Boolean)))
     const pureUserCount = uniqueCodes.length
 
     // 3. AGGREGATE DATA from MV table (blue_whale_usc_summary)
-    const summaryAgg = summaryData.reduce((acc: any, item: any) => ({
+    const summaryAgg = summaryData.reduce((acc: Record<string, number>, item: Record<string, unknown>) => ({
       deposit_cases: acc.deposit_cases + (Number(item.deposit_cases) || 0),
       deposit_amount: acc.deposit_amount + (Number(item.deposit_amount) || 0),
       withdraw_cases: acc.withdraw_cases + (Number(item.withdraw_cases) || 0),
@@ -530,8 +530,8 @@ async function getUSCChurnMembers(filters: USCSlicerFilters): Promise<{ churn_me
 
     if (currentError) throw currentError
 
-    const prevUserKeys = new Set((prevUsers || []).map((u: any) => u.userkey).filter(Boolean))
-    const currentUserKeys = new Set((currentUsers || []).map((u: any) => u.userkey).filter(Boolean))
+    const prevUserKeys = new Set((prevUsers || []).map((u: Record<string, unknown>) => u.userkey).filter(Boolean))
+    const currentUserKeys = new Set((currentUsers || []).map((u: Record<string, unknown>) => u.userkey).filter(Boolean))
 
     // Churn = users in previous month but not in current month
     const churnedUsers = Array.from(prevUserKeys).filter(userKey => !currentUserKeys.has(userKey))
@@ -761,9 +761,9 @@ export async function getUSCSlicerData(): Promise<USCSlicerData> {
       supabase.from('blue_whale_usc').select('line').eq('currency', 'USC')
     ])
 
-    const years = Array.from(new Set((yearsResult.data || []).map((item: any) => item.year).filter(Boolean))).sort()
-    const months = Array.from(new Set((monthsResult.data || []).map((item: any) => item.month).filter(Boolean)))
-    const lines = Array.from(new Set((linesResult.data || []).map((item: any) => item.line).filter(Boolean)))
+    const years = Array.from(new Set((yearsResult.data || []).map((item: Record<string, unknown>) => item.year).filter(Boolean))).sort()
+    const months = Array.from(new Set((monthsResult.data || []).map((item: Record<string, unknown>) => item.month).filter(Boolean)))
+    const lines = Array.from(new Set((linesResult.data || []).map((item: Record<string, unknown>) => item.line).filter(Boolean)))
 
     // Sort months chronologically
     const monthOrder: { [key: string]: number } = {
@@ -801,7 +801,7 @@ export async function getUSCMonthsForYear(year: string, line?: string): Promise<
 
     if (error) throw error
 
-    const rawMonths = (data || []).map((item: any) => item.month).filter(Boolean)
+    const rawMonths = (data || []).map((item: Record<string, unknown>) => item.month).filter(Boolean)
     console.log('🔍 [getUSCMonthsForYear] Raw months from DB:', rawMonths)
     
     const months = Array.from(new Set(rawMonths))
@@ -838,7 +838,7 @@ export async function getUSCLinesForYear(year?: string): Promise<string[]> {
 
     if (error) throw error
 
-    const lines = Array.from(new Set((data || []).map((item: any) => item.line).filter(Boolean)))
+    const lines = Array.from(new Set((data || []).map((item: Record<string, unknown>) => item.line).filter(Boolean)))
     
     // Sort lines alphabetically
     lines.sort()

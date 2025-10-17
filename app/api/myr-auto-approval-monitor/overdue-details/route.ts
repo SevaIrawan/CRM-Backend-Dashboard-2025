@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     // -------------------------
     let query = supabase
       .from('deposit')
-      .select('*')
+      .select('id, userkey, date, time, year, month, line, currency, amount, operator_group, proc_sec, status')
       .eq('currency', 'MYR')
       .not('proc_sec', 'is', null)
       .gt('proc_sec', threshold)

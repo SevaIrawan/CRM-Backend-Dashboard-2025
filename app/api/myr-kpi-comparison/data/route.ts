@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       // Fetch data from MV table
       let mvQuery = supabase
         .from('blue_whale_myr_summary')
-        .select('*')
+        .select('date, line, deposit_amount, withdraw_amount, deposit_cases, withdraw_cases, net_profit, ggr, valid_amount, add_bonus, deduct_bonus, add_transaction, deduct_transaction, new_register, new_depositor')
         .eq('currency', 'MYR')
         .gte('date', startDate)
         .lte('date', endDate);

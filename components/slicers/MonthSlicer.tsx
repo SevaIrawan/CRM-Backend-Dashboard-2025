@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { getMonthsForYear } from '@/lib/KPILogic'
 
 interface MonthSlicerProps {
   value: string
@@ -10,13 +9,20 @@ interface MonthSlicerProps {
   selectedYear?: string 
   selectedCurrency?: string
   disabled?: boolean
+  months?: string[]
 }
 
-export default function MonthSlicer({ value, onChange, className = '', selectedYear = '2025', selectedCurrency = 'MYR', disabled = false }: MonthSlicerProps) { 
+export default function MonthSlicer({ value, onChange, className = '', selectedYear = '2025', selectedCurrency = 'MYR', disabled = false, months: propMonths }: MonthSlicerProps) { 
   const [availableMonths, setAvailableMonths] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (propMonths) {
+      setAvailableMonths(propMonths)
+      setLoading(false)
+      return
+    }
+
     const fetchAvailableMonths = async () => {
       if (!selectedYear) {
         console.log('⏳ [MonthSlicer] Waiting for year selection...')
@@ -25,18 +31,32 @@ export default function MonthSlicer({ value, onChange, className = '', selectedY
 
       try {
         setLoading(true)
-        console.log('📅 [MonthSlicer] Fetching months for year using KPILogic PostgreSQL pattern:', selectedYear)
+        console.log('📅 [MonthSlicer] Fetching months from API for year:', selectedYear, 'currency:', selectedCurrency)
         
-        const months = await getMonthsForYear(selectedYear, selectedCurrency)
-        setAvailableMonths(months)
+        // Determine API endpoint based on currency
+        let apiEndpoint = '/api/usc-overview/slicer-options' // default
+        if (selectedCurrency === 'MYR') {
+          apiEndpoint = '/api/myr-overview/slicer-options'
+        } else if (selectedCurrency === 'SGD') {
+          apiEndpoint = '/api/sgd-overview/slicer-options'
+        }
         
-        console.log('✅ [MonthSlicer] Months loaded for year', selectedYear, 'currency', selectedCurrency, ':', months)
-        console.log('📊 [MonthSlicer] Using PostgreSQL pattern getMonthsForYear() with currency filter')
+        const response = await fetch(apiEndpoint)
+        const result = await response.json()
         
-        // Auto-select first month if current value is not in available months
-        if (months.length > 0 && !months.includes(value)) {
-          console.log('🔄 [MonthSlicer] Auto-selecting first available month:', months[0])
-          onChange(months[0])
+        if (result.success && result.data.months) {
+          const months = result.data.months
+          setAvailableMonths(months)
+          
+          console.log('✅ [MonthSlicer] Months loaded from API:', months)
+          
+          // Auto-select first month if current value is not in available months
+          if (months.length > 0 && !months.includes(value)) {
+            console.log('🔄 [MonthSlicer] Auto-selecting first available month:', months[0])
+            onChange(months[0])
+          }
+        } else {
+          setAvailableMonths([])
         }
       } catch (error) {
         console.error('❌ [MonthSlicer] Error:', error)
@@ -47,7 +67,7 @@ export default function MonthSlicer({ value, onChange, className = '', selectedY
     }
 
     fetchAvailableMonths()
-  }, [selectedYear, selectedCurrency])
+  }, [selectedYear, selectedCurrency, propMonths, value, onChange])
 
   if (loading || disabled) {
     return (
@@ -101,4 +121,5 @@ export default function MonthSlicer({ value, onChange, className = '', selectedY
       ))}
     </select>
   )
-} 
+}
+

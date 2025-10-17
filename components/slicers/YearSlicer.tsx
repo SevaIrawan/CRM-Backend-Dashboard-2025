@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
 
 interface YearSlicerProps {
   value: string
@@ -24,16 +23,25 @@ export default function YearSlicer({ value, onChange, className = '', years: pro
         try {
           setLoading(true)
           
-          const { data: yearData } = await supabase
-            .from('member_report_daily')
-            .select('year')
-            .eq('currency', selectedCurrency)
-            .order('year', { ascending: false })
+          // Determine API endpoint based on currency
+          let apiEndpoint = '/api/usc-overview/slicer-options' // default
+          if (selectedCurrency === 'MYR') {
+            apiEndpoint = '/api/myr-overview/slicer-options'
+          } else if (selectedCurrency === 'SGD') {
+            apiEndpoint = '/api/sgd-overview/slicer-options'
+          }
           
-          const availableYears = Array.from(new Set(yearData?.map((row: any) => row.year?.toString()).filter(Boolean) || [])) as string[]
-          setYears(availableYears)
+          const response = await fetch(apiEndpoint)
+          const result = await response.json()
+          
+          if (result.success && result.data.years) {
+            setYears(result.data.years)
+          } else {
+            setYears([])
+          }
           
         } catch (error) {
+          console.error('❌ [YearSlicer] Error fetching years:', error)
           setYears([])
         } finally {
           setLoading(false)
@@ -96,4 +104,5 @@ export default function YearSlicer({ value, onChange, className = '', years: pro
       ))}
     </select>
   )
-} 
+}
+

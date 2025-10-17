@@ -26,20 +26,22 @@ export default function ConnectionTest() {
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [lastDataHash, setLastDataHash] = useState<string>('')
 
-  // Semua table yang ada di database dengan title yang profesional
+  // EXACT table list as requested - no more, no less
   const allTables = [
-            { source: 'member_report_daily', title: 'Member Report Daily' },
-    { source: 'member_report_daily', title: 'Member Report Daily' },
-    { source: 'deposit_monthly', title: 'Deposit Monthly' },
-    { source: 'deposit_daily', title: 'Deposit Daily' },
-    { source: 'withdraw_monthly', title: 'Withdraw Monthly' },
-    { source: 'withdraw_daily', title: 'Withdraw Daily' },
-    { source: 'new_depositor', title: 'New Depositor' },
-    { source: 'new_depositor_daily', title: 'New Depositor Daily' },
+    { source: 'blue_whale_myr', title: 'Blue Whale MYR' },
+    { source: 'blue_whale_usc', title: 'Blue Whale USC' },
+    { source: 'blue_whale_sgd', title: 'Blue Whale SGD' },
+    { source: 'blue_whale_myr_monthly_summary', title: 'Blue Whale MYR Monthly Summary' },
+    { source: 'blue_whale_usc_monthly_summary', title: 'Blue Whale USC Monthly Summary' },
+    { source: 'blue_whale_sgd_monthly_summary', title: 'Blue Whale SGD Monthly Summary' },
     { source: 'new_register', title: 'New Register' },
-    { source: 'adjusment_daily', title: 'Adjustment Daily' },
-    { source: 'headcountdep', title: 'Headcount Deposit' },
-    { source: 'exchange_rate', title: 'Exchange Rate' },
+    { source: 'new_register_monthly_mv', title: 'New Register Monthly MV' },
+    { source: 'overall_label_myr_mv', title: 'Overall Label MYR MV' },
+    { source: 'dbmyr_summary', title: 'DB MYR Summary' },
+    { source: 'dbusc_summary', title: 'DB USC Summary' },
+    { source: 'dbsgd_summary', title: 'DB SGD Summary' },
+    { source: 'page_visibility_config', title: 'Page Visibility Config' },
+    { source: 'user_activity_logs', title: 'User Activity Logs' },
     { source: 'users', title: 'Users' }
   ]
 
@@ -242,16 +244,20 @@ export default function ConnectionTest() {
           console.log(`🔄 Testing table: ${tableInfo.source} (NO LIMIT)`)
           addLog(`🔄 Testing table: ${tableInfo.source} (NO LIMIT)`, 'info')
           
-          // Mengambil SEMUA data tanpa limit - REAL DATA
-          const { count, error } = await supabase
-            .from(tableInfo.source)
-            .select('*', { count: 'exact', head: true })
+          // USE RPC FOR EXACT COUNT (direct PostgreSQL COUNT(*))
+          // This bypasses PostgREST estimation and gets TRUE row count
+          const { data: rpcCount, error: rpcError } = await supabase
+            .rpc('get_table_count', { table_name: tableInfo.source })
+          
+          const count: number = (rpcCount as number) || 0
+          const error = rpcError
 
           if (error) {
             console.error(`❌ Error testing ${tableInfo.source}:`, error)
-            addLog(`❌ Error testing ${tableInfo.source}: ${error.message}`, 'error')
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+            addLog(`❌ Error testing ${tableInfo.source}: ${errorMessage}`, 'error')
             setTables(prev => prev.map((t, i) => 
-              i === index ? { ...t, status: 'error', error: error.message } : t
+              i === index ? { ...t, status: 'error', error: errorMessage } : t
             ))
           } else {
             console.log(`✅ ${tableInfo.source}: ${count?.toLocaleString() || 0} rows (REAL DATA)`)
@@ -314,15 +320,15 @@ export default function ConnectionTest() {
   }
 
   const getTableIcon = (title: string) => {
-    if (title.includes('Member')) return '👥'
-    if (title.includes('Deposit')) return '💰'
-    if (title.includes('Withdraw')) return '💸'
-    if (title.includes('New')) return '🆕'
-    if (title.includes('Register')) return '📝'
-    if (title.includes('Adjustment')) return '⚖️'
-    if (title.includes('Headcount')) return '📊'
-    if (title.includes('Exchange')) return '💱'
-    if (title.includes('Users')) return '👤'
+    if (title.includes('Blue Whale')) return '🐋'
+    if (title.includes('Summary')) return '📊'
+    if (title.includes('New Register')) return '🆕'
+    if (title.includes('Overall Label')) return '🏷️'
+    if (title.includes('DB') && title.includes('Summary')) return '💾'
+    if (title.includes('Page Visibility')) return '👁️'
+    if (title.includes('Activity Log')) return '📝'
+    if (title.includes('User')) return '👤'
+    if (title.includes('MV')) return '📈'
     return '📋'
   }
 

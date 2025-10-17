@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Build query for REAL DATA export from blue_whale_usc_summary (MV) - USC currency locked
-    let query = supabase.from('blue_whale_usc_summary').select('*')
+    let query = supabase.from('blue_whale_usc_summary').select('date, line, year, month, deposit_amount, withdraw_amount, deposit_cases, withdraw_cases, net_profit, ggr, valid_amount, add_bonus, deduct_bonus, add_transaction, deduct_transaction, new_register, new_depositor, active_member, pure_member')
       .eq('currency', 'USC') // Currency LOCKED to USC
 
     // Apply filters based on selections - ALL REAL DATA

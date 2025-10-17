@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { getSlicerData } from '@/lib/KPILogic'
 
 interface CurrencySlicerProps {
   value: string
@@ -22,15 +21,27 @@ export default function CurrencySlicer({ value, onChange, className = '', curren
       const fetchCurrencies = async () => {
         try {
           setLoading(true)
-          console.log('💱 [CurrencySlicer] Fetching currencies from Supabase...')
+          console.log('💱 [CurrencySlicer] Fetching currencies from API...')
           
-          const slicerData = await getSlicerData()
-          setCurrencies(slicerData.currencies)
+          // Try to get currencies from any available API endpoint
+          // We'll try USC first as default
+          const response = await fetch('/api/usc-overview/slicer-options')
+          const result = await response.json()
           
-          console.log('✅ [CurrencySlicer] Currencies loaded:', slicerData.currencies)
+          if (result.success && result.data.currencies) {
+            setCurrencies(result.data.currencies)
+            console.log('✅ [CurrencySlicer] Currencies loaded from API:', result.data.currencies)
+          } else {
+            // Fallback to hardcoded if API fails
+            const fallbackCurrencies = ['MYR', 'SGD', 'USC']
+            setCurrencies(fallbackCurrencies)
+            console.log('⚠️ [CurrencySlicer] Using fallback currencies:', fallbackCurrencies)
+          }
         } catch (error) {
           console.error('❌ [CurrencySlicer] Error:', error)
-          setCurrencies([])
+          // Fallback to hardcoded if error
+          const fallbackCurrencies = ['MYR', 'SGD', 'USC']
+          setCurrencies(fallbackCurrencies)
         } finally {
           setLoading(false)
         }
@@ -93,4 +104,5 @@ export default function CurrencySlicer({ value, onChange, className = '', curren
       ))}
     </select>
   )
-} 
+}
+

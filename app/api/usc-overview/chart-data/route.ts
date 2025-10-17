@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     // Query monthly data for entire year from MV
     let query = supabase
       .from('blue_whale_usc_monthly_summary')
-      .select('*')
+      .select('month, deposit_amount, withdraw_amount, net_profit, ggr, valid_amount, deposit_cases, withdraw_cases, active_member, pure_member, new_register, new_depositor, atv, purchase_frequency, da_user, ggr_user, winrate, withdrawal_rate, conversion_rate, hold_percentage')
       .eq('currency', 'USC')
       .eq('year', parseInt(year))
       .gt('month', 0)  // Exclude rollup (month=0)

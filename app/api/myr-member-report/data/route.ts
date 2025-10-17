@@ -19,8 +19,8 @@ export async function GET(request: NextRequest) {
       currency, line, year, month, startDate, endDate, filterMode, page, limit 
     })
 
-    // Build base query for filtering - using blue_whale_myr table
-    let baseQuery = supabase.from('blue_whale_myr').select('*')
+    // Build base query for filtering - using blue_whale_myr table  
+    let baseQuery = supabase.from('blue_whale_myr').select('userkey, user_name, unique_code, date, line, year, month, vip_level, operator, traffic, register_date, first_deposit_date, first_deposit_amount, last_deposit_date, days_inactive, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, add_transaction, deduct_transaction, cases_adjustment, cases_bets, bets_amount, valid_amount, ggr, net_profit, last_activity_days')
 
     // No currency filter needed since table is blue_whale_myr
 

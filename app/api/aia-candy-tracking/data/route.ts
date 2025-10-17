@@ -10,7 +10,8 @@ export async function GET(request: NextRequest) {
     const month = searchParams.get('month')
 
     // Fetch deposit data filtered by slicers (same pattern as auto-approval)
-    let query = supabase.from('deposit').select('*').eq('currency', 'MYR')
+    // Note: Currently returns dummy data, only validates filters work
+    let query = supabase.from('deposit').select('userkey, date, amount, currency').eq('currency', 'MYR')
     if (line && line !== 'ALL') query = query.eq('line', line)
     if (year) query = query.eq('year', parseInt(year))
     if (month) query = query.eq('month', month)

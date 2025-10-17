@@ -39,7 +39,7 @@ export interface ActivityLogData {
   sessionDuration?: number | null // in seconds (for logout)
   
   // Additional metadata
-  metadata?: any
+  metadata?: Record<string, unknown> | null
 }
 
 /**

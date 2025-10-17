@@ -149,7 +149,7 @@ export default function Sidebar({
       setIsLoading(true)
       
       // Determine table based on current page
-      let tableName = 'blue_whale_myr' // default - use blue_whale_myr instead of member_report_daily
+      let tableName = 'blue_whale_myr' // default
       if (pathname.startsWith('/usc/')) {
         tableName = 'blue_whale_usc'
       } else if (pathname.startsWith('/myr/')) {
