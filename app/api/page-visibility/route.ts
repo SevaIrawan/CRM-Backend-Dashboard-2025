@@ -100,16 +100,28 @@ export async function GET(request: NextRequest) {
     
     // Process data to add status field
     const processedData = data.map(page => {
-      const roleCount = Array.isArray(page.visible_for_roles) 
-        ? page.visible_for_roles.length 
-        : 0
+      // ✅ SAFE PARSING - Handle string, array, or null
+      let roles: string[] = []
+      
+      if (page.visible_for_roles) {
+        if (Array.isArray(page.visible_for_roles)) {
+          roles = page.visible_for_roles
+        } else if (typeof page.visible_for_roles === 'string') {
+          try {
+            const parsed = JSON.parse(page.visible_for_roles)
+            roles = Array.isArray(parsed) ? parsed : []
+          } catch {
+            roles = []
+          }
+        }
+      }
+      
+      const roleCount = roles.length
       
       return {
         ...page,
-        visible_for_roles: Array.isArray(page.visible_for_roles) 
-          ? page.visible_for_roles 
-          : [],
-        status: roleCount <= 1 ? 'building' : 'running'
+        visible_for_roles: roles,
+        status: (roleCount <= 1 ? 'building' : 'running') as 'running' | 'building'
       }
     })
     

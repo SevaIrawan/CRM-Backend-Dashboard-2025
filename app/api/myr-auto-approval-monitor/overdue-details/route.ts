@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     // -------------------------
     let query = supabase
       .from('deposit')
-      .select('id, userkey, date, time, year, month, line, currency, amount, operator_group, proc_sec, status')
+      .select('*')
       .eq('currency', 'MYR')
       .not('proc_sec', 'is', null)
       .gt('proc_sec', threshold)
@@ -89,16 +89,16 @@ export async function GET(request: NextRequest) {
       sampleData: data?.slice(0, 3)
     })
     
-    // Format data
+    // Format data with defensive null checks
     const formattedData = data?.map((t: any) => ({
-      date: t.date,
-      time: t.time,
-      uniqueCode: t.unique_code,
-      userName: t.user_name,
-      amount: t.amount,
-      operator: t.operator_group,
-      processTime: t.process_time,
-      procSec: t.proc_sec
+      date: t.date || '',
+      time: t.time || '',
+      uniqueCode: t.unique_code || t.userkey || 'N/A',
+      userName: t.user_name || 'N/A',
+      amount: t.amount || 0,
+      operator: t.operator_group || 'N/A',
+      processTime: t.process_time || `${t.proc_sec || 0}s`,
+      procSec: t.proc_sec || 0
     }))
     
     return NextResponse.json({
