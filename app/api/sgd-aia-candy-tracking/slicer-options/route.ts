@@ -23,26 +23,30 @@ export async function GET(request: NextRequest) {
     }
 
     // Extract unique brands (as "lines")
-    const uniqueBrands = Array.from(new Set(allData?.map(row => row.brand).filter(Boolean) || []))
+    const uniqueBrands = Array.from(new Set(allData?.map(row => row.brand).filter((brand): brand is string => Boolean(brand)) || []))
     const cleanBrands = uniqueBrands.filter(brand => brand !== 'ALL' && brand !== 'All')
     const linesWithAll = ['ALL', ...cleanBrands.sort()]
     
     console.log('📊 [DEBUG] Brands as Lines:', linesWithAll)
 
     // Extract unique years
-    const uniqueYears = Array.from(new Set(allData?.map(row => row.year?.toString()).filter(Boolean) || [])).sort()
+    const uniqueYears = Array.from(new Set(allData?.map(row => row.year?.toString()).filter((year): year is string => Boolean(year)) || [])).sort()
 
     // Extract unique months (sorted by month order)
     const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 
                        'July', 'August', 'September', 'October', 'November', 'December']
     const uniqueMonths = Array.from(new Set(
-      allData?.map(row => row.month_name).filter(Boolean) || []
+      allData?.map(row => row.month_name).filter((name): name is string => Boolean(name)) || []
     )).sort((a, b) => monthOrder.indexOf(a) - monthOrder.indexOf(b))
 
     // Get latest record for defaults (MAX year + month)
     const sortedData = allData?.sort((a, b) => {
-      if (a.year !== b.year) return (b.year || 0) - (a.year || 0)
-      return (b.month_num || 0) - (a.month_num || 0)
+      const yearA = Number(a.year || 0)
+      const yearB = Number(b.year || 0)
+      if (yearA !== yearB) return yearB - yearA
+      const monthA = Number(a.month_num || 0)
+      const monthB = Number(b.month_num || 0)
+      return monthB - monthA
     })
     const latestRecord = sortedData?.[0]
 

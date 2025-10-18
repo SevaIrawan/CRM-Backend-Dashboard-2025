@@ -143,6 +143,7 @@ export default function AiaCandyTrackingPage() {
             ))}
           </select>
         </div>
+
         {/* Daily/Weekly Toggle */}
         <div className="slicer-group">
           <label className="slicer-label">MODE:</label>

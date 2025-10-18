@@ -30,15 +30,7 @@ export async function GET(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Calculate start and end dates for the selected month
-    const startDate = `${year}-${String(monthNum).padStart(2, '0')}-01`
-    const lastDay = new Date(parseInt(year), monthNum, 0).getDate()
-    const endDate = `${year}-${String(monthNum).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
-
-    // Brand filter condition
-    const brandFilter = line && line !== 'ALL' ? `AND ctcr.brand = '${line}'` : ''
-
-    console.log('📅 Date range:', { startDate, endDate, brandFilter })
+    console.log('📅 Filters:', { line, year, monthNum })
 
     // ✅ STEP 1: Get BRAND KPIs from aia_brand_kpi_mv filtered by brand + year + month
     let brandKPIQuery = supabase
