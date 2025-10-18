@@ -81,26 +81,26 @@ export async function GET(request: NextRequest) {
         const brandKPI = brandKPIData[0]
         
         // KPI 1: Coverage Rate (already calculated in MV)
-        monthlyKPIs.groupInteractionCoverageRate = parseFloat(brandKPI.group_interaction_coverage_rate_percent || 0)
+        monthlyKPIs.groupInteractionCoverageRate = parseFloat(String(brandKPI.group_interaction_coverage_rate_percent || 0))
         
         // KPI 2: Customer Trigger Count
-        monthlyKPIs.customerTriggerCount = parseInt(brandKPI.total_customer_triggers || 0)
+        monthlyKPIs.customerTriggerCount = parseInt(String(brandKPI.total_customer_triggers || 0))
         
         // KPI 3: Unique Interaction Users
-        monthlyKPIs.uniqueInteractionUsers = parseInt(brandKPI.unique_interaction_users || 0)
+        monthlyKPIs.uniqueInteractionUsers = parseInt(String(brandKPI.unique_interaction_users || 0))
         
         // KPI 4: Customer Trigger Ratio (already calculated in MV)
-        monthlyKPIs.customerTriggerRatio = parseFloat(brandKPI.customer_trigger_ratio_percent || 0)
+        monthlyKPIs.customerTriggerRatio = parseFloat(String(brandKPI.customer_trigger_ratio_percent || 0))
         
         // KPI 5: Group Activity Change (message volume change)
-        monthlyKPIs.groupActivityChange = parseFloat(brandKPI.message_volume_change_percent || 0)
+        monthlyKPIs.groupActivityChange = parseFloat(String(brandKPI.message_volume_change_percent || 0))
         
         // KPI 6: Repeat Interaction Rate (already calculated in MV)
-        monthlyKPIs.repeatInteractionRate = parseFloat(brandKPI.repeat_interaction_rate_percent || 0)
+        monthlyKPIs.repeatInteractionRate = parseFloat(String(brandKPI.repeat_interaction_rate_percent || 0))
       } else {
         // ALL brands - aggregate
-        const totalEnabledGroups = brandKPIData.reduce((sum, row) => sum + (parseInt(row.total_enabled_groups) || 0), 0)
-        const totalGroupsWithInteraction = brandKPIData.reduce((sum, row) => sum + (parseInt(row.groups_with_interaction) || 0), 0)
+        const totalEnabledGroups = brandKPIData.reduce((sum, row) => sum + (parseInt(String(row.total_enabled_groups || 0))), 0)
+        const totalGroupsWithInteraction = brandKPIData.reduce((sum, row) => sum + (parseInt(String(row.groups_with_interaction || 0))), 0)
         
         // KPI 1: Coverage Rate
         monthlyKPIs.groupInteractionCoverageRate = totalEnabledGroups > 0
@@ -108,28 +108,28 @@ export async function GET(request: NextRequest) {
           : 0
         
         // KPI 2: Customer Trigger Count
-        monthlyKPIs.customerTriggerCount = brandKPIData.reduce((sum, row) => sum + (parseInt(row.total_customer_triggers) || 0), 0)
+        monthlyKPIs.customerTriggerCount = brandKPIData.reduce((sum, row) => sum + (parseInt(String(row.total_customer_triggers || 0))), 0)
         
         // KPI 3: Unique Interaction Users
-        monthlyKPIs.uniqueInteractionUsers = brandKPIData.reduce((sum, row) => sum + (parseInt(row.unique_interaction_users) || 0), 0)
+        monthlyKPIs.uniqueInteractionUsers = brandKPIData.reduce((sum, row) => sum + (parseInt(String(row.unique_interaction_users || 0))), 0)
         
         // KPI 4: Customer Trigger Ratio (weighted average)
-        const totalCustomerTriggers = brandKPIData.reduce((sum, row) => sum + (parseInt(row.customer_trigger_count) || 0), 0)
-        const totalTriggers = brandKPIData.reduce((sum, row) => sum + (parseInt(row.total_trigger_count) || 0), 0)
+        const totalCustomerTriggers = brandKPIData.reduce((sum, row) => sum + (parseInt(String(row.customer_trigger_count || 0))), 0)
+        const totalTriggers = brandKPIData.reduce((sum, row) => sum + (parseInt(String(row.total_trigger_count || 0))), 0)
         monthlyKPIs.customerTriggerRatio = totalTriggers > 0
           ? parseFloat(((totalCustomerTriggers / totalTriggers) * 100).toFixed(2))
           : 0
         
         // KPI 5: Activity Change (weighted average based on before_candy_messages)
-        const totalBeforeMessages = brandKPIData.reduce((sum, row) => sum + (parseFloat(row.before_candy_messages) || 0), 0)
-        const totalAfterMessages = brandKPIData.reduce((sum, row) => sum + (parseFloat(row.after_candy_messages) || 0), 0)
+        const totalBeforeMessages = brandKPIData.reduce((sum, row) => sum + (parseFloat(String(row.before_candy_messages || 0))), 0)
+        const totalAfterMessages = brandKPIData.reduce((sum, row) => sum + (parseFloat(String(row.after_candy_messages || 0))), 0)
         monthlyKPIs.groupActivityChange = totalBeforeMessages > 0
           ? parseFloat((((totalAfterMessages - totalBeforeMessages) / totalBeforeMessages) * 100).toFixed(2))
           : 0
         
         // KPI 6: Repeat Interaction Rate (weighted average)
-        const totalInteractingUsers = brandKPIData.reduce((sum, row) => sum + (parseInt(row.total_interacting_users) || 0), 0)
-        const totalUsersWithRepeat = brandKPIData.reduce((sum, row) => sum + (parseInt(row.users_with_2_or_more_triggers) || 0), 0)
+        const totalInteractingUsers = brandKPIData.reduce((sum, row) => sum + (parseInt(String(row.total_interacting_users || 0))), 0)
+        const totalUsersWithRepeat = brandKPIData.reduce((sum, row) => sum + (parseInt(String(row.users_with_2_or_more_triggers || 0))), 0)
         monthlyKPIs.repeatInteractionRate = totalInteractingUsers > 0
           ? parseFloat(((totalUsersWithRepeat / totalInteractingUsers) * 100).toFixed(2))
           : 0
