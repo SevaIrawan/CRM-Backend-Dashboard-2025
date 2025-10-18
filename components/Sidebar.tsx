@@ -317,6 +317,7 @@ export default function Sidebar({
         { title: 'Member Analytic', path: '/sgd/member-analytic' },
         { title: 'Brand Comparison Trends', path: '/sgd/brand-performance-trends' },
         { title: 'KPI Comparison', path: '/sgd/kpi-comparison' },
+        { title: 'AIA Candy Mechanism', path: '/sgd/aia-candy-tracking' },
         { title: 'Auto-Approval Monitor', path: '/sgd/auto-approval-monitor' },
         { title: 'Customer Retention', path: '/sgd/customer-retention' },
           { title: 'Churn Member', path: '/sgd/churn-member' },
