@@ -52,21 +52,27 @@ export default function MixedChart({
   };
 
   // Format label untuk Bar (Amount) - abbreviated
-  const formatBarLabel = (value: number): string => {
-    if (value >= 1000000) {
-      return `${getCurrencySymbol(currency)} ${(value / 1000000).toFixed(1)}M`;
-    } else if (value >= 1000) {
-      return `${getCurrencySymbol(currency)} ${(value / 1000).toFixed(0)}K`;
+  const formatBarLabel = (value: any): string => {
+    const numValue = typeof value === 'number' ? value : Number(value);
+    if (isNaN(numValue)) return '';
+    
+    if (numValue >= 1000000) {
+      return `${getCurrencySymbol(currency)} ${(numValue / 1000000).toFixed(1)}M`;
+    } else if (numValue >= 1000) {
+      return `${getCurrencySymbol(currency)} ${(numValue / 1000).toFixed(0)}K`;
     }
-    return `${getCurrencySymbol(currency)} ${value.toLocaleString()}`;
+    return `${getCurrencySymbol(currency)} ${numValue.toLocaleString()}`;
   };
 
   // Format label untuk Line (Cases) - integer
-  const formatLineLabel = (value: number): string => {
-    if (value >= 1000) {
-      return `${(value / 1000).toFixed(1)}K`;
+  const formatLineLabel = (value: any): string => {
+    const numValue = typeof value === 'number' ? value : Number(value);
+    if (isNaN(numValue)) return '';
+    
+    if (numValue >= 1000) {
+      return `${(numValue / 1000).toFixed(1)}K`;
     }
-    return value.toLocaleString();
+    return numValue.toLocaleString();
   };
 
   const CustomTooltip = ({ active, payload, label }: any) => {
