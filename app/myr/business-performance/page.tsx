@@ -225,7 +225,7 @@ export default function BusinessPerformancePage() {
           <StatCard 
             title="Pure Active"
             value="950"
-            icon="Pure Member"
+            icon="Pure Active"
             additionalKpi={{
               label: 'Daily Avg',
               value: '31'
