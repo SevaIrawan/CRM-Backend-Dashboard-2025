@@ -296,6 +296,7 @@ export default function Sidebar({
         permission: 'myr',
         submenu: [
           { title: 'Overview', path: '/myr/overview' },
+          { title: 'Business Performance', path: '/myr/business-performance' },
           { title: 'Member Analytic', path: '/myr/member-analytic' },
           { title: 'Brand Comparison Trends', path: '/myr/brand-performance-trends' },
           { title: 'KPI Comparison', path: '/myr/kpi-comparison' },
@@ -314,6 +315,7 @@ export default function Sidebar({
         permission: 'sgd',
         submenu: [
         { title: 'Overview', path: '/sgd/overview' },
+        { title: 'Business Performance', path: '/sgd/business-performance' },
         { title: 'Member Analytic', path: '/sgd/member-analytic' },
         { title: 'Brand Comparison Trends', path: '/sgd/brand-performance-trends' },
         { title: 'KPI Comparison', path: '/sgd/kpi-comparison' },
@@ -330,6 +332,7 @@ export default function Sidebar({
         permission: 'usc',
         submenu: [
         { title: 'Overview', path: '/usc/overview' },
+        { title: 'Business Performance', path: '/usc/business-performance' },
         { title: 'Member Analytic', path: '/usc/member-analytic' },
         { title: 'Brand Comparison Trends', path: '/usc/brand-performance-trends' },
         { title: 'KPI Comparison', path: '/usc/kpi-comparison' },
