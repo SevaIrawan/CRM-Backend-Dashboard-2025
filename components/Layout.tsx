@@ -13,6 +13,7 @@ import FeedbackWidget from './FeedbackWidget'
 interface LayoutProps {
   children: React.ReactNode
   pageTitle?: string
+  subtitle?: string
   subHeaderTitle?: string
   customSubHeader?: React.ReactNode
   darkMode?: boolean

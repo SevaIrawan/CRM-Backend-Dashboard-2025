@@ -9,6 +9,7 @@ import { logActivityViaAPI, getStoredSessionId, clearStoredSessionId, calculateS
 
 interface HeaderProps {
   pageTitle?: string
+  subtitle?: string
   sidebarOpen: boolean
   setSidebarOpen: (open: boolean) => void
   darkMode?: boolean
@@ -18,6 +19,7 @@ interface HeaderProps {
 
 export default function Header({
   pageTitle,
+  subtitle,
   sidebarOpen,
   setSidebarOpen,
   darkMode = false,
@@ -213,7 +215,19 @@ export default function Header({
             }}>
               {getPageTitle()}
             </h1>
-            <RealtimeTimestamp />
+            {subtitle ? (
+              <p style={{
+                fontSize: '12px',
+                color: 'rgba(255, 255, 255, 0.8)',
+                margin: 0,
+                marginTop: '2px',
+                fontWeight: '500'
+              }}>
+                {subtitle}
+              </p>
+            ) : (
+              <RealtimeTimestamp />
+            )}
           </div>
         </div>
 

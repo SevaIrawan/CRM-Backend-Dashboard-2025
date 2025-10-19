@@ -29,6 +29,7 @@ ChartJS.register(
 interface Series {
   name: string;
   data: number[];
+  color?: string; // Add color property for individual series
 }
 
 interface LineChartProps {
@@ -357,13 +358,11 @@ export default function LineChart({
   const data = {
     labels: categories,
     datasets: series.map((item, index) => {
-      // Use custom color if provided, otherwise use default colors
-      const lineColor = index === 0 ? color : '#F97316'; // First series uses color prop, second uses orange
+      // Use series-specific color if provided, otherwise use default colors
+      const lineColor = item.color || (index === 0 ? color : '#F97316'); // Use series color, or fallback to defaults
       
       // ✅ STANDARD: Semi-transparent background with gradient effect for all charts
-      const bgColor = index === 0 
-        ? `${color}20` // Add transparency to color prop (hex with alpha)
-        : 'rgba(249, 115, 22, 0.15)'; // Orange with transparency
+      const bgColor = `${lineColor}20`; // Add transparency to line color (hex with alpha)
       
       return {
         label: item.name,
@@ -478,7 +477,8 @@ export default function LineChart({
             return formatIntegerKPI(value);
           }
           
-          // For currency/amount types, use currency format
+          // ✅ For currency/amount types, ALWAYS use DENOMINATION (K, M) for data labels
+          // Reason: Full currency format too long for labels (e.g., "RM 7,500,000.00")
           if (datasetLabel && (
             datasetLabel.toLowerCase().includes('amount') ||
             datasetLabel.toLowerCase().includes('deposit') ||
@@ -490,11 +490,8 @@ export default function LineChart({
             datasetLabel.toLowerCase().includes('atv') ||
             datasetLabel.toLowerCase().includes('value')
           )) {
-            // Use denomination format (K, M) for Brand Performance Trends only
-            if (useDenominationLabels) {
-              return formatWithDenomination(value);
-            }
-            return formatCurrencyKPI(value, currency);
+            // ✅ ALWAYS use denomination format for DATA LABELS (not tooltip)
+            return formatWithDenomination(value);
           }
            
            // Default formatting
@@ -805,12 +802,15 @@ export default function LineChart({
       backgroundColor: d.backgroundColor
     })),
     needsDualYAxis,
-    seriesColors: series.map((item, index) => ({
-      name: item.name,
-      index,
-      lineColor: index === 0 ? color : '#F97316',
-      legendColor: index === 0 ? '#3B82F6' : '#F97316'
-    }))
+    seriesColors: series.map((item, index) => {
+      const lineColor = item.color || (index === 0 ? color : '#F97316');
+      return {
+        name: item.name,
+        index,
+        lineColor: lineColor,
+        legendColor: lineColor
+      };
+    })
   })
 
   return (
@@ -890,7 +890,10 @@ export default function LineChart({
               {(customLegend || series).map((item, index) => {
                 const isCustomLegend = !!customLegend;
                 const label = isCustomLegend ? (customLegend![index] as any).label : (item as any).name;
-                const color = isCustomLegend ? (customLegend![index] as any).color : (index === 0 ? '#3B82F6' : '#F97316');
+                const seriesItem = series[index];
+                const legendColor = isCustomLegend 
+                  ? (customLegend![index] as any).color 
+                  : (seriesItem?.color || (index === 0 ? '#3B82F6' : '#F97316'));
                 
                 return (
                   <div key={index} style={{
@@ -901,7 +904,7 @@ export default function LineChart({
                     <div style={{
                       width: '12px',
                       height: '3px',
-                      backgroundColor: color,
+                      backgroundColor: legendColor,
                       borderRadius: '2px'
                     }} />
                     <span style={{

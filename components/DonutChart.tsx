@@ -76,6 +76,15 @@ export default function DonutChart({
         }
       },
       tooltip: {
+        enabled: true,
+        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+        titleColor: '#ffffff',
+        bodyColor: '#ffffff',
+        borderColor: '#3B82F6',
+        borderWidth: 1,
+        padding: 12,
+        cornerRadius: 8,
+        displayColors: true,
         callbacks: {
           label: function(context: any) {
             const label = context.label || '';

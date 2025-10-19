@@ -12,7 +12,7 @@ import {
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { Bar, Line } from 'react-chartjs-2';
 import { getChartIcon } from '../lib/CentralIcon';
-import { formatNumericKPI, formatIntegerKPI, formatCurrencyKPI } from '../lib/formatHelpers';
+import { formatNumericKPI, formatIntegerKPI, formatCurrencyKPI, formatPercentageKPI } from '../lib/formatHelpers';
 
 ChartJS.register(
   CategoryScale,
@@ -218,7 +218,16 @@ export default function BarChart({
             return formatIntegerKPI(value);
           }
           
-          // For currency/amount types, use currency format
+          // ✅ For RATE/PERCENTAGE types, use 2 decimal places with % symbol
+          if (datasetLabel && (
+            datasetLabel.toLowerCase().includes('rate') ||
+            datasetLabel.toLowerCase().includes('percentage') ||
+            datasetLabel.toLowerCase().includes('winrate')
+          )) {
+            return value.toFixed(2) + '%';
+          }
+          
+          // ✅ For currency/amount types, use ABBREVIATED format (K, M) for data labels
           if (datasetLabel && (
             datasetLabel.toLowerCase().includes('amount') ||
             (datasetLabel.toLowerCase().includes('deposit') && !datasetLabel.toLowerCase().includes('depositor')) ||
@@ -230,6 +239,12 @@ export default function BarChart({
             datasetLabel.toLowerCase().includes('atv') ||
             datasetLabel.toLowerCase().includes('value')
           )) {
+            // ✅ Use abbreviated format for DATA LABELS (not full currency)
+            if (value >= 1000000) {
+              return getCurrencySymbol(currency) + ' ' + (value / 1000000).toFixed(1) + 'M';
+            } else if (value >= 1000) {
+              return getCurrencySymbol(currency) + ' ' + (value / 1000).toFixed(0) + 'K';
+            }
             return formatCurrencyKPI(value, currency);
           }
           
@@ -238,6 +253,16 @@ export default function BarChart({
         }
       },
       tooltip: {
+        enabled: true,
+        position: 'nearest' as const,
+        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+        titleColor: '#ffffff',
+        bodyColor: '#ffffff',
+        borderColor: '#3B82F6',
+        borderWidth: 1,
+        padding: 12,
+        cornerRadius: 8,
+        displayColors: true,
         callbacks: {
           label: function(context: any) {
             const value = horizontal ? context.parsed.x : context.parsed.y;
@@ -276,12 +301,22 @@ export default function BarChart({
               datasetLabel.toLowerCase().includes('register')
             ) && !isFormulaNumericType;
             
+            // Check if this is a rate/percentage type
+            const isRateType = datasetLabel && (
+              datasetLabel.toLowerCase().includes('rate') ||
+              datasetLabel.toLowerCase().includes('winrate') ||
+              datasetLabel.toLowerCase().includes('percentage')
+            );
+            
             if (isCasesType) {
               // For cases - using standard format: 0,000
               return `${datasetLabel}: ${formatIntegerKPI(value)} cases`;
             } else if (isCountType) {
               // For count/integer - using standard format: 0,000
               return `${datasetLabel}: ${formatIntegerKPI(value)} members`;
+            } else if (isRateType) {
+              // For rate/percentage - using standard format: 00.00%
+              return `${datasetLabel}: ${formatPercentageKPI(value)}`;
             } else {
               // For amount/numeric - using standard format: RM 0,000.00
               return `${datasetLabel}: ${formatCurrencyKPI(value, currency)}`;
