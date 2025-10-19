@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Layout from '@/components/Layout'
 import Frame from '@/components/Frame'
-import StatCard from '@/components/StatCard'
+import ComparisonStatCard from '@/components/ComparisonStatCard'
 import BarChart from '@/components/BarChart'
 import LineChart from '@/components/LineChart'
 import CustomerDetailModal from '@/components/CustomerDetailModal'
@@ -345,93 +345,99 @@ export default function BrandPerformanceTrendsPage() {
             <>
               {/* BARIS 1: KPI CARDS (6 CARDS HORIZONTAL ROW) */}
               <div className="kpi-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '18px', marginBottom: '24px' }}>
-                <StatCard
+                <ComparisonStatCard
                   title="Active Member A|B"
-                  value={`${formatKPIValue(data.comparison.periodA.activeMember, 'count')} | ${formatKPIValue(data.comparison.periodB.activeMember, 'count')}`}
+                  valueA={formatKPIValue(data.comparison.periodA.activeMember, 'count')}
+                  valueB={formatKPIValue(data.comparison.periodB.activeMember, 'count')}
                   additionalKpi={{
                     label: "Compare (B-A)",
                     value: formatKPIValue(data.comparison.difference.activeMember, 'count'),
                     isPositive: data.comparison.difference.activeMember > 0
-                  } as any}
+                  }}
                   comparison={{
                     percentage: formatKPIValue(data.comparison.percentageChange.activeMember, 'percentage'),
                     isPositive: data.comparison.percentageChange.activeMember > 0,
-                    text: "(B-A)" // % dari Compare (B-A), bukan MoM
+                    text: "(B-A)"
                   }}
                   icon="Active Member"
                 />
-                <StatCard
+                <ComparisonStatCard
                   title="Deposit Amount A|B"
-                  value={`${formatKPIValue(data.comparison.periodA.depositAmount, 'currency')} | ${formatKPIValue(data.comparison.periodB.depositAmount, 'currency')}`}
+                  valueA={formatKPIValue(data.comparison.periodA.depositAmount, 'currency', 'USD')}
+                  valueB={formatKPIValue(data.comparison.periodB.depositAmount, 'currency', 'USD')}
                   additionalKpi={{
                     label: "Compare (B-A)",
-                    value: formatKPIValue(data.comparison.difference.depositAmount, 'currency'),
+                    value: formatKPIValue(data.comparison.difference.depositAmount, 'currency', 'USD'),
                     isPositive: data.comparison.difference.depositAmount > 0
-                  } as any}
+                  }}
                   comparison={{
                     percentage: formatKPIValue(data.comparison.percentageChange.depositAmount, 'percentage'),
                     isPositive: data.comparison.percentageChange.depositAmount > 0,
-                    text: "(B-A)" // % dari Compare (B-A), bukan MoM
+                    text: "(B-A)"
                   }}
                   icon="Deposit Amount"
                 />
-                <StatCard
+                <ComparisonStatCard
                   title="Deposit Cases A|B"
-                  value={`${formatKPIValue(data.comparison.periodA.depositCases, 'count')} | ${formatKPIValue(data.comparison.periodB.depositCases, 'count')}`}
+                  valueA={formatKPIValue(data.comparison.periodA.depositCases, 'count')}
+                  valueB={formatKPIValue(data.comparison.periodB.depositCases, 'count')}
                   additionalKpi={{
                     label: "Compare (B-A)",
                     value: formatKPIValue(data.comparison.difference.depositCases, 'count'),
                     isPositive: data.comparison.difference.depositCases > 0
-                  } as any}
+                  }}
                   comparison={{
                     percentage: formatKPIValue(data.comparison.percentageChange.depositCases, 'percentage'),
                     isPositive: data.comparison.percentageChange.depositCases > 0,
-                    text: "(B-A)" // % dari Compare (B-A), bukan MoM
+                    text: "(B-A)"
                   }}
                   icon="Deposit Cases"
                 />
-                <StatCard
+                <ComparisonStatCard
                   title="Net Profit A|B"
-                  value={`${formatKPIValue(data.comparison.periodA.netProfit, 'currency')} | ${formatKPIValue(data.comparison.periodB.netProfit, 'currency')}`}
+                  valueA={formatKPIValue(data.comparison.periodA.netProfit, 'currency', 'USD')}
+                  valueB={formatKPIValue(data.comparison.periodB.netProfit, 'currency', 'USD')}
                   additionalKpi={{
                     label: "Compare (B-A)",
-                    value: formatKPIValue(data.comparison.difference.netProfit, 'currency'),
+                    value: formatKPIValue(data.comparison.difference.netProfit, 'currency', 'USD'),
                     isPositive: data.comparison.difference.netProfit > 0
-                  } as any}
+                  }}
                   comparison={{
                     percentage: formatKPIValue(data.comparison.percentageChange.netProfit, 'percentage'),
                     isPositive: data.comparison.percentageChange.netProfit > 0,
-                    text: "(B-A)" // % dari Compare (B-A), bukan MoM
+                    text: "(B-A)"
                   }}
                   icon="Net Profit"
                 />
-                <StatCard
+                <ComparisonStatCard
                   title="DA USER A|B"
-                  value={`${formatKPIValue(data.comparison.periodA.daUser, 'currency')} | ${formatKPIValue(data.comparison.periodB.daUser, 'currency')}`}
+                  valueA={formatKPIValue(data.comparison.periodA.daUser, 'currency', 'USD')}
+                  valueB={formatKPIValue(data.comparison.periodB.daUser, 'currency', 'USD')}
                   additionalKpi={{
                     label: "Compare (B-A)",
-                    value: formatKPIValue(data.comparison.difference.daUser, 'currency'),
+                    value: formatKPIValue(data.comparison.difference.daUser, 'currency', 'USD'),
                     isPositive: data.comparison.difference.daUser > 0
-                  } as any}
+                  }}
                   comparison={{
                     percentage: formatKPIValue(data.comparison.percentageChange.daUser, 'percentage'),
                     isPositive: data.comparison.percentageChange.daUser > 0,
-                    text: "(B-A)" // % dari Compare (B-A), bukan MoM
+                    text: "(B-A)"
                   }}
                   icon="DA User"
                 />
-                <StatCard
+                <ComparisonStatCard
                   title="GGR USER A|B"
-                  value={`${formatKPIValue(data.comparison.periodA.ggrUser, 'currency')} | ${formatKPIValue(data.comparison.periodB.ggrUser, 'currency')}`}
+                  valueA={formatKPIValue(data.comparison.periodA.ggrUser, 'currency', 'USD')}
+                  valueB={formatKPIValue(data.comparison.periodB.ggrUser, 'currency', 'USD')}
                   additionalKpi={{
                     label: "Compare (B-A)",
-                    value: formatKPIValue(data.comparison.difference.ggrUser, 'currency'),
+                    value: formatKPIValue(data.comparison.difference.ggrUser, 'currency', 'USD'),
                     isPositive: data.comparison.difference.ggrUser > 0
-                  } as any}
+                  }}
                   comparison={{
                     percentage: formatKPIValue(data.comparison.percentageChange.ggrUser, 'percentage'),
                     isPositive: data.comparison.percentageChange.ggrUser > 0,
-                    text: "(B-A)" // % dari Compare (B-A), bukan MoM
+                    text: "(B-A)"
                   }}
                   icon="GGR User"
                 />

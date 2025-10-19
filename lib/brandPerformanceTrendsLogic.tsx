@@ -245,33 +245,33 @@ function calculatePercentageChange(previous: number, current: number): number {
 // FORMATTING FUNCTIONS
 // ===========================================
 
-export function formatKPIValue(value: number, type: 'currency' | 'number' | 'percentage' | 'decimal' | 'count'): string {
+export function formatKPIValue(value: number, type: 'currency' | 'number' | 'percentage' | 'decimal' | 'count', currencySymbol: string = 'RM'): string {
   // Handle negative values
   const isNegative = value < 0
   const absValue = Math.abs(value)
   
   switch (type) {
     case 'currency':
-      // Amount/Currency: Use thousand denomination
+      // Amount/Currency: Use thousand denomination with currency prefix (1 decimal for K/M)
       let formatted: string
       if (absValue >= 1000000) {
-        formatted = `${(absValue / 1000000).toFixed(2)}M`
+        formatted = `${(absValue / 1000000).toFixed(1)}M`
       } else if (absValue >= 1000) {
-        formatted = `${(absValue / 1000).toFixed(2)}K`
+        formatted = `${(absValue / 1000).toFixed(1)}K`
       } else {
         formatted = absValue.toLocaleString('en-US', { 
           minimumFractionDigits: 2, 
           maximumFractionDigits: 2 
         })
       }
-      return isNegative ? `-${formatted}` : formatted
+      return isNegative ? `-${currencySymbol} ${formatted}` : `${currencySymbol} ${formatted}`
     case 'number':
-      // Numeric values: Use thousand denomination
+      // Numeric values: Use thousand denomination (1 decimal for K/M)
       let numberFormatted: string
       if (absValue >= 1000000) {
-        numberFormatted = `${(absValue / 1000000).toFixed(2)}M`
+        numberFormatted = `${(absValue / 1000000).toFixed(1)}M`
       } else if (absValue >= 1000) {
-        numberFormatted = `${(absValue / 1000).toFixed(2)}K`
+        numberFormatted = `${(absValue / 1000).toFixed(1)}K`
       } else {
         numberFormatted = Math.round(absValue).toLocaleString('en-US')
       }
