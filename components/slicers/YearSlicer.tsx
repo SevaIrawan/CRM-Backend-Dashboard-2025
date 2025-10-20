@@ -15,8 +15,14 @@ export default function YearSlicer({ value, onChange, className = '', years: pro
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (propYears) {
+    if (propYears && propYears.length > 0) {
+      console.log('✅ [YearSlicer] Using prop years:', propYears)
       setYears(propYears)
+      setLoading(false)
+    } else if (propYears !== undefined) {
+      // propYears passed but empty - still use it, don't fetch
+      console.log('⚠️ [YearSlicer] Prop years empty, using it anyway')
+      setYears([])
       setLoading(false)
     } else {
       const fetchYears = async () => {

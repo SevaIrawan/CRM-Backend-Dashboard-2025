@@ -251,6 +251,30 @@ Transition: 0.3s ease
 2. **QuarterSlicer** - Q1, Q2, Q3, Q4 (disabled when toggle ON)
 3. **DateRangeSlicer** - Start date to End date (disabled when toggle OFF)
 
+### 🔒 DOUBLE LOCK SYSTEM (Date Range Validation)
+
+**LOCK 1: Quarter Boundary** ✅
+- Date range picker **bounded** by selected quarter
+- Example: Q3 selected → User can ONLY pick dates within July-September
+- Purpose: Ensure data consistency with quarter selection
+
+**LOCK 2: Maximum 31 Days** ✅
+- Date range selection **limited** to maximum 31 days
+- If user selects > 31 days → Show **error message** + disable Apply button
+- Purpose: Maintain chart proportions and readability
+
+**Visual Feedback for Exceeding 31 Days:**
+```
+❌ Date range exceeds 31 days limit
+   (45 days selected)
+
+💡 Suggestion: For longer periods, please use 
+   Monthly/Quarter mode instead to maintain 
+   chart proportions.
+
+[Cancel]  [Apply - DISABLED]
+```
+
 ### Slicer Logic
 ```typescript
 // Mode Toggle Logic
@@ -263,12 +287,22 @@ isDateRangeMode = true
   → Use Date Range for data filtering
   → Quarter slicer: disabled (opacity 0.4, pointerEvents none)
   → Date Range slicer: enabled
+  → 🔒 LOCK 1: Date range bounded by quarter
+  → 🔒 LOCK 2: Max 31 days selection
 
 // Quarter mengonversi ke date range
 Q1 = January - March
 Q2 = April - June
 Q3 = July - September
 Q4 = October - December
+
+// Date Range Validation (LOCK 2)
+daysDiff = (endDate - startDate) + 1  // Include both start and end
+if (daysDiff > 31) {
+  → Show error message
+  → Disable Apply button
+  → Suggest Monthly/Quarter mode
+}
 ```
 
 ## 📦 DATA SOURCE

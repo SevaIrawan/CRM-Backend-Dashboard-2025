@@ -7,6 +7,7 @@ interface QuarterSlicerProps {
   onChange: (value: string) => void
   className?: string
   disabled?: boolean
+  quarters?: string[] // Optional: filter available quarters
 }
 
 // Quarter mapping
@@ -21,8 +22,14 @@ export default function QuarterSlicer({
   value, 
   onChange, 
   className = '', 
-  disabled = false 
+  disabled = false,
+  quarters 
 }: QuarterSlicerProps) {
+  
+  // Filter quarters if provided, otherwise show all
+  const availableQuarters = quarters 
+    ? QUARTERS.filter(q => quarters.includes(q.value))
+    : QUARTERS
   
   return (
     <select 
@@ -44,7 +51,7 @@ export default function QuarterSlicer({
         boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
       }}
     >
-      {QUARTERS.map((quarter) => (
+      {availableQuarters.map((quarter) => (
         <option key={quarter.value} value={quarter.value}>
           {quarter.label}
         </option>

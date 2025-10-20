@@ -15,6 +15,8 @@ interface ProgressBarStatCardProps {
     text?: string
   }
   className?: string
+  onEditClick?: () => void // Callback for edit button
+  showEditButton?: boolean // Show edit icon
 }
 
 export default function ProgressBarStatCard({ 
@@ -24,7 +26,9 @@ export default function ProgressBarStatCard({
   icon,
   unit = '%',
   comparison,
-  className = ''
+  className = '',
+  onEditClick,
+  showEditButton = false
 }: ProgressBarStatCardProps) {
   const iconSvg = icon ? getKpiIcon(icon) : ''
   
@@ -44,20 +48,56 @@ export default function ProgressBarStatCard({
     <div className={`stat-card ${className}`}>
       <div className="stat-card-header">
         <h3 className="stat-card-title">{title}</h3>
-        {icon && (
-          <div className="stat-card-icon">
-            <div 
-              dangerouslySetInnerHTML={{ __html: iconSvg }}
-              style={{ 
-                width: '20px', 
-                height: '20px',
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {showEditButton && onEditClick && (
+            <button
+              onClick={onEditClick}
+              style={{
+                padding: '4px 8px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                backgroundColor: 'white',
+                fontSize: '11px',
+                fontWeight: '500',
+                color: '#3B82F6',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                gap: '4px'
               }}
-            />
-          </div>
-        )}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#eff6ff'
+                e.currentTarget.style.borderColor = '#3B82F6'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'white'
+                e.currentTarget.style.borderColor = '#d1d5db'
+              }}
+              title="Edit Target"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+              Edit
+            </button>
+          )}
+          {icon && (
+            <div className="stat-card-icon">
+              <div 
+                dangerouslySetInnerHTML={{ __html: iconSvg }}
+                style={{ 
+                  width: '20px', 
+                  height: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              />
+            </div>
+          )}
+        </div>
       </div>
       
       {/* Achievement Rate Value */}

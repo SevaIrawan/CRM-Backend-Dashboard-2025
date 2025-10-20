@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Layout from '@/components/Layout'
 import Frame from '@/components/Frame'
 import StatCard from '@/components/StatCard'
@@ -14,9 +14,26 @@ import MixedChart from '@/components/MixedChart'
 import YearSlicer from '@/components/slicers/YearSlicer'
 import QuarterSlicer from '@/components/slicers/QuarterSlicer'
 import DateRangeSlicer from '@/components/slicers/DateRangeSlicer'
+import TargetEditModal from '@/components/TargetEditModal'
 import { getChartIcon } from '@/lib/CentralIcon'
 
+interface SlicerOptions {
+  years: string[]
+  quarters: Record<string, string[]>
+  quarterDateRanges: Record<string, { min: string | null, max: string | null }>
+  defaults: {
+    year: string
+    quarter: string
+    startDate: string | null
+    endDate: string | null
+  }
+}
+
 export default function BusinessPerformancePage() {
+  // Slicer Options from API
+  const [slicerOptions, setSlicerOptions] = useState<SlicerOptions | null>(null)
+  const [loadingSlicers, setLoadingSlicers] = useState(true)
+  
   // Slicer States
   const [selectedYear, setSelectedYear] = useState('2025')
   const [selectedQuarter, setSelectedQuarter] = useState('Q4')
@@ -25,6 +42,69 @@ export default function BusinessPerformancePage() {
   
   // Toggle State: FALSE = Month Mode (default), TRUE = Date Range Mode
   const [isDateRangeMode, setIsDateRangeMode] = useState(false)
+  
+  // Target Edit Modal State
+  const [isTargetModalOpen, setIsTargetModalOpen] = useState(false)
+  
+  // User Info (TODO: Get from session/auth context)
+  const [userEmail, setUserEmail] = useState('manager@example.com')
+  const [userRole, setUserRole] = useState('manager_myr')
+  
+  // ============================================================================
+  // FETCH SLICER OPTIONS ON MOUNT
+  // ============================================================================
+  useEffect(() => {
+    fetchSlicerOptions()
+  }, [])
+  
+  async function fetchSlicerOptions() {
+    try {
+      console.log('🔍 [BP Page] Fetching slicer options...')
+      const response = await fetch('/api/myr-business-performance/slicer-options')
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      console.log('✅ [BP Page] Slicer options loaded:', data)
+      
+      setSlicerOptions(data)
+      
+      // Set defaults from API
+      if (data.defaults) {
+        setSelectedYear(data.defaults.year)
+        setSelectedQuarter(data.defaults.quarter)
+        if (data.defaults.startDate) setStartDate(data.defaults.startDate)
+        if (data.defaults.endDate) setEndDate(data.defaults.endDate)
+      }
+      
+    } catch (error) {
+      console.error('❌ [BP Page] Error fetching slicer options:', error)
+    } finally {
+      setLoadingSlicers(false)
+    }
+  }
+  
+  // Get available quarters for selected year
+  const availableQuarters = slicerOptions?.quarters?.[selectedYear] || ['Q1', 'Q2', 'Q3', 'Q4']
+  
+  // ============================================================================
+  // GET DATE RANGE FOR SELECTED QUARTER (BOUNDED)
+  // ============================================================================
+  const quarterKey = `${selectedYear}-${selectedQuarter}`
+  const quarterDateRange = slicerOptions?.quarterDateRanges?.[quarterKey] || { min: null, max: null }
+  
+  // ============================================================================
+  // UPDATE DATE RANGE WHEN QUARTER CHANGES
+  // ============================================================================
+  useEffect(() => {
+    if (quarterDateRange.min && quarterDateRange.max) {
+      setStartDate(quarterDateRange.min)
+      setEndDate(quarterDateRange.max)
+      console.log(`📅 [BP Page] Quarter changed to ${quarterKey}, date range: ${quarterDateRange.min} to ${quarterDateRange.max}`)
+    }
+  }, [selectedYear, selectedQuarter, quarterKey, quarterDateRange.min, quarterDateRange.max])
   
   // CUSTOM STYLES FOR BUSINESS PERFORMANCE PAGE - COMPACT & PROFESSIONAL
   const customKPIStyles = `
@@ -122,7 +202,7 @@ export default function BusinessPerformancePage() {
               <YearSlicer 
                 value={selectedYear} 
                 onChange={setSelectedYear}
-                years={['2023', '2024', '2025']}
+                years={slicerOptions?.years || []}
               />
             </div>
             
@@ -140,6 +220,8 @@ export default function BusinessPerformancePage() {
               <QuarterSlicer 
                 value={selectedQuarter} 
                 onChange={setSelectedQuarter}
+                quarters={availableQuarters}
+                disabled={isDateRangeMode}
               />
             </div>
             
@@ -167,8 +249,48 @@ export default function BusinessPerformancePage() {
                 startDate={startDate}
                 endDate={endDate}
                 onDateChange={handleDateRangeChange}
+                disabled={!isDateRangeMode}
+                minDate={quarterDateRange.min}
+                maxDate={quarterDateRange.max}
               />
             </div>
+            
+            {/* EDIT TARGET BUTTON - Only for managers */}
+            {['manager_myr', 'admin'].includes(userRole) && (
+              <button
+                onClick={() => setIsTargetModalOpen(true)}
+                style={{
+                  padding: '8px 16px',
+                  border: '1px solid #3B82F6',
+                  borderRadius: '8px',
+                  backgroundColor: 'white',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  color: '#3B82F6',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#3B82F6'
+                  e.currentTarget.style.color = 'white'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'white'
+                  e.currentTarget.style.color = '#3B82F6'
+                }}
+                title="Edit quarterly targets"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                Edit Target
+              </button>
+            )}
           </div>
         </div>
       }
@@ -515,6 +637,23 @@ export default function BusinessPerformancePage() {
           </p>
         </div>
       </Frame>
+      
+      {/* Target Edit Modal */}
+      <TargetEditModal
+        isOpen={isTargetModalOpen}
+        onClose={() => setIsTargetModalOpen(false)}
+        currency="MYR"
+        line="ALL"
+        year={selectedYear}
+        quarter={selectedQuarter}
+        currentActualGGR={8500000}
+        userEmail={userEmail}
+        userRole={userRole}
+        onSaveSuccess={() => {
+          console.log('✅ Target saved successfully, refresh data here')
+          // TODO: Refresh KPI data from API
+        }}
+      />
     </Layout>
     </>
   )
