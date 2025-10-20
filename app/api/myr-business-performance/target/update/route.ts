@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     // ============================================================================
     // PREPARE TARGET DATA
     // ============================================================================
-    const targetData = {
+    const targetData: any = {
       currency,
       line,
       year,
@@ -141,10 +141,10 @@ export async function POST(request: NextRequest) {
     
     if (!isUpdate) {
       // CREATE new target
-      targetData['created_at'] = now
-      targetData['created_by'] = user_email
-      targetData['created_by_role'] = user_role
-      targetData['is_active'] = true
+      targetData.created_at = now
+      targetData.created_by = user_email
+      targetData.created_by_role = user_role
+      targetData.is_active = true
     }
     
     // ============================================================================
