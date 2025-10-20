@@ -31,14 +31,16 @@
 //    - BarChart: chartIcon={getChartIcon('HEADCOUNT BY DEPARTMENT')}
 //
 // ========================================
-// CURRENT ICON CATEGORIES:
+// CURRENT ICON CATEGORIES (ACTIVE IN PRODUCTION):
 // ========================================
 // - Financial KPIs: depositAmount, withdrawAmount, grossProfit, netProfit
-// - User KPIs: newDepositor, activeMember, pureMember (user+lock), pureUser, headcount
-// - Business Flow: conversionRate, newCustomers, groupJoin, etc.
-// - Charts: retentionChurnChart, customerMetricsChart, etc.
-// - Strategic Executive: ggrUser, ggrPureUser, customerValue, etc.
+// - User/Member KPIs: activeMember, pureMember, pureUser, newDepositor, headcount
+// - Business Metrics: conversionRate, churnRate, holdPercentage
+// - Auto-Approval KPIs: totalTransactions, coverageRate, avgProcTime, etc. (6 icons)
 // - Business Performance: transactionMetrics (bar chart), userValueMetrics (hand+dollar)
+// - Chart Specific: retentionChurnChart, customerMetricsChart
+// - Comparison Icons: arrowUp, arrowDown, minus
+// - Reserved for Future: Business flow icons (groupJoin, upgradedMembers, etc.)
 //
 // ========================================
 
@@ -243,36 +245,12 @@ export function getKpiIcon(kpiName: string): string {
     'target-completion': KPI_ICONS.targetCompletion,
     'reactivated-customers': KPI_ICONS.reactivatedCustomers,
     
-    // Additional KPI mappings (UPPERCASE)
-    'NEW CUSTOMER CONVERSION RATE': KPI_ICONS.conversionRate,
-    'TOTAL NEW CUSTOMERS': KPI_ICONS.newCustomers,
-    'CUSTOMER GROUP JOIN VOLUME': KPI_ICONS.groupJoin,
-    '2ND DEPOSIT RATE (IN GROUP)': KPI_ICONS.depositRate,
-    '2ND DEPOSITS (IN GROUP)': KPI_ICONS.deposits,
-    '2ND DEPOSIT RATE (NOT IN GROUP)': KPI_ICONS.depositRate,
-    '2ND DEPOSITS (NOT IN GROUP)': KPI_ICONS.deposits,
-    'TOTAL UPGRADED MEMBERS': KPI_ICONS.upgradedMembers,
-    'TOTAL CHURNED MEMBERS': KPI_ICONS.churnedMembers,
-    'CUSTOMER TRANSFER SUCCESS RATE': KPI_ICONS.transferSuccess,
-    'TARGET COMPLETION': KPI_ICONS.targetCompletion,
-    'TOTAL REACTIVATED CUSTOMERS': KPI_ICONS.reactivatedCustomers,
-    
-    // Strategic Executive KPI mappings
-    'GGR USER': KPI_ICONS.ggrUser,
-    'GGR PURE USER': KPI_ICONS.ggrPureUser,
-    'CUSTOMER VALUE PER HEADCOUNT': KPI_ICONS.customerValue,
-    'HEADCOUNT BY DEPARTMENT': KPI_ICONS.headcountByDepartment,
-    'CUSTOMER COUNT VS HEADCOUNT': KPI_ICONS.customerCount,
-    
-    // USC Page KPI mappings
+    // USC Member Analytic KPI mappings (ACTIVE)
     'GGR User': KPI_ICONS.ggrUser,
     'Deposit Amount User': KPI_ICONS.depositAmount,
     'Average Transaction Value': KPI_ICONS.averageTransactionValueTrend,
     'Purchase Frequency': KPI_ICONS.purchaseFrequencyTrend,
     'New Customer': KPI_ICONS.newCustomers,
-    'USC Performance Summary': KPI_ICONS.operationalEfficiencyChart,
-    'Member Engagement Analysis': KPI_ICONS.operationalEfficiencyChart,
-    'USC Market Share': KPI_ICONS.averageTransactionValueTrend,
     
     // Business Performance Page KPI mappings
     'Transaction Metrics': KPI_ICONS.transactionMetrics,
@@ -300,15 +278,11 @@ export function getKpiIcon(kpiName: string): string {
 // Helper function to get chart icon by chart name
 export function getChartIcon(chartName: string): string {
   const iconMap: { [key: string]: string } = {
-    // Existing chart icons
+    // Chart Icons (ACTIVE)
     'Retention vs Churn Rate': KPI_ICONS.retentionChurnChart,
     'CLV vs Purchase Frequency': KPI_ICONS.customerMetricsChart,
-    'Customer Metrics': KPI_ICONS.customerMetricsChart,
-    'Growth vs Profitability': KPI_ICONS.growthProfitabilityChart,
-    'Growth & Profitability': KPI_ICONS.growthProfitabilityChart,
-    'Operational Efficiency': KPI_ICONS.operationalEfficiencyChart,
     
-    // Sales Revenue Chart Icons (NEW ADDITIONS)
+    // Sales Revenue Chart Icons
     'Deposit Amount': KPI_ICONS.depositAmount,
     'Withdraw Amount': KPI_ICONS.withdrawAmount,
     'Gross Gaming Revenue': KPI_ICONS.grossGamingRevenueTrend,
@@ -336,21 +310,10 @@ export function getChartIcon(chartName: string): string {
     'Customer Count': KPI_ICONS.customerCount,
     'HEADCOUNT BY DEPARTMENT': KPI_ICONS.headcountByDepartment,
     
-    // USC Page Chart Icons
+    // USC Member Analytic Chart Icons (ACTIVE)
     'GGR User Trend': KPI_ICONS.ggrUser,
     'DA User Trend': KPI_ICONS.depositAmount,
     'Average Transaction Value Trend': KPI_ICONS.averageTransactionValueTrend,
-    'USC Category Distribution': KPI_ICONS.customerMetricsChart,
-    'USC Product Performance': KPI_ICONS.growthProfitabilityChart,
-    'USC Customer List': KPI_ICONS.customerMetricsChart,
-    'USC Monthly Sales': KPI_ICONS.ggrUser,
-    'USC Customer Retention': KPI_ICONS.operationalEfficiencyChart,
-    'USC Performance Summary': KPI_ICONS.operationalEfficiencyChart,
-    'Member Engagement Analysis': KPI_ICONS.operationalEfficiencyChart,
-    'USC Market Share': KPI_ICONS.averageTransactionValueTrend,
-    'USC Growth Rate': KPI_ICONS.purchaseFrequencyTrend,
-    'USC Regional Performance': KPI_ICONS.ggrUser,
-    'USC Seasonal Trends': KPI_ICONS.operationalEfficiencyChart,
     
     // Auto-Approval Page Chart Icons
     'Processing Time': KPI_ICONS.avgProcTimeAutomation,
