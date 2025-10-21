@@ -618,7 +618,7 @@ export async function GET(request: NextRequest) {
       }
       dataByMonth[month].push(row)
     })
-    let sortedMonths = Object.keys(dataByMonth).sort((a, b) => monthOrder.indexOf(a) - monthOrder.indexOf(b))
+    let sortedMonths = Object.keys(dataByMonth).sort((a, b) => monthNames.indexOf(a) - monthNames.indexOf(b))
     console.log(`📅 [BP Data API] Quarter-specific months: ${sortedMonths.join(', ')}`)
     
     // ========================================
