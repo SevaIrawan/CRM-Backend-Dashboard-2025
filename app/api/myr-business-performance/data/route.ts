@@ -116,13 +116,13 @@ async function calculateBrandMemberFlows(filters: {
     prevByBrand[brand] = new Set()
   })
   
-  currentData?.forEach(row => {
+  currentData?.forEach((row: any) => {
     if (row.line && BRANDS.includes(row.line)) {
       currentByBrand[row.line].add(row.userkey)
     }
   })
   
-  prevData?.forEach(row => {
+  prevData?.forEach((row: any) => {
     if (row.line && BRANDS.includes(row.line)) {
       prevByBrand[row.line].add(row.userkey)
     }
@@ -597,7 +597,7 @@ export async function GET(request: NextRequest) {
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
     const mvDataByMonth: Record<string, any> = {}
     
-    mvFullYearData.forEach(row => {
+    mvFullYearData.forEach((row: any) => {
       const monthNum = row.month as number
       const monthName = monthNames[monthNum - 1]  // Convert 1-12 to month name
       if (monthName) {
@@ -611,7 +611,7 @@ export async function GET(request: NextRequest) {
     
     // Group QUARTER-SPECIFIC data by month for monthly charts (Winrate/Withdraw Rate)
     const dataByMonth: Record<string, any[]> = {}
-    blueWhaleData.forEach(row => {
+    blueWhaleData.forEach((row: any) => {
       const month = row.month || 'Unknown'
       if (!dataByMonth[month]) {
         dataByMonth[month] = []
@@ -711,7 +711,7 @@ export async function GET(request: NextRequest) {
     
     // CHART 5: Bonus Usage Rate per Brand
     const dataByBrand: Record<string, any[]> = {}
-    blueWhaleData.forEach(row => {
+    blueWhaleData.forEach((row: any) => {
       const brand = row.line
       if (brand && brand.trim()) {  // ✅ Filter empty/null brands
         if (!dataByBrand[brand]) {
@@ -762,7 +762,7 @@ export async function GET(request: NextRequest) {
       // Filter MV data for this quarter and group by brand
       const brandTotals: Record<string, { deposit: number; withdraw: number }> = {}
       
-      mvBrandsData.forEach(row => {
+      mvBrandsData.forEach((row: any) => {
         const monthNum = row.month as number
         const brand = row.line as string
         
@@ -787,7 +787,7 @@ export async function GET(request: NextRequest) {
     // CHART 7 & 8: Retention Rate & Activation Rate (Per Brand)
     // Group new_register data by brand
     const newRegisterByBrand: Record<string, any[]> = {}
-    newRegisterData.forEach(row => {
+    newRegisterData.forEach((row: any) => {
       const brand = row.line
       if (brand && brand.trim()) {  // ✅ Filter empty/null brands
         if (!newRegisterByBrand[brand]) {
