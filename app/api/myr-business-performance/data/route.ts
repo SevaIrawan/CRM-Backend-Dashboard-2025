@@ -231,7 +231,7 @@ async function calculateMemberMetrics(filters: MemberMetricsFilters) {
     }
     
     const { data: currentUsers } = await currentQuery
-    const currentUserKeys = new Set((currentUsers || []).map(u => u.userkey).filter(Boolean))
+    const currentUserKeys = new Set((currentUsers || []).map((u: any) => u.userkey).filter(Boolean))
     
     console.log(`👥 Current Period: ${currentUserKeys.size} unique users`)
     
@@ -256,7 +256,7 @@ async function calculateMemberMetrics(filters: MemberMetricsFilters) {
     }
     
     const { data: prevUsers } = await prevQuery
-    const prevUserKeys = new Set((prevUsers || []).map(u => u.userkey).filter(Boolean))
+    const prevUserKeys = new Set((prevUsers || []).map((u: any) => u.userkey).filter(Boolean))
     
     console.log(`👥 Previous Period: ${prevUserKeys.size} unique users`)
     
@@ -546,8 +546,8 @@ export async function GET(request: NextRequest) {
     })
 
     // 3. NEW REGISTER & NEW DEPOSITOR
-    const newRegister = newRegisterData.reduce((sum, row) => sum + (parseInt(row.new_register) || 0), 0)
-    const newDepositor = newRegisterData.reduce((sum, row) => sum + (parseInt(row.new_depositor) || 0), 0)
+    const newRegister = newRegisterData.reduce((sum: number, row: any) => sum + (parseInt(row.new_register) || 0), 0)
+    const newDepositor = newRegisterData.reduce((sum: number, row: any) => sum + (parseInt(row.new_depositor) || 0), 0)
 
     // 4. PURE ACTIVE = Active Member - New Depositor
     const pureActive = activeMember - newDepositor
@@ -881,10 +881,10 @@ export async function GET(request: NextRequest) {
       
       // LINEAR REGRESSION: y = mx + b
       const n = historicalData.length
-      const sumX = historicalData.reduce((sum, d) => sum + d.x, 0)
-      const sumY = historicalData.reduce((sum, d) => sum + d.y, 0)
-      const sumXY = historicalData.reduce((sum, d) => sum + (d.x * d.y), 0)
-      const sumX2 = historicalData.reduce((sum, d) => sum + (d.x * d.x), 0)
+      const sumX = historicalData.reduce((sum: number, d: any) => sum + d.x, 0)
+      const sumY = historicalData.reduce((sum: number, d: any) => sum + d.y, 0)
+      const sumXY = historicalData.reduce((sum: number, d: any) => sum + (d.x * d.y), 0)
+      const sumX2 = historicalData.reduce((sum: number, d: any) => sum + (d.x * d.x), 0)
       
       // Calculate slope (m) and intercept (b)
       const denominator = (n * sumX2 - sumX * sumX)
@@ -934,9 +934,9 @@ export async function GET(request: NextRequest) {
     })
     
     // Calculate totals for validation
-    const totalActiveBrands = Object.values(brandFlows).reduce((sum, flow) => sum + flow.active, 0)
-    const totalRetained = Object.values(brandFlows).reduce((sum, flow) => sum + flow.retained, 0)
-    const totalChurned = Object.values(brandFlows).reduce((sum, flow) => sum + flow.churned, 0)
+    const totalActiveBrands = Object.values(brandFlows).reduce((sum: number, flow: any) => sum + flow.active, 0)
+    const totalRetained = Object.values(brandFlows).reduce((sum: number, flow: any) => sum + flow.retained, 0)
+    const totalChurned = Object.values(brandFlows).reduce((sum: number, flow: any) => sum + flow.churned, 0)
     
     console.log('📊 [BP Data API] Sankey validation:', {
       activeMemberTotal: activeMember,
