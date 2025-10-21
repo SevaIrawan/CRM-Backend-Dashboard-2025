@@ -82,7 +82,7 @@ async function calculateBrandMemberFlows(filters: {
   // STEP 3: AUTO-DETECT UNIQUE BRANDS from both periods
   // Current period brands (for display)
   const currentBrandsSet = new Set<string>()
-  currentData?.forEach(row => {
+  currentData?.forEach((row: any) => {
     if (row.line && row.line.trim()) {
       currentBrandsSet.add(row.line.trim())
     }
@@ -90,7 +90,7 @@ async function calculateBrandMemberFlows(filters: {
   
   // Previous period brands (for churned calculation)
   const prevBrandsSet = new Set<string>()
-  prevData?.forEach(row => {
+  prevData?.forEach((row: any) => {
     if (row.line && row.line.trim()) {
       prevBrandsSet.add(row.line.trim())
     }
