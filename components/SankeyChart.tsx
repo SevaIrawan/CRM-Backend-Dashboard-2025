@@ -5,6 +5,7 @@ import { Sankey, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface SankeyNode {
   name: string;
+  value?: number; // Explicit value to override recharts auto-calculation
 }
 
 interface SankeyLink {
@@ -29,6 +30,11 @@ export default function SankeyChart({ data, title, chartIcon }: SankeyChartProps
   // Custom node rendering
   const CustomNode = ({ x, y, width, height, index, payload, containerWidth }: any) => {
     const isOut = x + width + 6 > containerWidth;
+    
+    // USE EXPLICIT VALUE FROM NODE DATA, NOT RECHARTS AUTO-CALCULATED VALUE
+    // This fixes the issue where recharts calculates node value as sum of all flows
+    const nodeValue = data.nodes[index]?.value || payload.value || 0;
+    
     return (
       <g>
         <rect
@@ -58,7 +64,7 @@ export default function SankeyChart({ data, title, chartIcon }: SankeyChartProps
           fill="#6b7280"
           dy="0.35em"
         >
-          {payload.value ? `${payload.value.toLocaleString()}` : ''}
+          {nodeValue > 0 ? nodeValue.toLocaleString() : ''}
         </text>
       </g>
     );

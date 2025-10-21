@@ -104,26 +104,45 @@ export default function StackedBarChart({
         color: '#374151',
         font: {
           weight: 'bold' as const,
-          size: 10
+          size: 11
         },
-        anchor: 'center' as const,
-        align: 'center' as const,
-        formatter: function(value: number) {
-          if (value === 0) return ''; // Hide label for 0 values
+        anchor: 'end' as const,
+        align: 'end' as const,
+        offset: 4,
+        formatter: function(value: number, context: any) {
+          // Only show total label on the LAST dataset (top segment)
+          const isLastDataset = context.datasetIndex === context.chart.data.datasets.length - 1;
           
-          // ✅ For amount/currency types, use abbreviated format
+          if (!isLastDataset) {
+            return ''; // Hide labels on middle segments
+          }
+          
+          // Calculate TOTAL for this category by summing all datasets
+          let total = 0;
+          const dataIndex = context.dataIndex;
+          
+          context.chart.data.datasets.forEach((dataset: any) => {
+            const val = dataset.data[dataIndex];
+            if (val && !isNaN(val)) {
+              total += val;
+            }
+          });
+          
+          if (total === 0) return '';
+          
+          // Format total value
           const isCountType = currency === 'MEMBER' || currency === 'CASES';
           
-          if (!isCountType && value >= 100000) {
-            // For large amounts, use K/M format
-            if (value >= 1000000) {
-              return getCurrencySymbol(currency) + ' ' + (value / 1000000).toFixed(1) + 'M';
-            } else if (value >= 1000) {
-              return getCurrencySymbol(currency) + ' ' + (value / 1000).toFixed(0) + 'K';
+          if (!isCountType) {
+            // For currency, use K/M format
+            if (total >= 1000000) {
+              return getCurrencySymbol(currency) + ' ' + (total / 1000000).toFixed(1) + 'M';
+            } else if (total >= 1000) {
+              return getCurrencySymbol(currency) + ' ' + (total / 1000).toFixed(0) + 'K';
             }
           }
           
-          return formatIntegerKPI(value);
+          return formatIntegerKPI(total);
         }
       },
       tooltip: {

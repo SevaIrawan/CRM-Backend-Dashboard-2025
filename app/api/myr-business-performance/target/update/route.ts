@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { createClient } from '@supabase/supabase-js'
 
 /**
  * ============================================================================
@@ -8,7 +7,14 @@ import { createClient } from '@supabase/supabase-js'
  * ============================================================================
  * 
  * Update target with password verification
- * Security: Role-based + Password confirmation
+ * 
+ * ROLE PERMISSIONS:
+ * - manager_myr → ONLY edit MYR targets
+ * - manager_sgd → ONLY edit SGD targets
+ * - manager_usc → ONLY edit USC targets
+ * - admin → CAN edit ALL targets (MYR/SGD/USC)
+ * 
+ * Security: Role-based + Password confirmation via users table
  */
 
 export async function POST(request: NextRequest) {
@@ -32,6 +38,7 @@ export async function POST(request: NextRequest) {
     } = body
     
     console.log(`🎯 [BP Target Update] Request: ${currency} ${line} ${year} ${quarter} by ${user_email}`)
+    console.log('📦 [BP Target Update] Request body:', JSON.stringify(body, null, 2))
     
     // ============================================================================
     // VALIDATION 1: Check required fields
@@ -53,51 +60,103 @@ export async function POST(request: NextRequest) {
     // ============================================================================
     // VALIDATION 2: Check role permission
     // ============================================================================
+    console.log('🔐 [BP Target Update] Checking permissions...')
+    console.log('🔐 [BP Target Update] User role:', user_role)
+    console.log('🔐 [BP Target Update] Target currency:', currency)
+    
     const validRoles = ['manager_myr', 'manager_sgd', 'manager_usc', 'admin']
     if (!validRoles.includes(user_role)) {
       console.warn(`⚠️ [BP Target Update] Unauthorized role: ${user_role}`)
       return NextResponse.json(
-        { error: 'Unauthorized: Only managers can update targets' },
+        { error: 'Unauthorized: Only managers and admin can update targets' },
         { status: 403 }
       )
     }
     
-    // Check role matches currency
+    // ROLE PERMISSION MATRIX:
+    // - manager_myr → ONLY edit MYR targets
+    // - manager_sgd → ONLY edit SGD targets
+    // - manager_usc → ONLY edit USC targets
+    // - admin → CAN edit ALL targets (MYR/SGD/USC)
+    
     if (user_role !== 'admin') {
       const roleCurrency = user_role.split('_')[1]?.toUpperCase()
+      console.log('🔐 [BP Target Update] Role currency:', roleCurrency)
+      
       if (roleCurrency !== currency) {
-        console.warn(`⚠️ [BP Target Update] Role-currency mismatch: ${user_role} vs ${currency}`)
+        console.warn(`❌ [BP Target Update] Permission denied!`)
+        console.warn(`❌ [BP Target Update] ${user_role} trying to edit ${currency} target`)
+        
+        let errorMessage = ''
+        if (user_role === 'manager_myr') {
+          errorMessage = 'Manager MYR hanya dapat edit target MYR. Anda tidak memiliki akses ke target SGD/USC.'
+        } else if (user_role === 'manager_sgd') {
+          errorMessage = 'Manager SGD hanya dapat edit target SGD. Anda tidak memiliki akses ke target MYR/USC.'
+        } else if (user_role === 'manager_usc') {
+          errorMessage = 'Manager USC hanya dapat edit target USC. Anda tidak memiliki akses ke target MYR/SGD.'
+        } else {
+          errorMessage = `Role ${user_role} tidak memiliki akses untuk edit target ${currency}.`
+        }
+        
         return NextResponse.json(
-          { error: `Unauthorized: ${user_role} cannot modify ${currency} targets` },
+          { error: errorMessage },
           { status: 403 }
         )
       }
+      
+      console.log('✅ [BP Target Update] Permission granted:', `${user_role} can edit ${currency} targets`)
+    } else {
+      console.log('✅ [BP Target Update] Admin access - can edit all targets')
     }
     
     // ============================================================================
-    // VALIDATION 3: Verify password with Supabase Auth
+    // VALIDATION 3: Verify password with users table
     // ============================================================================
-    console.log('🔐 [BP Target Update] Verifying password...')
+    console.log('🔐 [BP Target Update] Verifying password for email:', user_email)
+    console.log('🔐 [BP Target Update] User role:', user_role)
     
-    const authClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    // Extract username from email (format: username@nexmax.com)
+    const username = user_email.split('@')[0]
+    console.log('🔐 [BP Target Update] Extracted username:', username)
     
-    const { data: authData, error: authError } = await authClient.auth.signInWithPassword({
-      email: user_email,
-      password: manager_password
-    })
+    // Query users table to verify password
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('username', username)
+      .eq('password', manager_password)
+      .single()
     
-    if (authError || !authData.user) {
-      console.error('❌ [BP Target Update] Password verification failed:', authError?.message)
+    if (userError || !userData) {
+      console.error('❌ [BP Target Update] Password verification failed')
+      console.error('❌ [BP Target Update] Username:', username)
+      console.error('❌ [BP Target Update] Error:', userError?.message)
+      
       return NextResponse.json(
-        { error: 'Invalid password' },
+        { 
+          error: 'Password salah! Gunakan password yang sama dengan login dashboard.',
+          details: 'Invalid password for user'
+        },
         { status: 401 }
       )
     }
     
-    console.log('✅ [BP Target Update] Password verified')
+    // Verify role matches
+    if (userData.role !== user_role) {
+      console.error('❌ [BP Target Update] Role mismatch')
+      console.error('❌ [BP Target Update] Expected:', user_role, 'Got:', userData.role)
+      
+      return NextResponse.json(
+        { 
+          error: 'Role tidak sesuai. Session mungkin expired, silakan login ulang.',
+          details: 'Role mismatch'
+        },
+        { status: 403 }
+      )
+    }
+    
+    console.log('✅ [BP Target Update] Password verified successfully')
+    console.log('✅ [BP Target Update] Authenticated user:', userData.username, 'Role:', userData.role)
     
     // ============================================================================
     // CHECK IF TARGET EXISTS
@@ -150,6 +209,8 @@ export async function POST(request: NextRequest) {
     // ============================================================================
     // SAVE TARGET (UPSERT)
     // ============================================================================
+    console.log('💾 [BP Target Update] Attempting to save target data:', JSON.stringify(targetData, null, 2))
+    
     const { data: savedTarget, error: saveError } = await supabase
       .from('bp_target')
       .upsert(targetData, {
@@ -161,8 +222,11 @@ export async function POST(request: NextRequest) {
     
     if (saveError) {
       console.error('❌ [BP Target Update] Save error:', saveError)
+      console.error('❌ [BP Target Update] Save error details:', JSON.stringify(saveError, null, 2))
       throw saveError
     }
+    
+    console.log('✅ [BP Target Update] Target saved successfully:', savedTarget)
     
     console.log(`✅ [BP Target Update] ${isUpdate ? 'Updated' : 'Created'} target ID:`, savedTarget.id)
     
@@ -216,10 +280,18 @@ export async function POST(request: NextRequest) {
     
   } catch (error) {
     console.error('❌ [BP Target Update] Error:', error)
+    
+    // Check if error is table not found
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const isTableNotFound = errorMessage.toLowerCase().includes('relation') && 
+                            errorMessage.toLowerCase().includes('does not exist')
+    
     return NextResponse.json(
       {
-        error: 'Failed to update target',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        error: isTableNotFound 
+          ? 'Database table not found. Please contact administrator to run setup script: scripts/create-bp-target-tables.sql'
+          : 'Failed to update target',
+        details: errorMessage
       },
       { status: 500 }
     )

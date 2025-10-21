@@ -1,3 +1,20 @@
+/**
+ * ============================================================================
+ * TARGET EDIT MODAL - MYR BUSINESS PERFORMANCE
+ * ============================================================================
+ * 
+ * Enhanced target input system with:
+ * - LINE dropdown (auto-detect from database)
+ * - QUARTER dropdown
+ * - Table-like input layout
+ * - Target List Table with all existing targets
+ * - TOTAL row with AUTO SUM
+ * - EDIT functionality per row
+ * - Password verification for SAVE
+ * 
+ * ============================================================================
+ */
+
 'use client'
 
 import React, { useState, useEffect } from 'react'
@@ -6,110 +23,204 @@ interface TargetEditModalProps {
   isOpen: boolean
   onClose: () => void
   currency: string
-  line: string
   year: string
-  quarter: string
-  currentActualGGR: number
   userEmail: string
   userRole: string
   onSaveSuccess: () => void
 }
 
 interface TargetData {
-  target_ggr: number | null
-  target_deposit_amount: number | null
-  target_deposit_cases: number | null
-  target_active_member: number | null
-  forecast_ggr: number | null
+  id?: string
+  line: string
+  quarter: string
+  target_ggr: number
+  target_deposit_amount: number
+  target_deposit_cases: number
+  target_active_member: number
+}
+
+interface TargetTotals {
+  total_ggr: number
+  total_deposit_amount: number
+  total_deposit_cases: number
+  total_active_member: number
 }
 
 export default function TargetEditModal({
   isOpen,
   onClose,
   currency,
-  line,
   year,
-  quarter,
-  currentActualGGR,
   userEmail,
   userRole,
   onSaveSuccess
 }: TargetEditModalProps) {
+  // ============================================================================
+  // STATE MANAGEMENT
+  // ============================================================================
   const [loading, setLoading] = useState(false)
-  const [loadingExisting, setLoadingExisting] = useState(false)
+  const [loadingData, setLoadingData] = useState(false)
   const [showPasswordPrompt, setShowPasswordPrompt] = useState(false)
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false)
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   
-  const [targetData, setTargetData] = useState<TargetData>({
-    target_ggr: null,
-    target_deposit_amount: null,
-    target_deposit_cases: null,
-    target_active_member: null,
-    forecast_ggr: null
+  // Brands from database
+  const [brands, setBrands] = useState<string[]>([])
+  
+  // Input form
+  const [selectedLine, setSelectedLine] = useState<string>('')
+  const [selectedQuarter, setSelectedQuarter] = useState<string>('Q1')
+  const [inputData, setInputData] = useState({
+    ggr: 0,
+    deposit_amount: 0,
+    deposit_cases: 0,
+    active_member: 0
   })
   
-  const [tempData, setTempData] = useState<TargetData>({
-    target_ggr: null,
-    target_deposit_amount: null,
-    target_deposit_cases: null,
-    target_active_member: null,
-    forecast_ggr: null
+  // Target list & totals
+  const [targetList, setTargetList] = useState<TargetData[]>([])
+  const [totals, setTotals] = useState<TargetTotals>({
+    total_ggr: 0,
+    total_deposit_amount: 0,
+    total_deposit_cases: 0,
+    total_active_member: 0
   })
+  
+  // Edit mode
+  const [editMode, setEditMode] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
 
-  // Fetch existing target when modal opens
+  // ============================================================================
+  // FETCH BRANDS & TARGETS ON MOUNT
+  // ============================================================================
   useEffect(() => {
     if (isOpen) {
-      fetchExistingTarget()
+      fetchBrands()
+      fetchTargets()
+      resetForm()
       setError('')
       setPassword('')
       setShowPasswordPrompt(false)
+      setShowSuccessMessage(false)
     }
-  }, [isOpen, currency, line, year, quarter])
+  }, [isOpen, year])
 
-  const fetchExistingTarget = async () => {
-    setLoadingExisting(true)
+  const fetchBrands = async () => {
+    try {
+      const response = await fetch('/api/myr-business-performance/slicer-options')
+      const data = await response.json()
+      
+      if (data.brands && data.brands.length > 0) {
+        setBrands(data.brands)
+        setSelectedLine(data.brands[0]) // Set first brand as default
+      }
+    } catch (err) {
+      console.error('Error fetching brands:', err)
+    }
+  }
+
+  const fetchTargets = async () => {
+    setLoadingData(true)
     try {
       const params = new URLSearchParams({
         currency,
-        line,
-        year,
-        quarter
+        year
       })
       
-      const response = await fetch(`/api/myr-business-performance/target?${params}`)
+      const response = await fetch(`/api/myr-business-performance/target/list?${params}`)
       const data = await response.json()
       
-      if (data.exists && data.target) {
-        setTargetData({
-          target_ggr: data.target.target_ggr,
-          target_deposit_amount: data.target.target_deposit_amount,
-          target_deposit_cases: data.target.target_deposit_cases,
-          target_active_member: data.target.target_active_member,
-          forecast_ggr: data.target.forecast_ggr
-        })
-        setTempData({
-          target_ggr: data.target.target_ggr,
-          target_deposit_amount: data.target.target_deposit_amount,
-          target_deposit_cases: data.target.target_deposit_cases,
-          target_active_member: data.target.target_active_member,
-          forecast_ggr: data.target.forecast_ggr
-        })
+      if (data.targets) {
+        setTargetList(data.targets)
+        calculateTotals(data.targets)
       }
     } catch (err) {
-      console.error('Error fetching existing target:', err)
+      console.error('Error fetching targets:', err)
     } finally {
-      setLoadingExisting(false)
+      setLoadingData(false)
     }
   }
 
-  const handleSaveClick = () => {
-    setTempData({ ...targetData })
-    setShowPasswordPrompt(true)
-    setError('')
+  // ============================================================================
+  // CALCULATE TOTALS (AUTO SUM)
+  // ============================================================================
+  const calculateTotals = (targets: TargetData[]) => {
+    const totals = targets.reduce((acc, target) => ({
+      total_ggr: acc.total_ggr + (target.target_ggr || 0),
+      total_deposit_amount: acc.total_deposit_amount + (target.target_deposit_amount || 0),
+      total_deposit_cases: acc.total_deposit_cases + (target.target_deposit_cases || 0),
+      total_active_member: acc.total_active_member + (target.target_active_member || 0)
+    }), {
+      total_ggr: 0,
+      total_deposit_amount: 0,
+      total_deposit_cases: 0,
+      total_active_member: 0
+    })
+    
+    setTotals(totals)
   }
 
-  const handleConfirmSave = async () => {
+  // ============================================================================
+  // EDIT ROW - LOAD DATA TO INPUT FORM
+  // ============================================================================
+  const handleEditRow = (target: TargetData) => {
+    setEditMode(true)
+    setEditingId(target.id || null)
+    setSelectedLine(target.line)
+    setSelectedQuarter(target.quarter)
+    setInputData({
+      ggr: target.target_ggr,
+      deposit_amount: target.target_deposit_amount,
+      deposit_cases: target.target_deposit_cases,
+      active_member: target.target_active_member
+    })
+    
+    // Scroll to top
+    const modalContent = document.querySelector('.target-modal-content')
+    if (modalContent) {
+      modalContent.scrollTop = 0
+    }
+  }
+
+  // ============================================================================
+  // RESET FORM
+  // ============================================================================
+  const resetForm = () => {
+    setEditMode(false)
+    setEditingId(null)
+    setSelectedQuarter('Q1')
+    setInputData({
+      ggr: 0,
+      deposit_amount: 0,
+      deposit_cases: 0,
+      active_member: 0
+    })
+    if (brands.length > 0) {
+      setSelectedLine(brands[0])
+    }
+  }
+
+  // ============================================================================
+  // SAVE - WITH PASSWORD VERIFICATION
+  // ============================================================================
+  const handleSaveClick = () => {
+    // Validate inputs
+    if (!selectedLine || !selectedQuarter) {
+      setError('Please select LINE and QUARTER')
+      return
+    }
+    
+    if (inputData.ggr <= 0) {
+      setError('GGR is required and must be greater than 0')
+      return
+    }
+    
+    // Show password prompt
+    setShowPasswordPrompt(true)
+  }
+
+  const handleSaveWithPassword = async () => {
     if (!password) {
       setError('Password is required')
       return
@@ -124,111 +235,132 @@ export default function TargetEditModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           currency,
-          line,
-          year: parseInt(year),
-          quarter,
-          ...tempData,
+          line: selectedLine,
+          year,
+          quarter: selectedQuarter,
+          target_ggr: inputData.ggr,
+          target_deposit_amount: inputData.deposit_amount,
+          target_deposit_cases: inputData.deposit_cases,
+          target_active_member: inputData.active_member,
+          forecast_ggr: null,
           user_email: userEmail,
           user_role: userRole,
           manager_password: password,
-          reason: 'Updated via Business Performance Dashboard'
+          reason: editMode ? 'Update existing target' : 'Create new target'
         })
       })
 
       const data = await response.json()
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to update target')
+      if (response.ok) {
+        setShowPasswordPrompt(false)
+        setPassword('')
+        setShowSuccessMessage(true) // Show success message
+        await fetchTargets() // Refresh list
+        onSaveSuccess() // Refresh dashboard
+      } else {
+        setError(data.error || 'Failed to save target')
       }
-
-      console.log('✅ Target updated successfully')
-      setPassword('')
-      setShowPasswordPrompt(false)
-      onSaveSuccess()
-      onClose()
-
     } catch (err) {
-      console.error('Error updating target:', err)
-      setError(err instanceof Error ? err.message : 'Failed to update target')
+      setError('Network error. Please try again.')
     } finally {
       setLoading(false)
     }
   }
 
-  const formatCurrency = (value: number | null) => {
-    if (value === null) return '-'
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency === 'MYR' ? 'MYR' : currency === 'SGD' ? 'SGD' : 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value)
-  }
-
-  const formatNumber = (value: number | null) => {
-    if (value === null) return '-'
-    return new Intl.NumberFormat('en-US').format(value)
+  // ============================================================================
+  // FORMAT HELPERS
+  // ============================================================================
+  const formatNumber = (num: number) => {
+    return new Intl.NumberFormat('en-MY').format(num)
   }
 
   if (!isOpen) return null
 
-  // Password confirmation modal
-  if (showPasswordPrompt) {
-    return (
-      <>
-        {/* Overlay */}
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-          onClick={() => {
-            if (!loading) {
-              setShowPasswordPrompt(false)
-              setPassword('')
-              setError('')
-            }
-          }}
-        >
-          {/* Password Modal */}
-          <div
-            style={{
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              padding: '24px',
-              maxWidth: '400px',
-              width: '90%',
-              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.3)'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 style={{
-              margin: '0 0 16px 0',
-              fontSize: '18px',
+  // ============================================================================
+  // RENDER
+  // ============================================================================
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 9999,
+      padding: '20px'
+    }}>
+      <div className="target-modal-content" style={{
+        backgroundColor: '#FFFFFF',
+        borderRadius: '8px',
+        width: '100%',
+        maxWidth: '1200px',
+        maxHeight: '90vh',
+        overflow: 'auto',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)'
+      }}>
+        {/* ================================================================ */}
+        {/* HEADER */}
+        {/* ================================================================ */}
+        <div style={{
+          padding: '24px',
+          borderBottom: '1px solid #E5E7EB',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          backgroundColor: '#F9FAFB'
+        }}>
+          <div>
+            <h2 style={{
+              fontSize: '20px',
               fontWeight: '600',
-              color: '#374151'
+              color: '#111827',
+              margin: 0
             }}>
-              Confirm Changes
-            </h3>
-
+              MYR TARGET
+            </h2>
             <p style={{
-              margin: '0 0 20px 0',
               fontSize: '14px',
-              color: '#6b7280',
-              lineHeight: '1.5'
+              color: '#6B7280',
+              margin: '4px 0 0 0'
             }}>
-              Please enter your manager password to confirm target changes:
+              Set targets for {year}
             </p>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '24px',
+              color: '#6B7280',
+              cursor: 'pointer',
+              padding: '4px 8px',
+              lineHeight: '1'
+            }}
+          >
+            ×
+          </button>
+        </div>
 
-            <div style={{ marginBottom: '20px' }}>
+        {/* ================================================================ */}
+        {/* INPUT FORM SECTION */}
+        {/* ================================================================ */}
+        <div style={{ padding: '24px', borderBottom: '2px solid #E5E7EB' }}>
+          {/* LINE & QUARTER DROPDOWNS */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr auto auto',
+            gap: '16px',
+            marginBottom: '20px',
+            alignItems: 'end'
+          }}>
+            {/* LINE DROPDOWN */}
+            <div>
               <label style={{
                 display: 'block',
                 fontSize: '14px',
@@ -236,397 +368,676 @@ export default function TargetEditModal({
                 color: '#374151',
                 marginBottom: '6px'
               }}>
-                Password
+                LINE
               </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-                placeholder="Enter your password"
+              <select
+                value={selectedLine}
+                onChange={(e) => setSelectedLine(e.target.value)}
+                disabled={loadingData}
                 style={{
                   width: '100%',
                   padding: '10px 12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '8px',
                   fontSize: '14px',
-                  outline: 'none',
-                  transition: 'border-color 0.2s',
-                  boxSizing: 'border-box'
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '6px',
+                  backgroundColor: '#FFFFFF',
+                  color: '#111827',
+                  cursor: loadingData ? 'not-allowed' : 'pointer'
                 }}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' && !loading) {
-                    handleConfirmSave()
-                  }
+              >
+                {brands.map(brand => (
+                  <option key={brand} value={brand}>{brand}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* QUARTER DROPDOWN */}
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#374151',
+                marginBottom: '6px'
+              }}>
+                QUARTER
+              </label>
+              <select
+                value={selectedQuarter}
+                onChange={(e) => setSelectedQuarter(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  fontSize: '14px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '6px',
+                  backgroundColor: '#FFFFFF',
+                  color: '#111827',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="Q1">QUARTER 1</option>
+                <option value="Q2">QUARTER 2</option>
+                <option value="Q3">QUARTER 3</option>
+                <option value="Q4">QUARTER 4</option>
+              </select>
+            </div>
+
+            {/* BUTTONS */}
+            <button
+              onClick={resetForm}
+              disabled={!editMode}
+              style={{
+                padding: '10px 20px',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: editMode ? '#374151' : '#9CA3AF',
+                backgroundColor: editMode ? '#F3F4F6' : '#F9FAFB',
+                border: '1px solid #D1D5DB',
+                borderRadius: '6px',
+                cursor: editMode ? 'pointer' : 'not-allowed',
+                transition: 'all 0.2s'
+              }}
+            >
+              {editMode ? 'CANCEL' : 'EDIT'}
+            </button>
+
+            <button
+              onClick={handleSaveClick}
+              disabled={loading}
+              style={{
+                padding: '10px 24px',
+                fontSize: '14px',
+                fontWeight: '600',
+                color: '#FFFFFF',
+                backgroundColor: loading ? '#9CA3AF' : '#3B82F6',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              {loading ? 'SAVING...' : editMode ? 'UPDATE' : 'SAVE'}
+            </button>
+          </div>
+
+          {/* KPI INPUT TABLE */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: '16px'
+          }}>
+            {/* GGR */}
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '13px',
+                fontWeight: '600',
+                color: '#111827',
+                marginBottom: '6px'
+              }}>
+                GGR <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <input
+                type="number"
+                value={inputData.ggr}
+                onChange={(e) => setInputData({ ...inputData, ggr: Number(e.target.value) })}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  fontSize: '14px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '6px',
+                  backgroundColor: '#FFFFFF'
                 }}
               />
             </div>
 
-            {error && (
-              <div style={{
-                padding: '10px 12px',
-                backgroundColor: '#fee2e2',
-                border: '1px solid #fecaca',
-                borderRadius: '6px',
-                marginBottom: '16px'
+            {/* DEPOSIT AMOUNT */}
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '13px',
+                fontWeight: '600',
+                color: '#111827',
+                marginBottom: '6px'
               }}>
-                <p style={{
-                  margin: 0,
+                DEPOSIT AMOUNT
+              </label>
+              <input
+                type="number"
+                value={inputData.deposit_amount}
+                onChange={(e) => setInputData({ ...inputData, deposit_amount: Number(e.target.value) })}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
                   fontSize: '14px',
-                  color: '#991b1b'
-                }}>
-                  {error}
-                </p>
-              </div>
-            )}
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '6px',
+                  backgroundColor: '#FFFFFF'
+                }}
+              />
+            </div>
 
-            <div style={{
-              display: 'flex',
-              gap: '10px',
-              justifyContent: 'flex-end'
-            }}>
-              <button
-                onClick={() => {
-                  if (!loading) {
-                    setShowPasswordPrompt(false)
-                    setPassword('')
-                    setError('')
-                  }
-                }}
-                disabled={loading}
+            {/* DEPOSIT CASES */}
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '13px',
+                fontWeight: '600',
+                color: '#111827',
+                marginBottom: '6px'
+              }}>
+                DEPOSIT CASES
+              </label>
+              <input
+                type="number"
+                value={inputData.deposit_cases}
+                onChange={(e) => setInputData({ ...inputData, deposit_cases: Number(e.target.value) })}
                 style={{
-                  padding: '10px 20px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '8px',
-                  backgroundColor: 'white',
+                  width: '100%',
+                  padding: '10px 12px',
                   fontSize: '14px',
-                  fontWeight: '500',
-                  color: '#374151',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  opacity: loading ? 0.5 : 1,
-                  transition: 'background-color 0.2s'
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '6px',
+                  backgroundColor: '#FFFFFF'
                 }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmSave}
-                disabled={loading || !password}
+              />
+            </div>
+
+            {/* ACTIVE MEMBER */}
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '13px',
+                fontWeight: '600',
+                color: '#111827',
+                marginBottom: '6px'
+              }}>
+                ACTIVE MEMBER
+              </label>
+              <input
+                type="number"
+                value={inputData.active_member}
+                onChange={(e) => setInputData({ ...inputData, active_member: Number(e.target.value) })}
                 style={{
-                  padding: '10px 20px',
-                  border: 'none',
-                  borderRadius: '8px',
-                  backgroundColor: loading || !password ? '#9ca3af' : '#3B82F6',
+                  width: '100%',
+                  padding: '10px 12px',
                   fontSize: '14px',
-                  fontWeight: '500',
-                  color: 'white',
-                  cursor: loading || !password ? 'not-allowed' : 'pointer',
-                  transition: 'background-color 0.2s'
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '6px',
+                  backgroundColor: '#FFFFFF'
                 }}
-              >
-                {loading ? 'Saving...' : 'Confirm'}
-              </button>
+              />
             </div>
           </div>
-        </div>
-      </>
-    )
-  }
 
-  // Main edit modal
-  return (
-    <>
-      {/* Overlay */}
-      <div
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          zIndex: 9998,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}
-        onClick={onClose}
-      >
-        {/* Modal */}
-        <div
-          style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            padding: '28px',
-            maxWidth: '600px',
-            width: '90%',
-            maxHeight: '90vh',
-            overflow: 'auto',
-            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.3)'
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div style={{ marginBottom: '24px' }}>
-            <h2 style={{
-              margin: '0 0 8px 0',
-              fontSize: '20px',
-              fontWeight: '600',
-              color: '#1f2937'
-            }}>
-              Edit Target - {quarter} {year}
-            </h2>
-            <p style={{
-              margin: 0,
-              fontSize: '14px',
-              color: '#6b7280'
-            }}>
-              {currency} • {line === 'ALL' ? 'All Brands' : line}
-            </p>
-          </div>
-
-          {loadingExisting ? (
+          {/* ERROR MESSAGE */}
+          {error && !showPasswordPrompt && (
             <div style={{
-              padding: '40px',
-              textAlign: 'center',
-              color: '#6b7280'
+              marginTop: '16px',
+              padding: '12px',
+              backgroundColor: '#FEF2F2',
+              border: '1px solid #FECACA',
+              borderRadius: '6px',
+              color: '#DC2626',
+              fontSize: '14px'
             }}>
-              Loading existing targets...
+              {error}
+            </div>
+          )}
+        </div>
+
+        {/* ================================================================ */}
+        {/* TARGET LIST TABLE */}
+        {/* ================================================================ */}
+        <div style={{ padding: '24px' }}>
+          <h3 style={{
+            fontSize: '16px',
+            fontWeight: '600',
+            color: '#111827',
+            marginBottom: '16px'
+          }}>
+            Target List
+          </h3>
+
+          {loadingData ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#6B7280' }}>
+              Loading targets...
             </div>
           ) : (
-            <>
-              {/* Current Actual */}
-              <div style={{
-                padding: '16px',
-                backgroundColor: '#f3f4f6',
-                borderRadius: '8px',
-                marginBottom: '24px'
+            <div style={{
+              border: '1px solid #E5E7EB',
+              borderRadius: '8px',
+              overflow: 'hidden',
+              maxHeight: '400px',
+              overflowY: 'auto'
+            }}>
+              <table style={{
+                width: '100%',
+                borderCollapse: 'collapse'
               }}>
-                <div style={{
-                  fontSize: '12px',
-                  color: '#6b7280',
-                  marginBottom: '4px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  fontWeight: '500'
+                {/* TABLE HEADER */}
+                <thead style={{
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 10
                 }}>
-                  Current Actual GGR
-                </div>
-                <div style={{
-                  fontSize: '24px',
-                  fontWeight: '600',
-                  color: '#1f2937'
-                }}>
-                  {formatCurrency(currentActualGGR)}
-                </div>
-              </div>
+                  <tr style={{ backgroundColor: '#F3F4F6' }}>
+                    <th style={{
+                      padding: '12px 16px',
+                      textAlign: 'left',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      color: '#374151',
+                      borderBottom: '1px solid #E5E7EB',
+                      backgroundColor: '#F3F4F6'
+                    }}>Line</th>
+                    <th style={{
+                      padding: '12px 16px',
+                      textAlign: 'right',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      color: '#374151',
+                      borderBottom: '1px solid #E5E7EB',
+                      backgroundColor: '#F3F4F6'
+                    }}>GGR</th>
+                    <th style={{
+                      padding: '12px 16px',
+                      textAlign: 'right',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      color: '#374151',
+                      borderBottom: '1px solid #E5E7EB',
+                      backgroundColor: '#F3F4F6'
+                    }}>DEPOSIT AMOUNT</th>
+                    <th style={{
+                      padding: '12px 16px',
+                      textAlign: 'right',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      color: '#374151',
+                      borderBottom: '1px solid #E5E7EB',
+                      backgroundColor: '#F3F4F6'
+                    }}>DEPOSIT CASES</th>
+                    <th style={{
+                      padding: '12px 16px',
+                      textAlign: 'right',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      color: '#374151',
+                      borderBottom: '1px solid #E5E7EB',
+                      backgroundColor: '#F3F4F6'
+                    }}>ACTIVE MEMBER</th>
+                    <th style={{
+                      padding: '12px 16px',
+                      textAlign: 'center',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      color: '#374151',
+                      borderBottom: '1px solid #E5E7EB',
+                      backgroundColor: '#F3F4F6'
+                    }}>QUARTER</th>
+                    <th style={{
+                      padding: '12px 16px',
+                      textAlign: 'center',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      color: '#374151',
+                      borderBottom: '1px solid #E5E7EB',
+                      backgroundColor: '#F3F4F6'
+                    }}>ACTION</th>
+                  </tr>
+                </thead>
 
-              {/* Target Inputs */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                {/* Target GGR */}
-                <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    color: '#374151',
-                    marginBottom: '6px'
-                  }}>
-                    Target GGR <span style={{ color: '#ef4444' }}>*</span>
-                  </label>
-                  <input
-                    type="number"
-                    value={targetData.target_ggr || ''}
-                    onChange={(e) => setTargetData({ ...targetData, target_ggr: e.target.value ? parseFloat(e.target.value) : null })}
-                    placeholder="e.g., 10000000"
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      outline: 'none',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
+                {/* TABLE BODY */}
+                <tbody>
+                  {targetList.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} style={{
+                        padding: '40px',
+                        textAlign: 'center',
+                        color: '#6B7280',
+                        fontSize: '14px'
+                      }}>
+                        No targets set yet. Add your first target above.
+                      </td>
+                    </tr>
+                  ) : (
+                    <>
+                      {targetList.map((target, index) => (
+                        <tr key={target.id || index} style={{
+                          backgroundColor: '#FFFFFF',
+                          borderBottom: '1px solid #E5E7EB'
+                        }}>
+                          <td style={{
+                            padding: '12px 16px',
+                            fontSize: '14px',
+                            color: '#111827',
+                            fontWeight: '500'
+                          }}>{target.line}</td>
+                          <td style={{
+                            padding: '12px 16px',
+                            textAlign: 'right',
+                            fontSize: '14px',
+                            color: '#111827'
+                          }}>{formatNumber(target.target_ggr)}</td>
+                          <td style={{
+                            padding: '12px 16px',
+                            textAlign: 'right',
+                            fontSize: '14px',
+                            color: '#111827'
+                          }}>{formatNumber(target.target_deposit_amount)}</td>
+                          <td style={{
+                            padding: '12px 16px',
+                            textAlign: 'right',
+                            fontSize: '14px',
+                            color: '#111827'
+                          }}>{formatNumber(target.target_deposit_cases)}</td>
+                          <td style={{
+                            padding: '12px 16px',
+                            textAlign: 'right',
+                            fontSize: '14px',
+                            color: '#111827'
+                          }}>{formatNumber(target.target_active_member)}</td>
+                          <td style={{
+                            padding: '12px 16px',
+                            textAlign: 'center',
+                            fontSize: '14px',
+                            color: '#111827'
+                          }}>{target.quarter}</td>
+                          <td style={{
+                            padding: '12px 16px',
+                            textAlign: 'center'
+                          }}>
+                            <button
+                              onClick={() => handleEditRow(target)}
+                              style={{
+                                padding: '6px 12px',
+                                fontSize: '13px',
+                                fontWeight: '500',
+                                color: '#3B82F6',
+                                backgroundColor: '#EFF6FF',
+                                border: '1px solid #BFDBFE',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              EDIT
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
 
-                {/* Target Deposit Amount */}
-                <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    color: '#374151',
-                    marginBottom: '6px'
-                  }}>
-                    Target Deposit Amount
-                  </label>
-                  <input
-                    type="number"
-                    value={targetData.target_deposit_amount || ''}
-                    onChange={(e) => setTargetData({ ...targetData, target_deposit_amount: e.target.value ? parseFloat(e.target.value) : null })}
-                    placeholder="e.g., 50000000"
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      outline: 'none',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
+                      {/* TOTAL ROW */}
+                      <tr style={{
+                        backgroundColor: '#F3F4F6',
+                        fontWeight: '600'
+                      }}>
+                        <td style={{
+                          padding: '12px 16px',
+                          fontSize: '14px',
+                          color: '#111827',
+                          fontWeight: '700'
+                        }}>TOTAL</td>
+                        <td style={{
+                          padding: '12px 16px',
+                          textAlign: 'right',
+                          fontSize: '14px',
+                          color: '#111827',
+                          fontWeight: '700'
+                        }}>{formatNumber(totals.total_ggr)}</td>
+                        <td style={{
+                          padding: '12px 16px',
+                          textAlign: 'right',
+                          fontSize: '14px',
+                          color: '#111827',
+                          fontWeight: '700'
+                        }}>{formatNumber(totals.total_deposit_amount)}</td>
+                        <td style={{
+                          padding: '12px 16px',
+                          textAlign: 'right',
+                          fontSize: '14px',
+                          color: '#111827',
+                          fontWeight: '700'
+                        }}>{formatNumber(totals.total_deposit_cases)}</td>
+                        <td style={{
+                          padding: '12px 16px',
+                          textAlign: 'right',
+                          fontSize: '14px',
+                          color: '#111827',
+                          fontWeight: '700'
+                        }}>{formatNumber(totals.total_active_member)}</td>
+                        <td style={{
+                          padding: '12px 16px',
+                          textAlign: 'center',
+                          fontSize: '13px',
+                          color: '#6B7280'
+                        }}>AUTO SUM</td>
+                        <td></td>
+                      </tr>
+                    </>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
 
-                {/* Target Deposit Cases */}
-                <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    color: '#374151',
-                    marginBottom: '6px'
-                  }}>
-                    Target Deposit Cases
-                  </label>
-                  <input
-                    type="number"
-                    value={targetData.target_deposit_cases || ''}
-                    onChange={(e) => setTargetData({ ...targetData, target_deposit_cases: e.target.value ? parseInt(e.target.value) : null })}
-                    placeholder="e.g., 100000"
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      outline: 'none',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
-
-                {/* Target Active Member */}
-                <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    color: '#374151',
-                    marginBottom: '6px'
-                  }}>
-                    Target Active Member
-                  </label>
-                  <input
-                    type="number"
-                    value={targetData.target_active_member || ''}
-                    onChange={(e) => setTargetData({ ...targetData, target_active_member: e.target.value ? parseInt(e.target.value) : null })}
-                    placeholder="e.g., 5000"
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      outline: 'none',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
-
-                {/* Forecast GGR */}
-                <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    color: '#374151',
-                    marginBottom: '6px'
-                  }}>
-                    Forecast GGR <span style={{ fontSize: '12px', color: '#6b7280' }}>(Optional)</span>
-                  </label>
-                  <input
-                    type="number"
-                    value={targetData.forecast_ggr || ''}
-                    onChange={(e) => setTargetData({ ...targetData, forecast_ggr: e.target.value ? parseFloat(e.target.value) : null })}
-                    placeholder="e.g., 9500000"
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      outline: 'none',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Info */}
-              <div style={{
-                marginTop: '20px',
-                padding: '12px',
-                backgroundColor: '#fef3c7',
-                border: '1px solid #fde68a',
-                borderRadius: '8px'
+        {/* ================================================================ */}
+        {/* PASSWORD PROMPT OVERLAY */}
+        {/* ================================================================ */}
+        {showPasswordPrompt && (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '8px'
+          }}>
+            <div style={{
+              backgroundColor: '#FFFFFF',
+              padding: '32px',
+              borderRadius: '8px',
+              width: '400px',
+              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)'
+            }}>
+              <h3 style={{
+                fontSize: '18px',
+                fontWeight: '600',
+                color: '#111827',
+                marginBottom: '8px'
               }}>
-                <p style={{
-                  margin: 0,
-                  fontSize: '13px',
-                  color: '#92400e'
-                }}>
-                  ⚠️ You will be asked to confirm with your manager password before saving.
-                </p>
-              </div>
+                Password Verification Required
+              </h3>
+              <p style={{
+                fontSize: '14px',
+                color: '#6B7280',
+                marginBottom: '20px'
+              }}>
+                Please enter your manager password to save target
+              </p>
 
-              {/* Actions */}
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSaveWithPassword()}
+                placeholder="Enter password"
+                autoFocus
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  fontSize: '14px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '6px',
+                  marginBottom: '16px'
+                }}
+              />
+
+              {error && (
+                <div style={{
+                  padding: '12px',
+                  backgroundColor: '#FEF2F2',
+                  border: '1px solid #FECACA',
+                  borderRadius: '6px',
+                  color: '#DC2626',
+                  fontSize: '14px',
+                  marginBottom: '16px'
+                }}>
+                  {error}
+                </div>
+              )}
+
               <div style={{
-                marginTop: '24px',
                 display: 'flex',
                 gap: '12px',
                 justifyContent: 'flex-end'
               }}>
                 <button
-                  onClick={onClose}
+                  onClick={() => {
+                    setShowPasswordPrompt(false)
+                    setPassword('')
+                    setError('')
+                  }}
                   style={{
-                    padding: '10px 24px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '8px',
-                    backgroundColor: 'white',
+                    padding: '10px 20px',
                     fontSize: '14px',
                     fontWeight: '500',
                     color: '#374151',
-                    cursor: 'pointer',
-                    transition: 'background-color 0.2s'
+                    backgroundColor: '#F3F4F6',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '6px',
+                    cursor: 'pointer'
                   }}
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={handleSaveClick}
-                  disabled={!targetData.target_ggr}
+                  onClick={handleSaveWithPassword}
+                  disabled={loading || !password}
                   style={{
                     padding: '10px 24px',
-                    border: 'none',
-                    borderRadius: '8px',
-                    backgroundColor: !targetData.target_ggr ? '#9ca3af' : '#3B82F6',
                     fontSize: '14px',
-                    fontWeight: '500',
-                    color: 'white',
-                    cursor: !targetData.target_ggr ? 'not-allowed' : 'pointer',
-                    transition: 'background-color 0.2s'
+                    fontWeight: '600',
+                    color: '#FFFFFF',
+                    backgroundColor: loading || !password ? '#9CA3AF' : '#3B82F6',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: loading || !password ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  Save Changes
+                  {loading ? 'Verifying...' : 'Confirm'}
                 </button>
               </div>
-            </>
-          )}
-        </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================================================================ */}
+        {/* SUCCESS MESSAGE OVERLAY */}
+        {/* ================================================================ */}
+        {showSuccessMessage && (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '8px'
+          }}>
+            <div style={{
+              backgroundColor: '#FFFFFF',
+              padding: '32px',
+              borderRadius: '8px',
+              width: '400px',
+              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)',
+              textAlign: 'center'
+            }}>
+              {/* Success Icon */}
+              <div style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                backgroundColor: '#D1FAE5',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 20px'
+              }}>
+                <svg
+                  width="32"
+                  height="32"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#10B981"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </div>
+
+              <h3 style={{
+                fontSize: '20px',
+                fontWeight: '600',
+                color: '#111827',
+                marginBottom: '8px'
+              }}>
+                Target Saved Successfully!
+              </h3>
+              
+              <p style={{
+                fontSize: '14px',
+                color: '#6B7280',
+                marginBottom: '24px'
+              }}>
+                Target telah disimpan dan dashboard akan diperbarui.
+              </p>
+
+              <button
+                onClick={() => {
+                  setShowSuccessMessage(false)
+                  resetForm()
+                  // DO NOT CLOSE MODAL - User can continue editing other targets
+                  // Only × button in header should close the modal
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px 24px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#FFFFFF',
+                  backgroundColor: '#10B981',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#059669'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#10B981'
+                }}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-    </>
+    </div>
   )
 }
-

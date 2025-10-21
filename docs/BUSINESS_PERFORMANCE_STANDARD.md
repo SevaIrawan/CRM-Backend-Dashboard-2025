@@ -222,12 +222,12 @@ Margins: Reduced untuk compact layout
 **Visual:**
 - ✅ **OFF (RED)** - Month Mode (default)
   - Data based on Quarter slicer
-  - Date Range slicer DISABLED (grey, opacity 0.4)
+  - Quick Date Filter DISABLED (grey, opacity 0.4)
   - Quarter slicer ACTIVE
-- ✅ **ON (GREEN)** - Date Range Mode
-  - Data based on Date Range slicer
+- ✅ **ON (GREEN)** - Daily Mode
+  - Data based on Quick Date Filter
   - Quarter slicer DISABLED (grey, opacity 0.4)
-  - Date Range slicer ACTIVE
+  - Quick Date Filter ACTIVE
 
 **Design:**
 ```typescript
@@ -239,7 +239,7 @@ Label: "Month Mode"
 // Toggle ON
 Background: #10b981 (Green)
 Knob: Right position (translateX(26px))
-Label: "Date Range Mode"
+Label: "Daily Mode"
 
 Size: 52px x 26px
 Knob: 20px diameter
@@ -249,31 +249,118 @@ Transition: 0.3s ease
 ### Standard Slicers
 1. **YearSlicer** - Select year (always active)
 2. **QuarterSlicer** - Q1, Q2, Q3, Q4 (disabled when toggle ON)
-3. **DateRangeSlicer** - Start date to End date (disabled when toggle OFF)
+3. **QuickDateFilter** - 4 button presets (disabled when toggle OFF)
 
-### 🔒 DOUBLE LOCK SYSTEM (Date Range Validation)
+### 📅 QUICK DATE FILTER (NEW - STANDARD KHUSUS BP PAGE)
 
-**LOCK 1: Quarter Boundary** ✅
-- Date range picker **bounded** by selected quarter
-- Example: Q3 selected → User can ONLY pick dates within July-September
-- Purpose: Ensure data consistency with quarter selection
+**Purpose:**
+- Simple & fast date selection untuk Daily Mode
+- Professional UX - 1 click sahaja (no manual date picking)
+- Standardized periods untuk business analysis
 
-**LOCK 2: Maximum 31 Days** ✅
-- Date range selection **limited** to maximum 31 days
-- If user selects > 31 days → Show **error message** + disable Apply button
-- Purpose: Maintain chart proportions and readability
-
-**Visual Feedback for Exceeding 31 Days:**
+**4 Button Presets:**
 ```
-❌ Date range exceeds 31 days limit
-   (45 days selected)
-
-💡 Suggestion: For longer periods, please use 
-   Monthly/Quarter mode instead to maintain 
-   chart proportions.
-
-[Cancel]  [Apply - DISABLED]
+┌──────────┬───────────┬──────────────┬──────────────┐
+│  7 Days  │  14 Days  │  This Month  │  Last Month  │
+└──────────┴───────────┴──────────────┴──────────────┘
 ```
+
+**Button Logic:**
+
+| Button | Calculation | Example (Today = Oct 20, 2025) |
+|--------|-------------|--------------------------------|
+| **7 Days** | Today - 6 days → Today | Oct 14 - Oct 20 (7 days / 1 week) |
+| **14 Days** | Today - 13 days → Today | Oct 7 - Oct 20 (14 days / 2 weeks) |
+| **This Month** | Month start → Today | Oct 1 - Oct 20 (MTD) |
+| **Last Month** | Previous month (full) | Sep 1 - Sep 30 (30 days) |
+
+**Visual States:**
+```typescript
+// ACTIVE Button
+Background: #3B82F6 (Blue)
+Color: #FFFFFF (White)
+Border: 1px solid #3B82F6
+Font Weight: 600
+
+// INACTIVE Button
+Background: #FFFFFF (White)
+Color: #374151 (Dark grey)
+Border: 1px solid #D1D5DB
+Font Weight: 500
+
+// DISABLED Button (when toggle OFF)
+Background: #F3F4F6 (Light grey)
+Color: #9CA3AF (Grey)
+Border: 1px solid #E5E7EB
+Cursor: not-allowed
+Opacity: 0.4
+```
+
+**Hover Effects:**
+```typescript
+// Hover on INACTIVE button
+Background: #F9FAFB (Light blue-grey)
+Border: 1px solid #9CA3AF
+Transition: all 0.2s ease
+```
+
+**Advantages:**
+- ✅ **Super Fast** - 1 click, instant result
+- ✅ **Professional** - Clean, modern UI (like Google Analytics)
+- ✅ **Standardized** - Consistent periods untuk comparison
+- ✅ **No Confusion** - 4 clear options, no overwhelm
+- ✅ **Mobile-Friendly** - Easy tap targets
+- ✅ **Business-Oriented** - Meaningful periods untuk decision making
+
+**Implementation:**
+```typescript
+import QuickDateFilter from '@/components/QuickDateFilter'
+import { 
+  QuickDateFilterType, 
+  calculateQuickDateRange 
+} from '@/lib/businessPerformanceHelper'
+
+// State
+const [activeFilter, setActiveFilter] = useState<QuickDateFilterType>('7_DAYS')
+
+// Handler
+const handleFilterChange = (filterType: QuickDateFilterType) => {
+  setActiveFilter(filterType)
+  const { startDate, endDate } = calculateQuickDateRange(filterType)
+  // Fetch data with startDate & endDate
+}
+
+// Render
+<QuickDateFilter
+  activeFilter={activeFilter}
+  onFilterChange={handleFilterChange}
+  disabled={!isDateRangeMode}  // Disabled when toggle OFF
+/>
+```
+
+**Helper Functions:**
+- `calculateQuickDateRange(filterType)` - Auto-calculate date range
+- `formatDateForAPI(date)` - Format untuk API call (YYYY-MM-DD)
+- `formatDateForDisplay(dateStr)` - Format untuk display (MMM DD, YYYY)
+- `boundDateRangeToQuarter(start, end, min, max)` - Ensure date range dalam quarter boundary
+
+### 🔒 VALIDATION SYSTEM
+
+**LOCK: Quarter Boundary** ✅
+- Quick Date Filter calculations **bounded** by selected quarter data
+- Example: Q4 selected (Oct 1 - Oct 20 available) → "This Month" = Oct 1 - Oct 20, NOT Oct 1 - Oct 31
+- Purpose: Ensure data consistency with available data in quarter
+
+**Built-in Period Limits:**
+- ✅ **7 Days** - Always 7 days (1 week)
+- ✅ **14 Days** - Always 14 days (2 weeks)
+- ✅ **This Month** - Month-to-date (bounded by today)
+- ✅ **Last Month** - Full previous month (always ≤ 31 days)
+
+**No Manual Date Selection = No Invalid Range** 🎯
+- Users cannot select invalid date ranges
+- All periods predefined & validated
+- Auto-bounded to quarter data availability
 
 ### Slicer Logic
 ```typescript
@@ -281,14 +368,14 @@ Transition: 0.3s ease
 isDateRangeMode = false (default)
   → Use Quarter for data filtering
   → Quarter slicer: enabled
-  → Date Range slicer: disabled (opacity 0.4, pointerEvents none)
+  → Quick Date Filter: disabled (opacity 0.4, pointerEvents none)
 
-isDateRangeMode = true
-  → Use Date Range for data filtering
+isDateRangeMode = true (Daily Mode)
+  → Use Quick Date Filter for data filtering
   → Quarter slicer: disabled (opacity 0.4, pointerEvents none)
-  → Date Range slicer: enabled
-  → 🔒 LOCK 1: Date range bounded by quarter
-  → 🔒 LOCK 2: Max 31 days selection
+  → Quick Date Filter: enabled
+  → Auto-calculate date range based on button selected
+  → 🔒 Date range auto-bounded to quarter data
 
 // Quarter mengonversi ke date range
 Q1 = January - March
@@ -296,13 +383,14 @@ Q2 = April - June
 Q3 = July - September
 Q4 = October - December
 
-// Date Range Validation (LOCK 2)
-daysDiff = (endDate - startDate) + 1  // Include both start and end
-if (daysDiff > 31) {
-  → Show error message
-  → Disable Apply button
-  → Suggest Monthly/Quarter mode
-}
+// Quick Date Filter Calculation
+const { startDate, endDate } = calculateQuickDateRange(filterType)
+
+// Example (Today = Oct 20, 2025, Q4 selected):
+'7_DAYS'      → Oct 14 - Oct 20  (7 days / 1 week)
+'14_DAYS'     → Oct 7 - Oct 20   (14 days / 2 weeks)
+'THIS_MONTH'  → Oct 1 - Oct 20   (MTD)
+'LAST_MONTH'  → Sep 1 - Sep 30   (Full month, bounded to Q3 if Q3 selected)
 ```
 
 ## 📦 DATA SOURCE
@@ -365,15 +453,16 @@ Display Slicer Info (with data source label)
 ```
 lib/
   └── businessPerformanceHelper.ts     // ⭐ STANDARD KHUSUS - All data & logic
+                                       // NEW: Quick Date Filter logic & helpers
 
 components/
   ├── DualKPICard.tsx                  // Dual KPI Grid component
   ├── ProgressBarStatCard.tsx          // Target Achieve Rate component
   ├── MixedChart.tsx                   // Dual-axis (Bar + Line) chart
   ├── SankeyChart.tsx                  // Sankey diagram
+  ├── QuickDateFilter.tsx              // ⭐ NEW: Quick Date Filter (4 buttons)
   └── slicers/
-      ├── QuarterSlicer.tsx            // Q1-Q4 selector
-      └── DateRangeSlicer.tsx          // Date range picker
+      └── QuarterSlicer.tsx            // Q1-Q4 selector
 
 app/
   ├── myr/business-performance/
@@ -383,6 +472,20 @@ app/
 docs/
   └── BUSINESS_PERFORMANCE_STANDARD.md // ⭐ This file
 ```
+
+**🆕 NEW FILES (Quick Date Filter System):**
+- `lib/businessPerformanceHelper.ts` - Extended with:
+  - `QuickDateFilterType` type definition
+  - `QUICK_DATE_FILTER_LABELS` constants
+  - `calculateQuickDateRange()` function
+  - `boundDateRangeToQuarter()` function
+  - `formatDateForAPI()` function
+  - `formatDateForDisplay()` function
+- `components/QuickDateFilter.tsx` - New component:
+  - 4 button presets (7 Days, 30 Days, This Month, Last Month)
+  - Active/inactive/disabled states
+  - Hover effects
+  - Professional styling
 
 ## ⚠️ CRITICAL RULES
 

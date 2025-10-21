@@ -13,9 +13,13 @@ import SankeyChart from '@/components/SankeyChart'
 import MixedChart from '@/components/MixedChart'
 import YearSlicer from '@/components/slicers/YearSlicer'
 import QuarterSlicer from '@/components/slicers/QuarterSlicer'
-import DateRangeSlicer from '@/components/slicers/DateRangeSlicer'
+import QuickDateFilter from '@/components/QuickDateFilter'
 import TargetEditModal from '@/components/TargetEditModal'
 import { getChartIcon } from '@/lib/CentralIcon'
+import { 
+  QuickDateFilterType, 
+  calculateQuickDateRange 
+} from '@/lib/businessPerformanceHelper'
 
 interface SlicerOptions {
   years: string[]
@@ -40,15 +44,38 @@ export default function BusinessPerformancePage() {
   const [startDate, setStartDate] = useState('2025-10-01')
   const [endDate, setEndDate] = useState('2025-10-31')
   
-  // Toggle State: FALSE = Month Mode (default), TRUE = Date Range Mode
+  // Quick Date Filter State (for Daily Mode)
+  const [activeQuickFilter, setActiveQuickFilter] = useState<QuickDateFilterType>('7_DAYS')
+  
+  // Toggle State: FALSE = Month Mode (default), TRUE = Daily Mode
   const [isDateRangeMode, setIsDateRangeMode] = useState(false)
   
   // Target Edit Modal State
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false)
   
-  // User Info (TODO: Get from session/auth context)
-  const [userEmail, setUserEmail] = useState('manager@example.com')
-  const [userRole, setUserRole] = useState('manager_myr')
+  // User Info - Get from localStorage session
+  const [userEmail, setUserEmail] = useState('')
+  const [userRole, setUserRole] = useState('')
+  
+  // Load user info from localStorage on mount
+  useEffect(() => {
+    const sessionData = localStorage.getItem('nexmax_session')
+    if (sessionData) {
+      try {
+        const userData = JSON.parse(sessionData)
+        setUserEmail(userData.email || `${userData.username}@nexmax.com`)
+        setUserRole(userData.role || 'manager_myr')
+        console.log('✅ [BP Page] User loaded:', userData.email, userData.role)
+      } catch (error) {
+        console.error('❌ [BP Page] Error parsing session:', error)
+      }
+    }
+  }, [])
+  
+  // KPI Data State
+  const [kpiData, setKpiData] = useState<any>(null)
+  const [chartData, setChartData] = useState<any>(null)
+  const [loadingData, setLoadingData] = useState(true)
   
   // ============================================================================
   // FETCH SLICER OPTIONS ON MOUNT
@@ -56,6 +83,47 @@ export default function BusinessPerformancePage() {
   useEffect(() => {
     fetchSlicerOptions()
   }, [])
+  
+  // ============================================================================
+  // FETCH KPI DATA WHEN FILTERS CHANGE
+  // ============================================================================
+  useEffect(() => {
+    if (!loadingSlicers) {
+      fetchKPIData()
+    }
+  }, [selectedYear, selectedQuarter, isDateRangeMode, startDate, endDate, loadingSlicers])
+  
+  // ============================================================================
+  // QUICK DATE FILTER HANDLER
+  // ============================================================================
+  function handleQuickFilterChange(filterType: QuickDateFilterType) {
+    console.log('📅 [BP Page] Quick filter changed:', filterType)
+    setActiveQuickFilter(filterType)
+    
+    // Calculate date range based on filter type
+    const { startDate: newStart, endDate: newEnd } = calculateQuickDateRange(filterType)
+    
+    console.log('📅 [BP Page] Calculated date range:', { newStart, newEnd })
+    setStartDate(newStart)
+    setEndDate(newEnd)
+  }
+  
+  // ============================================================================
+  // TOGGLE HANDLER - Set default 7 days when Daily Mode activated
+  // ============================================================================
+  function handleToggleChange(enabled: boolean) {
+    console.log('🔄 [BP Page] Toggle changed:', enabled)
+    setIsDateRangeMode(enabled)
+    
+    if (enabled) {
+      // DEFAULT: Set to 7 DAYS
+      setActiveQuickFilter('7_DAYS')
+      const { startDate: newStart, endDate: newEnd } = calculateQuickDateRange('7_DAYS')
+      console.log('📅 [BP Page] Default 7 days:', { newStart, newEnd })
+      setStartDate(newStart)
+      setEndDate(newEnd)
+    }
+  }
   
   async function fetchSlicerOptions() {
     try {
@@ -83,6 +151,47 @@ export default function BusinessPerformancePage() {
       console.error('❌ [BP Page] Error fetching slicer options:', error)
     } finally {
       setLoadingSlicers(false)
+    }
+  }
+  
+  async function fetchKPIData() {
+    try {
+      setLoadingData(true)
+      console.log('🔍 [BP Page] Fetching KPI data...')
+      
+      // Build API URL with filters
+      const params = new URLSearchParams({
+        year: selectedYear,
+        quarter: selectedQuarter,
+        isDateRange: isDateRangeMode.toString(),
+        line: 'ALL'
+      })
+      
+      if (isDateRangeMode) {
+        params.append('startDate', startDate)
+        params.append('endDate', endDate)
+      }
+      
+      const response = await fetch(`/api/myr-business-performance/data?${params}`)
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`)
+      }
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        console.log('✅ [BP Page] KPI data loaded:', result.data)
+        setKpiData(result.data.kpis)
+        setChartData(result.data.chartData)
+      } else {
+        console.error('❌ [BP Page] API returned error:', result.error)
+      }
+      
+    } catch (error) {
+      console.error('❌ [BP Page] Error fetching KPI data:', error)
+    } finally {
+      setLoadingData(false)
     }
   }
   
@@ -160,9 +269,84 @@ export default function BusinessPerformancePage() {
     }
   `
   
-  const handleDateRangeChange = (start: string, end: string) => {
-    setStartDate(start)
-    setEndDate(end)
+  // ============================================================================
+  // HELPER: FORMAT KPI VALUES
+  // ============================================================================
+  const formatCurrency = (value: number): string => {
+    if (!value) return 'RM 0'
+    if (value >= 1000000) return `RM ${(value / 1000000).toFixed(1)}M`
+    if (value >= 1000) return `RM ${(value / 1000).toFixed(1)}K`
+    return `RM ${value.toFixed(0)}`
+  }
+  
+  const formatCurrencyFull = (value: number): string => {
+    if (!value) return 'RM 0'
+    return `RM ${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+  }
+  
+  // Format with 2 decimal places (for ATV, PF, GGR User, DA User)
+  const formatWith2Decimals = (value: number, prefix: string = 'RM '): string => {
+    if (!value) return `${prefix}0.00`
+    return `${prefix}${value.toFixed(2)}`
+  }
+  
+  const formatNumber = (value: number): string => {
+    if (!value) return '0'
+    if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`
+    if (value >= 1000) return `${(value / 1000).toFixed(1)}K`
+    return value.toFixed(0)
+  }
+  
+  const formatNumberFull = (value: number): string => {
+    if (!value) return '0'
+    return value.toLocaleString('en-US', { maximumFractionDigits: 0 })
+  }
+  
+  const formatPercentage = (value: number): string => {
+    return `${value.toFixed(2)}%`
+  }
+  
+  // ============================================================================
+  // HELPER: TRANSFORM BRAND GGR DATA FOR STACKED CHART
+  // ============================================================================
+  const transformBrandGGRData = (data: any[]) => {
+    if (!data || data.length === 0) return { series: [], categories: [] }
+    
+    const categories = data.map(d => d.month)
+    
+    // ✅ AUTO-DETECT BRANDS from data (dynamic, not hardcoded)
+    const brandSet = new Set<string>()
+    data.forEach(d => {
+      Object.keys(d).forEach(key => {
+        if (key !== 'month' && d[key] !== undefined && d[key] > 0) {
+          brandSet.add(key)
+        }
+      })
+    })
+    
+    // Calculate total contribution per brand (sum across all months)
+    const brandTotals: Record<string, number> = {}
+    Array.from(brandSet).forEach(brand => {
+      brandTotals[brand] = data.reduce((sum, d) => sum + (d[brand] || 0), 0)
+    })
+    
+    // Sort brands by total contribution (HIGHEST FIRST)
+    const brands = Array.from(brandSet).sort((a, b) => brandTotals[b] - brandTotals[a])
+    
+    // Default colors for up to 6 brands
+    const defaultColors = ['#3B82F6', '#F97316', '#10b981', '#8b5cf6', '#ec4899', '#f59e0b']
+    const brandColors: Record<string, string> = {}
+    brands.forEach((brand, index) => {
+      brandColors[brand] = defaultColors[index % defaultColors.length]
+    })
+    
+    const series = brands.map(brand => ({
+      name: brand,
+      data: data.map(d => d[brand] || 0),
+      color: brandColors[brand]
+    }))
+    
+    return { series, categories }
   }
 
   return (
@@ -225,70 +409,42 @@ export default function BusinessPerformancePage() {
               />
             </div>
             
-            {/* TOGGLE: DIANTARA QUARTER DAN DATE RANGE */}
+            {/* TOGGLE: DIANTARA QUARTER DAN QUICK DATE FILTER */}
             <div 
               className={`mode-toggle ${isDateRangeMode ? 'active' : ''}`}
-              onClick={() => setIsDateRangeMode(!isDateRangeMode)}
+              onClick={() => handleToggleChange(!isDateRangeMode)}
               title={isDateRangeMode ? 'Switch to Month Mode (Click to OFF)' : 'Switch to Date Range Mode (Click to ON)'}
             >
               <div className="mode-toggle-knob" />
             </div>
             
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '6px',
-              opacity: isDateRangeMode ? 1 : 0.4,
-              pointerEvents: isDateRangeMode ? 'auto' : 'none',
-              transition: 'opacity 0.3s ease'
-            }}>
-              <span style={{ fontSize: '12px', fontWeight: '500', color: '#374151', textTransform: 'uppercase' }}>
-                Period:
-              </span>
-              <DateRangeSlicer 
-                startDate={startDate}
-                endDate={endDate}
-                onDateChange={handleDateRangeChange}
-                disabled={!isDateRangeMode}
-                minDate={quarterDateRange.min}
-                maxDate={quarterDateRange.max}
-              />
-            </div>
+            {/* QUICK DATE FILTER - ALWAYS VISIBLE, DISABLED WHEN TOGGLE OFF */}
+            <QuickDateFilter 
+              activeFilter={activeQuickFilter}
+              onFilterChange={handleQuickFilterChange}
+              disabled={!isDateRangeMode}
+            />
             
             {/* EDIT TARGET BUTTON - Only for managers */}
             {['manager_myr', 'admin'].includes(userRole) && (
               <button
                 onClick={() => setIsTargetModalOpen(true)}
                 style={{
-                  padding: '8px 16px',
-                  border: '1px solid #3B82F6',
-                  borderRadius: '8px',
-                  backgroundColor: 'white',
-                  fontSize: '13px',
-                  fontWeight: '600',
+                  padding: '0',
+                  border: 'none',
+                  backgroundColor: 'transparent',
                   color: '#3B82F6',
                   cursor: 'pointer',
-                  transition: 'all 0.2s',
                   display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#3B82F6'
-                  e.currentTarget.style.color = 'white'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'white'
-                  e.currentTarget.style.color = '#3B82F6'
+                  alignItems: 'center'
                 }}
                 title="Edit quarterly targets"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                {/* Pencil Icon */}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                 </svg>
-                Edit Target
               </button>
             )}
           </div>
@@ -305,8 +461,8 @@ export default function BusinessPerformancePage() {
           {/* Target Achieve Rate */}
           <ProgressBarStatCard 
             title="Target Achieve Rate"
-            value={8500000}
-            target={10000000}
+            value={kpiData?.currentGGR || 0}
+            target={kpiData?.targetGGR || 0}
             unit="%"
             icon="targetCompletion"
           />
@@ -314,14 +470,14 @@ export default function BusinessPerformancePage() {
           {/* Gross Gaming Revenue */}
           <StatCard 
             title="Gross Gaming Revenue"
-            value="RM 8.5M"
+            value={loadingData ? 'Loading...' : formatCurrencyFull(kpiData?.currentGGR || 0)}
             icon="Net Profit"
             additionalKpi={{
               label: 'Daily Avg',
-              value: 'RM 274K'
+              value: loadingData ? '-' : formatCurrencyFull((kpiData?.currentGGR || 0) / 31)
             }}
             comparison={{
-              percentage: '+12.5%',
+              percentage: '+0%',
               isPositive: true,
               text: 'MoM'
             }}
@@ -330,14 +486,14 @@ export default function BusinessPerformancePage() {
           {/* Active Member */}
           <StatCard 
             title="Active Member"
-            value="1,250"
+            value={loadingData ? 'Loading...' : formatNumberFull(kpiData?.activeMember || 0)}
             icon="Active Member"
             additionalKpi={{
               label: 'Daily Avg',
-              value: '40'
+              value: loadingData ? '-' : formatNumberFull((kpiData?.activeMember || 0) / 31)
             }}
             comparison={{
-              percentage: '+8.3%',
+              percentage: '+0%',
               isPositive: true,
               text: 'MoM'
             }}
@@ -346,14 +502,14 @@ export default function BusinessPerformancePage() {
           {/* Pure Active */}
           <StatCard 
             title="Pure Active"
-            value="950"
+            value={loadingData ? 'Loading...' : formatNumberFull(kpiData?.pureActive || 0)}
             icon="Pure Active"
             additionalKpi={{
               label: 'Daily Avg',
-              value: '31'
+              value: loadingData ? '-' : formatNumberFull((kpiData?.pureActive || 0) / 31)
             }}
             comparison={{
-              percentage: '+6.7%',
+              percentage: '+0%',
               isPositive: true,
               text: 'MoM'
             }}
@@ -365,17 +521,17 @@ export default function BusinessPerformancePage() {
             icon="Transaction Metrics"
             kpi1={{
               label: 'ATV',
-              value: 'RM 285',
+              value: loadingData ? 'Loading...' : formatWith2Decimals(kpiData?.atv || 0, 'RM '),
               comparison: {
-                percentage: '+3.2%',
+                percentage: '+0%',
                 isPositive: true
               }
             }}
             kpi2={{
               label: 'PF',
-              value: '3.8x',
+              value: loadingData ? 'Loading...' : formatWith2Decimals(kpiData?.purchaseFrequency || 0, ''),
               comparison: {
-                percentage: '+0.5x',
+                percentage: '+0%',
                 isPositive: true
               }
             }}
@@ -387,17 +543,17 @@ export default function BusinessPerformancePage() {
             icon="User Value Metrics"
             kpi1={{
               label: 'GGR User',
-              value: 'RM 6,800',
+              value: loadingData ? 'Loading...' : formatWith2Decimals(kpiData?.ggrUser || 0, 'RM '),
               comparison: {
-                percentage: '+4.1%',
+                percentage: '+0%',
                 isPositive: true
               }
             }}
             kpi2={{
               label: 'DA User',
-              value: 'RM 8,500',
+              value: loadingData ? 'Loading...' : formatWith2Decimals(kpiData?.daUser || 0, 'RM '),
               comparison: {
-                percentage: '+3.8%',
+                percentage: '+0%',
                 isPositive: true
               }
             }}
@@ -413,24 +569,8 @@ export default function BusinessPerformancePage() {
         }}>
           {/* Forecast Q4 - Actual vs Target vs Forecast */}
           <LineChart 
-            series={[
-              { 
-                name: 'Actual GGR', 
-                data: [7500000, 8200000, 8800000, 9500000], // Real performance
-                color: '#3B82F6' // Blue
-              },
-              { 
-                name: 'Target GGR', 
-                data: [9000000, 9200000, 9500000, 10000000], // Goal (highest)
-                color: '#10b981' // Green
-              },
-              { 
-                name: 'Forecast GGR', 
-                data: [8000000, 8500000, 9000000, 9700000], // Prediction
-                color: '#F97316' // Orange
-              }
-            ]}
-            categories={['Oct', 'Nov', 'Dec', 'Jan']}
+            series={chartData?.forecastQ4GGR?.series || []}
+            categories={chartData?.forecastQ4GGR?.categories || []}
             title="FORECAST Q4 - GROSS GAMING REVENUE"
             currency="MYR"
             chartIcon={getChartIcon('Gross Gaming Revenue')}
@@ -442,10 +582,10 @@ export default function BusinessPerformancePage() {
             series={[
               { 
                 name: 'Gross Gaming Revenue', 
-                data: [7200000, 7800000, 8100000, 8500000, 8200000, 8800000] 
+                data: chartData?.ggrTrend?.map((d: any) => d.ggr) || []
               }
             ]}
-            categories={['May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct']}
+            categories={chartData?.ggrTrend?.map((d: any) => d.month) || []}
             title="GROSS GAMING REVENUE TREND"
             currency="MYR"
             chartIcon={getChartIcon('Gross Gaming Revenue')}
@@ -463,14 +603,11 @@ export default function BusinessPerformancePage() {
         }}>
           {/* Deposit Amount vs Cases */}
           <MixedChart 
-            data={[
-              { name: 'May', barValue: 5200000, lineValue: 8500 },
-              { name: 'Jun', barValue: 5800000, lineValue: 9200 },
-              { name: 'Jul', barValue: 6100000, lineValue: 9800 },
-              { name: 'Aug', barValue: 6500000, lineValue: 10200 },
-              { name: 'Sep', barValue: 6200000, lineValue: 9900 },
-              { name: 'Oct', barValue: 6800000, lineValue: 10500 }
-            ]}
+            data={chartData?.depositAmountVsCases?.map((d: any) => ({
+              name: d.month,
+              barValue: d.amount,
+              lineValue: d.cases
+            })) || []}
             title="DEPOSIT AMOUNT VS CASES"
             chartIcon={getChartIcon('Deposit Amount')}
             barLabel="Amount"
@@ -482,14 +619,11 @@ export default function BusinessPerformancePage() {
           
           {/* Withdraw Amount vs Cases */}
           <MixedChart 
-            data={[
-              { name: 'May', barValue: 4500000, lineValue: 7200 },
-              { name: 'Jun', barValue: 5100000, lineValue: 7800 },
-              { name: 'Jul', barValue: 5400000, lineValue: 8100 },
-              { name: 'Aug', barValue: 5800000, lineValue: 8500 },
-              { name: 'Sep', barValue: 5500000, lineValue: 8200 },
-              { name: 'Oct', barValue: 6000000, lineValue: 8800 }
-            ]}
+            data={chartData?.withdrawAmountVsCases?.map((d: any) => ({
+              name: d.month,
+              barValue: d.amount,
+              lineValue: d.cases
+            })) || []}
             title="WITHDRAW AMOUNT VS CASES"
             chartIcon={getChartIcon('Withdraw Amount')}
             barLabel="Amount"
@@ -510,10 +644,10 @@ export default function BusinessPerformancePage() {
           {/* Winrate & Withdraw Rate - Dual Line */}
           <LineChart 
             series={[
-              { name: 'Winrate', data: [45.5, 48.2, 46.8, 49.1, 47.5, 50.2] },
-              { name: 'Withdraw Rate', data: [65.2, 68.5, 70.1, 72.8, 71.5, 74.2] }
+              { name: 'Winrate', data: chartData?.winrateVsWithdrawRate?.map((d: any) => d.winrate) || [] },
+              { name: 'Withdraw Rate', data: chartData?.winrateVsWithdrawRate?.map((d: any) => d.withdrawRate) || [] }
             ]}
-            categories={['May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct']}
+            categories={chartData?.winrateVsWithdrawRate?.map((d: any) => d.month) || []}
             title="WINRATE VS WITHDRAW RATE"
             currency="PERCENTAGE"
             chartIcon={getChartIcon('Winrate')}
@@ -523,9 +657,9 @@ export default function BusinessPerformancePage() {
           {/* Bonus Usage Rate - PER BRAND */}
           <BarChart 
             series={[
-              { name: 'Bonus Usage Rate', data: [18.25, 15.80, 22.45, 16.90] }
+              { name: 'Bonus Usage Rate', data: chartData?.bonusUsageRate?.map((d: any) => d.rate) || [] }
             ]}
-            categories={['SBMY', 'LVMY', 'JMMY', 'STMY']}
+            categories={chartData?.bonusUsageRate?.map((d: any) => d.brand) || []}
             title="BONUS USAGE RATE (%)"
             currency="PERCENTAGE"
             chartIcon={getChartIcon('Bonus')}
@@ -544,26 +678,26 @@ export default function BusinessPerformancePage() {
           {/* Retention Rate - PER BRAND */}
           <BarChart 
             series={[
-              { name: 'Retention Rate', data: [72.50, 68.30, 75.80, 70.15] }
+              { name: 'Retention Rate', data: chartData?.retentionVsChurn?.map((d: any) => d.retentionRate) || [], color: '#3B82F6' },
+              { name: 'Churn Rate', data: chartData?.retentionVsChurn?.map((d: any) => d.churnRate) || [], color: '#F97316' }
             ]}
-            categories={['SBMY', 'LVMY', 'JMMY', 'STMY']}
-            title="RETENTION RATE (%)"
+            categories={chartData?.retentionVsChurn?.map((d: any) => d.brand) || []}
+            title="RETENTION VS CHURN RATE (%)"
             currency="PERCENTAGE"
             chartIcon={getChartIcon('Retention Rate')}
-            color="#3B82F6"
             showDataLabels={true}
           />
           
           {/* Activation Rate - PER BRAND */}
           <BarChart 
             series={[
-              { name: 'Activation Rate', data: [55.80, 48.90, 62.45, 52.30] }
+              { name: 'Activation Rate', data: chartData?.activationRate?.map((d: any) => d.rate) || [] }
             ]}
-            categories={['SBMY', 'LVMY', 'JMMY', 'STMY']}
+            categories={chartData?.activationRate?.map((d: any) => d.brand) || []}
             title="ACTIVATION RATE (%)"
             currency="PERCENTAGE"
             chartIcon={getChartIcon('Conversion Rate')}
-            color="#F97316"
+            color="#3B82F6"
             showDataLabels={true}
           />
         </div>
@@ -577,51 +711,17 @@ export default function BusinessPerformancePage() {
         }}>
           {/* Stacked Bar Chart - Brand GGR Contribution */}
           <StackedBarChart 
-            series={[
-              { name: 'SBMY', data: [3000000, 3200000, 3500000, 3800000], color: '#3B82F6' },
-              { name: 'LVMY', data: [2500000, 2700000, 2800000, 3000000], color: '#F97316' },
-              { name: 'STMY', data: [2000000, 2300000, 2200000, 2400000], color: '#10b981' },
-              { name: 'JMMY', data: [1500000, 1800000, 2000000, 2200000], color: '#8b5cf6' }
-            ]}
-            categories={['Jul', 'Aug', 'Sep', 'Oct']}
+            series={transformBrandGGRData(chartData?.brandGGRContribution || []).series}
+            categories={transformBrandGGRData(chartData?.brandGGRContribution || []).categories}
             title="BRAND GGR CONTRIBUTION (STACKED)"
             currency="MYR"
             chartIcon={getChartIcon('Gross Gaming Revenue')}
-            showDataLabels={false}
+            showDataLabels={true}
           />
           
           {/* Sankey Diagram - Cross-Brand Customer Flow */}
           <SankeyChart 
-            data={{
-              nodes: [
-                { name: 'New Register' },
-                { name: 'SBMY' },
-                { name: 'LVMY' },
-                { name: 'STMY' },
-                { name: 'JMMY' },
-                { name: 'Retained' },
-                { name: 'Churned' }
-              ],
-              links: [
-                // New Register → Brands
-                { source: 0, target: 1, value: 400 }, // New Register → SBMY
-                { source: 0, target: 2, value: 300 }, // New Register → LVMY
-                { source: 0, target: 3, value: 200 }, // New Register → STMY
-                { source: 0, target: 4, value: 100 }, // New Register → JMMY
-                
-                // Brands → Retained
-                { source: 1, target: 5, value: 280 }, // SBMY → Retained
-                { source: 2, target: 5, value: 210 }, // LVMY → Retained
-                { source: 3, target: 5, value: 130 }, // STMY → Retained
-                { source: 4, target: 5, value: 50 },  // JMMY → Retained
-                
-                // Brands → Churned
-                { source: 1, target: 6, value: 120 }, // SBMY → Churned
-                { source: 2, target: 6, value: 90 },  // LVMY → Churned
-                { source: 3, target: 6, value: 70 },  // STMY → Churned
-                { source: 4, target: 6, value: 50 }   // JMMY → Churned
-              ]
-            }}
+            data={chartData?.customerFlow || { nodes: [], links: [] }}
             title="CROSS-BRAND CUSTOMER FLOW (SANKEY)"
             chartIcon={getChartIcon('Customer Flow')}
           />
@@ -630,9 +730,11 @@ export default function BusinessPerformancePage() {
         {/* Slicer Info */}
         <div className="slicer-info">
           <p>
-            {isDateRangeMode 
-              ? `Showing data for: ${selectedYear} | Date Range: ${startDate} to ${endDate} | Dummy Data Preview`
-              : `Showing data for: ${selectedYear} | ${selectedQuarter} | Dummy Data Preview`
+            {loadingData 
+              ? 'Loading data...'
+              : isDateRangeMode 
+                ? `Showing data for: ${selectedYear} | Date Range: ${startDate} to ${endDate} | Real Data from Database`
+                : `Showing data for: ${selectedYear} | ${selectedQuarter} | Real Data from Database`
             }
           </p>
         </div>
@@ -643,15 +745,12 @@ export default function BusinessPerformancePage() {
         isOpen={isTargetModalOpen}
         onClose={() => setIsTargetModalOpen(false)}
         currency="MYR"
-        line="ALL"
         year={selectedYear}
-        quarter={selectedQuarter}
-        currentActualGGR={8500000}
         userEmail={userEmail}
         userRole={userRole}
         onSaveSuccess={() => {
-          console.log('✅ Target saved successfully, refresh data here')
-          // TODO: Refresh KPI data from API
+          console.log('✅ Target saved successfully, refreshing KPI data...')
+          fetchKPIData()
         }}
       />
     </Layout>

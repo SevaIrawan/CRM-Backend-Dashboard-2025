@@ -7,27 +7,23 @@
  * Page ini berbeda dengan page lain karena punya:
  * - 6 KPI Cards (4 Standard + 2 Dual KPI Grid)
  * - 10 Charts berbeda (Line, Mixed, Bar, Stacked, Sankey)
- * - Quarter Slicer + Date Range Slicer
- * - Dummy data untuk design preview
+ * - Quarter Slicer + Quick Date Filter (7/14 Days, This Month)
+ * - ✅ REAL DATA from database (auto-detect brands, no hardcoded values)
  * 
  * ============================================================================
  */
 
 // ============================================================================
-// BRAND CONSTANTS
+// ❌ BRANDS REMOVED - AUTO-DETECTED FROM DATABASE
 // ============================================================================
-
-/**
- * Brand lists for each currency
- * MYR: SBMY, LVMY, STMY, JMMY
- * SGD: Will be added when SGD page is implemented
- * USC: Will be added when USC page is implemented
- */
-export const BRANDS = {
-  MYR: ['SBMY', 'LVMY', 'STMY', 'JMMY'],
-  SGD: [], // TODO: Add SGD brands
-  USC: []  // TODO: Add USC brands
-}
+// 
+// BRANDS are now dynamically detected from database in API routes:
+// - app/api/myr-business-performance/data/route.ts
+// - app/api/sgd-business-performance/data/route.ts (future)
+// - app/api/usc-business-performance/data/route.ts (future)
+// 
+// NO HARDCODED BRANDS - All brands auto-detected based on available data
+// ============================================================================
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -132,7 +128,7 @@ export interface BusinessPerformanceCharts {
     categories: string[]
   }
   customerFlow: {
-    nodes: Array<{ name: string }>
+    nodes: Array<{ name: string; value?: number }>
     links: Array<{
       source: number
       target: number
@@ -142,167 +138,22 @@ export interface BusinessPerformanceCharts {
 }
 
 // ============================================================================
-// DUMMY DATA - PHASE 1: WIREFRAME
+// ❌ DUMMY DATA REMOVED - NOW USING REAL DATA FROM DATABASE
 // ============================================================================
-
-/**
- * Get dummy KPI data for WIREFRAME presentation
- * 
- * PHASE 1: Used for design preview & atasan approval
- * PHASE 2: Will be replaced with fetchRealKPIData()
- * 
- * Brands: Data untuk ALL brands (SBMY, LVMY, STMY, JMMY)
- */
-export function getDummyKPIData(): BusinessPerformanceKPI {
-  return {
-    targetAchieveRate: {
-      value: 8500000,
-      target: 10000000
-      // NO comparison - sudah ada current vs target display
-    },
-    grossGamingRevenue: {
-      value: 'RM 8.5M',
-      dailyAvg: 'RM 274K',
-      comparison: '+12.5%',
-      isPositive: true
-    },
-    activeMember: {
-      value: '1,250',
-      dailyAvg: '40',
-      comparison: '+8.3%',
-      isPositive: true
-    },
-    pureActive: {
-      value: '950',
-      dailyAvg: '31',
-      comparison: '+6.7%',
-      isPositive: true
-    },
-    transactionMetrics: {
-      atv: {
-        value: 'RM 285',
-        comparison: '+3.2%',
-        isPositive: true
-      },
-      pf: {
-        value: '3.8x',
-        comparison: '+0.5x',
-        isPositive: true
-      }
-    },
-    userValueMetrics: {
-      ggrUser: {
-        value: 'RM 6,800',
-        comparison: '+4.1%',
-        isPositive: true
-      },
-      daUser: {
-        value: 'RM 8,500',
-        comparison: '+3.8%',
-        isPositive: true
-      }
-    }
-  }
-}
-
-/**
- * Get dummy chart data for WIREFRAME presentation
- * 
- * PHASE 1: Used for design preview & atasan approval
- * PHASE 2: Will be replaced with fetchRealChartData()
- * 
- * Brands: Data untuk ALL brands aggregated (SBMY, LVMY, STMY, JMMY)
- * Brand-specific breakdown akan diimplementasi di PHASE 2
- */
-export function getDummyChartData(): BusinessPerformanceCharts {
-  return {
-    forecastQ4GGR: {
-      // Actual: Real performance (start lower, gradually improving)
-      actualGGR: [7500000, 8200000, 8800000, 9500000],
-      // Target: Goal to achieve (highest, aspirational)
-      targetGGR: [9000000, 9200000, 9500000, 10000000],
-      // Forecast: Realistic prediction (between actual and target)
-      forecastGGR: [8000000, 8500000, 9000000, 9700000],
-      categories: ['Oct', 'Nov', 'Dec', 'Jan']
-    },
-    ggrTrend: {
-      data: [7200000, 7800000, 8100000, 8500000, 8200000, 8800000],
-      categories: ['May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct']
-    },
-    depositAmountVsCases: [
-      { name: 'May', barValue: 5200000, lineValue: 8500 },
-      { name: 'Jun', barValue: 5800000, lineValue: 9200 },
-      { name: 'Jul', barValue: 6100000, lineValue: 9800 },
-      { name: 'Aug', barValue: 6500000, lineValue: 10200 },
-      { name: 'Sep', barValue: 6200000, lineValue: 9900 },
-      { name: 'Oct', barValue: 6800000, lineValue: 10500 }
-    ],
-    withdrawAmountVsCases: [
-      { name: 'May', barValue: 4500000, lineValue: 7200 },
-      { name: 'Jun', barValue: 5100000, lineValue: 7800 },
-      { name: 'Jul', barValue: 5400000, lineValue: 8100 },
-      { name: 'Aug', barValue: 5800000, lineValue: 8500 },
-      { name: 'Sep', barValue: 5500000, lineValue: 8200 },
-      { name: 'Oct', barValue: 6000000, lineValue: 8800 }
-    ],
-    winrateVsWithdrawRate: {
-      winrate: [45.5, 48.2, 46.8, 49.1, 47.5, 50.2],
-      withdrawRate: [65.2, 68.5, 70.1, 72.8, 71.5, 74.2],
-      categories: ['May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct']
-    },
-    bonusUsageRate: {
-      data: [18.25, 15.80, 22.45, 16.90], // Per brand data
-      categories: ['SBMY', 'LVMY', 'JMMY', 'STMY'] // Brand names, not periods
-    },
-    retentionRate: {
-      data: [72.50, 68.30, 75.80, 70.15], // Per brand data
-      categories: ['SBMY', 'LVMY', 'JMMY', 'STMY'] // Brand names, not periods
-    },
-    activationRate: {
-      data: [55.80, 48.90, 62.45, 52.30], // Per brand data
-      categories: ['SBMY', 'LVMY', 'JMMY', 'STMY'] // Brand names, not periods
-    },
-    brandGGRContribution: {
-      series: [
-        { name: 'SBMY', data: [3000000, 3200000, 3500000, 3800000], color: '#3B82F6' },
-        { name: 'LVMY', data: [2500000, 2700000, 2800000, 3000000], color: '#F97316' },
-        { name: 'STMY', data: [2000000, 2300000, 2200000, 2400000], color: '#10b981' },
-        { name: 'JMMY', data: [1500000, 1800000, 2000000, 2200000], color: '#8b5cf6' }
-      ],
-      categories: ['Jul', 'Aug', 'Sep', 'Oct']
-    },
-    customerFlow: {
-      nodes: [
-        { name: 'New Register' },
-        { name: 'SBMY' },
-        { name: 'LVMY' },
-        { name: 'STMY' },
-        { name: 'JMMY' },
-        { name: 'Retained' },
-        { name: 'Churned' }
-      ],
-      links: [
-        // New Register → Brands
-        { source: 0, target: 1, value: 400 }, // New Register → SBMY
-        { source: 0, target: 2, value: 300 }, // New Register → LVMY
-        { source: 0, target: 3, value: 200 }, // New Register → STMY
-        { source: 0, target: 4, value: 100 }, // New Register → JMMY
-        
-        // Brands → Retained
-        { source: 1, target: 5, value: 280 }, // SBMY → Retained
-        { source: 2, target: 5, value: 210 }, // LVMY → Retained
-        { source: 3, target: 5, value: 130 }, // STMY → Retained
-        { source: 4, target: 5, value: 50 },  // JMMY → Retained
-        
-        // Brands → Churned
-        { source: 1, target: 6, value: 120 }, // SBMY → Churned
-        { source: 2, target: 6, value: 90 },  // LVMY → Churned
-        { source: 3, target: 6, value: 70 },  // STMY → Churned
-        { source: 4, target: 6, value: 50 }   // JMMY → Churned
-      ]
-    }
-  }
-}
+// 
+// All KPI and Chart data now fetched from API routes:
+// - GET /api/myr-business-performance/data
+// - GET /api/sgd-business-performance/data (future)
+// - GET /api/usc-business-performance/data (future)
+// 
+// Data sources:
+// - blue_whale_myr (master table)
+// - blue_whale_myr_monthly_summary (MV)
+// - new_register (registration table)
+// - bp_target (target table)
+// 
+// NO DUMMY DATA - All data is REAL from Supabase
+// ============================================================================
 
 // ============================================================================
 // CHART COLORS - STANDARD KHUSUS
@@ -358,7 +209,7 @@ export function getChartConfig(chartType: string) {
 }
 
 // ============================================================================
-// SLICER HELPERS
+// SLICER HELPERS - QUARTER MODE
 // ============================================================================
 
 /**
@@ -391,111 +242,159 @@ export function getMonthsInQuarter(quarter: string): number[] {
   return quarterMap[quarter] || []
 }
 
+// ============================================================================
+// SLICER HELPERS - DAILY MODE (QUICK DATE FILTER)
+// ============================================================================
+
+/**
+ * Quick Date Filter Types
+ * 
+ * STANDARD KHUSUS BUSINESS PERFORMANCE PAGE:
+ * - Tidak pakai date range picker (terlalu complex)
+ * - Pakai 3 button preset yang simple & professional
+ * - User tinggal klik button, date range auto-calculated
+ * - "Last Month" REMOVED to avoid cross-quarter confusion
+ */
+export type QuickDateFilterType = '7_DAYS' | '14_DAYS' | 'THIS_MONTH'
+
+/**
+ * Quick Date Filter Labels
+ */
+export const QUICK_DATE_FILTER_LABELS: Record<QuickDateFilterType, string> = {
+  '7_DAYS': '7 Days',
+  '14_DAYS': '14 Days',
+  'THIS_MONTH': 'This Month'
+}
+
+/**
+ * Calculate date range based on Quick Date Filter selection
+ * 
+ * Logic:
+ * - 7 Days: Today - 6 days → Today (total 7 days)
+ * - 14 Days: Today - 13 days → Today (total 14 days, 2 weeks)
+ * - This Month: Month start → Today (e.g., Oct 1 - Oct 20)
+ * 
+ * @param filterType - Quick filter type
+ * @param referenceDate - Reference date (default: today)
+ * @returns { startDate: 'YYYY-MM-DD', endDate: 'YYYY-MM-DD' }
+ */
+export function calculateQuickDateRange(
+  filterType: QuickDateFilterType,
+  referenceDate: Date = new Date()
+): { startDate: string; endDate: string } {
+  const today = new Date(referenceDate)
+  today.setHours(0, 0, 0, 0) // Reset time to midnight
+  
+  let startDate: Date
+  let endDate: Date = new Date(today) // End date = today
+  
+  switch (filterType) {
+    case '7_DAYS':
+      // Today - 6 days → Today (total 7 days = 1 week)
+      startDate = new Date(today)
+      startDate.setDate(today.getDate() - 6)
+      break
+      
+    case '14_DAYS':
+      // Today - 13 days → Today (total 14 days = 2 weeks)
+      startDate = new Date(today)
+      startDate.setDate(today.getDate() - 13)
+      break
+      
+    case 'THIS_MONTH':
+      // Month start → Today (e.g., Oct 1 - Oct 20)
+      startDate = new Date(today.getFullYear(), today.getMonth(), 1)
+      break
+      
+    default:
+      // Fallback: This month
+      startDate = new Date(today.getFullYear(), today.getMonth(), 1)
+  }
+  
+  return {
+    startDate: formatDateForAPI(startDate),
+    endDate: formatDateForAPI(endDate)
+  }
+}
+
+/**
+ * Bound date range to available quarter data
+ * 
+ * CRITICAL RULE:
+ * Ketika user pilih Q4, maka date range picker hanya bisa pilih tanggal dalam Q4
+ * Ini untuk avoid user pilih tanggal yang tidak ada data
+ * 
+ * @param startDate - User-selected start date
+ * @param endDate - User-selected end date
+ * @param quarterMin - Min date dari quarter yang dipilih (dari API)
+ * @param quarterMax - Max date dari quarter yang dipilih (dari API)
+ * @returns { startDate: bounded, endDate: bounded }
+ */
+export function boundDateRangeToQuarter(
+  startDate: string,
+  endDate: string,
+  quarterMin: string,
+  quarterMax: string
+): { startDate: string; endDate: string } {
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+  const min = new Date(quarterMin)
+  const max = new Date(quarterMax)
+  
+  // Bound start date
+  if (start < min) {
+    startDate = quarterMin
+  }
+  
+  // Bound end date
+  if (end > max) {
+    endDate = quarterMax
+  }
+  
+  return { startDate, endDate }
+}
+
+/**
+ * Format date for API (YYYY-MM-DD)
+ */
+export function formatDateForAPI(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+/**
+ * Format date for display (MMM DD, YYYY)
+ */
+export function formatDateForDisplay(dateStr: string): string {
+  const date = new Date(dateStr)
+  const options: Intl.DateTimeFormatOptions = { 
+    month: 'short', 
+    day: 'numeric', 
+    year: 'numeric' 
+  }
+  return date.toLocaleDateString('en-US', options)
+}
+
 /**
  * Format date range for display
  */
 export function formatDateRange(startDate: string, endDate: string): string {
-  return `${startDate} to ${endDate}`
+  return `${formatDateForDisplay(startDate)} - ${formatDateForDisplay(endDate)}`
 }
 
 // ============================================================================
-// DATA VALIDATION
+// ✅ REAL DATA IMPLEMENTATION - COMPLETED
 // ============================================================================
-
-/**
- * Validate if real data is available
- * 
- * PHASE 1 (CURRENT): Always return false - use dummy data for WIREFRAME
- * PHASE 2 (FUTURE): Check if target table exists and has real data
- */
-export function isRealDataAvailable(): boolean {
-  // TODO PHASE 2: Check if target table exists and has data
-  // For PHASE 1 (WIREFRAME), always return false (use dummy data)
-  return false
-}
-
-/**
- * Get data source label for slicer info
- * 
- * PHASE 1: Show "Dummy Data (for Design Preview)"
- * PHASE 2: Show "Real Data from Supabase"
- */
-export function getDataSourceLabel(): string {
-  return isRealDataAvailable() ? 'Real Data from Supabase' : 'Dummy Data (for Design Preview)'
-}
-
+// 
+// All data fetching now handled by API routes:
+// - GET /api/myr-business-performance/data
+//   → Returns all KPIs and chart data from database
+//   → Brands auto-detected from blue_whale_myr
+//   → Targets from bp_target table
+//   → No dummy data, no hardcoded brands
+// 
+// Frontend (page.tsx) calls API and displays real data
 // ============================================================================
-// PHASE 2: REAL DATA INTEGRATION (AFTER WIREFRAME APPROVAL)
-// ============================================================================
-
-/**
- * PHASE 2: Fetch real KPI data from Supabase
- * 
- * Prerequisite:
- * - Wireframe approved by atasan ✅
- * - Target Input Table created in Supabase
- * - Blue Whale tables accessible
- * 
- * Data Source:
- * - Target Input Table (for target values)
- * - Blue Whale MYR/SGD/USC (for actual values)
- * - Filter by brand: SBMY, LVMY, STMY, JMMY (MYR)
- * 
- * @param currency - MYR, SGD, or USC
- * @param year - Selected year (e.g., '2025')
- * @param quarter - Selected quarter (e.g., 'Q4') or null if date range mode
- * @param startDate - Start date for date range mode (e.g., '2025-10-01')
- * @param endDate - End date for date range mode (e.g., '2025-10-31')
- * @returns BusinessPerformanceKPI or null if error
- */
-export async function fetchRealKPIData(
-  currency: string,
-  year: string,
-  quarter: string,
-  startDate: string,
-  endDate: string
-): Promise<BusinessPerformanceKPI | null> {
-  // TODO PHASE 2: Implement real data fetching
-  // 1. Query Target Input Table for target values
-  // 2. Query Blue Whale tables for actual values
-  // 3. Calculate KPIs based on selected filters
-  // 4. Return formatted BusinessPerformanceKPI
-  return null
-}
-
-/**
- * PHASE 2: Fetch real chart data from Supabase
- * 
- * Prerequisite:
- * - Wireframe approved by atasan ✅
- * - Target Input Table created in Supabase
- * - Blue Whale tables accessible
- * 
- * Data Source:
- * - Blue Whale MYR/SGD/USC (for all chart data)
- * - Filter by brand: SBMY, LVMY, STMY, JMMY (MYR)
- * - Aggregate data per brand or ALL brands
- * 
- * @param currency - MYR, SGD, or USC
- * @param year - Selected year (e.g., '2025')
- * @param quarter - Selected quarter (e.g., 'Q4') or null if date range mode
- * @param startDate - Start date for date range mode (e.g., '2025-10-01')
- * @param endDate - End date for date range mode (e.g., '2025-10-31')
- * @returns BusinessPerformanceCharts or null if error
- */
-export async function fetchRealChartData(
-  currency: string,
-  year: string,
-  quarter: string,
-  startDate: string,
-  endDate: string
-): Promise<BusinessPerformanceCharts | null> {
-  // TODO PHASE 2: Implement real data fetching
-  // 1. Query Blue Whale tables for chart data
-  // 2. Filter by selected year, quarter/date range
-  // 3. Aggregate data per brand or ALL brands
-  // 4. Format data for each chart type
-  // 5. Return formatted BusinessPerformanceCharts
-  return null
-}
 

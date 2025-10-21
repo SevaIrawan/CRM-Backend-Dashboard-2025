@@ -7,7 +7,9 @@ import { supabase } from '@/lib/supabase'
  * ============================================================================
  * 
  * Source: blue_whale_myr_summary (MV)
- * Returns: Years, Quarters, Quarter Date Ranges, Defaults
+ * Returns: Years, Quarters, Brands, Quarter Date Ranges, Defaults
+ * 
+ * Brands: Auto-detect unique brands from database for target input
  */
 
 export async function GET(request: NextRequest) {
@@ -18,7 +20,7 @@ export async function GET(request: NextRequest) {
     // IMPORTANT: Extract month NUMBER from date since 'month' column is text
     const { data, error } = await supabase
       .from('blue_whale_myr_summary')
-      .select('year, date')
+      .select('year, date, line')
       .order('year', { ascending: false })
       .order('date', { ascending: false })
 
@@ -87,6 +89,22 @@ export async function GET(request: NextRequest) {
     })
 
     console.log(`📊 [BP Slicer API] Quarters:`, quarters)
+
+    // ============================================================================
+    // EXTRACT UNIQUE BRANDS (FOR TARGET INPUT)
+    // ============================================================================
+    const uniqueBrands = Array.from(new Set(
+      data
+        .map((row: any) => row.line)
+        .filter((line: any): line is string => 
+          line !== null && 
+          line !== undefined && 
+          line !== '' && 
+          line !== 'ALL'
+        )
+    )).sort()
+
+    console.log(`📊 [BP Slicer API] Brands:`, uniqueBrands)
 
     // ============================================================================
     // CALCULATE DATE RANGES PER QUARTER (BOUNDED)
@@ -159,6 +177,7 @@ export async function GET(request: NextRequest) {
     const response = {
       years,
       quarters,
+      brands: uniqueBrands,
       quarterDateRanges,
       defaults: {
         year: defaultYear,
