@@ -97,7 +97,9 @@ async function calculateBrandMemberFlows(filters: {
   })
   
   // ALL brands (union of both periods for complete flow calculation)
-  const allBrandsSet = new Set([...currentBrandsSet, ...prevBrandsSet])
+  const allBrandsSet = new Set<string>()
+  Array.from(currentBrandsSet).forEach(brand => allBrandsSet.add(brand))
+  Array.from(prevBrandsSet).forEach(brand => allBrandsSet.add(brand))
   const BRANDS = Array.from(allBrandsSet).sort()  // Sort alfabetis untuk konsistensi
   
   console.log(`📊 [Sankey] Brands in current period: ${Array.from(currentBrandsSet).sort().join(', ')}`)
