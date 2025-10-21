@@ -255,8 +255,10 @@ export const getDefaultPageByRole = (userRole: string): string => {
       return '/usc/overview'
     case 'admin':
     case 'analyst':
-    case 'ops':
       return '/dashboard'
+    case 'ops':
+    case 'manager_xbpo':
+      return '/myr/auto-approval-monitor'  // Ops & manager_xbpo default: Deposit Auto-Approval MYR
     default:
       return '/myr/overview' // fallback to MYR overview
   }

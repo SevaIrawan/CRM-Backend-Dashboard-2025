@@ -686,6 +686,10 @@ export default function BusinessPerformancePage() {
             currency="PERCENTAGE"
             chartIcon={getChartIcon('Retention Rate')}
             showDataLabels={true}
+            customLegend={[
+              { label: 'Retention Rate', color: '#3B82F6' },
+              { label: 'Churn Rate', color: '#F97316' }
+            ]}
           />
           
           {/* Activation Rate - PER BRAND */}
