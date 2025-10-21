@@ -516,20 +516,20 @@ export async function GET(request: NextRequest) {
     // 1. ACTIVE MEMBER = COUNT UNIQUE userkey WHERE deposit_cases > 0
     const activeMemberSet = new Set(
       blueWhaleData
-        .filter(row => (row.deposit_cases || 0) > 0)
-        .map(row => row.userkey)
+        .filter((row: any) => (row.deposit_cases || 0) > 0)
+        .map((row: any) => row.userkey)
         .filter(Boolean)
     )
     const activeMember = activeMemberSet.size
 
     // 2. FINANCIAL AGGREGATES
-    const depositAmount = blueWhaleData.reduce((sum, row) => sum + (parseFloat(row.deposit_amount) || 0), 0)
-    const depositCases = blueWhaleData.reduce((sum, row) => sum + (parseInt(row.deposit_cases) || 0), 0)
-    const withdrawAmount = blueWhaleData.reduce((sum, row) => sum + (parseFloat(row.withdraw_amount) || 0), 0)
-    const withdrawCases = blueWhaleData.reduce((sum, row) => sum + (parseInt(row.withdraw_cases) || 0), 0)
-    const addTransaction = blueWhaleData.reduce((sum, row) => sum + (parseFloat(row.add_transaction) || 0), 0)
-    const deductTransaction = blueWhaleData.reduce((sum, row) => sum + (parseFloat(row.deduct_transaction) || 0), 0)
-    const bonusAmount = blueWhaleData.reduce((sum, row) => sum + (parseFloat(row.bonus) || 0) + (parseFloat(row.add_bonus) || 0), 0)
+    const depositAmount = blueWhaleData.reduce((sum: number, row: any) => sum + (parseFloat(row.deposit_amount) || 0), 0)
+    const depositCases = blueWhaleData.reduce((sum: number, row: any) => sum + (parseInt(row.deposit_cases) || 0), 0)
+    const withdrawAmount = blueWhaleData.reduce((sum: number, row: any) => sum + (parseFloat(row.withdraw_amount) || 0), 0)
+    const withdrawCases = blueWhaleData.reduce((sum: number, row: any) => sum + (parseInt(row.withdraw_cases) || 0), 0)
+    const addTransaction = blueWhaleData.reduce((sum: number, row: any) => sum + (parseFloat(row.add_transaction) || 0), 0)
+    const deductTransaction = blueWhaleData.reduce((sum: number, row: any) => sum + (parseFloat(row.deduct_transaction) || 0), 0)
+    const bonusAmount = blueWhaleData.reduce((sum: number, row: any) => sum + (parseFloat(row.bonus) || 0) + (parseFloat(row.add_bonus) || 0), 0)
     
     // CALCULATE GGR & NET PROFIT (sesuai KPI Comparison logic)
     const grossGamingRevenue = depositAmount - withdrawAmount  // GGR = Deposit - Withdraw
@@ -730,13 +730,13 @@ export async function GET(request: NextRequest) {
       // Active Member for this brand
       const activeMemberBrand = new Set(
         brandData
-          .filter(row => (row.deposit_cases || 0) > 0)
-          .map(row => row.userkey)
+          .filter((row: any) => (row.deposit_cases || 0) > 0)
+          .map((row: any) => row.userkey)
           .filter(Boolean)
       ).size
       
       // Bonus for this brand
-      const bonusBrand = brandData.reduce((sum, row) => sum + (parseFloat(row.bonus) || 0) + (parseFloat(row.add_bonus) || 0), 0)
+      const bonusBrand = brandData.reduce((sum: number, row: any) => sum + (parseFloat(row.bonus) || 0) + (parseFloat(row.add_bonus) || 0), 0)
       
       const rate = activeMemberBrand > 0 ? bonusBrand / activeMemberBrand : 0  // ✅ FIXED: Removed * 100
       
@@ -805,13 +805,13 @@ export async function GET(request: NextRequest) {
       // Active Member for this brand
       const activeMemberBrand = new Set(
         brandData
-          .filter(row => (row.deposit_cases || 0) > 0)
-          .map(row => row.userkey)
+          .filter((row: any) => (row.deposit_cases || 0) > 0)
+          .map((row: any) => row.userkey)
           .filter(Boolean)
       ).size
       
       // New Depositor for this brand
-      const newDepositorBrand = newRegBrand.reduce((sum, row) => sum + (parseInt(row.new_depositor) || 0), 0)
+      const newDepositorBrand = newRegBrand.reduce((sum: number, row: any) => sum + (parseInt(row.new_depositor) || 0), 0)
       
       // Retention Rate = (Active Member - New Depositor) / Active Member * 100
       const retentionRate = activeMemberBrand > 0 ? ((activeMemberBrand - newDepositorBrand) / activeMemberBrand) * 100 : 0
@@ -831,10 +831,10 @@ export async function GET(request: NextRequest) {
       const brandData = dataByBrand[brand] || []
       
       // Total new register
-      const totalNewReg = newRegBrand.reduce((sum, row) => sum + (parseInt(row.new_register) || 0), 0)
+      const totalNewReg = newRegBrand.reduce((sum: number, row: any) => sum + (parseInt(row.new_register) || 0), 0)
       
       // New depositor (activated)
-      const newDepositor = newRegBrand.reduce((sum, row) => sum + (parseInt(row.new_depositor) || 0), 0)
+      const newDepositor = newRegBrand.reduce((sum: number, row: any) => sum + (parseInt(row.new_depositor) || 0), 0)
       
       // Activation Rate = New Depositor / Total New Register * 100
       const rate = totalNewReg > 0 ? (newDepositor / totalNewReg) * 100 : 0
