@@ -574,7 +574,7 @@ export async function generateRetentionVsChurnRateChart(params: ChartParams): Pr
       .lte('date', currentEnd)
       .gt('deposit_cases', 0)
 
-    const currentUserKeys = [...new Set(currentUsers?.map(u => u.userkey) || [])]
+    const currentUserKeys = Array.from(new Set(currentUsers?.map((u: any) => u.userkey) || []))
 
     // Get active users in previous period for this brand
     const { data: prevUsers } = await supabase
@@ -675,7 +675,7 @@ export async function generateReactivationRateChart(params: ChartParams): Promis
       }
     })
 
-    const currentUserKeys = [...currentUserMap.keys()]
+    const currentUserKeys = Array.from(currentUserMap.keys())
 
     // Get active users in previous period
     const { data: prevUsers } = await supabase
@@ -804,17 +804,17 @@ export async function generateSankeyDiagram(params: ChartParams & { pureUserGGR:
     brandMultipleUsers[brand] = 0
   })
   
-  Object.entries(uniqueCodeBrands).forEach(([uniqueCode, brandSet]) => {
+  Object.entries(uniqueCodeBrands).forEach(([uniqueCode, brandSet]: [string, Set<string>]) => {
     if (brandSet.size === 1) {
       singleBrandUsers++
       // Add to the single brand this user belongs to
-      brandSet.forEach(brand => {
+      Array.from(brandSet).forEach((brand: string) => {
         brandSingleUsers[brand]++
       })
     } else if (brandSet.size > 1) {
       multipleBrandUsers++
       // Add to all brands this user belongs to
-      brandSet.forEach(brand => {
+      Array.from(brandSet).forEach((brand: string) => {
         brandMultipleUsers[brand]++
       })
     }
