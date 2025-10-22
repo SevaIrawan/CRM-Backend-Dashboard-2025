@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
         brands: [],
         defaults: {
           year: '2025',
-          quarter: 'Q1',  // Default to Q1 if no data
+          quarter: 'Q4',  // Default to Q4 if no data (latest quarter)
           startDate: null,
           endDate: null
         }
@@ -150,23 +150,23 @@ export async function GET(request: NextRequest) {
     console.log(`📅 [BP Slicer API] Quarter date ranges:`, quarterDateRanges)
 
     // ============================================================================
-    // DETERMINE DEFAULTS - USE EARLIEST AVAILABLE QUARTER FROM DATA
+    // DETERMINE DEFAULTS - USE LATEST AVAILABLE QUARTER FROM DATA (MAX DATE)
     // ============================================================================
-    // ✅ CRITICAL FIX: Use earliest quarter with data, not current quarter
-    // This ensures defaults match actual data availability in bp_daily_summary_myr
+    // ✅ AUTO-DETECT: Use latest quarter based on max date
+    // Example: If max date = October 2025 → Default to Q4 2025
     
     const defaultYear = years[0] || '2025'  // Most recent year with data
     const availableQuarters = quarters[defaultYear] || []
     
-    // Use FIRST quarter with data (earliest), not current quarter
-    const defaultQuarter = availableQuarters[0] || 'Q1'
+    // Use LAST quarter with data (latest/most recent), auto-detect from max date
+    const defaultQuarter = availableQuarters[availableQuarters.length - 1] || 'Q4'
     
     const defaultQuarterKey = `${defaultYear}-${defaultQuarter}`
     const defaultQuarterRange = quarterDateRanges[defaultQuarterKey] || { min: null, max: null }
     
-    console.log(`✅ [BP Slicer API] Defaults determined from ACTUAL DATA:`)
-    console.log(`   → Year: ${defaultYear}`)
-    console.log(`   → Quarter: ${defaultQuarter}`)
+    console.log(`✅ [BP Slicer API] Defaults AUTO-DETECTED from LATEST DATA:`)
+    console.log(`   → Year: ${defaultYear} (most recent year)`)
+    console.log(`   → Quarter: ${defaultQuarter} (latest quarter based on max date)`)
     console.log(`   → Date Range: ${defaultQuarterRange.min} to ${defaultQuarterRange.max}`)
 
     // ============================================================================

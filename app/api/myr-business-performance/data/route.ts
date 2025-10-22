@@ -128,9 +128,9 @@ async function calculatePureUser(params: {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// HELPER 3: CALCULATE PURE USER NET PROFIT (SUM of net profit for unique_code)
+// HELPER 3: CALCULATE PURE USER GGR (deposit_amount - withdraw_amount)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async function calculatePureUserNetProfit(params: {
+async function calculatePureUserGGR(params: {
   currency: string
   startDate?: string
   endDate?: string
@@ -141,7 +141,7 @@ async function calculatePureUserNetProfit(params: {
 
   let query = supabase
     .from('blue_whale_myr')
-    .select('deposit_amount, withdraw_amount, add_transaction, deduct_transaction')
+    .select('deposit_amount, withdraw_amount')
     .eq('currency', currency)
     .gt('deposit_cases', 0)
     .not('unique_code', 'is', null)
@@ -166,18 +166,18 @@ async function calculatePureUserNetProfit(params: {
   const { data, error } = await query
 
   if (error || !data) {
-    console.error('[calculatePureUserNetProfit] Error:', error)
+    console.error('[calculatePureUserGGR] Error:', error)
     return 0
   }
 
-  // Sum net profit
-  let pureUserNetProfit = 0
+  // Sum GGR (deposit_amount - withdraw_amount)
+  let pureUserGGR = 0
   data.forEach((row: any) => {
-    const netProfit = (row.deposit_amount + row.add_transaction) - (row.withdraw_amount + row.deduct_transaction)
-    pureUserNetProfit += netProfit
+    const ggr = (row.deposit_amount || 0) - (row.withdraw_amount || 0)
+    pureUserGGR += ggr
   })
 
-  return pureUserNetProfit
+  return pureUserGGR
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -487,7 +487,7 @@ export async function GET(request: NextRequest) {
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // STEP 3: CALCULATE MEMBER METRICS (COUNT DISTINCT from blue_whale_myr)
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    const [activeMember, pureUser, pureUserNetProfit] = await Promise.all([
+    const [activeMember, pureUser, pureUserGGR] = await Promise.all([
       calculateActiveMember(
         mode === 'daily'
           ? { currency, startDate, endDate }
@@ -498,7 +498,7 @@ export async function GET(request: NextRequest) {
           ? { currency, startDate, endDate }
           : { currency, year, quarter }
       ),
-      calculatePureUserNetProfit(
+      calculatePureUserGGR(
         mode === 'daily'
           ? { currency, startDate, endDate }
           : { currency, year, quarter }
@@ -637,7 +637,7 @@ export async function GET(request: NextRequest) {
       generateBrandGGRContributionChart(chartParams),
       generateRetentionVsChurnRateChart(chartParams),
       generateReactivationRateChart(chartParams),
-      generateSankeyDiagram({ ...chartParams, pureUserNetProfit })
+      generateSankeyDiagram({ ...chartParams, pureUserGGR })
     ])
 
     console.log('[BP API] Chart data generated successfully')
@@ -649,19 +649,19 @@ export async function GET(request: NextRequest) {
       success: true,
       mode,
       kpis: {
-        // Financial KPIs (from MV)
-        grossGamingRevenue: mvData.ggr,
+        // Financial KPIs
+        grossGamingRevenue: pureUserGGR, // ✅ WAJIB SAMA! GGR = Pure User GGR (deposit - withdraw)
         depositAmount: mvData.deposit_amount,
         depositCases: mvData.deposit_cases,
         withdrawAmount: mvData.withdraw_amount,
         withdrawCases: mvData.withdraw_cases,
-        netProfit: pureUserNetProfit, // ✅ WAJIB SAMA! Semua profit berasal dari Pure User
+        netProfit: mvData.net_profit, // Net Profit dari MV (terpisah dari GGR)
         
         // Member Metrics (from API calculation)
         activeMember,
         pureUser,
         pureActive,
-        pureUserNetProfit,
+        pureUserGGR,
         newRegister,
         newDepositor,
         

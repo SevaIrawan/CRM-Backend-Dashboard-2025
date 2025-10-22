@@ -38,9 +38,9 @@ export default function BusinessPerformancePage() {
   const [slicerOptions, setSlicerOptions] = useState<SlicerOptions | null>(null)
   const [loadingSlicers, setLoadingSlicers] = useState(true)
   
-  // Slicer States - Default values will be updated from API
+  // Slicer States - Default values will be updated from API (auto-detect from max date)
   const [selectedYear, setSelectedYear] = useState('2025')
-  const [selectedQuarter, setSelectedQuarter] = useState('Q1')  // ✅ Default to Q1 (earliest quarter with data)
+  const [selectedQuarter, setSelectedQuarter] = useState('Q4')  // ✅ Default will be auto-detected (latest quarter from max date)
   const [startDate, setStartDate] = useState('')  // ✅ Will be set from API
   const [endDate, setEndDate] = useState('')  // ✅ Will be set from API
   
@@ -745,10 +745,10 @@ export default function BusinessPerformancePage() {
             showDataLabels={true}
           />
           
-          {/* Sankey Diagram - Cross-Brand Customer Flow */}
+          {/* Sankey Diagram - Pure User GGR Distribution */}
           <SankeyChart 
             data={chartData?.sankey || { nodes: [], links: [] }}
-            title="PURE USER NET PROFIT DISTRIBUTION PER BRAND"
+            title="PURE USER GGR DISTRIBUTION PER BRAND"
             chartIcon={getChartIcon('Customer Flow')}
           />
         </div>

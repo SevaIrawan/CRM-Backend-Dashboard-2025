@@ -707,29 +707,32 @@ export async function generateReactivationRateChart(params: ChartParams): Promis
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// CHART 10: SANKEY DIAGRAM (Pure User Net Profit Distribution per Brand)
+// CHART 10: SANKEY DIAGRAM (Pure User GGR Distribution per Brand)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-export async function generateSankeyDiagram(params: ChartParams & { pureUserNetProfit: number }): Promise<{
+export async function generateSankeyDiagram(params: ChartParams & { pureUserGGR: number }): Promise<{
   nodes: Array<{ name: string; value: number }>
   links: Array<{ source: number; target: number; value: number }>
 }> {
-  const { currency, year, quarter, mode, startDate, endDate, pureUserNetProfit } = params
+  const { currency, year, quarter, mode, startDate, endDate, pureUserGGR } = params
 
   // Get detected brands
   const brands = await getDetectedBrands(params)
 
-  // Calculate Pure User count and Net Profit per brand
+  // Calculate Pure User count and GGR per brand
   const brandPureUser: Record<string, number> = {}
-  const brandPureUserNetProfit: Record<string, number> = {}
+  const brandPureUserGGR: Record<string, number> = {}
   
   // GLOBAL unique_code tracker (across all brands) to avoid double-counting
-  const globalUniqueCodeNetProfit: Record<string, number> = {}
+  const globalUniqueCodeGGR: Record<string, number> = {}
+  
+  // Track which brands each unique_code belongs to (for Single/Multiple Brand calculation)
+  const uniqueCodeBrands: Record<string, Set<string>> = {}
 
   for (const brand of brands) {
-    // Query for pure users (unique_code with deposit_cases > 0) and their net profit
+    // Query for pure users (unique_code with deposit_cases > 0) and their GGR
     let query = supabase
       .from('blue_whale_myr')
-      .select('unique_code, deposit_amount, withdraw_amount, add_transaction, deduct_transaction')
+      .select('unique_code, deposit_amount, withdraw_amount')
       .eq('currency', currency)
       .eq('line', brand)
       .gt('deposit_cases', 0)
@@ -751,88 +754,143 @@ export async function generateSankeyDiagram(params: ChartParams & { pureUserNetP
     const { data } = await query
 
     // Pure User Logic (SIMPLE): COUNT DISTINCT unique_code with deposit_cases > 0
-    // Aggregate net profit per unique_code FOR THIS BRAND
-    const brandUniqueCodeNetProfit: Record<string, number> = {}
+    // Aggregate GGR per unique_code FOR THIS BRAND
+    const brandUniqueCodeGGR: Record<string, number> = {}
     data?.forEach((row: any) => {
       const uniqueCode = row.unique_code?.trim()
       if (!uniqueCode) return
 
-      const netProfit = (row.deposit_amount || 0) + (row.add_transaction || 0) - (row.withdraw_amount || 0) - (row.deduct_transaction || 0)
+      const ggr = (row.deposit_amount || 0) - (row.withdraw_amount || 0)
       
       // Track per brand
-      if (!brandUniqueCodeNetProfit[uniqueCode]) {
-        brandUniqueCodeNetProfit[uniqueCode] = 0
+      if (!brandUniqueCodeGGR[uniqueCode]) {
+        brandUniqueCodeGGR[uniqueCode] = 0
       }
-      brandUniqueCodeNetProfit[uniqueCode] += netProfit
+      brandUniqueCodeGGR[uniqueCode] += ggr
       
       // Track globally (across all brands) - no double counting!
-      if (!globalUniqueCodeNetProfit[uniqueCode]) {
-        globalUniqueCodeNetProfit[uniqueCode] = 0
+      if (!globalUniqueCodeGGR[uniqueCode]) {
+        globalUniqueCodeGGR[uniqueCode] = 0
       }
-      globalUniqueCodeNetProfit[uniqueCode] += netProfit
+      globalUniqueCodeGGR[uniqueCode] += ggr
+      
+      // Track which brands this unique_code belongs to
+      if (!uniqueCodeBrands[uniqueCode]) {
+        uniqueCodeBrands[uniqueCode] = new Set()
+      }
+      uniqueCodeBrands[uniqueCode].add(brand)
     })
 
     // Pure User per brand = COUNT DISTINCT unique_code in this brand
-    brandPureUser[brand] = Object.keys(brandUniqueCodeNetProfit).length
+    brandPureUser[brand] = Object.keys(brandUniqueCodeGGR).length
     
-    // Pure User Net Profit per brand = SUM of net profit for unique_code in this brand
-    brandPureUserNetProfit[brand] = Object.values(brandUniqueCodeNetProfit).reduce((sum, np) => sum + np, 0)
+    // Pure User GGR per brand = SUM of GGR for unique_code in this brand
+    brandPureUserGGR[brand] = Object.values(brandUniqueCodeGGR).reduce((sum, ggr) => sum + ggr, 0)
   }
 
   // Calculate TOTAL Pure User (DISTINCT across all brands - no double counting!)
-  const totalPureUser = Object.keys(globalUniqueCodeNetProfit).length
+  const totalPureUser = Object.keys(globalUniqueCodeGGR).length
+  
+  // Calculate Single Brand vs Multiple Brand users
+  let singleBrandUsers = 0
+  let multipleBrandUsers = 0
+  
+  // Track per-brand single/multiple breakdown for links
+  const brandSingleUsers: Record<string, number> = {}
+  const brandMultipleUsers: Record<string, number> = {}
+  
+  brands.forEach(brand => {
+    brandSingleUsers[brand] = 0
+    brandMultipleUsers[brand] = 0
+  })
+  
+  Object.entries(uniqueCodeBrands).forEach(([uniqueCode, brandSet]) => {
+    if (brandSet.size === 1) {
+      singleBrandUsers++
+      // Add to the single brand this user belongs to
+      brandSet.forEach(brand => {
+        brandSingleUsers[brand]++
+      })
+    } else if (brandSet.size > 1) {
+      multipleBrandUsers++
+      // Add to all brands this user belongs to
+      brandSet.forEach(brand => {
+        brandMultipleUsers[brand]++
+      })
+    }
+  })
 
-  // Build nodes - 3 LEVEL SANKEY
-  // Level 1: Total Pure User (1 node)
-  // Level 2: Pure User per brand (4 nodes)
-  // Level 3: Net Profit per brand (4 nodes)
+  // Build nodes - 3 COLUMN SANKEY
+  // COLUMN 1: Pure User (1 node)
+  // COLUMN 2: Brands with count + GGR (N nodes)
+  // COLUMN 3: Single Brand + Multiple Brand (2 nodes)
   const nodes: Array<{ name: string; value: number }> = []
 
-  // Level 1: Total Pure User
+  // COLUMN 1: Pure User
   nodes.push({ 
-    name: 'Total Pure User', 
+    name: `Pure User\n${totalPureUser.toLocaleString()}`, 
     value: totalPureUser 
   })
 
-  // Level 2: Pure User per brand
+  // COLUMN 2: Brands (dengan format: "SBMY\n1,092 (RM 414,906)")
   brands.forEach(brand => {
+    const count = brandPureUser[brand] || 0
+    const ggr = Math.round(brandPureUserGGR[brand] || 0)
     nodes.push({ 
-      name: `${brand} Pure User`, 
-      value: brandPureUser[brand] || 0 
+      name: `${brand}\n${count.toLocaleString()} (RM ${ggr.toLocaleString()})`, 
+      value: count
     })
   })
-
-  // Level 3: Net Profit per brand
-  brands.forEach(brand => {
-    nodes.push({ 
-      name: `${brand} Net Profit`, 
-      value: Math.round(brandPureUserNetProfit[brand] || 0) 
-    })
+  
+  // COLUMN 3: Single Brand and Multiple Brand
+  const singleBrandIndex = 1 + brands.length
+  const multipleBrandIndex = 1 + brands.length + 1
+  
+  nodes.push({
+    name: `Single Brand\n${singleBrandUsers.toLocaleString()}`,
+    value: singleBrandUsers
+  })
+  
+  nodes.push({
+    name: `Multiple Brand\n${multipleBrandUsers.toLocaleString()}`,
+    value: multipleBrandUsers
   })
 
   // Build links
   const links: Array<{ source: number; target: number; value: number }> = []
 
-  // Level 1 → Level 2: Total Pure User → Brand Pure User
+  // COLUMN 1 → COLUMN 2: Pure User → Brands
   brands.forEach((brand, index) => {
     const pureUserCount = brandPureUser[brand] || 0
     if (pureUserCount > 0) {
       links.push({
-        source: 0, // Total Pure User node
-        target: 1 + index, // Brand Pure User node (offset by 1)
+        source: 0, // Pure User node
+        target: 1 + index, // Brand node
         value: pureUserCount
       })
     }
   })
-
-  // Level 2 → Level 3: Brand Pure User → Brand Net Profit
+  
+  // COLUMN 2 → COLUMN 3: Brands → Single Brand
   brands.forEach((brand, index) => {
-    const netProfit = Math.round(brandPureUserNetProfit[brand] || 0)
-    if (netProfit > 0) {
+    const singleCount = brandSingleUsers[brand] || 0
+    if (singleCount > 0) {
       links.push({
-        source: 1 + index, // Brand Pure User node
-        target: 1 + brands.length + index, // Brand Net Profit node
-        value: netProfit
+        source: 1 + index, // Brand node
+        target: singleBrandIndex, // Single Brand node
+        value: singleCount
+      })
+    }
+  })
+  
+  // COLUMN 2 → COLUMN 3: Brands → Multiple Brand
+  brands.forEach((brand, index) => {
+    const multipleCount = brandMultipleUsers[brand] || 0
+    if (multipleCount > 0) {
+      links.push({
+        source: 1 + index, // Brand node
+        target: multipleBrandIndex, // Multiple Brand node
+        value: multipleCount
       })
     }
   })

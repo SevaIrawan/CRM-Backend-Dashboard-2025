@@ -35,6 +35,9 @@ export default function SankeyChart({ data, title, chartIcon }: SankeyChartProps
     // This fixes the issue where recharts calculates node value as sum of all flows
     const nodeValue = data.nodes[index]?.value || payload.value || 0;
     
+    // Split name by \n for multi-line rendering
+    const nameLines = payload.name ? payload.name.split('\n') : [];
+    
     return (
       <g>
         <rect
@@ -45,27 +48,21 @@ export default function SankeyChart({ data, title, chartIcon }: SankeyChartProps
           fill="#3B82F6"
           fillOpacity="0.8"
         />
-        <text
-          textAnchor={isOut ? 'end' : 'start'}
-          x={isOut ? x - 6 : x + width + 6}
-          y={y + height / 2}
-          fontSize="12"
-          fontWeight="600"
-          fill="#374151"
-          dy="0.35em"
-        >
-          {payload.name}
-        </text>
-        <text
-          textAnchor={isOut ? 'end' : 'start'}
-          x={isOut ? x - 6 : x + width + 6}
-          y={y + height / 2 + 15}
-          fontSize="10"
-          fill="#6b7280"
-          dy="0.35em"
-        >
-          {nodeValue > 0 ? nodeValue.toLocaleString() : ''}
-        </text>
+        {/* Render each line of the name */}
+        {nameLines.map((line: string, idx: number) => (
+          <text
+            key={idx}
+            textAnchor={isOut ? 'end' : 'start'}
+            x={isOut ? x - 6 : x + width + 6}
+            y={y + height / 2 + (idx * 15) - ((nameLines.length - 1) * 7.5)}
+            fontSize={idx === 0 ? "12" : "10"}
+            fontWeight={idx === 0 ? "600" : "400"}
+            fill={idx === 0 ? "#374151" : "#6b7280"}
+            dy="0.35em"
+          >
+            {line}
+          </text>
+        ))}
       </g>
     );
   };
