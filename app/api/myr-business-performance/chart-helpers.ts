@@ -137,8 +137,8 @@ export async function generateForecastQ4GGRChart(params: ChartParams): Promise<{
       .eq('year', year)
       .eq('quarter', quarter)
 
-    const totalTarget = targetData?.reduce((sum, row) => sum + (row.target_ggr || 0), 0) || 0
-    const totalForecast = targetData?.reduce((sum, row) => sum + (row.forecast_ggr || 0), 0) || 0
+    const totalTarget = targetData?.reduce((sum: number, row: any) => sum + (row.target_ggr || 0), 0) || 0
+    const totalForecast = targetData?.reduce((sum: number, row: any) => sum + (row.forecast_ggr || 0), 0) || 0
 
     // Calculate number of days in the selected period
     const start = new Date(startDate)
@@ -189,18 +189,18 @@ export async function generateForecastQ4GGRChart(params: ChartParams): Promise<{
   // Build data arrays
   const quarters = ['Q1', 'Q2', 'Q3', 'Q4']
   const actualData = quarters.map(q => {
-    const found = quarterData?.find(row => row.period === q)
+    const found = quarterData?.find((row: any) => row.period === q)
     return found ? found.ggr : 0
   })
 
   const targetDataArray = quarters.map(q => {
-    const found = targetData?.filter(row => row.quarter === q)
-    return found && found.length > 0 ? found.reduce((sum, row) => sum + (row.target_ggr || 0), 0) : 0
+    const found = targetData?.filter((row: any) => row.quarter === q)
+    return found && found.length > 0 ? found.reduce((sum: number, row: any) => sum + (row.target_ggr || 0), 0) : 0
   })
 
   const forecastDataArray = quarters.map(q => {
-    const found = targetData?.filter(row => row.quarter === q)
-    return found && found.length > 0 ? found.reduce((sum, row) => sum + (row.forecast_ggr || 0), 0) : 0
+    const found = targetData?.filter((row: any) => row.quarter === q)
+    return found && found.length > 0 ? found.reduce((sum: number, row: any) => sum + (row.forecast_ggr || 0), 0) : 0
   })
 
   return {
@@ -392,7 +392,7 @@ export async function generateBonusUsagePerBrandChart(params: ChartParams): Prom
 
   // Aggregate by brand
   const brandAggregates: Record<string, { bonus: number; addBonus: number; deductBonus: number }> = {}
-  mvData.forEach(row => {
+  mvData.forEach((row: any) => {
     if (!brandAggregates[row.line]) {
       brandAggregates[row.line] = { bonus: 0, addBonus: 0, deductBonus: 0 }
     }
@@ -464,7 +464,7 @@ export async function generateBrandGGRContributionChart(params: ChartParams): Pr
 
     // Group by date
     const groupedByDate: Record<string, Record<string, number>> = {}
-    dailyData?.forEach(row => {
+    dailyData?.forEach((row: any) => {
       if (!groupedByDate[row.date]) {
         groupedByDate[row.date] = {}
       }
@@ -472,13 +472,13 @@ export async function generateBrandGGRContributionChart(params: ChartParams): Pr
     })
 
     const categories = Object.keys(groupedByDate).map(date => {
-      const d = new Date(date)
+      const d = new Date(date as string)
       return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     })
 
     const data: Record<string, number[]> = {}
     brands.forEach(brand => {
-      data[brand] = Object.values(groupedByDate).map(dateData => dateData[brand] || 0)
+      data[brand] = Object.values(groupedByDate).map((dateData: any) => dateData[brand] || 0)
     })
 
     return { categories, brands, data }
@@ -494,7 +494,7 @@ export async function generateBrandGGRContributionChart(params: ChartParams): Pr
 
     // Group by quarter
     const groupedByQuarter: Record<string, Record<string, number>> = {}
-    quarterData?.forEach(row => {
+    quarterData?.forEach((row: any) => {
       if (!groupedByQuarter[row.period]) {
         groupedByQuarter[row.period] = {}
       }
@@ -505,7 +505,7 @@ export async function generateBrandGGRContributionChart(params: ChartParams): Pr
 
     const data: Record<string, number[]> = {}
     brands.forEach(brand => {
-      data[brand] = Object.values(groupedByQuarter).map(periodData => periodData[brand] || 0)
+      data[brand] = Object.values(groupedByQuarter).map((periodData: any) => periodData[brand] || 0)
     })
 
     return { categories, brands, data }
