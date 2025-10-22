@@ -83,7 +83,7 @@ export async function generateGGRTrendChart(params: ChartParams): Promise<{
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     }) || []
 
-    const data = dailyData?.map(row => row.ggr || 0) || []
+    const data = dailyData?.map((row: any) => row.ggr || 0) || []
 
     return { categories, data }
   } else {
@@ -97,8 +97,8 @@ export async function generateGGRTrendChart(params: ChartParams): Promise<{
       .eq('line', 'ALL')
       .order('period', { ascending: true })
 
-    const categories = quarterData?.map(row => row.period) || []
-    const data = quarterData?.map(row => row.ggr || 0) || []
+    const categories = quarterData?.map((row: any) => row.period) || []
+    const data = quarterData?.map((row: any) => row.ggr || 0) || []
 
     return { categories, data }
   }
@@ -154,7 +154,7 @@ export async function generateForecastQ4GGRChart(params: ChartParams): Promise<{
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     }) || []
 
-    const actualData = dailyData?.map(row => row.ggr || 0) || []
+    const actualData = dailyData?.map((row: any) => row.ggr || 0) || []
     const targetDataArray = new Array(categories.length).fill(dailyTarget)
     const forecastDataArray = new Array(categories.length).fill(dailyForecast)
 
@@ -236,8 +236,8 @@ export async function generateDepositVsCasesChart(params: ChartParams): Promise<
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     }) || []
 
-    const depositAmount = dailyData?.map(row => row.deposit_amount || 0) || []
-    const depositCases = dailyData?.map(row => row.deposit_cases || 0) || []
+    const depositAmount = dailyData?.map((row: any) => row.deposit_amount || 0) || []
+    const depositCases = dailyData?.map((row: any) => row.deposit_cases || 0) || []
 
     return { categories, depositAmount, depositCases }
   } else {
@@ -250,9 +250,9 @@ export async function generateDepositVsCasesChart(params: ChartParams): Promise<
       .eq('line', 'ALL')
       .order('period', { ascending: true })
 
-    const categories = quarterData?.map(row => row.period) || []
-    const depositAmount = quarterData?.map(row => row.deposit_amount || 0) || []
-    const depositCases = quarterData?.map(row => row.deposit_cases || 0) || []
+    const categories = quarterData?.map((row: any) => row.period) || []
+    const depositAmount = quarterData?.map((row: any) => row.deposit_amount || 0) || []
+    const depositCases = quarterData?.map((row: any) => row.deposit_cases || 0) || []
 
     return { categories, depositAmount, depositCases }
   }
@@ -283,8 +283,8 @@ export async function generateWithdrawVsCasesChart(params: ChartParams): Promise
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     }) || []
 
-    const withdrawAmount = dailyData?.map(row => row.withdraw_amount || 0) || []
-    const withdrawCases = dailyData?.map(row => row.withdraw_cases || 0) || []
+    const withdrawAmount = dailyData?.map((row: any) => row.withdraw_amount || 0) || []
+    const withdrawCases = dailyData?.map((row: any) => row.withdraw_cases || 0) || []
 
     return { categories, withdrawAmount, withdrawCases }
   } else {
@@ -297,9 +297,9 @@ export async function generateWithdrawVsCasesChart(params: ChartParams): Promise
       .eq('line', 'ALL')
       .order('period', { ascending: true })
 
-    const categories = quarterData?.map(row => row.period) || []
-    const withdrawAmount = quarterData?.map(row => row.withdraw_amount || 0) || []
-    const withdrawCases = quarterData?.map(row => row.withdraw_cases || 0) || []
+    const categories = quarterData?.map((row: any) => row.period) || []
+    const withdrawAmount = quarterData?.map((row: any) => row.withdraw_amount || 0) || []
+    const withdrawCases = quarterData?.map((row: any) => row.withdraw_cases || 0) || []
 
     return { categories, withdrawAmount, withdrawCases }
   }
@@ -330,8 +330,8 @@ export async function generateWinrateVsWithdrawRateChart(params: ChartParams): P
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     }) || []
 
-    const winrateData = dailyData?.map(row => row.winrate || 0) || []
-    const withdrawalRateData = dailyData?.map(row => row.withdrawal_rate || 0) || []
+    const winrateData = dailyData?.map((row: any) => row.winrate || 0) || []
+    const withdrawalRateData = dailyData?.map((row: any) => row.withdrawal_rate || 0) || []
 
     return { categories, winrateData, withdrawalRateData }
   } else {
@@ -344,9 +344,9 @@ export async function generateWinrateVsWithdrawRateChart(params: ChartParams): P
       .eq('line', 'ALL')
       .order('period', { ascending: true })
 
-    const categories = quarterData?.map(row => row.period) || []
-    const winrateData = quarterData?.map(row => row.winrate || 0) || []
-    const withdrawalRateData = quarterData?.map(row => row.withdrawal_rate || 0) || []
+    const categories = quarterData?.map((row: any) => row.period) || []
+    const winrateData = quarterData?.map((row: any) => row.winrate || 0) || []
+    const withdrawalRateData = quarterData?.map((row: any) => row.withdrawal_rate || 0) || []
 
     return { categories, winrateData, withdrawalRateData }
   }
