@@ -474,9 +474,9 @@ export async function GET(request: NextRequest) {
         newDepositor = 0
         newRegister = 0
       } else {
-        mvData = quarterData
-        newDepositor = quarterData.new_depositor || 0
-        newRegister = quarterData.new_register || 0
+        mvData = quarterData as any
+        newDepositor = (quarterData as any).new_depositor || 0
+        newRegister = (quarterData as any).new_register || 0
       }
 
       // For quarterly, hold_percentage and conversion_rate are not pre-calculated, so calculate here
