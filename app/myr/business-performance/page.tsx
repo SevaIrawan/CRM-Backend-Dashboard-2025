@@ -38,11 +38,11 @@ export default function BusinessPerformancePage() {
   const [slicerOptions, setSlicerOptions] = useState<SlicerOptions | null>(null)
   const [loadingSlicers, setLoadingSlicers] = useState(true)
   
-  // Slicer States
+  // Slicer States - Default values will be updated from API
   const [selectedYear, setSelectedYear] = useState('2025')
-  const [selectedQuarter, setSelectedQuarter] = useState('Q4')
-  const [startDate, setStartDate] = useState('2025-10-01')
-  const [endDate, setEndDate] = useState('2025-10-31')
+  const [selectedQuarter, setSelectedQuarter] = useState('Q1')  // ✅ Default to Q1 (earliest quarter with data)
+  const [startDate, setStartDate] = useState('')  // ✅ Will be set from API
+  const [endDate, setEndDate] = useState('')  // ✅ Will be set from API
   
   // Quick Date Filter State (for Daily Mode)
   const [activeQuickFilter, setActiveQuickFilter] = useState<QuickDateFilterType>('7_DAYS')
@@ -100,12 +100,21 @@ export default function BusinessPerformancePage() {
     console.log('📅 [BP Page] Quick filter changed:', filterType)
     setActiveQuickFilter(filterType)
     
+    // ✅ CRITICAL: Use LAST DATA DATE from slicerOptions, NOT today!
+    // 7 Days = 7 hari dari last data date (misal: last date=Oct 20 → Oct 14-20)
+    const quarterKey = `${selectedYear}-${selectedQuarter}`
+    const lastDataDate = slicerOptions?.quarterDateRanges?.[quarterKey]?.max
+    
+    const referenceDate = lastDataDate ? new Date(lastDataDate) : new Date()
+    console.log('📅 [BP Page] Using LAST DATA DATE as reference:', lastDataDate)
+    
     // Calculate date range based on filter type
-    const { startDate: newStart, endDate: newEnd } = calculateQuickDateRange(filterType)
+    const { startDate: newStart, endDate: newEnd } = calculateQuickDateRange(filterType, referenceDate)
     
     console.log('📅 [BP Page] Calculated date range:', { newStart, newEnd })
     setStartDate(newStart)
     setEndDate(newEnd)
+    // useEffect will auto-trigger fetchKPIData when startDate/endDate changes
   }
   
   // ============================================================================
@@ -118,11 +127,19 @@ export default function BusinessPerformancePage() {
     if (enabled) {
       // DEFAULT: Set to 7 DAYS
       setActiveQuickFilter('7_DAYS')
-      const { startDate: newStart, endDate: newEnd } = calculateQuickDateRange('7_DAYS')
-      console.log('📅 [BP Page] Default 7 days:', { newStart, newEnd })
+      
+      // ✅ CRITICAL: Use LAST DATA DATE from slicerOptions
+      const quarterKey = `${selectedYear}-${selectedQuarter}`
+      const lastDataDate = slicerOptions?.quarterDateRanges?.[quarterKey]?.max
+      const referenceDate = lastDataDate ? new Date(lastDataDate) : new Date()
+      
+      const { startDate: newStart, endDate: newEnd } = calculateQuickDateRange('7_DAYS', referenceDate)
+      console.log('📅 [BP Page] Default 7 days from last data:', { lastDataDate, newStart, newEnd })
       setStartDate(newStart)
       setEndDate(newEnd)
+      // useEffect will auto-trigger fetchKPIData when isDateRangeMode/startDate/endDate changes
     }
+    // useEffect will auto-trigger fetchKPIData when isDateRangeMode changes
   }
   
   async function fetchSlicerOptions() {
@@ -157,7 +174,14 @@ export default function BusinessPerformancePage() {
   async function fetchKPIData() {
     try {
       setLoadingData(true)
-      console.log('🔍 [BP Page] Fetching KPI data...')
+      console.log('🔍 [BP Page] Fetching KPI data...', { isDateRangeMode, startDate, endDate })
+      
+      // ✅ CRITICAL: Don't fetch if daily mode is ON but dates are empty
+      if (isDateRangeMode && (!startDate || !endDate)) {
+        console.warn('⚠️ [BP Page] Daily mode active but dates not set yet, skipping fetch')
+        setLoadingData(false)
+        return
+      }
       
       // Build API URL with filters
       const params = new URLSearchParams({
@@ -181,9 +205,10 @@ export default function BusinessPerformancePage() {
       const result = await response.json()
       
       if (result.success) {
-        console.log('✅ [BP Page] KPI data loaded:', result.data)
-        setKpiData(result.data.kpis)
-        setChartData(result.data.chartData)
+        console.log('✅ [BP Page] KPI data loaded (mode:', result.mode, '):', result.kpis)
+        console.log('✅ [BP Page] Chart data loaded:', result.charts)
+        setKpiData(result.kpis)
+        setChartData(result.charts)
       } else {
         console.error('❌ [BP Page] API returned error:', result.error)
       }
@@ -309,41 +334,34 @@ export default function BusinessPerformancePage() {
   // ============================================================================
   // HELPER: TRANSFORM BRAND GGR DATA FOR STACKED CHART
   // ============================================================================
-  const transformBrandGGRData = (data: any[]) => {
-    if (!data || data.length === 0) return { series: [], categories: [] }
+  // ============================================================================
+  // HELPER: Transform API Brand GGR Data to StackedBarChart format
+  // API returns: { categories: string[], brands: string[], data: Record<string, number[]> }
+  // StackedBarChart expects: { series: Array<{ name, data, color }>, categories: string[] }
+  // ============================================================================
+  const transformBrandGGRDataFromAPI = (apiData: any) => {
+    if (!apiData || !apiData.brands || !apiData.data) {
+      return { series: [], categories: [] }
+    }
     
-    const categories = data.map(d => d.month)
+    const { categories, brands, data } = apiData
     
-    // ✅ AUTO-DETECT BRANDS from data (dynamic, not hardcoded)
-    const brandSet = new Set<string>()
-    data.forEach(d => {
-      Object.keys(d).forEach(key => {
-        if (key !== 'month' && d[key] !== undefined && d[key] > 0) {
-          brandSet.add(key)
-        }
-      })
-    })
-    
-    // Calculate total contribution per brand (sum across all months)
+    // Calculate total contribution per brand (for sorting)
     const brandTotals: Record<string, number> = {}
-    Array.from(brandSet).forEach(brand => {
-      brandTotals[brand] = data.reduce((sum, d) => sum + (d[brand] || 0), 0)
+    brands.forEach((brand: string) => {
+      brandTotals[brand] = data[brand]?.reduce((sum: number, val: number) => sum + val, 0) || 0
     })
     
     // Sort brands by total contribution (HIGHEST FIRST)
-    const brands = Array.from(brandSet).sort((a, b) => brandTotals[b] - brandTotals[a])
+    const sortedBrands = brands.sort((a: string, b: string) => brandTotals[b] - brandTotals[a])
     
     // Default colors for up to 6 brands
     const defaultColors = ['#3B82F6', '#F97316', '#10b981', '#8b5cf6', '#ec4899', '#f59e0b']
-    const brandColors: Record<string, string> = {}
-    brands.forEach((brand, index) => {
-      brandColors[brand] = defaultColors[index % defaultColors.length]
-    })
     
-    const series = brands.map(brand => ({
+    const series = sortedBrands.map((brand: string, index: number) => ({
       name: brand,
-      data: data.map(d => d[brand] || 0),
-      color: brandColors[brand]
+      data: data[brand] || [],
+      color: defaultColors[index % defaultColors.length]
     }))
     
     return { series, categories }
@@ -461,7 +479,7 @@ export default function BusinessPerformancePage() {
           {/* Target Achieve Rate */}
           <ProgressBarStatCard 
             title="Target Achieve Rate"
-            value={kpiData?.currentGGR || 0}
+            value={kpiData?.grossGamingRevenue || 0}
             target={kpiData?.targetGGR || 0}
             unit="%"
             icon="targetCompletion"
@@ -470,11 +488,11 @@ export default function BusinessPerformancePage() {
           {/* Gross Gaming Revenue */}
           <StatCard 
             title="Gross Gaming Revenue"
-            value={loadingData ? 'Loading...' : formatCurrencyFull(kpiData?.currentGGR || 0)}
+            value={loadingData ? 'Loading...' : formatCurrencyFull(kpiData?.grossGamingRevenue || 0)}
             icon="Net Profit"
             additionalKpi={{
               label: 'Daily Avg',
-              value: loadingData ? '-' : formatCurrencyFull((kpiData?.currentGGR || 0) / 31)
+              value: loadingData ? '-' : formatCurrencyFull((kpiData?.grossGamingRevenue || 0) / 31)
             }}
             comparison={{
               percentage: '+0%',
@@ -529,7 +547,7 @@ export default function BusinessPerformancePage() {
             }}
             kpi2={{
               label: 'PF',
-              value: loadingData ? 'Loading...' : formatWith2Decimals(kpiData?.purchaseFrequency || 0, ''),
+              value: loadingData ? 'Loading...' : formatWith2Decimals(kpiData?.pf || 0, ''),
               comparison: {
                 percentage: '+0%',
                 isPositive: true
@@ -569,7 +587,11 @@ export default function BusinessPerformancePage() {
         }}>
           {/* Forecast Q4 - Actual vs Target vs Forecast */}
           <LineChart 
-            series={chartData?.forecastQ4GGR?.series || []}
+            series={[
+              { name: 'Actual GGR', data: chartData?.forecastQ4GGR?.actualData || [], color: '#3B82F6' },
+              { name: 'Target GGR', data: chartData?.forecastQ4GGR?.targetData || [], color: '#10b981' },
+              { name: 'Forecast GGR', data: chartData?.forecastQ4GGR?.forecastData || [], color: '#F97316' }
+            ]}
             categories={chartData?.forecastQ4GGR?.categories || []}
             title="FORECAST Q4 - GROSS GAMING REVENUE"
             currency="MYR"
@@ -582,10 +604,10 @@ export default function BusinessPerformancePage() {
             series={[
               { 
                 name: 'Gross Gaming Revenue', 
-                data: chartData?.ggrTrend?.map((d: any) => d.ggr) || []
+                data: chartData?.ggrTrend?.data || []
               }
             ]}
-            categories={chartData?.ggrTrend?.map((d: any) => d.month) || []}
+            categories={chartData?.ggrTrend?.categories || []}
             title="GROSS GAMING REVENUE TREND"
             currency="MYR"
             chartIcon={getChartIcon('Gross Gaming Revenue')}
@@ -603,10 +625,10 @@ export default function BusinessPerformancePage() {
         }}>
           {/* Deposit Amount vs Cases */}
           <MixedChart 
-            data={chartData?.depositAmountVsCases?.map((d: any) => ({
-              name: d.month,
-              barValue: d.amount,
-              lineValue: d.cases
+            data={chartData?.depositVsCases?.categories?.map((cat: string, idx: number) => ({
+              name: cat,
+              barValue: chartData?.depositVsCases?.depositAmount?.[idx] || 0,
+              lineValue: chartData?.depositVsCases?.depositCases?.[idx] || 0
             })) || []}
             title="DEPOSIT AMOUNT VS CASES"
             chartIcon={getChartIcon('Deposit Amount')}
@@ -619,10 +641,10 @@ export default function BusinessPerformancePage() {
           
           {/* Withdraw Amount vs Cases */}
           <MixedChart 
-            data={chartData?.withdrawAmountVsCases?.map((d: any) => ({
-              name: d.month,
-              barValue: d.amount,
-              lineValue: d.cases
+            data={chartData?.withdrawVsCases?.categories?.map((cat: string, idx: number) => ({
+              name: cat,
+              barValue: chartData?.withdrawVsCases?.withdrawAmount?.[idx] || 0,
+              lineValue: chartData?.withdrawVsCases?.withdrawCases?.[idx] || 0
             })) || []}
             title="WITHDRAW AMOUNT VS CASES"
             chartIcon={getChartIcon('Withdraw Amount')}
@@ -644,10 +666,10 @@ export default function BusinessPerformancePage() {
           {/* Winrate & Withdraw Rate - Dual Line */}
           <LineChart 
             series={[
-              { name: 'Winrate', data: chartData?.winrateVsWithdrawRate?.map((d: any) => d.winrate) || [] },
-              { name: 'Withdraw Rate', data: chartData?.winrateVsWithdrawRate?.map((d: any) => d.withdrawRate) || [] }
+              { name: 'Winrate', data: chartData?.winrateVsWithdrawRate?.winrateData || [] },
+              { name: 'Withdraw Rate', data: chartData?.winrateVsWithdrawRate?.withdrawalRateData || [] }
             ]}
-            categories={chartData?.winrateVsWithdrawRate?.map((d: any) => d.month) || []}
+            categories={chartData?.winrateVsWithdrawRate?.categories || []}
             title="WINRATE VS WITHDRAW RATE"
             currency="PERCENTAGE"
             chartIcon={getChartIcon('Winrate')}
@@ -657,9 +679,9 @@ export default function BusinessPerformancePage() {
           {/* Bonus Usage Rate - PER BRAND */}
           <BarChart 
             series={[
-              { name: 'Bonus Usage Rate', data: chartData?.bonusUsageRate?.map((d: any) => d.rate) || [] }
+              { name: 'Bonus Usage Rate', data: chartData?.bonusUsagePerBrand?.data || [] }
             ]}
-            categories={chartData?.bonusUsageRate?.map((d: any) => d.brand) || []}
+            categories={chartData?.bonusUsagePerBrand?.categories || []}
             title="BONUS USAGE RATE (%)"
             currency="PERCENTAGE"
             chartIcon={getChartIcon('Bonus')}
@@ -678,10 +700,10 @@ export default function BusinessPerformancePage() {
           {/* Retention Rate - PER BRAND */}
           <BarChart 
             series={[
-              { name: 'Retention Rate', data: chartData?.retentionVsChurn?.map((d: any) => d.retentionRate) || [], color: '#3B82F6' },
-              { name: 'Churn Rate', data: chartData?.retentionVsChurn?.map((d: any) => d.churnRate) || [], color: '#F97316' }
+              { name: 'Retention Rate', data: chartData?.retentionVsChurnRate?.retentionData || [], color: '#3B82F6' },
+              { name: 'Churn Rate', data: chartData?.retentionVsChurnRate?.churnData || [], color: '#F97316' }
             ]}
-            categories={chartData?.retentionVsChurn?.map((d: any) => d.brand) || []}
+            categories={chartData?.retentionVsChurnRate?.categories || []}
             title="RETENTION VS CHURN RATE (%)"
             currency="PERCENTAGE"
             chartIcon={getChartIcon('Retention Rate')}
@@ -692,13 +714,13 @@ export default function BusinessPerformancePage() {
             ]}
           />
           
-          {/* Activation Rate - PER BRAND */}
+          {/* Reactivation Rate (Same as Activation Rate) - PER BRAND */}
           <BarChart 
             series={[
-              { name: 'Activation Rate', data: chartData?.activationRate?.map((d: any) => d.rate) || [] }
+              { name: 'Reactivation Rate', data: chartData?.reactivationRate?.reactivationData || [] }
             ]}
-            categories={chartData?.activationRate?.map((d: any) => d.brand) || []}
-            title="ACTIVATION RATE (%)"
+            categories={chartData?.reactivationRate?.categories || []}
+            title="REACTIVATION RATE (%)"
             currency="PERCENTAGE"
             chartIcon={getChartIcon('Conversion Rate')}
             color="#3B82F6"
@@ -715,8 +737,8 @@ export default function BusinessPerformancePage() {
         }}>
           {/* Stacked Bar Chart - Brand GGR Contribution */}
           <StackedBarChart 
-            series={transformBrandGGRData(chartData?.brandGGRContribution || []).series}
-            categories={transformBrandGGRData(chartData?.brandGGRContribution || []).categories}
+            series={transformBrandGGRDataFromAPI(chartData?.brandGGRContribution || {}).series}
+            categories={transformBrandGGRDataFromAPI(chartData?.brandGGRContribution || {}).categories}
             title="BRAND GGR CONTRIBUTION (STACKED)"
             currency="MYR"
             chartIcon={getChartIcon('Gross Gaming Revenue')}
@@ -725,8 +747,8 @@ export default function BusinessPerformancePage() {
           
           {/* Sankey Diagram - Cross-Brand Customer Flow */}
           <SankeyChart 
-            data={chartData?.customerFlow || { nodes: [], links: [] }}
-            title="CROSS-BRAND CUSTOMER FLOW (SANKEY)"
+            data={chartData?.sankey || { nodes: [], links: [] }}
+            title="PURE USER NET PROFIT DISTRIBUTION PER BRAND"
             chartIcon={getChartIcon('Customer Flow')}
           />
         </div>

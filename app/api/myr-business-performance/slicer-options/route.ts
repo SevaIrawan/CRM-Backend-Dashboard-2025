@@ -6,7 +6,8 @@ import { supabase } from '@/lib/supabase'
  * BUSINESS PERFORMANCE SLICER OPTIONS API
  * ============================================================================
  * 
- * Source: blue_whale_myr_summary (MV)
+ * Source: bp_daily_summary_myr (MV) for Daily Mode Date Ranges
+ * Source: blue_whale_myr_summary (MV) for Quarterly Mode
  * Returns: Years, Quarters, Brands, Quarter Date Ranges, Defaults
  * 
  * Brands: Auto-detect unique brands from database for target input
@@ -14,12 +15,12 @@ import { supabase } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔍 [BP Slicer API] Fetching options from blue_whale_myr_summary...')
+    console.log('🔍 [BP Slicer API] Fetching options from bp_daily_summary_myr...')
 
+    // ✅ CRITICAL FIX: Use bp_daily_summary_myr for daily mode date ranges
     // Query MV for all available data
-    // IMPORTANT: Extract month NUMBER from date since 'month' column is text
     const { data, error } = await supabase
-      .from('blue_whale_myr_summary')
+      .from('bp_daily_summary_myr')
       .select('year, date, line')
       .order('year', { ascending: false })
       .order('date', { ascending: false })
@@ -30,21 +31,22 @@ export async function GET(request: NextRequest) {
     }
 
     if (!data || data.length === 0) {
-      console.warn('⚠️ [BP Slicer API] No data found in blue_whale_myr_summary')
+      console.warn('⚠️ [BP Slicer API] No data found in bp_daily_summary_myr')
       return NextResponse.json({
         years: [],
         quarters: {},
         quarterDateRanges: {},
+        brands: [],
         defaults: {
           year: '2025',
-          quarter: 'Q4',
+          quarter: 'Q1',  // Default to Q1 if no data
           startDate: null,
           endDate: null
         }
       })
     }
 
-    console.log(`📊 [BP Slicer API] Found ${data.length} rows in MV`)
+    console.log(`📊 [BP Slicer API] Found ${data.length} rows in bp_daily_summary_myr`)
     console.log(`🔍 [BP Slicer API] Sample data (first 3 rows):`, data.slice(0, 3))
 
     // ============================================================================
@@ -148,28 +150,24 @@ export async function GET(request: NextRequest) {
     console.log(`📅 [BP Slicer API] Quarter date ranges:`, quarterDateRanges)
 
     // ============================================================================
-    // DETERMINE DEFAULTS
+    // DETERMINE DEFAULTS - USE EARLIEST AVAILABLE QUARTER FROM DATA
     // ============================================================================
-    const currentYear = new Date().getFullYear()
-    const currentMonth = new Date().getMonth() + 1
-
-    const defaultYear = years.includes(currentYear.toString())
-      ? currentYear.toString()
-      : years[0]
-
-    const currentQuarter =
-      currentMonth >= 1 && currentMonth <= 3 ? 'Q1' :
-      currentMonth >= 4 && currentMonth <= 6 ? 'Q2' :
-      currentMonth >= 7 && currentMonth <= 9 ? 'Q3' :
-      'Q4'
-
+    // ✅ CRITICAL FIX: Use earliest quarter with data, not current quarter
+    // This ensures defaults match actual data availability in bp_daily_summary_myr
+    
+    const defaultYear = years[0] || '2025'  // Most recent year with data
     const availableQuarters = quarters[defaultYear] || []
-    const defaultQuarter = availableQuarters.includes(currentQuarter)
-      ? currentQuarter
-      : availableQuarters[availableQuarters.length - 1] || 'Q4'
-
+    
+    // Use FIRST quarter with data (earliest), not current quarter
+    const defaultQuarter = availableQuarters[0] || 'Q1'
+    
     const defaultQuarterKey = `${defaultYear}-${defaultQuarter}`
     const defaultQuarterRange = quarterDateRanges[defaultQuarterKey] || { min: null, max: null }
+    
+    console.log(`✅ [BP Slicer API] Defaults determined from ACTUAL DATA:`)
+    console.log(`   → Year: ${defaultYear}`)
+    console.log(`   → Quarter: ${defaultQuarter}`)
+    console.log(`   → Date Range: ${defaultQuarterRange.min} to ${defaultQuarterRange.max}`)
 
     // ============================================================================
     // RESPONSE
@@ -187,7 +185,11 @@ export async function GET(request: NextRequest) {
       },
       meta: {
         totalRows: data.length,
-        dataSource: 'blue_whale_myr_summary (MV)'
+        dataSource: 'bp_daily_summary_myr (MV - Daily Data)',
+        detectedDateRange: {
+          min: defaultQuarterRange.min,
+          max: defaultQuarterRange.max
+        }
       }
     }
 

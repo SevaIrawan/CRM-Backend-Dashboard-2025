@@ -270,45 +270,52 @@ export const QUICK_DATE_FILTER_LABELS: Record<QuickDateFilterType, string> = {
  * Calculate date range based on Quick Date Filter selection
  * 
  * Logic:
- * - 7 Days: Today - 6 days → Today (total 7 days)
- * - 14 Days: Today - 13 days → Today (total 14 days, 2 weeks)
- * - This Month: Month start → Today (e.g., Oct 1 - Oct 20)
+ * ✅ CRITICAL: referenceDate HARUS last data date dari database (BUKAN today!)
+ * 
+ * - 7 Days: Last date - 6 days → Last date (total 7 days)
+ *   Contoh: Last data = Oct 20 → Oct 14-20
+ * 
+ * - 14 Days: Last date - 13 days → Last date (total 14 days)
+ *   Contoh: Last data = Oct 20 → Oct 7-20
+ * 
+ * - This Month: Month start → Last date
+ *   Contoh: Last data = Oct 20 → Oct 1-20
  * 
  * @param filterType - Quick filter type
- * @param referenceDate - Reference date (default: today)
+ * @param referenceDate - LAST DATA DATE from database (NOT today!)
  * @returns { startDate: 'YYYY-MM-DD', endDate: 'YYYY-MM-DD' }
  */
 export function calculateQuickDateRange(
   filterType: QuickDateFilterType,
   referenceDate: Date = new Date()
 ): { startDate: string; endDate: string } {
-  const today = new Date(referenceDate)
-  today.setHours(0, 0, 0, 0) // Reset time to midnight
+  const lastDate = new Date(referenceDate)
+  lastDate.setHours(0, 0, 0, 0) // Reset time to midnight
   
   let startDate: Date
-  let endDate: Date = new Date(today) // End date = today
+  let endDate: Date = new Date(lastDate) // End date = last data date
   
   switch (filterType) {
     case '7_DAYS':
-      // Today - 6 days → Today (total 7 days = 1 week)
-      startDate = new Date(today)
-      startDate.setDate(today.getDate() - 6)
+      // Last date - 6 days → Last date (total 7 days)
+      startDate = new Date(lastDate)
+      startDate.setDate(lastDate.getDate() - 6)
       break
       
     case '14_DAYS':
-      // Today - 13 days → Today (total 14 days = 2 weeks)
-      startDate = new Date(today)
-      startDate.setDate(today.getDate() - 13)
+      // Last date - 13 days → Last date (total 14 days)
+      startDate = new Date(lastDate)
+      startDate.setDate(lastDate.getDate() - 13)
       break
       
     case 'THIS_MONTH':
-      // Month start → Today (e.g., Oct 1 - Oct 20)
-      startDate = new Date(today.getFullYear(), today.getMonth(), 1)
+      // Month start → Last date (e.g., Oct 1 - Oct 20)
+      startDate = new Date(lastDate.getFullYear(), lastDate.getMonth(), 1)
       break
       
     default:
       // Fallback: This month
-      startDate = new Date(today.getFullYear(), today.getMonth(), 1)
+      startDate = new Date(lastDate.getFullYear(), lastDate.getMonth(), 1)
   }
   
   return {
