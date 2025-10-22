@@ -188,17 +188,17 @@ export async function generateForecastQ4GGRChart(params: ChartParams): Promise<{
 
   // Build data arrays
   const quarters = ['Q1', 'Q2', 'Q3', 'Q4']
-  const actualData = quarters.map(q => {
+  const actualData: number[] = quarters.map(q => {
     const found = quarterData?.find((row: any) => row.period === q)
-    return found ? found.ggr : 0
+    return found ? (found.ggr as number) : 0
   })
 
-  const targetDataArray = quarters.map(q => {
+  const targetDataArray: number[] = quarters.map(q => {
     const found = targetData?.filter((row: any) => row.quarter === q)
     return found && found.length > 0 ? found.reduce((sum: number, row: any) => sum + (row.target_ggr || 0), 0) : 0
   })
 
-  const forecastDataArray = quarters.map(q => {
+  const forecastDataArray: number[] = quarters.map(q => {
     const found = targetData?.filter((row: any) => row.quarter === q)
     return found && found.length > 0 ? found.reduce((sum: number, row: any) => sum + (row.forecast_ggr || 0), 0) : 0
   })
