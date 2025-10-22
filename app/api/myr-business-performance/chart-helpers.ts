@@ -78,8 +78,8 @@ export async function generateGGRTrendChart(params: ChartParams): Promise<{
       .eq('line', 'ALL')
       .order('date', { ascending: true })
 
-    const categories = dailyData?.map(row => {
-      const date = new Date(row.date)
+    const categories = dailyData?.map((row: any) => {
+      const date = new Date(row.date as string)
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     }) || []
 
@@ -149,8 +149,8 @@ export async function generateForecastQ4GGRChart(params: ChartParams): Promise<{
     const dailyTarget = totalTarget > 0 ? totalTarget / totalDays : 0
     const dailyForecast = totalForecast > 0 ? totalForecast / totalDays : 0
 
-    const categories = dailyData?.map(row => {
-      const date = new Date(row.date)
+    const categories = dailyData?.map((row: any) => {
+      const date = new Date(row.date as string)
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     }) || []
 
@@ -231,8 +231,8 @@ export async function generateDepositVsCasesChart(params: ChartParams): Promise<
       .eq('line', 'ALL')
       .order('date', { ascending: true })
 
-    const categories = dailyData?.map(row => {
-      const date = new Date(row.date)
+    const categories = dailyData?.map((row: any) => {
+      const date = new Date(row.date as string)
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     }) || []
 
@@ -278,8 +278,8 @@ export async function generateWithdrawVsCasesChart(params: ChartParams): Promise
       .eq('line', 'ALL')
       .order('date', { ascending: true })
 
-    const categories = dailyData?.map(row => {
-      const date = new Date(row.date)
+    const categories = dailyData?.map((row: any) => {
+      const date = new Date(row.date as string)
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     }) || []
 
@@ -325,8 +325,8 @@ export async function generateWinrateVsWithdrawRateChart(params: ChartParams): P
       .eq('line', 'ALL')
       .order('date', { ascending: true })
 
-    const categories = dailyData?.map(row => {
-      const date = new Date(row.date)
+    const categories = dailyData?.map((row: any) => {
+      const date = new Date(row.date as string)
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     }) || []
 
