@@ -514,7 +514,10 @@ export async function GET(request: NextRequest) {
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     const atv = mvData.deposit_cases > 0 ? mvData.deposit_amount / mvData.deposit_cases : 0
     const pf = activeMember > 0 ? mvData.deposit_cases / activeMember : 0
-    const ggrUser = activeMember > 0 ? mvData.net_profit / activeMember : 0
+    // GGR User = Net Profit / Pure User (NOT Active Member!)
+    // Net Profit = (deposit_amount + add_transaction) - (withdraw_amount + deduct_transaction)
+    // Pure User = COUNT DISTINCT unique_code WHERE deposit_cases > 0
+    const ggrUser = pureUser > 0 ? mvData.net_profit / pureUser : 0
     const daUser = activeMember > 0 ? mvData.deposit_amount / activeMember : 0
     // Bonus Usage Rate = (bonus + add_bonus - deduct_bonus) / active_member (NO × 100)
     const netBonus = (mvData.bonus || 0) + (mvData.add_bonus || 0) - (mvData.deduct_bonus || 0)
@@ -848,7 +851,8 @@ export async function GET(request: NextRequest) {
       pureActive: calculateMoMChange(pureActive, prevPeriodPureActive),
       atv: calculateMoMChange(atv, prevPeriodMvData.deposit_cases > 0 ? prevPeriodMvData.deposit_amount / prevPeriodMvData.deposit_cases : 0),
       pf: calculateMoMChange(pf, prevPeriodActiveMember > 0 ? prevPeriodMvData.deposit_cases / prevPeriodActiveMember : 0),
-      ggrUser: calculateMoMChange(ggrUser, prevPeriodActiveMember > 0 ? prevPeriodPureUserGGR / prevPeriodActiveMember : 0),
+      // GGR User previous period = Net Profit / Pure User (NOT Active Member!)
+      ggrUser: calculateMoMChange(ggrUser, prevPeriodPureUser > 0 ? prevPeriodMvData.net_profit / prevPeriodPureUser : 0),
       daUser: calculateMoMChange(daUser, prevPeriodActiveMember > 0 ? prevPeriodMvData.deposit_amount / prevPeriodActiveMember : 0),
       bonusUsageRate: calculateMoMChange(bonusUsageRate, prevPeriodMvData.valid_amount > 0 ? (prevPeriodMvData.bonus / prevPeriodMvData.valid_amount) * 100 : 0),
       winrate: calculateMoMChange(mvData.winrate, prevPeriodMvData.winrate),
