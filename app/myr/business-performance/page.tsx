@@ -16,6 +16,7 @@ import QuarterSlicer from '@/components/slicers/QuarterSlicer'
 import QuickDateFilter from '@/components/QuickDateFilter'
 import TargetEditModal from '@/components/TargetEditModal'
 import ActiveMemberDetailsModal from '@/components/ActiveMemberDetailsModal'
+import TargetAchieveModal from '@/components/TargetAchieveModal'
 import { getChartIcon } from '@/lib/CentralIcon'
 import { 
   QuickDateFilterType, 
@@ -56,6 +57,9 @@ export default function BusinessPerformancePage() {
   
   // Active Member Details Modal State
   const [isActiveMemberModalOpen, setIsActiveMemberModalOpen] = useState(false)
+  
+  // Target Achieve Modal State
+  const [isTargetAchieveModalOpen, setIsTargetAchieveModalOpen] = useState(false)
   
   // User Info - Get from localStorage session
   const [userEmail, setUserEmail] = useState('')
@@ -496,6 +500,8 @@ export default function BusinessPerformancePage() {
             target={kpiData?.targetGGR || 0}
             unit="%"
             icon="targetCompletion"
+            onClick={() => setIsTargetAchieveModalOpen(true)}
+            clickable={true}
           />
           
           {/* Gross Gaming Revenue */}
@@ -797,6 +803,18 @@ export default function BusinessPerformancePage() {
         isOpen={isActiveMemberModalOpen}
         onClose={() => setIsActiveMemberModalOpen(false)}
         totalCount={kpiData?.activeMember || 0}
+        currency="MYR"
+        year={selectedYear}
+        quarter={selectedQuarter}
+        startDate={startDate}
+        endDate={endDate}
+        isDateRange={isDateRangeMode}
+      />
+      
+      {/* Target Achieve Modal */}
+      <TargetAchieveModal
+        isOpen={isTargetAchieveModalOpen}
+        onClose={() => setIsTargetAchieveModalOpen(false)}
         currency="MYR"
         year={selectedYear}
         quarter={selectedQuarter}

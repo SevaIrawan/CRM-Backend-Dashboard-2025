@@ -17,6 +17,8 @@ interface ProgressBarStatCardProps {
   className?: string
   onEditClick?: () => void // Callback for edit button
   showEditButton?: boolean // Show edit icon
+  onClick?: () => void // Callback for card click (drill-out)
+  clickable?: boolean // Make card clickable
 }
 
 export default function ProgressBarStatCard({ 
@@ -28,7 +30,9 @@ export default function ProgressBarStatCard({
   comparison,
   className = '',
   onEditClick,
-  showEditButton = false
+  showEditButton = false,
+  onClick,
+  clickable = false
 }: ProgressBarStatCardProps) {
   const iconSvg = icon ? getKpiIcon(icon) : ''
   
@@ -45,7 +49,26 @@ export default function ProgressBarStatCard({
   }
   
   return (
-    <div className={`stat-card ${className}`}>
+    <div 
+      className={`stat-card ${className}`}
+      onClick={clickable ? onClick : undefined}
+      style={{
+        cursor: clickable ? 'pointer' : 'default',
+        transition: 'all 0.2s ease'
+      }}
+      onMouseEnter={(e) => {
+        if (clickable) {
+          e.currentTarget.style.transform = 'translateY(-2px)'
+          e.currentTarget.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.12)'
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (clickable) {
+          e.currentTarget.style.transform = 'translateY(0)'
+          e.currentTarget.style.boxShadow = ''
+        }
+      }}
+    >
       <div className="stat-card-header">
         <h3 className="stat-card-title">{title}</h3>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

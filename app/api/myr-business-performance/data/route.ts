@@ -148,8 +148,6 @@ async function calculatePureUserGGR(params: {
     .from('blue_whale_myr')
     .select('deposit_amount, withdraw_amount')
     .eq('currency', currency)
-    .gt('deposit_cases', 0)
-    .not('unique_code', 'is', null)
 
   // Filter by date range (Daily Mode)
   if (startDate && endDate) {
@@ -176,11 +174,10 @@ async function calculatePureUserGGR(params: {
   }
 
   // Sum GGR (deposit_amount - withdraw_amount)
-  let pureUserGGR = 0
-  data.forEach((row: any) => {
+  const pureUserGGR = data.reduce((sum: number, row: any) => {
     const ggr = (row.deposit_amount || 0) - (row.withdraw_amount || 0)
-    pureUserGGR += ggr
-  })
+    return sum + ggr
+  }, 0)
 
   return pureUserGGR
 }

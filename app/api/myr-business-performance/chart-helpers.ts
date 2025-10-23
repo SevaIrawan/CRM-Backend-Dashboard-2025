@@ -729,14 +729,12 @@ export async function generateSankeyDiagram(params: ChartParams & { pureUserGGR:
   const uniqueCodeBrands: Record<string, Set<string>> = {}
 
   for (const brand of brands) {
-    // Query for pure users (unique_code with deposit_cases > 0) and their GGR
+    // Query for pure users and their GGR
     let query = supabase
       .from('blue_whale_myr')
       .select('unique_code, deposit_amount, withdraw_amount')
       .eq('currency', currency)
       .eq('line', brand)
-      .gt('deposit_cases', 0)
-      .not('unique_code', 'is', null)
 
     if (mode === 'daily' && startDate && endDate) {
       query = query.gte('date', startDate).lte('date', endDate)
