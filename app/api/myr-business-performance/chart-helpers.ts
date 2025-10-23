@@ -353,7 +353,167 @@ export async function generateWinrateVsWithdrawRateChart(params: ChartParams): P
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// CHART 6: BONUS USAGE RATE PER BRAND (BAR CHART)
+// CHART 4: DA USER VS GGR USER TREND (DUAL LINE CHART)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+export async function generateDaUserVsGgrUserTrendChart(params: ChartParams): Promise<{
+  categories: string[]
+  daUserData: number[]
+  ggrUserData: number[]
+}> {
+  const { currency, year, quarter, mode, startDate, endDate } = params
+
+  if (mode === 'daily') {
+    // DAILY MODE: Use bp_daily_summary_myr (Pre-calculated columns)
+    const { data: mvData } = await supabase
+      .from('bp_daily_summary_myr')
+      .select('date, da_user, ggr_user')
+      .eq('currency', currency)
+      .eq('line', 'ALL')
+      .gte('date', startDate!)
+      .lte('date', endDate!)
+      .order('date', { ascending: true })
+
+    if (!mvData || mvData.length === 0) {
+      return { categories: [], daUserData: [], ggrUserData: [] }
+    }
+
+    const categories: string[] = []
+    const daUserData: number[] = []
+    const ggrUserData: number[] = []
+
+    mvData.forEach((row: any) => {
+      const dateObj = new Date(row.date as string)
+      categories.push(dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))
+      
+      // ✅ Use pre-calculated columns from MV
+      daUserData.push(row.da_user || 0)
+      ggrUserData.push(row.ggr_user || 0)
+    })
+
+    return { categories, daUserData, ggrUserData }
+
+  } else {
+    // QUARTERLY MODE: Use bp_quarter_summary_myr (Pre-calculated columns)
+    const { data: quarterData } = await supabase
+      .from('bp_quarter_summary_myr')
+      .select('period, da_user, ggr_user')
+      .eq('currency', currency)
+      .eq('year', year)
+      .eq('period_type', 'QUARTERLY')
+      .eq('line', 'ALL')
+      .order('period', { ascending: true })
+
+    if (!quarterData || quarterData.length === 0) {
+      return { categories: [], daUserData: [], ggrUserData: [] }
+    }
+
+    const categories: string[] = []
+    const daUserData: number[] = []
+    const ggrUserData: number[] = []
+
+    const allQuarters = ['Q1', 'Q2', 'Q3', 'Q4']
+    const dataMap = new Map(quarterData.map((row: any) => [row.period, row]))
+
+    allQuarters.forEach((q: string) => {
+      const data = dataMap.get(q)
+      categories.push(q)
+      
+      if (data) {
+        // ✅ Use pre-calculated columns from MV
+        daUserData.push(data.da_user || 0)
+        ggrUserData.push(data.ggr_user || 0)
+      } else {
+        daUserData.push(0)
+        ggrUserData.push(0)
+      }
+    })
+
+    return { categories, daUserData, ggrUserData }
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// CHART 5: ATV VS PURCHASE FREQUENCY TREND (DUAL LINE CHART)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+export async function generateAtvVsPfTrendChart(params: ChartParams): Promise<{
+  categories: string[]
+  atvData: number[]
+  pfData: number[]
+}> {
+  const { currency, year, quarter, mode, startDate, endDate } = params
+
+  if (mode === 'daily') {
+    // DAILY MODE: Use bp_daily_summary_myr (Pre-calculated columns)
+    const { data: mvData } = await supabase
+      .from('bp_daily_summary_myr')
+      .select('date, atv, pf')
+      .eq('currency', currency)
+      .eq('line', 'ALL')
+      .gte('date', startDate!)
+      .lte('date', endDate!)
+      .order('date', { ascending: true })
+
+    if (!mvData || mvData.length === 0) {
+      return { categories: [], atvData: [], pfData: [] }
+    }
+
+    const categories: string[] = []
+    const atvData: number[] = []
+    const pfData: number[] = []
+
+    mvData.forEach((row: any) => {
+      const dateObj = new Date(row.date as string)
+      categories.push(dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))
+      
+      // ✅ Use pre-calculated columns from MV
+      atvData.push(row.atv || 0)
+      pfData.push(row.pf || 0)
+    })
+
+    return { categories, atvData, pfData }
+
+  } else {
+    // QUARTERLY MODE: Use bp_quarter_summary_myr (Pre-calculated columns)
+    const { data: quarterData } = await supabase
+      .from('bp_quarter_summary_myr')
+      .select('period, atv, pf')
+      .eq('currency', currency)
+      .eq('year', year)
+      .eq('period_type', 'QUARTERLY')
+      .eq('line', 'ALL')
+      .order('period', { ascending: true })
+
+    if (!quarterData || quarterData.length === 0) {
+      return { categories: [], atvData: [], pfData: [] }
+    }
+
+    const categories: string[] = []
+    const atvData: number[] = []
+    const pfData: number[] = []
+
+    const allQuarters = ['Q1', 'Q2', 'Q3', 'Q4']
+    const dataMap = new Map(quarterData.map((row: any) => [row.period, row]))
+
+    allQuarters.forEach((q: string) => {
+      const data = dataMap.get(q)
+      categories.push(q)
+      
+      if (data) {
+        // ✅ Use pre-calculated columns from MV
+        atvData.push(data.atv || 0)
+        pfData.push(data.pf || 0)
+      } else {
+        atvData.push(0)
+        pfData.push(0)
+      }
+    })
+
+    return { categories, atvData, pfData }
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// CHART 6: AVG BONUS USAGE PER BRAND (BAR CHART)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export async function generateBonusUsagePerBrandChart(params: ChartParams): Promise<{
   categories: string[]
@@ -431,7 +591,7 @@ export async function generateBonusUsagePerBrandChart(params: ChartParams): Prom
     const { data: userData } = await query
     const activeMember = new Set(userData?.map((row: any) => row.userkey) || []).size
 
-    // Bonus Usage Rate = (bonus + add_bonus - deduct_bonus) / active_member (NO × 100)
+    // AVG Bonus Usage = (bonus + add_bonus - deduct_bonus) / active_member (NO × 100, Currency Format)
     const netBonus = agg.bonus + agg.addBonus - agg.deductBonus
     return activeMember > 0 ? (netBonus / activeMember) : 0
   }))

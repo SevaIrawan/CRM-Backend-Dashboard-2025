@@ -10,7 +10,7 @@ import LineChart from '@/components/LineChart'
 import BarChart from '@/components/BarChart'
 import StackedBarChart from '@/components/StackedBarChart'
 import SankeyChart from '@/components/SankeyChart'
-import MixedChart from '@/components/MixedChart'
+import StandardChart2Line from '@/components/StandardChart2Line'
 import YearSlicer from '@/components/slicers/YearSlicer'
 import QuarterSlicer from '@/components/slicers/QuarterSlicer'
 import QuickDateFilter from '@/components/QuickDateFilter'
@@ -551,46 +551,46 @@ export default function BusinessPerformancePage() {
             }}
           />
           
-          {/* ATV & PF */}
+          {/* DC & WC */}
           <DualKPICard 
-            title="Transaction Metrics"
+            title="Transaction Volume"
             icon="Transaction Metrics"
             kpi1={{
-              label: 'ATV',
-              value: loadingData ? 'Loading...' : formatWith2Decimals(kpiData?.atv || 0, 'RM '),
+              label: 'DC',
+              value: loadingData ? 'Loading...' : formatNumberFull(kpiData?.depositCases || 0),
               comparison: {
-                percentage: loadingData ? '-' : `${comparison?.atv >= 0 ? '+' : ''}${comparison?.atv?.toFixed(2) || '0.00'}%`,
-                isPositive: (comparison?.atv || 0) >= 0
+                percentage: loadingData ? '-' : `${comparison?.depositCases >= 0 ? '+' : ''}${comparison?.depositCases?.toFixed(2) || '0.00'}%`,
+                isPositive: (comparison?.depositCases || 0) >= 0
               }
             }}
             kpi2={{
-              label: 'PF',
-              value: loadingData ? 'Loading...' : formatWith2Decimals(kpiData?.pf || 0, ''),
+              label: 'WC',
+              value: loadingData ? 'Loading...' : formatNumberFull(kpiData?.withdrawCases || 0),
               comparison: {
-                percentage: loadingData ? '-' : `${comparison?.pf >= 0 ? '+' : ''}${comparison?.pf?.toFixed(2) || '0.00'}%`,
-                isPositive: (comparison?.pf || 0) >= 0
+                percentage: loadingData ? '-' : `${comparison?.withdrawCases >= 0 ? '+' : ''}${comparison?.withdrawCases?.toFixed(2) || '0.00'}%`,
+                isPositive: (comparison?.withdrawCases || 0) >= 0
               }
             }}
           />
           
-          {/* GGR User & DA User */}
+          {/* DA & WA */}
           <DualKPICard 
-            title="User Value Metrics"
+            title="Transaction Amount"
             icon="User Value Metrics"
             kpi1={{
-              label: 'GGR User',
-              value: loadingData ? 'Loading...' : formatWith2Decimals(kpiData?.ggrUser || 0, 'RM '),
+              label: 'DA',
+              value: loadingData ? 'Loading...' : formatCurrencyFull(kpiData?.depositAmount || 0),
               comparison: {
-                percentage: loadingData ? '-' : `${comparison?.ggrUser >= 0 ? '+' : ''}${comparison?.ggrUser?.toFixed(2) || '0.00'}%`,
-                isPositive: (comparison?.ggrUser || 0) >= 0
+                percentage: loadingData ? '-' : `${comparison?.depositAmount >= 0 ? '+' : ''}${comparison?.depositAmount?.toFixed(2) || '0.00'}%`,
+                isPositive: (comparison?.depositAmount || 0) >= 0
               }
             }}
             kpi2={{
-              label: 'DA User',
-              value: loadingData ? 'Loading...' : formatWith2Decimals(kpiData?.daUser || 0, 'RM '),
+              label: 'WA',
+              value: loadingData ? 'Loading...' : formatCurrencyFull(kpiData?.withdrawAmount || 0),
               comparison: {
-                percentage: loadingData ? '-' : `${comparison?.daUser >= 0 ? '+' : ''}${comparison?.daUser?.toFixed(2) || '0.00'}%`,
-                isPositive: (comparison?.daUser || 0) >= 0
+                percentage: loadingData ? '-' : `${comparison?.withdrawAmount >= 0 ? '+' : ''}${comparison?.withdrawAmount?.toFixed(2) || '0.00'}%`,
+                isPositive: (comparison?.withdrawAmount || 0) >= 0
               }
             }}
           />
@@ -634,42 +634,34 @@ export default function BusinessPerformancePage() {
           />
         </div>
 
-        {/* ROW 3: Dual-Axis Charts (2 charts) - Mixed Bar + Line */}
+        {/* ROW 3: DA User vs GGR User & ATV vs PF Trend (2 Dual Line Charts) */}
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(2, 1fr)', 
           gap: '18px',
           minHeight: '350px'
         }}>
-          {/* Deposit Amount vs Cases */}
-          <MixedChart 
-            data={chartData?.depositVsCases?.categories?.map((cat: string, idx: number) => ({
-              name: cat,
-              barValue: chartData?.depositVsCases?.depositAmount?.[idx] || 0,
-              lineValue: chartData?.depositVsCases?.depositCases?.[idx] || 0
-            })) || []}
-            title="DEPOSIT AMOUNT VS CASES"
-            chartIcon={getChartIcon('Deposit Amount')}
-            barLabel="Amount"
-            lineLabel="Cases"
-            barColor="#3B82F6"
-            lineColor="#F97316"
+          {/* DA User vs GGR User Trend */}
+          <StandardChart2Line 
+            categories={chartData?.daUserVsGgrUser?.categories || []}
+            series={[
+              { name: 'DA User', data: chartData?.daUserVsGgrUser?.daUserData || [] },
+              { name: 'GGR User', data: chartData?.daUserVsGgrUser?.ggrUserData || [] }
+            ]}
+            title="DA USER VS GGR USER TREND"
+            chartIcon={getChartIcon('Net Profit')}
             currency="MYR"
           />
           
-          {/* Withdraw Amount vs Cases */}
-          <MixedChart 
-            data={chartData?.withdrawVsCases?.categories?.map((cat: string, idx: number) => ({
-              name: cat,
-              barValue: chartData?.withdrawVsCases?.withdrawAmount?.[idx] || 0,
-              lineValue: chartData?.withdrawVsCases?.withdrawCases?.[idx] || 0
-            })) || []}
-            title="WITHDRAW AMOUNT VS CASES"
-            chartIcon={getChartIcon('Withdraw Amount')}
-            barLabel="Amount"
-            lineLabel="Cases"
-            barColor="#3B82F6"
-            lineColor="#F97316"
+          {/* ATV vs Purchase Frequency Trend */}
+          <StandardChart2Line 
+            categories={chartData?.atvVsPf?.categories || []}
+            series={[
+              { name: 'ATV', data: chartData?.atvVsPf?.atvData || [] },
+              { name: 'Purchase Frequency', data: chartData?.atvVsPf?.pfData || [] }
+            ]}
+            title="ATV VS PURCHASE FREQUENCY TREND"
+            chartIcon={getChartIcon('Average Transaction Value')}
             currency="MYR"
           />
         </div>
@@ -767,14 +759,14 @@ export default function BusinessPerformancePage() {
             showDataLabels={true}
           />
           
-          {/* Bonus Usage Rate - PER BRAND */}
+          {/* AVG Bonus Usage - PER BRAND */}
           <BarChart 
             series={[
-              { name: 'Bonus Usage Rate', data: chartData?.bonusUsagePerBrand?.data || [] }
+              { name: 'Avg Bonus Usage', data: chartData?.bonusUsagePerBrand?.data || [] }
             ]}
             categories={chartData?.bonusUsagePerBrand?.categories || []}
-            title="BONUS USAGE RATE (%)"
-            currency="PERCENTAGE"
+            title="AVG BONUS USAGE"
+            currency="MYR"
             chartIcon={getChartIcon('Bonus')}
             color="#F97316"
             showDataLabels={true}

@@ -63,6 +63,8 @@ export default function ActiveMemberDetailsModal({
   const [totalPages, setTotalPages] = useState(1)
   const [totalRecords, setTotalRecords] = useState(0)
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
+  const [brandFilter, setBrandFilter] = useState<string>('ALL')
+  const [availableBrands, setAvailableBrands] = useState<string[]>([])
   const [exporting, setExporting] = useState(false)
 
   // Fetch data when modal opens
@@ -71,7 +73,7 @@ export default function ActiveMemberDetailsModal({
       setPage(1)
       fetchMemberDetails()
     }
-  }, [isOpen, currency, year, quarter, startDate, endDate, statusFilter])
+  }, [isOpen, currency, year, quarter, startDate, endDate, statusFilter, brandFilter])
 
   useEffect(() => {
     if (isOpen && page > 1) {
@@ -91,7 +93,8 @@ export default function ActiveMemberDetailsModal({
         isDateRange: isDateRange.toString(),
         page: String(page),
         limit: String(limit),
-        status: statusFilter
+        status: statusFilter,
+        brand: brandFilter
       })
       
       if (isDateRange && startDate && endDate) {
@@ -107,6 +110,7 @@ export default function ActiveMemberDetailsModal({
         setMiniKPI(data.data.miniKPI)
         setTotalPages(data.data.pagination?.totalPages || 1)
         setTotalRecords(data.data.pagination?.totalRecords || 0)
+        setAvailableBrands(data.data.availableBrands || [])
       } else {
         setError(data.error || 'Failed to fetch active member details')
       }
@@ -139,7 +143,8 @@ export default function ActiveMemberDetailsModal({
           isDateRange: isDateRange.toString(),
           page: String(p),
           limit: String(exportLimit),
-          status: statusFilter
+          status: statusFilter,
+          brand: brandFilter
         })
         
         if (isDateRange && startDate && endDate) {
@@ -232,6 +237,21 @@ export default function ActiveMemberDetailsModal({
               <option value="Retention">Retention</option>
               <option value="Reactivation">Reactivation</option>
               <option value="New Depositor">New Depositor</option>
+            </select>
+
+            {/* Brand Filter Dropdown */}
+            <select
+              value={brandFilter}
+              onChange={(e) => {
+                setBrandFilter(e.target.value)
+                setPage(1)
+              }}
+              className="px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="ALL">All Brands</option>
+              {availableBrands.map((brand) => (
+                <option key={brand} value={brand}>{brand}</option>
+              ))}
             </select>
             
             <button

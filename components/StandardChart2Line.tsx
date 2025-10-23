@@ -12,6 +12,7 @@ import {
   Legend,
   Filler
 } from 'chart.js';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 
 ChartJS.register(
   CategoryScale,
@@ -21,7 +22,8 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
-  Filler
+  Filler,
+  ChartDataLabels
 );
 
 interface Series {
@@ -199,7 +201,7 @@ export default function StandardChart2Line({
       seriesName.toLowerCase().includes('retention')
     );
     
-    // Check if this is a frequency type
+    // Check if this is a frequency type (number only, no currency)
     const isFrequencyType = seriesName && (
       seriesName.toLowerCase().includes('frequency') ||
       seriesName.toLowerCase().includes('purchase frequency')
@@ -220,25 +222,36 @@ export default function StandardChart2Line({
       seriesName.toLowerCase().includes('customer lifetime value')
     );
     
+    // Check if this is a currency type (ATV, DA User, GGR User)
+    const isCurrencyType = seriesName && (
+      seriesName.toLowerCase().includes('atv') ||
+      seriesName.toLowerCase().includes('da user') ||
+      seriesName.toLowerCase().includes('ggr user') ||
+      seriesName.toLowerCase().includes('average transaction value')
+    );
+    
     if (isPercentageType) {
-      // For percentage - show % symbol with full precision
+      // For percentage - show % symbol with 2 decimal places
       return value.toFixed(2) + '%';
     } else if (isFrequencyType) {
-      // For frequency - show as decimal number only (2 decimal places)
+      // For frequency - show as decimal number only (2 decimal places, no currency)
       return value.toFixed(2);
-         } else if (isCountType) {
-       // For count/integer - no currency symbol, full number
-       return value.toLocaleString(); // Remove redundant "persons"
-     } else if (isCLVType) {
+    } else if (isCountType) {
+      // For count/integer - no currency symbol, full number
+      return value.toLocaleString();
+    } else if (isCLVType) {
       // For CLV - show full number for thousands, up to 2 decimals
       if (value >= 1000) {
-        return Math.round(value).toLocaleString(); // Show full number for thousands, no decimals
+        return Math.round(value).toLocaleString();
       } else {
         return value.toFixed(4);
       }
+    } else if (isCurrencyType) {
+      // For currency types (ATV, DA User, GGR User) - show RM with 2 decimal places
+      return 'RM ' + value.toFixed(2);
     } else {
-      // For other amounts - show as integer only (no currency)
-      return Math.round(value).toLocaleString();
+      // For other amounts - show with 2 decimal places
+      return value.toFixed(2);
     }
   };
 
@@ -272,19 +285,19 @@ export default function StandardChart2Line({
       legend: {
         display: false, // Hide legend since we have it in header
       },
-             tooltip: {
-         mode: 'index' as const,
-         intersect: false,
-         backgroundColor: 'rgba(0, 0, 0, 0.8)',
-         titleColor: '#ffffff',
-         bodyColor: '#ffffff',
-         borderColor: '#e5e7eb',
-         borderWidth: 1,
-         cornerRadius: 8,
-         displayColors: true,
-         position: 'nearest' as const,
-         xAlign: 'center' as const,
-         yAlign: 'top' as const,
+      tooltip: {
+        mode: 'index' as const,
+        intersect: false,
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        titleColor: '#ffffff',
+        bodyColor: '#ffffff',
+        borderColor: '#e5e7eb',
+        borderWidth: 1,
+        cornerRadius: 8,
+        displayColors: true,
+        position: 'nearest' as const,
+        xAlign: 'center' as const,
+        yAlign: 'top' as const,
         callbacks: {
           title: function(context: any) {
             return context[0].label;
@@ -294,6 +307,21 @@ export default function StandardChart2Line({
             const value = context.parsed.y;
             return `${label}: ${formatValue(value, label)}`;
           }
+        }
+      },
+      datalabels: {
+        display: true,
+        align: 'top' as const,
+        anchor: 'end' as const,
+        offset: 4,
+        color: '#1f2937', // ✅ STANDARD: BLACK COLOR FOR ALL LABELS
+        font: {
+          weight: 'bold' as const,
+          size: 11
+        },
+        formatter: function(value: number, context: any) {
+          const seriesName = context.dataset.label;
+          return formatValue(value, seriesName);
         }
       }
     },
@@ -337,10 +365,19 @@ export default function StandardChart2Line({
           },
           callback: function(tickValue: string | number) {
             const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
-            // Check first series name for percentage
             const firstSeries = series && series[0];
+            
+            // Check if this is a currency type (ATV, DA User, GGR User) for left Y-axis
+            const isCurrencyType = firstSeries && firstSeries.name && (
+              firstSeries.name.toLowerCase().includes('atv') ||
+              firstSeries.name.toLowerCase().includes('da user') ||
+              firstSeries.name.toLowerCase().includes('ggr user') ||
+              firstSeries.name.toLowerCase().includes('average transaction value')
+            );
+            
+            // Check first series name for percentage
             if (firstSeries && firstSeries.name && firstSeries.name.toLowerCase().includes('rate')) {
-              return value + '%';
+              return value.toFixed(0) + '%';
             }
             
             // Check if this is CLV chart (first series)
@@ -351,12 +388,16 @@ export default function StandardChart2Line({
             );
             
             if (isCLVChart) {
-              // For CLV - use special formatting
               return formatValue(value, firstSeries?.name);
             }
             
-            // For other values - formatted numbers
-            return formatValue(value, firstSeries?.name);
+            // For currency types on Y-axis - show with RM and 0 decimal
+            if (isCurrencyType) {
+              return 'RM ' + Math.round(value).toLocaleString();
+            }
+            
+            // For other values - show with 0 decimal
+            return Math.round(value).toLocaleString();
           }
         },
         // Remove legend title from Y-axis since we have it in header
@@ -385,10 +426,22 @@ export default function StandardChart2Line({
              },
             callback: function(tickValue: string | number) {
               const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
-              // Check second series name for percentage
               const secondSeries = series && series[1];
+              
+              // Check if this is a currency type (GGR User) for right Y-axis
+              const isCurrencyType = secondSeries && secondSeries.name && (
+                secondSeries.name.toLowerCase().includes('ggr user')
+              );
+              
+              // Check if this is a frequency type (Purchase Frequency)
+              const isFrequencyType = secondSeries && secondSeries.name && (
+                secondSeries.name.toLowerCase().includes('frequency') ||
+                secondSeries.name.toLowerCase().includes('purchase frequency')
+              );
+              
+              // Check second series name for percentage
               if (secondSeries && secondSeries.name && secondSeries.name.toLowerCase().includes('rate')) {
-                return value + '%';
+                return value.toFixed(0) + '%';
               }
               
               // Check if this is CLV chart (second series)
@@ -399,12 +452,21 @@ export default function StandardChart2Line({
               );
               
               if (isCLVChart) {
-                // For CLV - use special formatting
                 return formatValue(value, secondSeries?.name);
               }
               
-              // For other values - formatted numbers
-              return formatValue(value, secondSeries?.name);
+              // For currency types on right Y-axis - show with RM and 0 decimal
+              if (isCurrencyType) {
+                return 'RM ' + Math.round(value).toLocaleString();
+              }
+              
+              // For frequency types - show with 1 decimal
+              if (isFrequencyType) {
+                return value.toFixed(1);
+              }
+              
+              // For other values - show with 0 decimal
+              return Math.round(value).toLocaleString();
             }
           },
           // Add title for count type (persons) on right Y-axis
@@ -463,23 +525,25 @@ export default function StandardChart2Line({
           gap: '12px'
         }}>
                      {chartIcon && (
-             <div style={{
-               display: 'flex',
-               alignItems: 'center',
-               justifyContent: 'center',
-               width: '20px',
-               height: '20px'
-             }}
-             dangerouslySetInnerHTML={{ 
-               __html: typeof chartIcon === 'string' ? chartIcon.replace(/<path/g, '<path fill="#3B82F6"') : chartIcon as string
-             }}
+             <span 
+               style={{
+                 fontSize: '14px',
+                 width: '20px',
+                 height: '20px',
+                 display: 'inline-block',
+                 flexShrink: 0
+               }}
+               dangerouslySetInnerHTML={{ __html: chartIcon }}
              />
            )}
           <h3 style={{
+            margin: 0,
             fontSize: '12px',
-            fontWeight: '600',
-            color: '#1f2937',
-            margin: 0
+            fontWeight: 700,
+            color: '#374151',
+            textTransform: 'uppercase' as const,
+            letterSpacing: '0.6px',
+            lineHeight: '1.2'
           }}>
             {title}
           </h3>
@@ -498,19 +562,17 @@ export default function StandardChart2Line({
               gap: '6px'
             }}>
               <div style={{
-                width: '12px',
-                height: '12px',
-                borderRadius: '50%',
+                width: '8px',
+                height: '8px',
                 backgroundColor: index === 0 ? '#3B82F6' : '#F97316',
-                border: '2px solid #ffffff',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                borderRadius: '2px'
               }}></div>
               <span style={{
-                fontSize: '12px',
-                fontWeight: '500',
-                color: '#6b7280'
+                fontSize: '11px',
+                fontWeight: 600,
+                color: '#4b5563'
               }}>
-                {item.name}
+                {item.name.toUpperCase()}
               </span>
             </div>
           ))}

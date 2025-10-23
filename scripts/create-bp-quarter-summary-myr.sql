@@ -149,7 +149,13 @@ monthly_rows AS (
     deposit_amount - withdraw_amount as ggr,
     (deposit_amount + add_transaction) - (withdraw_amount + deduct_transaction) as net_profit,
     CASE WHEN deposit_amount > 0 THEN ((deposit_amount - withdraw_amount)::NUMERIC / deposit_amount) * 100 ELSE 0 END as winrate,
-    CASE WHEN deposit_cases > 0 THEN (withdraw_cases::NUMERIC / deposit_cases) * 100 ELSE 0 END as withdrawal_rate
+    CASE WHEN deposit_cases > 0 THEN (withdraw_cases::NUMERIC / deposit_cases) * 100 ELSE 0 END as withdrawal_rate,
+    
+    -- ✅ NEW KPI COLUMNS (Pre-calculated for Trend Charts)
+    CASE WHEN deposit_cases > 0 THEN deposit_amount::NUMERIC / deposit_cases ELSE 0 END as atv,
+    CASE WHEN active_member > 0 THEN deposit_cases::NUMERIC / active_member ELSE 0 END as pf,
+    CASE WHEN active_member > 0 THEN deposit_amount::NUMERIC / active_member ELSE 0 END as da_user,
+    CASE WHEN active_member > 0 THEN ((deposit_amount + add_transaction) - (withdraw_amount + deduct_transaction))::NUMERIC / active_member ELSE 0 END as ggr_user
     
   FROM monthly_with_members
 ),
@@ -193,7 +199,13 @@ monthly_all AS (
     SUM(deposit_amount) - SUM(withdraw_amount) as ggr,
     (SUM(deposit_amount) + SUM(add_transaction)) - (SUM(withdraw_amount) + SUM(deduct_transaction)) as net_profit,
     CASE WHEN SUM(deposit_amount) > 0 THEN ((SUM(deposit_amount) - SUM(withdraw_amount))::NUMERIC / SUM(deposit_amount)) * 100 ELSE 0 END as winrate,
-    CASE WHEN SUM(deposit_cases) > 0 THEN (SUM(withdraw_cases)::NUMERIC / SUM(deposit_cases)) * 100 ELSE 0 END as withdrawal_rate
+    CASE WHEN SUM(deposit_cases) > 0 THEN (SUM(withdraw_cases)::NUMERIC / SUM(deposit_cases)) * 100 ELSE 0 END as withdrawal_rate,
+    
+    -- ✅ NEW KPI COLUMNS (Pre-calculated for Trend Charts)
+    CASE WHEN SUM(deposit_cases) > 0 THEN SUM(deposit_amount)::NUMERIC / SUM(deposit_cases) ELSE 0 END as atv,
+    CASE WHEN SUM(active_member) > 0 THEN SUM(deposit_cases)::NUMERIC / SUM(active_member) ELSE 0 END as pf,
+    CASE WHEN SUM(active_member) > 0 THEN SUM(deposit_amount)::NUMERIC / SUM(active_member) ELSE 0 END as da_user,
+    CASE WHEN SUM(active_member) > 0 THEN ((SUM(deposit_amount) + SUM(add_transaction)) - (SUM(withdraw_amount) + SUM(deduct_transaction)))::NUMERIC / SUM(active_member) ELSE 0 END as ggr_user
     
   FROM monthly_rows
   GROUP BY year, month, period, currency
@@ -238,7 +250,13 @@ quarterly_per_brand AS (
     SUM(deposit_amount) - SUM(withdraw_amount) as ggr,
     (SUM(deposit_amount) + SUM(add_transaction)) - (SUM(withdraw_amount) + SUM(deduct_transaction)) as net_profit,
     CASE WHEN SUM(deposit_amount) > 0 THEN ((SUM(deposit_amount) - SUM(withdraw_amount))::NUMERIC / SUM(deposit_amount)) * 100 ELSE 0 END as winrate,
-    CASE WHEN SUM(deposit_cases) > 0 THEN (SUM(withdraw_cases)::NUMERIC / SUM(deposit_cases)) * 100 ELSE 0 END as withdrawal_rate
+    CASE WHEN SUM(deposit_cases) > 0 THEN (SUM(withdraw_cases)::NUMERIC / SUM(deposit_cases)) * 100 ELSE 0 END as withdrawal_rate,
+    
+    -- ✅ NEW KPI COLUMNS (Pre-calculated for Trend Charts)
+    CASE WHEN SUM(deposit_cases) > 0 THEN SUM(deposit_amount)::NUMERIC / SUM(deposit_cases) ELSE 0 END as atv,
+    CASE WHEN SUM(active_member) > 0 THEN SUM(deposit_cases)::NUMERIC / SUM(active_member) ELSE 0 END as pf,
+    CASE WHEN SUM(active_member) > 0 THEN SUM(deposit_amount)::NUMERIC / SUM(active_member) ELSE 0 END as da_user,
+    CASE WHEN SUM(active_member) > 0 THEN ((SUM(deposit_amount) + SUM(add_transaction)) - (SUM(withdraw_amount) + SUM(deduct_transaction)))::NUMERIC / SUM(active_member) ELSE 0 END as ggr_user
     
   FROM monthly_rows
   WHERE line != 'ALL'
@@ -284,7 +302,13 @@ quarterly_all AS (
     SUM(deposit_amount) - SUM(withdraw_amount) as ggr,
     (SUM(deposit_amount) + SUM(add_transaction)) - (SUM(withdraw_amount) + SUM(deduct_transaction)) as net_profit,
     CASE WHEN SUM(deposit_amount) > 0 THEN ((SUM(deposit_amount) - SUM(withdraw_amount))::NUMERIC / SUM(deposit_amount)) * 100 ELSE 0 END as winrate,
-    CASE WHEN SUM(deposit_cases) > 0 THEN (SUM(withdraw_cases)::NUMERIC / SUM(deposit_cases)) * 100 ELSE 0 END as withdrawal_rate
+    CASE WHEN SUM(deposit_cases) > 0 THEN (SUM(withdraw_cases)::NUMERIC / SUM(deposit_cases)) * 100 ELSE 0 END as withdrawal_rate,
+    
+    -- ✅ NEW KPI COLUMNS (Pre-calculated for Trend Charts)
+    CASE WHEN SUM(deposit_cases) > 0 THEN SUM(deposit_amount)::NUMERIC / SUM(deposit_cases) ELSE 0 END as atv,
+    CASE WHEN SUM(active_member) > 0 THEN SUM(deposit_cases)::NUMERIC / SUM(active_member) ELSE 0 END as pf,
+    CASE WHEN SUM(active_member) > 0 THEN SUM(deposit_amount)::NUMERIC / SUM(active_member) ELSE 0 END as da_user,
+    CASE WHEN SUM(active_member) > 0 THEN ((SUM(deposit_amount) + SUM(add_transaction)) - (SUM(withdraw_amount) + SUM(deduct_transaction)))::NUMERIC / SUM(active_member) ELSE 0 END as ggr_user
     
   FROM quarterly_per_brand
   GROUP BY period, year, currency

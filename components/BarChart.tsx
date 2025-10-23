@@ -80,6 +80,15 @@ export default function BarChart({
       )
     );
     
+    // Check if this is a small currency value that needs decimal (Bonus, ATV, per-user metrics)
+    const needsDecimal = title && (
+      title.toLowerCase().includes('bonus') ||
+      title.toLowerCase().includes('atv') ||
+      title.toLowerCase().includes('per user') ||
+      title.toLowerCase().includes('da user') ||
+      title.toLowerCase().includes('ggr user')
+    );
+    
     if (isCountType) {
       // For count/integer - no currency symbol, show all digits
       return value.toLocaleString();
@@ -89,6 +98,10 @@ export default function BarChart({
         return getCurrencySymbol(currency) + ' ' + (value / 1000000).toFixed(1) + 'M';
       } else if (value >= 1000) {
         return getCurrencySymbol(currency) + ' ' + (value / 1000).toFixed(0) + 'K';
+      }
+      // For small values - check if needs decimal
+      if (needsDecimal) {
+        return getCurrencySymbol(currency) + ' ' + value.toFixed(2);
       }
       return getCurrencySymbol(currency) + ' ' + value.toLocaleString();
     }
@@ -116,7 +129,7 @@ export default function BarChart({
       ) && !isFormulaNumericType // EXCLUDE formula numeric types
     );
     
-            // Check if this is an amount/currency type (Deposit, Withdraw, Revenue, CLV, etc.)
+            // Check if this is an amount/currency type (Deposit, Withdraw, Revenue, CLV, Bonus, etc.)
             const isAmountType = datasetLabel && (
               datasetLabel.toLowerCase().includes('amount') ||
               (datasetLabel.toLowerCase().includes('deposit') && !datasetLabel.toLowerCase().includes('depositor')) ||
@@ -134,7 +147,9 @@ export default function BarChart({
               datasetLabel.toLowerCase().includes('gross gaming revenue') ||
               datasetLabel.toLowerCase().includes('per user') ||
               datasetLabel.toLowerCase().includes('pure user') ||
-              datasetLabel.toLowerCase().includes('user') // Add user for GGR User, DA User
+              datasetLabel.toLowerCase().includes('user') || // Add user for GGR User, DA User
+              datasetLabel.toLowerCase().includes('bonus') || // Add bonus for AVG Bonus Usage
+              title?.toLowerCase().includes('bonus') // Also check title for bonus
             );
     
     if (isCountType) {
@@ -178,7 +193,7 @@ export default function BarChart({
       },
       datalabels: {
         display: true, // ✅ ALWAYS SHOW LABELS - NO EXCEPTION!
-        color: '#374151', // ✅ ALWAYS DARK COLOR - all labels on top!
+        color: '#1f2937', // ✅ STANDARD: BLACK COLOR FOR ALL LABELS
         font: {
           weight: 'bold' as const,
           size: 10
@@ -225,6 +240,11 @@ export default function BarChart({
             datasetLabel.toLowerCase().includes('winrate')
           )) {
             return value.toFixed(2) + '%';
+          }
+          
+          // ✅ For BONUS types, ALWAYS use 2 decimal places (RM X.XX)
+          if (title && title.toLowerCase().includes('bonus')) {
+            return getCurrencySymbol(currency) + ' ' + value.toFixed(2);
           }
           
           // ✅ For currency/amount types, use ABBREVIATED format (K, M) for data labels
@@ -611,7 +631,6 @@ export default function BarChart({
               <span 
                 style={{
                   fontSize: '14px',
-                  color: '#3b82f6',
                   width: '20px',
                   height: '20px',
                   display: 'inline-block',

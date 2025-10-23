@@ -3,8 +3,8 @@ import { supabase } from '@/lib/supabase'
 import {
   generateGGRTrendChart,
   generateForecastQ4GGRChart,
-  generateDepositVsCasesChart,
-  generateWithdrawVsCasesChart,
+  generateDaUserVsGgrUserTrendChart,
+  generateAtvVsPfTrendChart,
   generateWinrateVsWithdrawRateChart,
   generateBonusUsagePerBrandChart,
   generateBrandGGRContributionChart,
@@ -521,7 +521,7 @@ export async function GET(request: NextRequest) {
     // Pure User = COUNT DISTINCT unique_code WHERE deposit_cases > 0
     const ggrUser = pureUser > 0 ? mvData.net_profit / pureUser : 0
     const daUser = activeMember > 0 ? mvData.deposit_amount / activeMember : 0
-    // Bonus Usage Rate = (bonus + add_bonus - deduct_bonus) / active_member (NO × 100)
+    // AVG Bonus Usage = (bonus + add_bonus - deduct_bonus) / active_member (NO × 100, Currency Format)
     const netBonus = (mvData.bonus || 0) + (mvData.add_bonus || 0) - (mvData.deduct_bonus || 0)
     const bonusUsageRate = activeMember > 0 ? (netBonus / activeMember) : 0
 
@@ -626,8 +626,8 @@ export async function GET(request: NextRequest) {
     const [
       ggrTrend,
       forecastQ4GGR,
-      depositVsCases,
-      withdrawVsCases,
+      daUserVsGgrUser,
+      atvVsPf,
       winrateVsWithdrawRate,
       bonusUsagePerBrand,
       brandGGRContribution,
@@ -638,8 +638,8 @@ export async function GET(request: NextRequest) {
     ] = await Promise.all([
       generateGGRTrendChart(chartParams),
       generateForecastQ4GGRChart(chartParams),
-      generateDepositVsCasesChart(chartParams),
-      generateWithdrawVsCasesChart(chartParams),
+      generateDaUserVsGgrUserTrendChart(chartParams),
+      generateAtvVsPfTrendChart(chartParams),
       generateWinrateVsWithdrawRateChart(chartParams),
       generateBonusUsagePerBrandChart(chartParams),
       generateBrandGGRContributionChart(chartParams),
@@ -858,7 +858,8 @@ export async function GET(request: NextRequest) {
       // GGR User previous period = Net Profit / Pure User (NOT Active Member!)
       ggrUser: calculateMoMChange(ggrUser, prevPeriodPureUser > 0 ? prevPeriodMvData.net_profit / prevPeriodPureUser : 0),
       daUser: calculateMoMChange(daUser, prevPeriodActiveMember > 0 ? prevPeriodMvData.deposit_amount / prevPeriodActiveMember : 0),
-      bonusUsageRate: calculateMoMChange(bonusUsageRate, prevPeriodMvData.valid_amount > 0 ? (prevPeriodMvData.bonus / prevPeriodMvData.valid_amount) * 100 : 0),
+      // AVG Bonus Usage = (bonus + add_bonus - deduct_bonus) / active_member (NO × 100)
+      bonusUsageRate: calculateMoMChange(bonusUsageRate, prevPeriodActiveMember > 0 ? ((prevPeriodMvData.bonus || 0) + (prevPeriodMvData.add_bonus || 0) - (prevPeriodMvData.deduct_bonus || 0)) / prevPeriodActiveMember : 0),
       winrate: calculateMoMChange(mvData.winrate, prevPeriodMvData.winrate),
       withdrawalRate: calculateMoMChange(mvData.withdrawal_rate, prevPeriodMvData.withdrawal_rate)
     }
@@ -930,8 +931,8 @@ export async function GET(request: NextRequest) {
       charts: {
         ggrTrend,
         forecastQ4GGR,
-        depositVsCases,
-        withdrawVsCases,
+        daUserVsGgrUser,
+        atvVsPf,
         winrateVsWithdrawRate,
         bonusUsagePerBrand,
         brandGGRContribution,

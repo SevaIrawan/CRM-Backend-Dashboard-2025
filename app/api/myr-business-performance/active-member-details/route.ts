@@ -13,13 +13,14 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
     const statusFilter = searchParams.get('status') || 'ALL'
+    const brandFilter = searchParams.get('brand') || 'ALL'
     const pageParam = searchParams.get('page')
     const limitParam = searchParams.get('limit')
 
     const page = Math.max(1, parseInt(pageParam || '1'))
     const limit = Math.max(1, Math.min(1000, parseInt(limitParam || '100')))
     
-    console.log('🔍 [DEBUG] Query parameters:', { currency, year, quarter, isDateRange, startDate, endDate, statusFilter, page, limit })
+    console.log('🔍 [DEBUG] Query parameters:', { currency, year, quarter, isDateRange, startDate, endDate, statusFilter, brandFilter, page, limit })
     
     // Determine date range for query
     let queryStartDate: string
@@ -52,15 +53,47 @@ export async function GET(request: NextRequest) {
     })
     
     // =====================================================================
+    // STEP 0: Auto-detect available brands from database
+    // =====================================================================
+    let brandDetectionQuery = supabase
+      .from('blue_whale_myr')
+      .select('line')
+      .eq('currency', currency)
+      .gt('deposit_cases', 0)
+      .neq('line', 'ALL')
+      .not('line', 'is', null)
+      .gte('date', queryStartDate)
+      .lte('date', queryEndDate)
+    
+    const { data: brandData } = await brandDetectionQuery
+    
+    const brandsSet = new Set<string>()
+    brandData?.forEach((row: any) => {
+      if (row.line && row.line.trim()) {
+        brandsSet.add(row.line.trim())
+      }
+    })
+    
+    const detectedBrands = Array.from(brandsSet).sort()
+    console.log('🏷️  [DEBUG] Detected brands:', detectedBrands)
+    
+    // =====================================================================
     // STEP 1: Get all active members in CURRENT period (userkey level)
     // =====================================================================
-    const { data: currentData, error: currentError } = await supabase
+    let currentQuery = supabase
       .from('blue_whale_myr')
       .select('*')
       .eq('currency', currency)
       .gte('date', queryStartDate)
       .lte('date', queryEndDate)
       .gt('deposit_cases', 0)
+    
+    // Apply brand filter if not ALL
+    if (brandFilter !== 'ALL') {
+      currentQuery = currentQuery.eq('line', brandFilter)
+    }
+    
+    const { data: currentData, error: currentError } = await currentQuery
     
     if (currentError) {
       console.error('❌ Database error (current period):', currentError)
@@ -74,13 +107,20 @@ export async function GET(request: NextRequest) {
     // =====================================================================
     // STEP 2: Get all active members in PREVIOUS period (for status)
     // =====================================================================
-    const { data: prevData } = await supabase
+    let prevQuery = supabase
       .from('blue_whale_myr')
       .select('userkey, unique_code')
       .eq('currency', currency)
       .gte('date', prevStartDate)
       .lte('date', prevEndDate)
       .gt('deposit_cases', 0)
+    
+    // Apply brand filter if not ALL
+    if (brandFilter !== 'ALL') {
+      prevQuery = prevQuery.eq('line', brandFilter)
+    }
+    
+    const { data: prevData } = await prevQuery
     
     const prevUserKeys = new Set(prevData?.map((r: any) => r.userkey) || [])
     
@@ -90,14 +130,21 @@ export async function GET(request: NextRequest) {
     // STEP 3: Determine LAST MONTH of current period for New Depositor logic
     // Get MAX date from ACTUAL DATA in the period (not the theoretical end date)
     // =====================================================================
-    const { data: maxDateData } = await supabase
+    let maxDateQuery = supabase
       .from('blue_whale_myr')
       .select('date')
       .eq('currency', currency)
       .gte('date', queryStartDate)
       .lte('date', queryEndDate)
-      .order('date', { ascending: false })
-      .limit(1)
+    
+    // Apply brand filter if not ALL
+    if (brandFilter !== 'ALL') {
+      maxDateQuery = maxDateQuery.eq('line', brandFilter)
+    }
+    
+    maxDateQuery = maxDateQuery.order('date', { ascending: false }).limit(1)
+    
+    const { data: maxDateData } = await maxDateQuery
     
     const maxDateInPeriod: string = (maxDateData?.[0]?.date as string) || queryEndDate
     
@@ -125,13 +172,20 @@ export async function GET(request: NextRequest) {
     // STEP 4: Get New Depositor data from blue_whale_myr
     // Users with first_deposit_date in LAST MONTH of period
     // =====================================================================
-    const { data: newDepositorData, error: newDepError } = await supabase
+    let newDepQuery = supabase
       .from('blue_whale_myr')
       .select('userkey, first_deposit_date')
       .eq('currency', currency)
       .gte('first_deposit_date', lastMonthStart)
       .lte('first_deposit_date', lastMonthEnd)
       .not('first_deposit_date', 'is', null) // Exclude NULL first_deposit_date
+    
+    // Apply brand filter if not ALL
+    if (brandFilter !== 'ALL') {
+      newDepQuery = newDepQuery.eq('line', brandFilter)
+    }
+    
+    const { data: newDepositorData, error: newDepError } = await newDepQuery
     
     console.log('🔍 [DEBUG] New Depositor query:', {
       table: 'blue_whale_myr',
@@ -328,8 +382,10 @@ export async function GET(request: NextRequest) {
           quarter: quarter || 'All',
           startDate: queryStartDate,
           endDate: queryEndDate,
-          status: statusFilter
-        }
+          status: statusFilter,
+          brand: brandFilter
+        },
+        availableBrands: detectedBrands
       }
     })
     

@@ -151,13 +151,6 @@ SELECT
   -- Net Profit = (SUM(deposit) + SUM(add)) - (SUM(withdraw) + SUM(deduct))
   (sum_deposit_amount + sum_add_transaction - sum_withdraw_amount - sum_deduct_transaction) as net_profit,
   
-  -- ATV = SUM(deposit) / SUM(deposit_cases)
-  CASE 
-    WHEN sum_deposit_cases > 0 
-    THEN sum_deposit_amount::NUMERIC / sum_deposit_cases
-    ELSE 0 
-  END as atv,
-  
   -- Winrate = GGR / SUM(deposit) = (SUM(deposit) - SUM(withdraw)) / SUM(deposit)
   CASE 
     WHEN sum_deposit_amount > 0 
@@ -184,13 +177,42 @@ SELECT
     WHEN new_register > 0 
     THEN (new_depositor::NUMERIC / new_register) * 100
     ELSE 0
-  END as conversion_rate
+  END as conversion_rate,
+  
+  -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  -- ✅ NEW KPI COLUMNS (Pre-calculated for Trend Charts)
+  -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  -- ATV (Average Transaction Value) = deposit_amount / deposit_cases
+  CASE 
+    WHEN sum_deposit_cases > 0 
+    THEN sum_deposit_amount::NUMERIC / sum_deposit_cases
+    ELSE 0
+  END as atv,
+  
+  -- PF (Purchase Frequency) = deposit_cases / active_member
+  CASE 
+    WHEN active_member > 0 
+    THEN sum_deposit_cases::NUMERIC / active_member
+    ELSE 0
+  END as pf,
+  
+  -- DA User (Deposit Amount per User) = deposit_amount / active_member
+  CASE 
+    WHEN active_member > 0 
+    THEN sum_deposit_amount::NUMERIC / active_member
+    ELSE 0
+  END as da_user,
+  
+  -- GGR User = net_profit / active_member
+  CASE 
+    WHEN active_member > 0 
+    THEN (sum_deposit_amount + sum_add_transaction - sum_withdraw_amount - sum_deduct_transaction)::NUMERIC / active_member
+    ELSE 0
+  END as ggr_user
   
   -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   -- ❌ REMOVED (Calculate in API - need special logic):
-  -- pure_user (need unique_code COUNT DISTINCT),
-  -- pure_active (Pure User - based logic),
-  -- pf, bonus_usage_rate, da_user, ggr_user (need API-calculated Active Member for random ranges)
   -- retention, reactivation, churn (need cohort comparison logic)
   -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -235,12 +257,6 @@ SELECT
   SUM(sum_deposit_amount) + SUM(sum_add_transaction) - SUM(sum_withdraw_amount) - SUM(sum_deduct_transaction) as net_profit,
   
   CASE 
-    WHEN SUM(sum_deposit_cases) > 0 
-    THEN SUM(sum_deposit_amount)::NUMERIC / SUM(sum_deposit_cases)
-    ELSE 0 
-  END as atv,
-  
-  CASE 
     WHEN SUM(sum_deposit_amount) > 0 
     THEN ((SUM(sum_deposit_amount) - SUM(sum_withdraw_amount))::NUMERIC / SUM(sum_deposit_amount)) * 100
     ELSE 0 
@@ -262,7 +278,39 @@ SELECT
     WHEN SUM(new_register) > 0 
     THEN (SUM(new_depositor)::NUMERIC / SUM(new_register)) * 100
     ELSE 0
-  END as conversion_rate
+  END as conversion_rate,
+  
+  -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  -- ✅ NEW KPI COLUMNS (Pre-calculated for Trend Charts)
+  -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  -- ATV (Average Transaction Value) = deposit_amount / deposit_cases
+  CASE 
+    WHEN SUM(sum_deposit_cases) > 0 
+    THEN SUM(sum_deposit_amount)::NUMERIC / SUM(sum_deposit_cases)
+    ELSE 0 
+  END as atv,
+  
+  -- PF (Purchase Frequency) = deposit_cases / active_member
+  CASE 
+    WHEN SUM(active_member) > 0 
+    THEN SUM(sum_deposit_cases)::NUMERIC / SUM(active_member)
+    ELSE 0 
+  END as pf,
+  
+  -- DA User (Deposit Amount per User) = deposit_amount / active_member
+  CASE 
+    WHEN SUM(active_member) > 0 
+    THEN SUM(sum_deposit_amount)::NUMERIC / SUM(active_member)
+    ELSE 0 
+  END as da_user,
+  
+  -- GGR User = net_profit / active_member
+  CASE 
+    WHEN SUM(active_member) > 0 
+    THEN (SUM(sum_deposit_amount) + SUM(sum_add_transaction) - SUM(sum_withdraw_amount) - SUM(sum_deduct_transaction))::NUMERIC / SUM(active_member)
+    ELSE 0 
+  END as ggr_user
 
 FROM with_new_users_and_members
 GROUP BY date, year, month, quarter, currency
