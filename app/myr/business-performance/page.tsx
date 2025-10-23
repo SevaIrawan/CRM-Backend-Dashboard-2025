@@ -694,17 +694,21 @@ export default function BusinessPerformancePage() {
             showDataLabels={true}
           />
           
-          {/* Bonus Usage Rate - PER BRAND */}
+          {/* Active Member vs Pure Member Trend - Double Bar */}
           <BarChart 
             series={[
-              { name: 'Bonus Usage Rate', data: chartData?.bonusUsagePerBrand?.data || [] }
+              { name: 'Active Member', data: chartData?.activeMemberVsPureMemberTrend?.activeMemberData || [], color: '#3B82F6' },
+              { name: 'Pure Member', data: chartData?.activeMemberVsPureMemberTrend?.pureMemberData || [], color: '#F97316' }
             ]}
-            categories={chartData?.bonusUsagePerBrand?.categories || []}
-            title="BONUS USAGE RATE (%)"
-            currency="PERCENTAGE"
-            chartIcon={getChartIcon('Bonus')}
-            color="#F97316"
+            categories={chartData?.activeMemberVsPureMemberTrend?.categories || []}
+            title="ACTIVE MEMBER VS PURE MEMBER TREND"
+            currency="NUMBER"
+            chartIcon={getChartIcon('Active Member')}
             showDataLabels={true}
+            customLegend={[
+              { label: 'Active Member', color: '#3B82F6' },
+              { label: 'Pure Member', color: '#F97316' }
+            ]}
           />
         </div>
 
@@ -746,7 +750,7 @@ export default function BusinessPerformancePage() {
           />
         </div>
 
-        {/* ROW 6: Stacked Bar Chart + Sankey Diagram */}
+        {/* ROW 6: Stacked Bar Chart + Bar Chart */}
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(2, 1fr)', 
@@ -763,6 +767,27 @@ export default function BusinessPerformancePage() {
             showDataLabels={true}
           />
           
+          {/* Bonus Usage Rate - PER BRAND */}
+          <BarChart 
+            series={[
+              { name: 'Bonus Usage Rate', data: chartData?.bonusUsagePerBrand?.data || [] }
+            ]}
+            categories={chartData?.bonusUsagePerBrand?.categories || []}
+            title="BONUS USAGE RATE (%)"
+            currency="PERCENTAGE"
+            chartIcon={getChartIcon('Bonus')}
+            color="#F97316"
+            showDataLabels={true}
+          />
+        </div>
+
+        {/* ROW 7: Sankey Chart (Full Width) */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: '1fr', 
+          gap: '18px',
+          minHeight: '400px'
+        }}>
           {/* Sankey Diagram - Pure User GGR Distribution */}
           <SankeyChart 
             data={chartData?.sankey || { nodes: [], links: [] }}

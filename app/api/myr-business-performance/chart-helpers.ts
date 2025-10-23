@@ -724,20 +724,25 @@ export async function generateSankeyDiagram(params: ChartParams & { pureUserGGR:
   
   // GLOBAL unique_code tracker (across all brands) to avoid double-counting
   const globalUniqueCodeGGR: Record<string, number> = {}
+  const globalPureUserSet: Set<string> = new Set()  // ✅ Track PURE USER globally!
   
   // Track which brands each unique_code belongs to (for Single/Multiple Brand calculation)
   const uniqueCodeBrands: Record<string, Set<string>> = {}
 
   for (const brand of brands) {
-    // Query for pure users and their GGR
-    let query = supabase
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // STEP 1: Get Pure User List (filter deposit_cases > 0) - FOR COUNT
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    let pureUserQuery = supabase
       .from('blue_whale_myr')
-      .select('unique_code, deposit_amount, withdraw_amount')
+      .select('unique_code')
       .eq('currency', currency)
       .eq('line', brand)
+      .gt('deposit_cases', 0)           // ✅ Filter: Only users with deposits
+      .not('unique_code', 'is', null)
 
     if (mode === 'daily' && startDate && endDate) {
-      query = query.gte('date', startDate).lte('date', endDate)
+      pureUserQuery = pureUserQuery.gte('date', startDate).lte('date', endDate)
     } else {
       const quarterMonths: Record<string, string[]> = {
         'Q1': ['January', 'February', 'March'],
@@ -746,19 +751,53 @@ export async function generateSankeyDiagram(params: ChartParams & { pureUserGGR:
         'Q4': ['October', 'November', 'December']
       }
       const months = quarterMonths[quarter] || []
-      query = query.eq('year', year.toString()).in('month', months)
+      pureUserQuery = pureUserQuery.eq('year', year.toString()).in('month', months)
     }
 
-    const { data } = await query
+    const { data: pureUserData } = await pureUserQuery
+    const pureUserList = Array.from(new Set(pureUserData?.map((row: any) => row.unique_code?.trim()).filter(Boolean) || []))
 
-    // Pure User Logic (SIMPLE): COUNT DISTINCT unique_code with deposit_cases > 0
-    // Aggregate GGR per unique_code FOR THIS BRAND
+    // ✅ Add Pure User dari brand ini ke global set (untuk total count)
+    pureUserList.forEach((uniqueCode: string) => globalPureUserSet.add(uniqueCode))
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // STEP 2: Get ALL transactions per brand (GGR = SEMUA TRANSAKSI!)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    let transactionQuery = supabase
+      .from('blue_whale_myr')
+      .select('unique_code, deposit_amount, withdraw_amount')
+      .eq('currency', currency)
+      .eq('line', brand)
+      // ✅ TIDAK filter Pure User - ambil SEMUA transaksi brand!
+
+    if (mode === 'daily' && startDate && endDate) {
+      transactionQuery = transactionQuery.gte('date', startDate).lte('date', endDate)
+    } else {
+      const quarterMonths: Record<string, string[]> = {
+        'Q1': ['January', 'February', 'March'],
+        'Q2': ['April', 'May', 'June'],
+        'Q3': ['July', 'August', 'September'],
+        'Q4': ['October', 'November', 'December']
+      }
+      const months = quarterMonths[quarter] || []
+      transactionQuery = transactionQuery.eq('year', year.toString()).in('month', months)
+    }
+
+    const { data: transactionData } = await transactionQuery
+
+    // ✅ Pure User COUNT = dari pureUserList (deposit_cases > 0)
+    brandPureUser[brand] = pureUserList.length
+
+    // ✅ Pure User GGR = SUM(deposit - withdraw) SEMUA TRANSAKSI BRAND INI!
+    let brandGGR = 0
     const brandUniqueCodeGGR: Record<string, number> = {}
-    data?.forEach((row: any) => {
+    
+    transactionData?.forEach((row: any) => {
       const uniqueCode = row.unique_code?.trim()
       if (!uniqueCode) return
 
       const ggr = (row.deposit_amount || 0) - (row.withdraw_amount || 0)
+      brandGGR += ggr
       
       // Track per brand
       if (!brandUniqueCodeGGR[uniqueCode]) {
@@ -779,15 +818,12 @@ export async function generateSankeyDiagram(params: ChartParams & { pureUserGGR:
       uniqueCodeBrands[uniqueCode].add(brand)
     })
 
-    // Pure User per brand = COUNT DISTINCT unique_code in this brand
-    brandPureUser[brand] = Object.keys(brandUniqueCodeGGR).length
-    
-    // Pure User GGR per brand = SUM of GGR for unique_code in this brand
-    brandPureUserGGR[brand] = Object.values(brandUniqueCodeGGR).reduce((sum, ggr) => sum + ggr, 0)
+    // Pure User GGR per brand = SUM GGR SEMUA transaksi brand ini
+    brandPureUserGGR[brand] = brandGGR
   }
 
-  // Calculate TOTAL Pure User (DISTINCT across all brands - no double counting!)
-  const totalPureUser = Object.keys(globalUniqueCodeGGR).length
+  // ✅ Calculate TOTAL Pure User (DISTINCT across all brands - from globalPureUserSet!)
+  const totalPureUser = globalPureUserSet.size
   
   // Calculate Single Brand vs Multiple Brand users
   let singleBrandUsers = 0
@@ -894,5 +930,82 @@ export async function generateSankeyDiagram(params: ChartParams & { pureUserGGR:
   })
 
   return { nodes, links }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// CHART 11: ACTIVE MEMBER VS PURE MEMBER TREND (DOUBLE BAR CHART)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Show Active Member (blue) vs Pure Member (orange) per period
+// Pure Member = Pure Active = Active Member - New Depositor
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+export async function generateActiveMemberVsPureMemberTrendChart(params: ChartParams): Promise<{
+  categories: string[]
+  activeMemberData: number[]
+  pureMemberData: number[]
+}> {
+  const { currency, year, quarter, mode, startDate, endDate } = params
+
+  if (mode === 'daily') {
+    // DAILY MODE: Use MV (bp_daily_summary_myr) - Fast pre-calculated data
+    const { data: mvData } = await supabase
+      .from('bp_daily_summary_myr')
+      .select('date, active_member, pure_member')
+      .eq('currency', currency)
+      .eq('line', 'ALL')
+      .gte('date', startDate!)
+      .lte('date', endDate!)
+      .order('date', { ascending: true })
+
+    if (!mvData || mvData.length === 0) {
+      return { categories: [], activeMemberData: [], pureMemberData: [] }
+    }
+
+    // Build arrays from MV
+    const categories: string[] = []
+    const activeMemberData: number[] = []
+    const pureMemberData: number[] = []
+
+    mvData.forEach((row: any) => {
+      const dateObj = new Date(row.date)
+      categories.push(dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))
+      activeMemberData.push(row.active_member || 0)
+      pureMemberData.push(row.pure_member || 0)
+    })
+
+    return { categories, activeMemberData, pureMemberData }
+
+  } else {
+    // QUARTERLY MODE: Use MV (bp_quarter_summary_myr) - Fast pre-calculated data
+    const { data: quarterData } = await supabase
+      .from('bp_quarter_summary_myr')
+      .select('period, active_member, pure_member')
+      .eq('currency', currency)
+      .eq('year', year)
+      .eq('period_type', 'QUARTERLY')
+      .eq('line', 'ALL')
+      .order('period', { ascending: true })
+
+    if (!quarterData || quarterData.length === 0) {
+      return { categories: [], activeMemberData: [], pureMemberData: [] }
+    }
+
+    // Build arrays from MV (pre-calculated!)
+    const categories: string[] = []
+    const activeMemberData: number[] = []
+    const pureMemberData: number[] = []
+
+    // Ensure all quarters exist (Q1, Q2, Q3, Q4)
+    const allQuarters = ['Q1', 'Q2', 'Q3', 'Q4']
+    const dataMap = new Map(quarterData.map((row: any) => [row.period, row]))
+
+    allQuarters.forEach((q: string) => {
+      const data = dataMap.get(q)
+      categories.push(q)
+      activeMemberData.push(data?.active_member || 0)
+      pureMemberData.push(data?.pure_member || 0)
+    })
+
+    return { categories, activeMemberData, pureMemberData }
+  }
 }
 

@@ -11,6 +11,7 @@ import {
   generateRetentionVsChurnRateChart,
   generateReactivationRateChart,
   generateSankeyDiagram,
+  generateActiveMemberVsPureMemberTrendChart,
   type ChartParams
 } from '../chart-helpers'
 import {
@@ -134,6 +135,7 @@ async function calculatePureUser(params: {
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // HELPER 3: CALCULATE PURE USER GGR (deposit_amount - withdraw_amount)
+// ✅ Pure User GGR = GGR biasa = SUM(deposit - withdraw) SEMUA TRANSAKSI!
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function calculatePureUserGGR(params: {
   currency: string
@@ -173,7 +175,7 @@ async function calculatePureUserGGR(params: {
     return 0
   }
 
-  // Sum GGR (deposit_amount - withdraw_amount)
+  // ✅ GGR = SUM(deposit - withdraw) SEMUA TRANSAKSI!
   const pureUserGGR = data.reduce((sum: number, row: any) => {
     const ggr = (row.deposit_amount || 0) - (row.withdraw_amount || 0)
     return sum + ggr
@@ -631,6 +633,7 @@ export async function GET(request: NextRequest) {
       brandGGRContribution,
       retentionVsChurnRate,
       reactivationRateChart,
+      activeMemberVsPureMemberTrend,
       sankey
     ] = await Promise.all([
       generateGGRTrendChart(chartParams),
@@ -642,6 +645,7 @@ export async function GET(request: NextRequest) {
       generateBrandGGRContributionChart(chartParams),
       generateRetentionVsChurnRateChart(chartParams),
       generateReactivationRateChart(chartParams),
+      generateActiveMemberVsPureMemberTrendChart(chartParams),
       generateSankeyDiagram({ ...chartParams, pureUserGGR })
     ])
 
@@ -933,6 +937,7 @@ export async function GET(request: NextRequest) {
         brandGGRContribution,
         retentionVsChurnRate,
         reactivationRate: reactivationRateChart,
+        activeMemberVsPureMemberTrend,
         sankey
       },
       dailyAverage,
