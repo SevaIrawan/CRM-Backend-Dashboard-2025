@@ -15,6 +15,7 @@ import YearSlicer from '@/components/slicers/YearSlicer'
 import QuarterSlicer from '@/components/slicers/QuarterSlicer'
 import QuickDateFilter from '@/components/QuickDateFilter'
 import TargetEditModal from '@/components/TargetEditModal'
+import ActiveMemberDetailsModal from '@/components/ActiveMemberDetailsModal'
 import { getChartIcon } from '@/lib/CentralIcon'
 import { 
   QuickDateFilterType, 
@@ -53,6 +54,9 @@ export default function BusinessPerformancePage() {
   // Target Edit Modal State
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false)
   
+  // Active Member Details Modal State
+  const [isActiveMemberModalOpen, setIsActiveMemberModalOpen] = useState(false)
+  
   // User Info - Get from localStorage session
   const [userEmail, setUserEmail] = useState('')
   const [userRole, setUserRole] = useState('')
@@ -75,6 +79,9 @@ export default function BusinessPerformancePage() {
   // KPI Data State
   const [kpiData, setKpiData] = useState<any>(null)
   const [chartData, setChartData] = useState<any>(null)
+  const [dailyAverage, setDailyAverage] = useState<any>(null)
+  const [comparison, setComparison] = useState<any>(null)
+  const [previousPeriod, setPreviousPeriod] = useState<any>(null)
   const [loadingData, setLoadingData] = useState(true)
   
   // ============================================================================
@@ -207,8 +214,14 @@ export default function BusinessPerformancePage() {
       if (result.success) {
         console.log('✅ [BP Page] KPI data loaded (mode:', result.mode, '):', result.kpis)
         console.log('✅ [BP Page] Chart data loaded:', result.charts)
+        console.log('✅ [BP Page] Daily Average loaded:', result.dailyAverage)
+        console.log('✅ [BP Page] Comparison loaded:', result.comparison)
+        console.log('✅ [BP Page] Previous Period loaded:', result.previousPeriod)
         setKpiData(result.kpis)
         setChartData(result.charts)
+        setDailyAverage(result.dailyAverage)
+        setComparison(result.comparison)
+        setPreviousPeriod(result.previousPeriod)
       } else {
         console.error('❌ [BP Page] API returned error:', result.error)
       }
@@ -492,12 +505,11 @@ export default function BusinessPerformancePage() {
             icon="Net Profit"
             additionalKpi={{
               label: 'Daily Avg',
-              value: loadingData ? '-' : formatCurrencyFull((kpiData?.grossGamingRevenue || 0) / 31)
+              value: loadingData ? '-' : formatCurrencyFull(dailyAverage?.grossGamingRevenue || 0)
             }}
             comparison={{
-              percentage: '+0%',
-              isPositive: true,
-              text: 'MoM'
+              percentage: loadingData ? '-' : `${comparison?.grossGamingRevenue >= 0 ? '+' : ''}${comparison?.grossGamingRevenue?.toFixed(2) || '0.00'}%`,
+              isPositive: (comparison?.grossGamingRevenue || 0) >= 0
             }}
           />
           
@@ -508,13 +520,14 @@ export default function BusinessPerformancePage() {
             icon="Active Member"
             additionalKpi={{
               label: 'Daily Avg',
-              value: loadingData ? '-' : formatNumberFull((kpiData?.activeMember || 0) / 31)
+              value: loadingData ? '-' : formatNumberFull(dailyAverage?.activeMember || 0)
             }}
             comparison={{
-              percentage: '+0%',
-              isPositive: true,
-              text: 'MoM'
+              percentage: loadingData ? '-' : `${comparison?.activeMember >= 0 ? '+' : ''}${comparison?.activeMember?.toFixed(2) || '0.00'}%`,
+              isPositive: (comparison?.activeMember || 0) >= 0
             }}
+            onClick={() => setIsActiveMemberModalOpen(true)}
+            clickable={true}
           />
           
           {/* Pure Active */}
@@ -524,12 +537,11 @@ export default function BusinessPerformancePage() {
             icon="Pure Active"
             additionalKpi={{
               label: 'Daily Avg',
-              value: loadingData ? '-' : formatNumberFull((kpiData?.pureActive || 0) / 31)
+              value: loadingData ? '-' : formatNumberFull(dailyAverage?.pureActive || 0)
             }}
             comparison={{
-              percentage: '+0%',
-              isPositive: true,
-              text: 'MoM'
+              percentage: loadingData ? '-' : `${comparison?.pureActive >= 0 ? '+' : ''}${comparison?.pureActive?.toFixed(2) || '0.00'}%`,
+              isPositive: (comparison?.pureActive || 0) >= 0
             }}
           />
           
@@ -541,16 +553,16 @@ export default function BusinessPerformancePage() {
               label: 'ATV',
               value: loadingData ? 'Loading...' : formatWith2Decimals(kpiData?.atv || 0, 'RM '),
               comparison: {
-                percentage: '+0%',
-                isPositive: true
+                percentage: loadingData ? '-' : `${comparison?.atv >= 0 ? '+' : ''}${comparison?.atv?.toFixed(2) || '0.00'}%`,
+                isPositive: (comparison?.atv || 0) >= 0
               }
             }}
             kpi2={{
               label: 'PF',
               value: loadingData ? 'Loading...' : formatWith2Decimals(kpiData?.pf || 0, ''),
               comparison: {
-                percentage: '+0%',
-                isPositive: true
+                percentage: loadingData ? '-' : `${comparison?.pf >= 0 ? '+' : ''}${comparison?.pf?.toFixed(2) || '0.00'}%`,
+                isPositive: (comparison?.pf || 0) >= 0
               }
             }}
           />
@@ -563,16 +575,16 @@ export default function BusinessPerformancePage() {
               label: 'GGR User',
               value: loadingData ? 'Loading...' : formatWith2Decimals(kpiData?.ggrUser || 0, 'RM '),
               comparison: {
-                percentage: '+0%',
-                isPositive: true
+                percentage: loadingData ? '-' : `${comparison?.ggrUser >= 0 ? '+' : ''}${comparison?.ggrUser?.toFixed(2) || '0.00'}%`,
+                isPositive: (comparison?.ggrUser || 0) >= 0
               }
             }}
             kpi2={{
               label: 'DA User',
               value: loadingData ? 'Loading...' : formatWith2Decimals(kpiData?.daUser || 0, 'RM '),
               comparison: {
-                percentage: '+0%',
-                isPositive: true
+                percentage: loadingData ? '-' : `${comparison?.daUser >= 0 ? '+' : ''}${comparison?.daUser?.toFixed(2) || '0.00'}%`,
+                isPositive: (comparison?.daUser || 0) >= 0
               }
             }}
           />
@@ -778,6 +790,19 @@ export default function BusinessPerformancePage() {
           console.log('✅ Target saved successfully, refreshing KPI data...')
           fetchKPIData()
         }}
+      />
+      
+      {/* Active Member Details Modal */}
+      <ActiveMemberDetailsModal
+        isOpen={isActiveMemberModalOpen}
+        onClose={() => setIsActiveMemberModalOpen(false)}
+        totalCount={kpiData?.activeMember || 0}
+        currency="MYR"
+        year={selectedYear}
+        quarter={selectedQuarter}
+        startDate={startDate}
+        endDate={endDate}
+        isDateRange={isDateRangeMode}
       />
     </Layout>
     </>

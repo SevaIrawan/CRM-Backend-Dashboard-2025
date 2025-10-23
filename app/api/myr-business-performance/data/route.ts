@@ -13,6 +13,11 @@ import {
   generateSankeyDiagram,
   type ChartParams
 } from '../chart-helpers'
+import {
+  calculatePreviousPeriod as getPreviousPeriod,
+  calculateAverageDaily,
+  calculateMoMChange
+} from '@/lib/businessPerformanceComparison'
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // BUSINESS PERFORMANCE DATA API - MYR
@@ -643,6 +648,173 @@ export async function GET(request: NextRequest) {
     console.log('[BP API] Chart data generated successfully')
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // STEP 7.5: CALCULATE DAILY AVERAGE & MOM COMPARISON
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    console.log('[BP API] Calculating Daily Average & MoM Comparison...')
+    
+    // Get max date from data for comparison logic
+    const { data: maxDateResult } = await supabase
+      .from('blue_whale_myr')
+      .select('date')
+      .eq('currency', currency)
+      .order('date', { ascending: false })
+      .limit(1)
+      .single()
+    
+    const maxDateInData = maxDateResult?.date || endDate || `${year}-12-31`
+    
+    // Calculate previous period dates
+    const previousPeriod = getPreviousPeriod(
+      mode === 'daily' ? 'Daily' : 'Quarter',
+      quarter || 'Q4',
+      year || new Date().getFullYear(),
+      startDate || `${year}-01-01`,
+      endDate || `${year}-12-31`,
+      maxDateInData
+    )
+    
+    console.log('[BP API] Previous Period:', previousPeriod)
+    
+    // Fetch and calculate PREVIOUS PERIOD KPIs FOR MoM COMPARISON
+    let prevPeriodActiveMember = 0
+    let prevPeriodPureUser = 0
+    let prevPeriodPureActive = 0
+    let prevPeriodPureUserGGR = 0
+    let prevPeriodMvData: any = {
+      deposit_amount: 0,
+      deposit_cases: 0,
+      withdraw_amount: 0,
+      withdraw_cases: 0,
+      net_profit: 0,
+      winrate: 0,
+      withdrawal_rate: 0
+    }
+    let prevPeriodNewDepositor = 0
+    let prevPeriodNewRegister = 0
+    
+    if (mode === 'daily') {
+      // DAILY MODE: Fetch from bp_daily_summary_myr
+      const { data: prevDailyData } = await supabase
+        .from('bp_daily_summary_myr')
+        .select('*')
+        .eq('currency', currency)
+        .gte('date', previousPeriod.prevStartDate)
+        .lte('date', previousPeriod.prevEndDate)
+        .eq('line', 'ALL')
+      
+      if (prevDailyData && prevDailyData.length > 0) {
+        prevPeriodMvData = {
+          deposit_amount: prevDailyData.reduce((sum: number, row: any) => sum + (row.deposit_amount || 0), 0),
+          deposit_cases: prevDailyData.reduce((sum: number, row: any) => sum + (row.deposit_cases || 0), 0),
+          withdraw_amount: prevDailyData.reduce((sum: number, row: any) => sum + (row.withdraw_amount || 0), 0),
+          withdraw_cases: prevDailyData.reduce((sum: number, row: any) => sum + (row.withdraw_cases || 0), 0),
+          net_profit: prevDailyData.reduce((sum: number, row: any) => sum + (row.net_profit || 0), 0),
+          ggr: prevDailyData.reduce((sum: number, row: any) => sum + (row.ggr || 0), 0),
+          valid_amount: prevDailyData.reduce((sum: number, row: any) => sum + (row.valid_amount || 0), 0),
+          bonus: prevDailyData.reduce((sum: number, row: any) => sum + (row.bonus || 0), 0)
+        }
+        prevPeriodNewDepositor = prevDailyData.reduce((sum: number, row: any) => sum + (row.new_depositor || 0), 0)
+        prevPeriodNewRegister = prevDailyData.reduce((sum: number, row: any) => sum + (row.new_register || 0), 0)
+        
+        // Recalculate rates for previous period
+        prevPeriodMvData.winrate = prevPeriodMvData.deposit_amount > 0 ? (prevPeriodMvData.ggr / prevPeriodMvData.deposit_amount) * 100 : 0
+        prevPeriodMvData.withdrawal_rate = prevPeriodMvData.deposit_cases > 0 ? (prevPeriodMvData.withdraw_cases / prevPeriodMvData.deposit_cases) * 100 : 0
+      }
+    } else {
+      // QUARTERLY MODE: Fetch from bp_quarter_summary_myr or previous quarter
+      const prevQuarterInfo = previousPeriod.comparisonMode === 'QUARTER_TO_QUARTER'
+        ? (() => {
+            const quarters = ['Q1', 'Q2', 'Q3', 'Q4']
+            const currentIndex = quarters.indexOf(quarter || 'Q4')
+            if (currentIndex === 0) {
+              return { quarter: 'Q4', year: year - 1 }
+            } else {
+              return { quarter: quarters[currentIndex - 1], year: year }
+            }
+          })()
+        : { quarter: quarter, year: year }
+      
+      const { data: prevQuarterData } = await supabase
+        .from('bp_quarter_summary_myr')
+        .select('*')
+        .eq('currency', currency)
+        .eq('year', prevQuarterInfo.year.toString())
+        .eq('period', prevQuarterInfo.quarter)
+        .eq('period_type', 'QUARTERLY')
+        .eq('line', 'ALL')
+        .maybeSingle()
+      
+      if (prevQuarterData) {
+        prevPeriodMvData = prevQuarterData as any
+        prevPeriodNewDepositor = (prevQuarterData as any).new_depositor || 0
+        prevPeriodNewRegister = (prevQuarterData as any).new_register || 0
+      }
+    }
+    
+    // Calculate PREVIOUS PERIOD member metrics from master table
+    const [prevPeriodActiveMemberCalc, prevPeriodPureUserCalc, prevPeriodPureUserGGRCalc] = await Promise.all([
+      calculateActiveMember({
+        currency,
+        startDate: previousPeriod.prevStartDate,
+        endDate: previousPeriod.prevEndDate
+      }),
+      calculatePureUser({
+        currency,
+        startDate: previousPeriod.prevStartDate,
+        endDate: previousPeriod.prevEndDate
+      }),
+      calculatePureUserGGR({
+        currency,
+        startDate: previousPeriod.prevStartDate,
+        endDate: previousPeriod.prevEndDate
+      })
+    ])
+    
+    prevPeriodActiveMember = prevPeriodActiveMemberCalc
+    prevPeriodPureUser = prevPeriodPureUserCalc
+    prevPeriodPureUserGGR = prevPeriodPureUserGGRCalc
+    prevPeriodPureActive = prevPeriodActiveMember - prevPeriodNewDepositor
+    
+    // Calculate DAILY AVERAGE for CURRENT PERIOD
+    const actualDays = mode === 'daily' 
+      ? Math.ceil((new Date(endDate || '').getTime() - new Date(startDate || '').getTime()) / (1000 * 60 * 60 * 24)) + 1
+      : 90 // approximate for quarter
+    
+    const dailyAverage = {
+      grossGamingRevenue: calculateAverageDaily(pureUserGGR, startDate || `${year}-01-01`, endDate || `${year}-12-31`),
+      depositAmount: calculateAverageDaily(mvData.deposit_amount, startDate || `${year}-01-01`, endDate || `${year}-12-31`),
+      depositCases: calculateAverageDaily(mvData.deposit_cases, startDate || `${year}-01-01`, endDate || `${year}-12-31`),
+      withdrawAmount: calculateAverageDaily(mvData.withdraw_amount, startDate || `${year}-01-01`, endDate || `${year}-12-31`),
+      withdrawCases: calculateAverageDaily(mvData.withdraw_cases, startDate || `${year}-01-01`, endDate || `${year}-12-31`),
+      netProfit: calculateAverageDaily(mvData.net_profit, startDate || `${year}-01-01`, endDate || `${year}-12-31`),
+      activeMember: calculateAverageDaily(activeMember, startDate || `${year}-01-01`, endDate || `${year}-12-31`),
+      pureUser: calculateAverageDaily(pureUser, startDate || `${year}-01-01`, endDate || `${year}-12-31`),
+      pureActive: calculateAverageDaily(pureActive, startDate || `${year}-01-01`, endDate || `${year}-12-31`)
+    }
+    
+    // Calculate MOM COMPARISON (percentage change from previous to current)
+    const comparison = {
+      grossGamingRevenue: calculateMoMChange(pureUserGGR, prevPeriodPureUserGGR),
+      depositAmount: calculateMoMChange(mvData.deposit_amount, prevPeriodMvData.deposit_amount),
+      depositCases: calculateMoMChange(mvData.deposit_cases, prevPeriodMvData.deposit_cases),
+      withdrawAmount: calculateMoMChange(mvData.withdraw_amount, prevPeriodMvData.withdraw_amount),
+      withdrawCases: calculateMoMChange(mvData.withdraw_cases, prevPeriodMvData.withdraw_cases),
+      netProfit: calculateMoMChange(mvData.net_profit, prevPeriodMvData.net_profit),
+      activeMember: calculateMoMChange(activeMember, prevPeriodActiveMember),
+      pureUser: calculateMoMChange(pureUser, prevPeriodPureUser),
+      pureActive: calculateMoMChange(pureActive, prevPeriodPureActive),
+      atv: calculateMoMChange(atv, prevPeriodMvData.deposit_cases > 0 ? prevPeriodMvData.deposit_amount / prevPeriodMvData.deposit_cases : 0),
+      pf: calculateMoMChange(pf, prevPeriodActiveMember > 0 ? prevPeriodMvData.deposit_cases / prevPeriodActiveMember : 0),
+      ggrUser: calculateMoMChange(ggrUser, prevPeriodActiveMember > 0 ? prevPeriodPureUserGGR / prevPeriodActiveMember : 0),
+      daUser: calculateMoMChange(daUser, prevPeriodActiveMember > 0 ? prevPeriodMvData.deposit_amount / prevPeriodActiveMember : 0),
+      bonusUsageRate: calculateMoMChange(bonusUsageRate, prevPeriodMvData.valid_amount > 0 ? (prevPeriodMvData.bonus / prevPeriodMvData.valid_amount) * 100 : 0),
+      winrate: calculateMoMChange(mvData.winrate, prevPeriodMvData.winrate),
+      withdrawalRate: calculateMoMChange(mvData.withdrawal_rate, prevPeriodMvData.withdrawal_rate)
+    }
+    
+    console.log('[BP API] Daily Average & MoM Comparison calculated successfully')
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // STEP 8: BUILD RESPONSE
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     return NextResponse.json({
@@ -707,6 +879,13 @@ export async function GET(request: NextRequest) {
         retentionVsChurnRate,
         reactivationRate: reactivationRateChart,
         sankey
+      },
+      dailyAverage,
+      comparison,
+      previousPeriod: {
+        startDate: previousPeriod.prevStartDate,
+        endDate: previousPeriod.prevEndDate,
+        comparisonMode: previousPeriod.comparisonMode
       }
     })
 
