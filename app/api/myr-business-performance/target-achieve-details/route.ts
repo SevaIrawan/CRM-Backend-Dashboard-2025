@@ -187,10 +187,15 @@ export async function GET(request: NextRequest) {
         
         if (brandKPI) {
           // Apply breakdown ratio if in daily mode
-          brandKPI.ggrTarget = targetRow.target_ggr ? targetRow.target_ggr * breakdownRatio : null
-          brandKPI.dcTarget = targetRow.target_deposit_cases ? targetRow.target_deposit_cases * breakdownRatio : null
-          brandKPI.daTarget = targetRow.target_deposit_amount ? targetRow.target_deposit_amount * breakdownRatio : null
-          brandKPI.amTarget = targetRow.target_active_member ? targetRow.target_active_member * breakdownRatio : null
+          const targetGgr = targetRow.target_ggr as number | null
+          const targetDc = targetRow.target_deposit_cases as number | null
+          const targetDa = targetRow.target_deposit_amount as number | null
+          const targetAm = targetRow.target_active_member as number | null
+          
+          brandKPI.ggrTarget = targetGgr ? targetGgr * breakdownRatio : null
+          brandKPI.dcTarget = targetDc ? targetDc * breakdownRatio : null
+          brandKPI.daTarget = targetDa ? targetDa * breakdownRatio : null
+          brandKPI.amTarget = targetAm ? targetAm * breakdownRatio : null
         }
       }
       
