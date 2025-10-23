@@ -88,7 +88,7 @@ export default function MixedChart({
           position: 'relative',
           pointerEvents: 'none'
         }}>
-          <p style={{ margin: '0 0 8px 0', fontWeight: '600', fontSize: '13px' }}>
+          <p style={{ margin: '0 0 8px 0', fontWeight: '600', fontSize: '13px', color: '#ffffff' }}>
             📅 {label}
           </p>
           {payload.map((entry: any, index: number) => {
@@ -100,10 +100,10 @@ export default function MixedChart({
             return (
               <p key={index} style={{ 
                 margin: '4px 0', 
-                color: entry.color,
+                color: '#ffffff',
                 fontSize: '12px'
               }}>
-                {entry.name}: {formattedValue}
+                <span style={{ fontWeight: '600' }}>{entry.name}:</span> {formattedValue}
               </p>
             );
           })}

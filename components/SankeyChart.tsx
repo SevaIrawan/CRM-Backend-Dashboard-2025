@@ -27,6 +27,32 @@ interface SankeyChartProps {
 
 export default function SankeyChart({ data, title, chartIcon }: SankeyChartProps) {
   
+  // Custom Tooltip with full control over styling
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length > 0) {
+      const value = payload[0].value;
+      return (
+        <div style={{
+          backgroundColor: 'rgba(0, 0, 0, 0.9)',
+          border: '1px solid #3B82F6',
+          borderRadius: '8px',
+          padding: '12px',
+          zIndex: 9999
+        }}>
+          <p style={{ 
+            margin: 0, 
+            color: '#ffffff',
+            fontWeight: '600',
+            fontSize: '12px'
+          }}>
+            <span style={{ color: '#ffffff' }}>Flow:</span> <span style={{ color: '#ffffff' }}>{value.toLocaleString()}</span>
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+  
   // Custom node rendering
   const CustomNode = ({ x, y, width, height, index, payload, containerWidth }: any) => {
     const isOut = x + width + 6 > containerWidth;
@@ -169,16 +195,8 @@ export default function SankeyChart({ data, title, chartIcon }: SankeyChartProps
             margin={{ top: 20, right: 150, bottom: 20, left: 150 }}
           >
             <Tooltip 
-              contentStyle={{
-                backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                border: '1px solid #3B82F6',
-                borderRadius: '8px',
-                padding: '12px',
-                color: '#ffffff',
-                zIndex: 9999
-              }}
+              content={<CustomTooltip />}
               wrapperStyle={{ zIndex: 9999 }}
-              formatter={(value: any) => [`${value.toLocaleString()}`, 'Flow']}
             />
           </Sankey>
         </ResponsiveContainer>
