@@ -536,18 +536,18 @@ export default function BusinessPerformancePage() {
             clickable={true}
           />
           
-          {/* Pure Active */}
+          {/* Pure User */}
           <StatCard 
-            title="Pure Active"
-            value={loadingData ? 'Loading...' : formatNumberFull(kpiData?.pureActive || 0)}
-            icon="Pure Active"
+            title="Pure User"
+            value={loadingData ? 'Loading...' : formatNumberFull(kpiData?.pureUser || 0)}
+            icon="Pure User"
             additionalKpi={{
               label: 'Daily Avg',
-              value: loadingData ? '-' : formatNumberFull(dailyAverage?.pureActive || 0)
+              value: loadingData ? '-' : formatNumberFull(dailyAverage?.pureUser || 0)
             }}
             comparison={{
-              percentage: loadingData ? '-' : `${comparison?.pureActive >= 0 ? '+' : ''}${comparison?.pureActive?.toFixed(2) || '0.00'}%`,
-              isPositive: (comparison?.pureActive || 0) >= 0
+              percentage: loadingData ? '-' : `${comparison?.pureUser >= 0 ? '+' : ''}${comparison?.pureUser?.toFixed(2) || '0.00'}%`,
+              isPositive: (comparison?.pureUser || 0) >= 0
             }}
           />
           
