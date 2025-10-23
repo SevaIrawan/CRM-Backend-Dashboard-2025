@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
  * BUSINESS PERFORMANCE TARGET API - UPDATE
  * ============================================================================
  * 
- * Update target with password verification
+ * Update target with role-based access control only (no password)
  * 
  * ROLE PERMISSIONS:
  * - manager_myr → ONLY edit MYR targets
@@ -14,7 +14,7 @@ import { supabase } from '@/lib/supabase'
  * - manager_usc → ONLY edit USC targets
  * - admin → CAN edit ALL targets (MYR/SGD/USC)
  * 
- * Security: Role-based + Password confirmation via users table
+ * Security: Role-based validation only
  */
 
 export async function POST(request: NextRequest) {
@@ -33,7 +33,6 @@ export async function POST(request: NextRequest) {
       forecast_ggr,
       user_email,
       user_role,
-      manager_password,
       reason
     } = body
     
@@ -50,9 +49,9 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    if (!user_email || !user_role || !manager_password) {
+    if (!user_email || !user_role) {
       return NextResponse.json(
-        { error: 'Missing authentication fields' },
+        { error: 'Missing authentication fields: user_email and user_role are required' },
         { status: 401 }
       )
     }
@@ -108,55 +107,6 @@ export async function POST(request: NextRequest) {
     } else {
       console.log('✅ [BP Target Update] Admin access - can edit all targets')
     }
-    
-    // ============================================================================
-    // VALIDATION 3: Verify password with users table
-    // ============================================================================
-    console.log('🔐 [BP Target Update] Verifying password for email:', user_email)
-    console.log('🔐 [BP Target Update] User role:', user_role)
-    
-    // Extract username from email (format: username@nexmax.com)
-    const username = user_email.split('@')[0]
-    console.log('🔐 [BP Target Update] Extracted username:', username)
-    
-    // Query users table to verify password
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('username', username)
-      .eq('password', manager_password)
-      .single()
-    
-    if (userError || !userData) {
-      console.error('❌ [BP Target Update] Password verification failed')
-      console.error('❌ [BP Target Update] Username:', username)
-      console.error('❌ [BP Target Update] Error:', userError?.message)
-      
-      return NextResponse.json(
-        { 
-          error: 'Password salah! Gunakan password yang sama dengan login dashboard.',
-          details: 'Invalid password for user'
-        },
-        { status: 401 }
-      )
-    }
-    
-    // Verify role matches
-    if (userData.role !== user_role) {
-      console.error('❌ [BP Target Update] Role mismatch')
-      console.error('❌ [BP Target Update] Expected:', user_role, 'Got:', userData.role)
-      
-      return NextResponse.json(
-        { 
-          error: 'Role tidak sesuai. Session mungkin expired, silakan login ulang.',
-          details: 'Role mismatch'
-        },
-        { status: 403 }
-      )
-    }
-    
-    console.log('✅ [BP Target Update] Password verified successfully')
-    console.log('✅ [BP Target Update] Authenticated user:', userData.username, 'Role:', userData.role)
     
     // ============================================================================
     // CHECK IF TARGET EXISTS

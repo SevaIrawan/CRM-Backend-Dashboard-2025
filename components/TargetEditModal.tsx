@@ -10,7 +10,7 @@
  * - Target List Table with all existing targets
  * - TOTAL row with AUTO SUM
  * - EDIT functionality per row
- * - Password verification for SAVE
+ * - Role-based access control (Manager MYR/SGD/USC + Admin only)
  * 
  * ============================================================================
  */
@@ -60,9 +60,7 @@ export default function TargetEditModal({
   // ============================================================================
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(false)
-  const [showPasswordPrompt, setShowPasswordPrompt] = useState(false)
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
-  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   
   // Brands from database
@@ -100,8 +98,6 @@ export default function TargetEditModal({
       fetchTargets()
       resetForm()
       setError('')
-      setPassword('')
-      setShowPasswordPrompt(false)
       setShowSuccessMessage(false)
     }
   }, [isOpen, year])
@@ -202,9 +198,9 @@ export default function TargetEditModal({
   }
 
   // ============================================================================
-  // SAVE - WITH PASSWORD VERIFICATION
+  // SAVE - ROLE-BASED ACCESS ONLY (NO PASSWORD)
   // ============================================================================
-  const handleSaveClick = () => {
+  const handleSave = async () => {
     // Validate inputs
     if (!selectedLine || !selectedQuarter) {
       setError('Please select LINE and QUARTER')
@@ -213,16 +209,6 @@ export default function TargetEditModal({
     
     if (inputData.ggr <= 0) {
       setError('GGR is required and must be greater than 0')
-      return
-    }
-    
-    // Show password prompt
-    setShowPasswordPrompt(true)
-  }
-
-  const handleSaveWithPassword = async () => {
-    if (!password) {
-      setError('Password is required')
       return
     }
 
@@ -245,7 +231,6 @@ export default function TargetEditModal({
           forecast_ggr: null,
           user_email: userEmail,
           user_role: userRole,
-          manager_password: password,
           reason: editMode ? 'Update existing target' : 'Create new target'
         })
       })
@@ -253,8 +238,6 @@ export default function TargetEditModal({
       const data = await response.json()
 
       if (response.ok) {
-        setShowPasswordPrompt(false)
-        setPassword('')
         setShowSuccessMessage(true) // Show success message
         await fetchTargets() // Refresh list
         onSaveSuccess() // Refresh dashboard
@@ -443,7 +426,7 @@ export default function TargetEditModal({
             </button>
 
             <button
-              onClick={handleSaveClick}
+              onClick={handleSave}
               disabled={loading}
               style={{
                 padding: '10px 24px',
@@ -573,7 +556,7 @@ export default function TargetEditModal({
           </div>
 
           {/* ERROR MESSAGE */}
-          {error && !showPasswordPrompt && (
+          {error && (
             <div style={{
               marginTop: '16px',
               padding: '12px',
@@ -824,121 +807,6 @@ export default function TargetEditModal({
             </div>
           )}
         </div>
-
-        {/* ================================================================ */}
-        {/* PASSWORD PROMPT OVERLAY */}
-        {/* ================================================================ */}
-        {showPasswordPrompt && (
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: '8px'
-          }}>
-            <div style={{
-              backgroundColor: '#FFFFFF',
-              padding: '32px',
-              borderRadius: '8px',
-              width: '400px',
-              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)'
-            }}>
-              <h3 style={{
-                fontSize: '18px',
-                fontWeight: '600',
-                color: '#111827',
-                marginBottom: '8px'
-              }}>
-                Password Verification Required
-              </h3>
-              <p style={{
-                fontSize: '14px',
-                color: '#6B7280',
-                marginBottom: '20px'
-              }}>
-                Please enter your manager password to save target
-              </p>
-
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSaveWithPassword()}
-                placeholder="Enter password"
-                autoFocus
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  fontSize: '14px',
-                  border: '1px solid #D1D5DB',
-                  borderRadius: '6px',
-                  marginBottom: '16px'
-                }}
-              />
-
-              {error && (
-                <div style={{
-                  padding: '12px',
-                  backgroundColor: '#FEF2F2',
-                  border: '1px solid #FECACA',
-                  borderRadius: '6px',
-                  color: '#DC2626',
-                  fontSize: '14px',
-                  marginBottom: '16px'
-                }}>
-                  {error}
-                </div>
-              )}
-
-              <div style={{
-                display: 'flex',
-                gap: '12px',
-                justifyContent: 'flex-end'
-              }}>
-                <button
-                  onClick={() => {
-                    setShowPasswordPrompt(false)
-                    setPassword('')
-                    setError('')
-                  }}
-                  style={{
-                    padding: '10px 20px',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    color: '#374151',
-                    backgroundColor: '#F3F4F6',
-                    border: '1px solid #D1D5DB',
-                    borderRadius: '6px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveWithPassword}
-                  disabled={loading || !password}
-                  style={{
-                    padding: '10px 24px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#FFFFFF',
-                    backgroundColor: loading || !password ? '#9CA3AF' : '#3B82F6',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: loading || !password ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  {loading ? 'Verifying...' : 'Confirm'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* ================================================================ */}
         {/* SUCCESS MESSAGE OVERLAY */}
