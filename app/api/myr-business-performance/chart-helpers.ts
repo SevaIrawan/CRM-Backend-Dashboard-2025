@@ -182,7 +182,7 @@ export async function generateForecastQ4GGRChart(params: ChartParams): Promise<{
     const qEndMonth = quarterNum * 3
     
     // Calculate last day of end month dynamically
-    const tempEndDate = new Date(parseInt(year), qEndMonth, 0) // Day 0 = last day of previous month
+    const tempEndDate = new Date(year, qEndMonth, 0) // Day 0 = last day of previous month
     const qEndDay = tempEndDate.getDate()
     
     const quarterEndDate = `${year}-${String(qEndMonth).padStart(2, '0')}-${String(qEndDay).padStart(2, '0')}`
@@ -332,7 +332,7 @@ export async function generateForecastQ4GGRChart(params: ChartParams): Promise<{
       const qEndMonth = quarterNum * 3
       
       // Calculate last day of end month dynamically
-      const tempEndDate = new Date(parseInt(year), qEndMonth, 0) // Day 0 = last day of previous month
+      const tempEndDate = new Date(year, qEndMonth, 0) // Day 0 = last day of previous month
       const qEndDay = tempEndDate.getDate()
       
       const quarterEndDate = `${year}-${String(qEndMonth).padStart(2, '0')}-${String(qEndDay).padStart(2, '0')}`
