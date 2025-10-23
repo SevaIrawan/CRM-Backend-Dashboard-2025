@@ -661,7 +661,7 @@ export async function GET(request: NextRequest) {
       .limit(1)
       .single()
     
-    const maxDateInData = maxDateResult?.date || endDate || `${year}-12-31`
+    const maxDateInData: string = (maxDateResult?.date as string) || endDate || `${year}-12-31`
     
     // Calculate previous period dates
     const previousPeriod = getPreviousPeriod(
@@ -674,6 +674,11 @@ export async function GET(request: NextRequest) {
     )
     
     console.log('[BP API] Previous Period:', previousPeriod)
+    console.log('[BP API] Comparison Mode:', previousPeriod.comparisonMode)
+    console.log('[BP API] Previous Period Dates:', {
+      prevStartDate: previousPeriod.prevStartDate,
+      prevEndDate: previousPeriod.prevEndDate
+    })
     
     // Fetch and calculate PREVIOUS PERIOD KPIs FOR MoM COMPARISON
     let prevPeriodActiveMember = 0
@@ -721,33 +726,57 @@ export async function GET(request: NextRequest) {
         prevPeriodMvData.withdrawal_rate = prevPeriodMvData.deposit_cases > 0 ? (prevPeriodMvData.withdraw_cases / prevPeriodMvData.deposit_cases) * 100 : 0
       }
     } else {
-      // QUARTERLY MODE: Fetch from bp_quarter_summary_myr or previous quarter
-      const prevQuarterInfo = previousPeriod.comparisonMode === 'QUARTER_TO_QUARTER'
-        ? (() => {
-            const quarters = ['Q1', 'Q2', 'Q3', 'Q4']
-            const currentIndex = quarters.indexOf(quarter || 'Q4')
-            if (currentIndex === 0) {
-              return { quarter: 'Q4', year: year - 1 }
-            } else {
-              return { quarter: quarters[currentIndex - 1], year: year }
-            }
-          })()
-        : { quarter: quarter, year: year }
-      
-      const { data: prevQuarterData } = await supabase
-        .from('bp_quarter_summary_myr')
-        .select('*')
-        .eq('currency', currency)
-        .eq('year', prevQuarterInfo.year.toString())
-        .eq('period', prevQuarterInfo.quarter)
-        .eq('period_type', 'QUARTERLY')
-        .eq('line', 'ALL')
-        .maybeSingle()
-      
-      if (prevQuarterData) {
-        prevPeriodMvData = prevQuarterData as any
-        prevPeriodNewDepositor = (prevQuarterData as any).new_depositor || 0
-        prevPeriodNewRegister = (prevQuarterData as any).new_register || 0
+      // QUARTERLY MODE
+      if (previousPeriod.comparisonMode === 'QUARTER_TO_QUARTER') {
+        // QUARTER-TO-QUARTER: Fetch from bp_quarter_summary_myr (previous complete quarter)
+        const quarters = ['Q1', 'Q2', 'Q3', 'Q4']
+        const currentIndex = quarters.indexOf(quarter || 'Q4')
+        const prevQuarter = currentIndex === 0 ? 'Q4' : quarters[currentIndex - 1]
+        const prevYear = currentIndex === 0 ? year - 1 : year
+        
+        const { data: prevQuarterData } = await supabase
+          .from('bp_quarter_summary_myr')
+          .select('*')
+          .eq('currency', currency)
+          .eq('year', prevYear.toString())
+          .eq('period', prevQuarter)
+          .eq('period_type', 'QUARTERLY')
+          .eq('line', 'ALL')
+          .maybeSingle()
+        
+        if (prevQuarterData) {
+          prevPeriodMvData = prevQuarterData as any
+          prevPeriodNewDepositor = (prevQuarterData as any).new_depositor || 0
+          prevPeriodNewRegister = (prevQuarterData as any).new_register || 0
+        }
+      } else {
+        // DATE-TO-DATE: Fetch from bp_daily_summary_myr (same date range, previous month)
+        const { data: prevDailyData } = await supabase
+          .from('bp_daily_summary_myr')
+          .select('*')
+          .eq('currency', currency)
+          .gte('date', previousPeriod.prevStartDate)
+          .lte('date', previousPeriod.prevEndDate)
+          .eq('line', 'ALL')
+        
+        if (prevDailyData && prevDailyData.length > 0) {
+          prevPeriodMvData = {
+            deposit_amount: prevDailyData.reduce((sum: number, row: any) => sum + (row.deposit_amount || 0), 0),
+            deposit_cases: prevDailyData.reduce((sum: number, row: any) => sum + (row.deposit_cases || 0), 0),
+            withdraw_amount: prevDailyData.reduce((sum: number, row: any) => sum + (row.withdraw_amount || 0), 0),
+            withdraw_cases: prevDailyData.reduce((sum: number, row: any) => sum + (row.withdraw_cases || 0), 0),
+            net_profit: prevDailyData.reduce((sum: number, row: any) => sum + (row.net_profit || 0), 0),
+            ggr: prevDailyData.reduce((sum: number, row: any) => sum + (row.ggr || 0), 0),
+            valid_amount: prevDailyData.reduce((sum: number, row: any) => sum + (row.valid_amount || 0), 0),
+            bonus: prevDailyData.reduce((sum: number, row: any) => sum + (row.bonus || 0), 0)
+          }
+          prevPeriodNewDepositor = prevDailyData.reduce((sum: number, row: any) => sum + (row.new_depositor || 0), 0)
+          prevPeriodNewRegister = prevDailyData.reduce((sum: number, row: any) => sum + (row.new_register || 0), 0)
+          
+          // Recalculate rates for previous period
+          prevPeriodMvData.winrate = prevPeriodMvData.deposit_amount > 0 ? (prevPeriodMvData.ggr / prevPeriodMvData.deposit_amount) * 100 : 0
+          prevPeriodMvData.withdrawal_rate = prevPeriodMvData.deposit_cases > 0 ? (prevPeriodMvData.withdraw_cases / prevPeriodMvData.deposit_cases) * 100 : 0
+        }
       }
     }
     
@@ -776,20 +805,37 @@ export async function GET(request: NextRequest) {
     prevPeriodPureActive = prevPeriodActiveMember - prevPeriodNewDepositor
     
     // Calculate DAILY AVERAGE for CURRENT PERIOD
-    const actualDays = mode === 'daily' 
-      ? Math.ceil((new Date(endDate || '').getTime() - new Date(startDate || '').getTime()) / (1000 * 60 * 60 * 24)) + 1
-      : 90 // approximate for quarter
+    // Get actual date range based on mode
+    let actualStartDate = startDate
+    let actualEndDate = endDate
+    
+    if (mode === 'quarterly') {
+      // For quarterly mode, calculate actual quarter date range
+      const quarterStartMonth = quarter === 'Q1' ? '01' : quarter === 'Q2' ? '04' : quarter === 'Q3' ? '07' : '10'
+      const quarterEndMonth = quarter === 'Q1' ? '03' : quarter === 'Q2' ? '06' : quarter === 'Q3' ? '09' : '12'
+      const quarterEndDay = quarter === 'Q1' ? '31' : quarter === 'Q2' ? '30' : quarter === 'Q3' ? '30' : '31'
+      
+      actualStartDate = `${year}-${quarterStartMonth}-01`
+      actualEndDate = `${year}-${quarterEndMonth}-${quarterEndDay}`
+      
+      // If current quarter and maxDateInData exists, use maxDateInData as end date
+      if (maxDateInData && new Date(maxDateInData) < new Date(actualEndDate)) {
+        actualEndDate = maxDateInData
+      }
+    }
+    
+    console.log('[BP API] Daily Average Period:', { actualStartDate, actualEndDate, mode })
     
     const dailyAverage = {
-      grossGamingRevenue: calculateAverageDaily(pureUserGGR, startDate || `${year}-01-01`, endDate || `${year}-12-31`),
-      depositAmount: calculateAverageDaily(mvData.deposit_amount, startDate || `${year}-01-01`, endDate || `${year}-12-31`),
-      depositCases: calculateAverageDaily(mvData.deposit_cases, startDate || `${year}-01-01`, endDate || `${year}-12-31`),
-      withdrawAmount: calculateAverageDaily(mvData.withdraw_amount, startDate || `${year}-01-01`, endDate || `${year}-12-31`),
-      withdrawCases: calculateAverageDaily(mvData.withdraw_cases, startDate || `${year}-01-01`, endDate || `${year}-12-31`),
-      netProfit: calculateAverageDaily(mvData.net_profit, startDate || `${year}-01-01`, endDate || `${year}-12-31`),
-      activeMember: calculateAverageDaily(activeMember, startDate || `${year}-01-01`, endDate || `${year}-12-31`),
-      pureUser: calculateAverageDaily(pureUser, startDate || `${year}-01-01`, endDate || `${year}-12-31`),
-      pureActive: calculateAverageDaily(pureActive, startDate || `${year}-01-01`, endDate || `${year}-12-31`)
+      grossGamingRevenue: calculateAverageDaily(pureUserGGR, actualStartDate, actualEndDate),
+      depositAmount: calculateAverageDaily(mvData.deposit_amount, actualStartDate, actualEndDate),
+      depositCases: calculateAverageDaily(mvData.deposit_cases, actualStartDate, actualEndDate),
+      withdrawAmount: calculateAverageDaily(mvData.withdraw_amount, actualStartDate, actualEndDate),
+      withdrawCases: calculateAverageDaily(mvData.withdraw_cases, actualStartDate, actualEndDate),
+      netProfit: calculateAverageDaily(mvData.net_profit, actualStartDate, actualEndDate),
+      activeMember: calculateAverageDaily(activeMember, actualStartDate, actualEndDate),
+      pureUser: calculateAverageDaily(pureUser, actualStartDate, actualEndDate),
+      pureActive: calculateAverageDaily(pureActive, actualStartDate, actualEndDate)
     }
     
     // Calculate MOM COMPARISON (percentage change from previous to current)
@@ -813,6 +859,14 @@ export async function GET(request: NextRequest) {
     }
     
     console.log('[BP API] Daily Average & MoM Comparison calculated successfully')
+    console.log('[BP API] Comparison Results:', {
+      ggrCurrent: pureUserGGR,
+      ggrPrevious: prevPeriodPureUserGGR,
+      ggrComparison: comparison.grossGamingRevenue,
+      activeMemberCurrent: activeMember,
+      activeMemberPrevious: prevPeriodActiveMember,
+      activeMemberComparison: comparison.activeMember
+    })
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // STEP 8: BUILD RESPONSE
