@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
       .order('date', { ascending: false })
       .limit(1)
     
-    const maxDateInPeriod = maxDateData?.[0]?.date || queryEndDate
+    const maxDateInPeriod: string = (maxDateData?.[0]?.date as string) || queryEndDate
     
     // Extract year and month from max date (format: YYYY-MM-DD)
     const [lastYear, lastMonthStr] = maxDateInPeriod.split('-')
