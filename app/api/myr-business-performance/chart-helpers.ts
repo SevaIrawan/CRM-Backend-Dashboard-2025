@@ -107,6 +107,8 @@ export async function generateGGRTrendChart(params: ChartParams): Promise<{
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // CHART 2: FORECAST Q4 GGR (LINE CHART with 3 lines: Actual, Target, Forecast)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// FORMULA: Forecast GGR = Current Realized GGR + (Avg Daily GGR × Remaining Days)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export async function generateForecastQ4GGRChart(params: ChartParams): Promise<{
   categories: string[]
   actualData: number[]
@@ -116,10 +118,10 @@ export async function generateForecastQ4GGRChart(params: ChartParams): Promise<{
   const { currency, year, quarter, mode, startDate, endDate } = params
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // DAILY MODE: Daily breakdown with daily target & forecast
+  // DAILY MODE: Cumulative forecast with projection
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if (mode === 'daily' && startDate && endDate) {
-    // Fetch actual GGR per day
+    // Fetch actual GGR per day for entire period (including future dates if available)
     const { data: dailyData } = await supabase
       .from('bp_daily_summary_myr')
       .select('date, ggr')
@@ -132,31 +134,126 @@ export async function generateForecastQ4GGRChart(params: ChartParams): Promise<{
     // Get target for current quarter
     const { data: targetData } = await supabase
       .from('bp_target')
-      .select('quarter, target_ggr, forecast_ggr')
+      .select('quarter, target_ggr')
       .eq('currency', currency)
       .eq('year', year)
       .eq('quarter', quarter)
 
     const totalTarget = targetData?.reduce((sum: number, row: any) => sum + (row.target_ggr || 0), 0) || 0
-    const totalForecast = targetData?.reduce((sum: number, row: any) => sum + (row.forecast_ggr || 0), 0) || 0
 
-    // Calculate number of days in the selected period
+    // Get max date in database (last data date)
+    const maxDataDateStr = dailyData && dailyData.length > 0 
+      ? dailyData[dailyData.length - 1].date as string
+      : startDate
+
+    // Calculate avg daily GGR from actual data
+    const currentRealizedGGR = dailyData?.reduce((sum: number, row: any) => sum + (row.ggr || 0), 0) || 0
+    const daysElapsed = dailyData?.length || 1
+    const avgDailyGGR = currentRealizedGGR / daysElapsed
+
+    console.log('[Forecast Calculation - Daily]', {
+      startDate,
+      endDate,
+      maxDataDateStr,
+      currentRealizedGGR,
+      daysElapsed,
+      avgDailyGGR
+    })
+
+    // Generate all dates in the period
     const start = new Date(startDate)
     const end = new Date(endDate)
-    const totalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+    const totalDaysInPeriod = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+    
+    // ✅ Calculate TOTAL DAYS IN QUARTER (proper dynamic calculation)
+    // Target daily MUST be based on full quarter, not selected period!
+    
+    // Extract quarter number (Q1 -> 1, Q2 -> 2, etc.)
+    const quarterNum = parseInt(quarter.replace('Q', ''))
+    
+    // Calculate quarter start month (Q1=1, Q2=4, Q3=7, Q4=10)
+    const qStartMonth = (quarterNum - 1) * 3 + 1
+    
+    // Quarter start date (always 1st day of start month)
+    const quarterStartDate = `${year}-${String(qStartMonth).padStart(2, '0')}-01`
+    
+    // Quarter end date (last day of end month)
+    // Calculate end month
+    const qEndMonth = quarterNum * 3
+    
+    // Calculate last day of end month dynamically
+    const tempEndDate = new Date(parseInt(year), qEndMonth, 0) // Day 0 = last day of previous month
+    const qEndDay = tempEndDate.getDate()
+    
+    const quarterEndDate = `${year}-${String(qEndMonth).padStart(2, '0')}-${String(qEndDay).padStart(2, '0')}`
+    
+    // Calculate total days in quarter
+    const qStart = new Date(quarterStartDate)
+    const qEnd = new Date(quarterEndDate)
+    const totalDaysInQuarter = Math.ceil((qEnd.getTime() - qStart.getTime()) / (1000 * 60 * 60 * 24)) + 1
+    
+    console.log('[Target Daily Calculation]', {
+      quarter,
+      quarterStartDate,
+      quarterEndDate,
+      totalDaysInQuarter,
+      totalTarget,
+      dailyTargetValue: totalTarget / totalDaysInQuarter
+    })
+    
+    const categories: string[] = []
+    const actualData: number[] = []
+    const forecastDataArray: number[] = []
+    const targetDataArray: number[] = []
+    
+    // Daily target = Total Quarter Target / Total Days in Quarter
+    const dailyTargetValue = totalTarget > 0 ? totalTarget / totalDaysInQuarter : 0
+    
+    // Build cumulative forecast
+    let cumulativeActual = 0
+    const actualDataMap = new Map<string, number>()
+    
+    // Map actual data by date
+    dailyData?.forEach((row: any) => {
+      actualDataMap.set(row.date as string, row.ggr || 0)
+    })
 
-    // Daily target = Total Target / Total Days
-    const dailyTarget = totalTarget > 0 ? totalTarget / totalDays : 0
-    const dailyForecast = totalForecast > 0 ? totalForecast / totalDays : 0
-
-    const categories = dailyData?.map((row: any) => {
-      const date = new Date(row.date as string)
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    }) || []
-
-    const actualData = dailyData?.map((row: any) => row.ggr || 0) || []
-    const targetDataArray = new Array(categories.length).fill(dailyTarget)
-    const forecastDataArray = new Array(categories.length).fill(dailyForecast)
+    // Generate data for each day
+    for (let i = 0; i < totalDaysInPeriod; i++) {
+      const currentDate = new Date(start)
+      currentDate.setDate(start.getDate() + i)
+      const dateStr = currentDate.toISOString().split('T')[0]
+      
+      // Category label
+      categories.push(currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))
+      
+      // Target (flat line)
+      targetDataArray.push(dailyTargetValue)
+      
+      // Check if we have actual data for this date
+      if (actualDataMap.has(dateStr)) {
+        // Past: Has actual data
+        const dailyGGR = actualDataMap.get(dateStr) || 0
+        cumulativeActual += dailyGGR
+        actualData.push(dailyGGR)
+        forecastDataArray.push(cumulativeActual) // Forecast = cumulative actual
+      } else if (dateStr > maxDataDateStr) {
+        // Future: No data yet, project based on avg daily pace
+        actualData.push(0) // No actual data
+        
+        // Calculate days since last data
+        const maxDate = new Date(maxDataDateStr)
+        const daysSinceLastData = Math.ceil((currentDate.getTime() - maxDate.getTime()) / (1000 * 60 * 60 * 24))
+        
+        // Forecast = Total actual + (Avg daily × Days since last data)
+        const projectedValue = currentRealizedGGR + (avgDailyGGR * daysSinceLastData)
+        forecastDataArray.push(projectedValue)
+      } else {
+        // Past date but no data (gap in data)
+        actualData.push(0)
+        forecastDataArray.push(cumulativeActual)
+      }
+    }
 
     return {
       categories,
@@ -182,26 +279,95 @@ export async function generateForecastQ4GGRChart(params: ChartParams): Promise<{
   // Fetch target data
   const { data: targetData } = await supabase
     .from('bp_target')
-    .select('quarter, target_ggr, forecast_ggr')
+    .select('quarter, target_ggr')
     .eq('currency', currency)
     .eq('year', year)
 
+  // Get max date in database to determine which quarter is ongoing
+  const { data: maxDateData } = await supabase
+    .from('bp_daily_summary_myr')
+    .select('date')
+    .eq('currency', currency)
+    .order('date', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const maxDataDate = maxDateData?.date as string || `${year}-12-31`
+  const maxMonth = parseInt(maxDataDate.split('-')[1])
+  const currentQuarter = maxMonth <= 3 ? 'Q1' : maxMonth <= 6 ? 'Q2' : maxMonth <= 9 ? 'Q3' : 'Q4'
+
+  console.log('[Forecast Calculation - Quarterly]', { maxDataDate, maxMonth, currentQuarter })
+
   // Build data arrays
   const quarters = ['Q1', 'Q2', 'Q3', 'Q4']
-  const actualData: number[] = quarters.map(q => {
+  const actualData: number[] = []
+  const targetDataArray: number[] = []
+  const forecastDataArray: number[] = []
+
+  for (const q of quarters) {
+    // Actual GGR
     const found = quarterData?.find((row: any) => row.period === q)
-    return found ? (found.ggr as number) : 0
-  })
+    const actualGGR = found ? (found.ggr as number) : 0
+    actualData.push(actualGGR)
 
-  const targetDataArray: number[] = quarters.map(q => {
-    const found = targetData?.filter((row: any) => row.quarter === q)
-    return found && found.length > 0 ? found.reduce((sum: number, row: any) => sum + (row.target_ggr || 0), 0) : 0
-  })
+    // Target GGR
+    const targetRows = targetData?.filter((row: any) => row.quarter === q)
+    const targetGGR = targetRows && targetRows.length > 0 ? targetRows.reduce((sum: number, row: any) => sum + (row.target_ggr || 0), 0) : 0
+    targetDataArray.push(targetGGR)
 
-  const forecastDataArray: number[] = quarters.map(q => {
-    const found = targetData?.filter((row: any) => row.quarter === q)
-    return found && found.length > 0 ? found.reduce((sum: number, row: any) => sum + (row.forecast_ggr || 0), 0) : 0
-  })
+    // Forecast GGR (only for current quarter if ongoing)
+    if (q === currentQuarter && actualGGR > 0) {
+      // Calculate forecast for current quarter (dynamic calculation)
+      
+      // Extract quarter number (Q1 -> 1, Q2 -> 2, etc.)
+      const quarterNum = parseInt(q.replace('Q', ''))
+      
+      // Calculate quarter start month (Q1=1, Q2=4, Q3=7, Q4=10)
+      const qStartMonth = (quarterNum - 1) * 3 + 1
+      
+      // Quarter start date (always 1st day of start month)
+      const quarterStartDate = `${year}-${String(qStartMonth).padStart(2, '0')}-01`
+      
+      // Quarter end date (last day of end month)
+      const qEndMonth = quarterNum * 3
+      
+      // Calculate last day of end month dynamically
+      const tempEndDate = new Date(parseInt(year), qEndMonth, 0) // Day 0 = last day of previous month
+      const qEndDay = tempEndDate.getDate()
+      
+      const quarterEndDate = `${year}-${String(qEndMonth).padStart(2, '0')}-${String(qEndDay).padStart(2, '0')}`
+
+      // Calculate days elapsed (from start of quarter to max data date)
+      const qStart = new Date(quarterStartDate)
+      const maxDate = new Date(maxDataDate)
+      const daysElapsed = Math.ceil((maxDate.getTime() - qStart.getTime()) / (1000 * 60 * 60 * 24)) + 1
+
+      // Calculate remaining days (from max data date to end of quarter)
+      const qEnd = new Date(quarterEndDate)
+      const remainingDays = Math.max(0, Math.ceil((qEnd.getTime() - maxDate.getTime()) / (1000 * 60 * 60 * 24)))
+
+      // Avg Daily GGR
+      const avgDailyGGR = actualGGR / daysElapsed
+
+      // Forecast = Current Realized + (Avg Daily × Remaining Days)
+      const forecastGGR = actualGGR + (avgDailyGGR * remainingDays)
+
+      console.log(`[Forecast ${q}]`, {
+        quarterStartDate,
+        quarterEndDate,
+        actualGGR,
+        daysElapsed,
+        avgDailyGGR,
+        remainingDays,
+        forecastGGR
+      })
+
+      forecastDataArray.push(forecastGGR)
+    } else {
+      // Historical quarters or future quarters: forecast = actual
+      forecastDataArray.push(actualGGR)
+    }
+  }
 
   return {
     categories: quarters,

@@ -43,6 +43,7 @@ interface LineChartProps {
   showDataLabels?: boolean; // Add prop for showing data labels
   customLegend?: Array<{ label: string; color: string }>; // Add custom legend support
   useDenominationLabels?: boolean; // Use K, M denomination for data labels (for Brand Performance Trends only)
+  forceSingleYAxis?: boolean; // Force single Y-axis even with multiple series (for forecast chart)
   peakHourData?: Array<{
     period: string;
     peakHour: string;
@@ -63,6 +64,7 @@ export default function LineChart({
   showDataLabels = false, // Default false
   customLegend,
   useDenominationLabels = false, // Default false - only true for Brand Performance Trends
+  forceSingleYAxis = false, // Default false - set to true for forecast chart
   peakHourData // Peak hour data for detailed tooltip
 }: LineChartProps) {
   
@@ -352,8 +354,10 @@ export default function LineChart({
     }
   };
 
-  // Force dual Y-axes for all charts with 2 series (as requested by user)
-  const needsDualYAxis = series.length > 1;
+  // Determine if dual Y-axis is needed
+  // - If forceSingleYAxis = true, always use single Y-axis (for forecast chart)
+  // - Otherwise, use dual Y-axis for charts with 2+ series
+  const needsDualYAxis = !forceSingleYAxis && series.length > 1;
 
   const data = {
     labels: categories,
@@ -636,29 +640,13 @@ export default function LineChart({
            lineWidth: 1,
            drawBorder: false
          },
-                 ticks: {
-           padding: 20, // Increased padding for legend space
-           // ✅ IMPROVED: Professional step calculation for better Y-axis labels
-           stepSize: (() => {
-             const allValues = series.flatMap(s => s.data);
-             const maxValue = Math.max(...allValues);
-             const suggestedMax = maxValue * 1.2;
-             
-             // Calculate appropriate step size based on data range
-             if (suggestedMax >= 1000000) {
-               return Math.ceil(suggestedMax / 1000000 / 5) * 200000; // Steps of 200K, 400K, etc.
-             } else if (suggestedMax >= 10000) {
-               return Math.ceil(suggestedMax / 10000 / 5) * 10000; // Steps of 10K, 20K, etc.
-             } else if (suggestedMax >= 1000) {
-               return Math.ceil(suggestedMax / 1000 / 5) * 1000; // Steps of 1K, 2K, etc.
-             } else {
-               return Math.ceil(suggestedMax / 5); // Steps of 100, 200, etc.
-             }
-           })(),
-           font: {
-             weight: 'bold' as const,
-             size: 10
-           },
+                ticks: {
+          padding: 20,
+          maxTicksLimit: 6, // ✅ STANDARD: Maximum 6 ticks to prevent duplicates
+          font: {
+            weight: 'bold' as const,
+            size: 10
+          },
                         callback: function(tickValue: string | number) {
                const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
                // Check series name for percentage
@@ -722,32 +710,13 @@ export default function LineChart({
              color: '#e5e7eb',
              lineWidth: 1
            },
-                     ticks: {
-             padding: 20, // Increased padding for legend space
-             // ✅ IMPROVED: Professional step calculation for better Y1-axis labels
-             stepSize: (() => {
-               if (series.length > 1) {
-                 const secondSeriesValues = series[1].data;
-                 const maxValue = Math.max(...secondSeriesValues);
-                 const suggestedMax = maxValue * 1.2;
-                 
-                 // Calculate appropriate step size based on second series data range
-                 if (suggestedMax >= 1000000) {
-                   return Math.ceil(suggestedMax / 1000000 / 5) * 200000; // Steps of 200K, 400K, etc.
-                 } else if (suggestedMax >= 10000) {
-                   return Math.ceil(suggestedMax / 10000 / 5) * 10000; // Steps of 10K, 20K, etc.
-                 } else if (suggestedMax >= 1000) {
-                   return Math.ceil(suggestedMax / 1000 / 5) * 1000; // Steps of 1K, 2K, etc.
-                 } else {
-                   return Math.ceil(suggestedMax / 5); // Steps of 100, 200, etc.
-                 }
-               }
-               return undefined;
-             })(),
-             font: {
-               weight: 'bold' as const,
-               size: 10
-             },
+                    ticks: {
+            padding: 20,
+            maxTicksLimit: 6, // ✅ STANDARD: Maximum 6 ticks to prevent duplicates
+            font: {
+              weight: 'bold' as const,
+              size: 10
+            },
              callback: function(tickValue: string | number) {
                const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
                // Check second series name for percentage

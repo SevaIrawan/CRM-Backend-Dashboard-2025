@@ -500,7 +500,7 @@ export default function BusinessPerformancePage() {
             target={kpiData?.targetGGR || 0}
             unit="%"
             icon="targetCompletion"
-            onClick={() => setIsTargetAchieveModalOpen(true)}
+            onDoubleClick={() => setIsTargetAchieveModalOpen(true)}
             clickable={true}
           />
           
@@ -532,7 +532,7 @@ export default function BusinessPerformancePage() {
               percentage: loadingData ? '-' : `${comparison?.activeMember >= 0 ? '+' : ''}${comparison?.activeMember?.toFixed(2) || '0.00'}%`,
               isPositive: (comparison?.activeMember || 0) >= 0
             }}
-            onClick={() => setIsActiveMemberModalOpen(true)}
+            onDoubleClick={() => setIsActiveMemberModalOpen(true)}
             clickable={true}
           />
           
@@ -615,6 +615,7 @@ export default function BusinessPerformancePage() {
             currency="MYR"
             chartIcon={getChartIcon('Gross Gaming Revenue')}
             showDataLabels={true}
+            forceSingleYAxis={true}
           />
           
           {/* GGR Trend */}

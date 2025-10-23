@@ -489,25 +489,32 @@ export async function GET(request: NextRequest) {
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // STEP 3: CALCULATE MEMBER METRICS (COUNT DISTINCT from blue_whale_myr)
+    // STEP 3: CALCULATE MEMBER METRICS
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    const [activeMember, pureUser, pureUserGGR] = await Promise.all([
-      calculateActiveMember(
-        mode === 'daily'
-          ? { currency, startDate, endDate }
-          : { currency, year, quarter }
-      ),
-      calculatePureUser(
-        mode === 'daily'
-          ? { currency, startDate, endDate }
-          : { currency, year, quarter }
-      ),
-      calculatePureUserGGR(
-        mode === 'daily'
-          ? { currency, startDate, endDate }
-          : { currency, year, quarter }
-      )
-    ])
+    // ✅ OPTIMIZATION: For QUARTERLY mode, use pre-calculated values from MV
+    // ❌ For DAILY mode, still need COUNT DISTINCT from blue_whale_myr
+    let activeMember: number
+    let pureUser: number
+    let pureUserGGR: number
+
+    if (mode === 'quarterly') {
+      // ✅ FAST: Use MV Quarter Table (NO additional queries!)
+      console.log('[BP API] Using MV Quarter Table for member metrics (FAST)')
+      activeMember = mvData.active_member || 0
+      pureUser = mvData.pure_member || 0
+      pureUserGGR = mvData.ggr || 0
+    } else {
+      // ❌ SLOW: Query blue_whale_myr for COUNT DISTINCT (needed for random date ranges)
+      console.log('[BP API] Querying blue_whale_myr for member metrics (SLOW - random date range)')
+      const [activeMemResult, pureUserResult, pureUserGGRResult] = await Promise.all([
+        calculateActiveMember({ currency, startDate, endDate }),
+        calculatePureUser({ currency, startDate, endDate }),
+        calculatePureUserGGR({ currency, startDate, endDate })
+      ])
+      activeMember = activeMemResult
+      pureUser = pureUserResult
+      pureUserGGR = pureUserGGRResult
+    }
 
     const pureActive = activeMember - newDepositor
 
@@ -784,28 +791,40 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    // Calculate PREVIOUS PERIOD member metrics from master table
-    const [prevPeriodActiveMemberCalc, prevPeriodPureUserCalc, prevPeriodPureUserGGRCalc] = await Promise.all([
-      calculateActiveMember({
-        currency,
-        startDate: previousPeriod.prevStartDate,
-        endDate: previousPeriod.prevEndDate
-      }),
-      calculatePureUser({
-        currency,
-        startDate: previousPeriod.prevStartDate,
-        endDate: previousPeriod.prevEndDate
-      }),
-      calculatePureUserGGR({
-        currency,
-        startDate: previousPeriod.prevStartDate,
-        endDate: previousPeriod.prevEndDate
-      })
-    ])
+    // Calculate PREVIOUS PERIOD member metrics
+    // ✅ OPTIMIZATION: For QUARTER_TO_QUARTER comparison, use MV data
+    if (mode === 'quarterly' && previousPeriod.comparisonMode === 'QUARTER_TO_QUARTER') {
+      // ✅ FAST: Use MV Quarter Table for previous quarter (NO additional queries!)
+      console.log('[BP API] Using MV Quarter Table for previous period (FAST)')
+      prevPeriodActiveMember = prevPeriodMvData.active_member || 0
+      prevPeriodPureUser = prevPeriodMvData.pure_member || 0
+      prevPeriodPureUserGGR = prevPeriodMvData.ggr || 0
+    } else {
+      // ❌ SLOW: Query blue_whale_myr for previous period (needed for date-to-date or daily mode)
+      console.log('[BP API] Querying blue_whale_myr for previous period (SLOW)')
+      const [prevPeriodActiveMemberCalc, prevPeriodPureUserCalc, prevPeriodPureUserGGRCalc] = await Promise.all([
+        calculateActiveMember({
+          currency,
+          startDate: previousPeriod.prevStartDate,
+          endDate: previousPeriod.prevEndDate
+        }),
+        calculatePureUser({
+          currency,
+          startDate: previousPeriod.prevStartDate,
+          endDate: previousPeriod.prevEndDate
+        }),
+        calculatePureUserGGR({
+          currency,
+          startDate: previousPeriod.prevStartDate,
+          endDate: previousPeriod.prevEndDate
+        })
+      ])
+      
+      prevPeriodActiveMember = prevPeriodActiveMemberCalc
+      prevPeriodPureUser = prevPeriodPureUserCalc
+      prevPeriodPureUserGGR = prevPeriodPureUserGGRCalc
+    }
     
-    prevPeriodActiveMember = prevPeriodActiveMemberCalc
-    prevPeriodPureUser = prevPeriodPureUserCalc
-    prevPeriodPureUserGGR = prevPeriodPureUserGGRCalc
     prevPeriodPureActive = prevPeriodActiveMember - prevPeriodNewDepositor
     
     // Calculate DAILY AVERAGE for CURRENT PERIOD

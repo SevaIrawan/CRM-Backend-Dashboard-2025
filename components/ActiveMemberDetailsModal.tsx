@@ -6,6 +6,7 @@ import { formatCurrencyKPI, formatIntegerKPI } from '@/lib/formatHelpers'
 interface ActiveMemberDetail {
   uniqueCode: string
   userName: string
+  firstDepositDate: string
   lastDepositDate: string
   daysInactive: number
   daysActive: number
@@ -126,7 +127,7 @@ export default function ActiveMemberDetailsModal({
     try {
       setExporting(true)
       const headers = [
-        'Unique Code', 'User Name', 'Last Deposit Date', 'Days Inactive', 'Days Active',
+        'Unique Code', 'User Name', 'First Deposit Date', 'Last Deposit Date', 'Days Inactive', 'Days Active',
         'ATV', 'DC', 'DA', 'WC', 'WA', 'GGR', 'Net Profit', 'Win Rate', 'Withdrawal Rate', 'Status', 'Brand'
       ]
       const allRows: string[] = []
@@ -161,6 +162,7 @@ export default function ActiveMemberDetailsModal({
           allRows.push([
             m.uniqueCode,
             m.userName,
+            m.firstDepositDate,
             m.lastDepositDate,
             String(m.daysInactive),
             String(m.daysActive),
@@ -329,6 +331,7 @@ export default function ActiveMemberDetailsModal({
                     <tr>
                       <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', minWidth: '120px', whiteSpace: 'nowrap' }}>Unique Code</th>
                       <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', minWidth: '150px', whiteSpace: 'nowrap' }}>User Name</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', minWidth: '110px', whiteSpace: 'nowrap' }}>First Deposit Date</th>
                       <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', minWidth: '110px', whiteSpace: 'nowrap' }}>Last Deposit Date</th>
                       <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', minWidth: '90px', whiteSpace: 'nowrap' }}>Days Inactive</th>
                       <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', minWidth: '90px', whiteSpace: 'nowrap' }}>Days Active</th>
@@ -350,6 +353,7 @@ export default function ActiveMemberDetailsModal({
                       <tr key={index} className="hover:bg-gray-50">
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>{member.uniqueCode}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>{member.userName}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>{member.firstDepositDate}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>{member.lastDepositDate}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center" style={{ border: '1px solid #e5e7eb' }}>{member.daysInactive}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center" style={{ border: '1px solid #e5e7eb' }}>{member.daysActive}</td>

@@ -219,6 +219,7 @@ export async function GET(request: NextRequest) {
           uniqueCode: row.unique_code || 'N/A',
           userName: row.user_name || 'N/A',
           brand: row.line || 'N/A',
+          firstDepositDate: row.date,
           lastDepositDate: row.date,
           daysActive: 0,
           depositAmount: 0,
@@ -235,6 +236,11 @@ export async function GET(request: NextRequest) {
       
       // Track dates for days active calculation
       user.dates.add(row.date)
+      
+      // Update first deposit date (keep earliest)
+      if (row.date < user.firstDepositDate) {
+        user.firstDepositDate = row.date
+      }
       
       // Update last deposit date (keep most recent)
       if (row.date > user.lastDepositDate) {
@@ -291,6 +297,7 @@ export async function GET(request: NextRequest) {
       memberDetails.push({
         uniqueCode: user.uniqueCode,
         userName: user.userName,
+        firstDepositDate: user.firstDepositDate,
         lastDepositDate: user.lastDepositDate,
         daysInactive: daysInactive,
         daysActive: daysActive,

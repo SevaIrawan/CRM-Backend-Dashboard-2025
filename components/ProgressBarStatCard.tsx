@@ -3,6 +3,7 @@
 import React from 'react'
 import { getKpiIcon } from '@/lib/CentralIcon'
 
+// Support both onClick and onDoubleClick for drill-out functionality
 interface ProgressBarStatCardProps {
   title: string
   value: number // Current value
@@ -17,7 +18,8 @@ interface ProgressBarStatCardProps {
   className?: string
   onEditClick?: () => void // Callback for edit button
   showEditButton?: boolean // Show edit icon
-  onClick?: () => void // Callback for card click (drill-out)
+  onClick?: () => void // Callback for card click (single click)
+  onDoubleClick?: () => void // Callback for card double click (drill-out)
   clickable?: boolean // Make card clickable
 }
 
@@ -32,6 +34,7 @@ export default function ProgressBarStatCard({
   onEditClick,
   showEditButton = false,
   onClick,
+  onDoubleClick,
   clickable = false
 }: ProgressBarStatCardProps) {
   const iconSvg = icon ? getKpiIcon(icon) : ''
@@ -52,6 +55,7 @@ export default function ProgressBarStatCard({
     <div 
       className={`stat-card ${className}`}
       onClick={clickable ? onClick : undefined}
+      onDoubleClick={clickable ? onDoubleClick : undefined}
       style={{
         cursor: clickable ? 'pointer' : 'default',
         transition: 'all 0.2s ease'

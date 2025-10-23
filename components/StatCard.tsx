@@ -4,6 +4,7 @@ import React from 'react'
 import { getComparisonColor } from '@/lib/kpiHelpers'
 import { getKpiIcon, ComparisonIcon } from '@/lib/CentralIcon'
 
+// Support both onClick and onDoubleClick for drill-out functionality
 interface StatCardProps {
   title: string
   value: string | number
@@ -21,6 +22,7 @@ interface StatCardProps {
   comparisonSize?: number
   className?: string
   onClick?: () => void
+  onDoubleClick?: () => void
   clickable?: boolean
 }
 
@@ -33,6 +35,7 @@ export default function StatCard({
   comparisonSize = 12,
   className = '',
   onClick,
+  onDoubleClick,
   clickable = false
 }: StatCardProps) {
   const iconSvg = icon ? getKpiIcon(icon) : ''
@@ -41,6 +44,7 @@ export default function StatCard({
     <div 
       className={`stat-card ${className} ${clickable ? 'clickable' : ''}`}
       onClick={clickable ? onClick : undefined}
+      onDoubleClick={clickable ? onDoubleClick : undefined}
       style={{ cursor: clickable ? 'pointer' : 'default' }}
     >
       <div className="stat-card-header">
