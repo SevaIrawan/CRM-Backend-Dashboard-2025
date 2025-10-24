@@ -351,7 +351,8 @@ export default function Sidebar({
           { title: 'Supabase', path: '/supabase' },
           { title: 'Activity Logs', path: '/admin/activity-logs' },
           { title: 'Feedback & Support', path: '/admin/feedback' },
-          { title: 'Page Status Management', path: '/admin/page-status' }
+          { title: 'Page Status Management', path: '/admin/page-status' },
+          { title: 'Target Audit Log', path: '/admin/target-audit-log' }
         ]
       }
     ]
