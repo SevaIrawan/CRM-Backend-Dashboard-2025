@@ -415,23 +415,23 @@ export default function Sidebar({
   // Enhanced submenu state management with persistence
   const handleSubmenuToggle = (title: string, isActivePage: boolean) => {
     if (isActivePage) {
-      // Jika user sedang di halaman submenu, biarkan terbuka
+      // If user is on submenu page, keep it open
       setOpenSubmenu(title)
     } else {
-      // Jika user klik menu yang sama tapi tidak di halaman submenu, toggle
+      // If user clicks the same menu but not on submenu page, toggle
       toggleSubmenu(title)
     }
   }
 
   // HELPER FUNCTIONS FOR STANDARD SUB MENU RULES:
-  // Helper function untuk mendeteksi sub menu secara dinamis
-  // Tambahkan path baru di sini untuk menambah sub menu baru
+  // Helper function to dynamically detect submenu
+  // Add new paths here to add new submenu
   const isSubmenuPath = (path: string) => {
     return path.startsWith('/usc/') || path.startsWith('/myr/') || path.startsWith('/sgd/') || path.startsWith('/admin/') || path.startsWith('/users') || path.startsWith('/supabase')
   }
 
-  // Helper function untuk mendapatkan parent menu dari path
-  // Tambahkan mapping baru di sini untuk menambah sub menu baru
+  // Helper function to get parent menu from path
+  // Add new mapping here to add new submenu
   const getParentMenuFromPath = (path: string) => {
     if (path.startsWith('/usc/')) return 'USC'
     if (path.startsWith('/myr/')) return 'MYR'
@@ -470,7 +470,7 @@ export default function Sidebar({
     }
   }
 
-  // Preload function untuk pages yang sering diakses
+  // Preload function for frequently accessed pages
   const preloadPage = (path: string) => {
     if (typeof window !== 'undefined') {
       router.prefetch(path)

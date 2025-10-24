@@ -1084,7 +1084,7 @@ export async function generateSankeyDiagram(params: ChartParams & { pureUserGGR:
     const { data: pureUserData } = await pureUserQuery
     const pureUserList = Array.from(new Set(pureUserData?.map((row: any) => row.unique_code?.trim()).filter(Boolean) || []))
 
-    // ✅ Add Pure User dari brand ini ke global set (untuk total count)
+    // ✅ Add Pure User from this brand to global set (for total count)
     pureUserList.forEach((uniqueCode: string) => globalPureUserSet.add(uniqueCode))
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1193,7 +1193,7 @@ export async function generateSankeyDiagram(params: ChartParams & { pureUserGGR:
     value: totalPureUser 
   })
 
-  // COLUMN 2: Brands (dengan format: "SBMY\n1,092 (RM 414,906)")
+  // COLUMN 2: Brands (with format: "SBMY\n1,092 (RM 414,906)")
   brands.forEach(brand => {
     const count = brandPureUser[brand] || 0
     const ggr = Math.round(brandPureUserGGR[brand] || 0)

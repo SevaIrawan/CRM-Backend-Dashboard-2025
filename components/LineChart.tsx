@@ -502,19 +502,19 @@ export default function LineChart({
            return formatIntegerKPI(value);
          }
        },
-       // Custom plugin untuk background Y1 dan Y2
+       // Custom plugin for background Y1 and Y2
        customBackgroundPlugin: {
          id: 'customBackground',
          beforeDraw: (chart: any) => {
            const { ctx, chartArea, scales } = chart;
            if (!chartArea) return;
            
-           // Background untuk Y1 (Blue muda) - area kanan
+           // Background for Y1 (Light blue) - right area
            if (scales.y1) {
              ctx.save();
              ctx.fillStyle = 'rgba(59, 130, 246, 0.1)'; // Blue muda
              ctx.fillRect(
-               chartArea.right - 100, // Area untuk Y1
+               chartArea.right - 100, // Area for Y1
                chartArea.top,
                100,
                chartArea.height
@@ -522,12 +522,12 @@ export default function LineChart({
              ctx.restore();
            }
            
-           // Background untuk Y (Orange muda) - area kiri
+           // Background for Y (Light orange) - left area
            if (scales.y) {
              ctx.save();
              ctx.fillStyle = 'rgba(249, 115, 22, 0.1)'; // Orange muda
              ctx.fillRect(
-               chartArea.left, // Area untuk Y
+               chartArea.left, // Area for Y
                100,
                chartArea.height
              );
@@ -896,13 +896,13 @@ export default function LineChart({
              {/* Chart Area */}
                <div style={{
           flex: 1,
-          minHeight: '250px', // Reduced minimum height untuk responsive
+          minHeight: '250px', // Reduced minimum height for responsive
           padding: '0',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: '#ffffff', // White background
-          border: '1px solid #ffffff' // White border untuk canvas
+          border: '1px solid #ffffff' // White border for canvas
         }}>
         {(() => {
           try {

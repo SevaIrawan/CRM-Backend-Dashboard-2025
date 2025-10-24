@@ -52,7 +52,7 @@ export default function ConnectionTest() {
     addLog('🔑 Key: Configured', 'info')
     fetchLastUpdate()
     testConnection()
-    // Auto check untuk perubahan database setiap 30 detik
+    // Auto check for database changes every 30 seconds
     const interval = setInterval(checkForChanges, 30000)
     const lastUpdateInterval = setInterval(fetchLastUpdate, 30000)
     return () => {
@@ -61,7 +61,7 @@ export default function ConnectionTest() {
     }
   }, [])
 
-  // Fetch Last Update dengan logic yang sama seperti sidebar
+  // Fetch Last Update with the same logic as sidebar
   const fetchLastUpdate = async () => {
     try {
       setIsLoading(true)
@@ -164,12 +164,12 @@ export default function ConnectionTest() {
     setLogs(prev => [...prev.slice(-50), { timestamp, message, type }]) // Keep only last 50 logs
   }
 
-  // Check untuk perubahan data di database - REAL TIME
+  // Check for data changes in database - REAL TIME
   const checkForChanges = async () => {
     try {
       addLog('🔄 Checking for database changes...', 'info')
       
-      // Ambil hash dari data terbaru untuk comparison - SIMPLIFIED QUERY
+      // Get hash from latest data for comparison - SIMPLIFIED QUERY
       const { data: latestData, error } = await supabase
         .from('blue_whale_myr')
         .select('count')

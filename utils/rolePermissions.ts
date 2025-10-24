@@ -160,7 +160,7 @@ export const USER_ROLES: { [key: string]: UserRole } = {
   }
 }
 
-// Helper functions untuk role management
+// Helper functions for role management
 export const getRoleInfo = (roleName: string): UserRole | null => {
   const role = USER_ROLES[roleName.toLowerCase()]
   return role || null
@@ -230,7 +230,7 @@ export const getRoleDisplayName = (roleName: string): string => {
   return role ? role.displayName : roleName
 }
 
-// Function untuk mendapatkan menu items berdasarkan role
+// Function to get menu items based on role
 export const getMenuItemsByRole = (userRole: string) => {
   console.log('🔍 [getMenuItemsByRole] Input userRole:', userRole)
   const role = getRoleInfo(userRole)

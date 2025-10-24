@@ -89,13 +89,13 @@ export async function POST(request: NextRequest) {
         
         let errorMessage = ''
         if (user_role === 'manager_myr') {
-          errorMessage = 'Manager MYR hanya dapat edit target MYR. Anda tidak memiliki akses ke target SGD/USC.'
+          errorMessage = 'Manager MYR can only edit MYR targets. You do not have access to SGD/USC targets.'
         } else if (user_role === 'manager_sgd') {
-          errorMessage = 'Manager SGD hanya dapat edit target SGD. Anda tidak memiliki akses ke target MYR/USC.'
+          errorMessage = 'Manager SGD can only edit SGD targets. You do not have access to MYR/USC targets.'
         } else if (user_role === 'manager_usc') {
-          errorMessage = 'Manager USC hanya dapat edit target USC. Anda tidak memiliki akses ke target MYR/SGD.'
+          errorMessage = 'Manager USC can only edit USC targets. You do not have access to MYR/SGD targets.'
         } else {
-          errorMessage = `Role ${user_role} tidak memiliki akses untuk edit target ${currency}.`
+          errorMessage = `Role ${user_role} does not have access to edit ${currency} targets.`
         }
         
         return NextResponse.json(
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
       
       if (!totalTargetData || !totalTargetData.target_ggr) {
         return NextResponse.json(
-          { error: `Total target untuk ${currency} ${quarter} ${year} belum di-set. Harap set total target terlebih dahulu sebelum breakdown per brand.` },
+          { error: `Total target for ${currency} ${quarter} ${year} has not been set. Please set the total target first before breakdown by brand.` },
           { status: 400 }
         )
       }
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
         
         return NextResponse.json(
           { 
-            error: `Total percentage breakdown melebihi 100%!\n\nBreakdown saat ini:\n- Brand lain: ${existingPercentage.toFixed(2)}%\n- ${line}: ${currentBrandPercentage.toFixed(2)}%\n- Total: ${totalPercentage.toFixed(2)}%\n\nSisa percentage yang tersedia: ${availablePercentage.toFixed(2)}%\n\nSilakan adjust target GGR untuk ${line} agar total tidak melebihi 100%.`
+            error: `Total percentage breakdown exceeds 100%!\n\nCurrent breakdown:\n- Other brands: ${existingPercentage.toFixed(2)}%\n- ${line}: ${currentBrandPercentage.toFixed(2)}%\n- Total: ${totalPercentage.toFixed(2)}%\n\nAvailable percentage: ${availablePercentage.toFixed(2)}%\n\nPlease adjust target GGR for ${line} so the total does not exceed 100%.`
           },
           { status: 400 }
         )
@@ -360,7 +360,7 @@ export async function POST(request: NextRequest) {
     
     // Add warning message if other brands were reset
     if (resetBrands.length > 0) {
-      responseMessage += `\n\n⚠️ PERHATIAN: Target untuk brand lain (${resetBrands.join(', ')}) telah di-reset ke 0.\n\nSilakan set ulang target untuk brand tersebut agar total breakdown sesuai.`
+      responseMessage += `\n\n⚠️ WARNING: Targets for other brands (${resetBrands.join(', ')}) have been reset to 0.\n\nPlease set targets for these brands again to ensure the total breakdown is accurate.`
     }
     
     return NextResponse.json({
