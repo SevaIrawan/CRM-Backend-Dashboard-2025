@@ -2,11 +2,11 @@
 // User Management Level Rules:
 // 1. Admin = Full Access All Page + User Management + Admin Features
 // 2. Executive = Limited Access: Dashboard, MYR, SGD, USC + Read Only
-// 3. Manager = Limited Access: Currency Specific (MYR/SGD/USC) + Read Only
+// 3. Manager = Limited Access: Currency Specific (MYR/SGD/USC) + Can Edit Targets
 // 4. SQ = Limited Access: Currency Specific (MYR/SGD/USC) + Read Only
 // 5. Analyst = Full Dashboard Access (Dashboard, MYR, SGD, USC) + Read Only + No Admin Features
 // 6. Ops = Full Dashboard Access (Dashboard, MYR, SGD, USC) + Read Only + No Admin Features
-// 7. Demo = Full Dashboard Access (Dashboard, MYR, SGD, USC) + Read Only + For Presentation & Feedback
+// 7. Demo = Full Dashboard Access (Dashboard, MYR, SGD, USC) + Can Edit ALL Targets (Testing) + For Presentation & Feedback
 
 export interface UserRole {
   id: string
@@ -144,7 +144,7 @@ export const USER_ROLES: { [key: string]: UserRole } = {
     canAccessUserManagement: false,
     isReadOnly: true
   },
-  // Demo = Demo User (Full Dashboard Access, Read Only, For Presentation & Feedback)
+  // Demo = Demo User (Full Dashboard Access, Can Edit Targets for Testing, For Presentation & Feedback)
   'demo': {
     id: 'demo',
     name: 'demo',
@@ -156,7 +156,7 @@ export const USER_ROLES: { [key: string]: UserRole } = {
       'usc'
     ],
     canAccessUserManagement: false,
-    isReadOnly: true
+    isReadOnly: true  // Read-only for most features, but can edit targets for testing purposes
   }
 }
 

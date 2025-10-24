@@ -63,11 +63,11 @@ export async function POST(request: NextRequest) {
     console.log('🔐 [BP Target Update] User role:', user_role)
     console.log('🔐 [BP Target Update] Target currency:', currency)
     
-    const validRoles = ['manager_myr', 'manager_sgd', 'manager_usc', 'admin']
+    const validRoles = ['manager_myr', 'manager_sgd', 'manager_usc', 'admin', 'demo']
     if (!validRoles.includes(user_role)) {
       console.warn(`⚠️ [BP Target Update] Unauthorized role: ${user_role}`)
       return NextResponse.json(
-        { error: 'Unauthorized: Only managers and admin can update targets' },
+        { error: 'Unauthorized: Only managers, admin, and demo can update targets' },
         { status: 403 }
       )
     }
@@ -77,8 +77,9 @@ export async function POST(request: NextRequest) {
     // - manager_sgd → ONLY edit SGD targets
     // - manager_usc → ONLY edit USC targets
     // - admin → CAN edit ALL targets (MYR/SGD/USC)
+    // - demo → CAN edit ALL targets (MYR/SGD/USC) - For testing purposes
     
-    if (user_role !== 'admin') {
+    if (user_role !== 'admin' && user_role !== 'demo') {
       const roleCurrency = user_role.split('_')[1]?.toUpperCase()
       console.log('🔐 [BP Target Update] Role currency:', roleCurrency)
       
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
       
       console.log('✅ [BP Target Update] Permission granted:', `${user_role} can edit ${currency} targets`)
     } else {
-      console.log('✅ [BP Target Update] Admin access - can edit all targets')
+      console.log('✅ [BP Target Update] Admin/Demo access - can edit all targets')
     }
     
     // ============================================================================

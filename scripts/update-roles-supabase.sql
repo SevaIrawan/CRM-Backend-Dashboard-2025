@@ -31,7 +31,16 @@ INSERT INTO users (username, password, role, created_at, updated_at) VALUES
 ('sq_sgd', 'sq_sgd123', 'sq_sgd', NOW(), NOW()),
 
 -- SQ_USC = Level/Role User = Limited Access > USC
-('sq_usc', 'sq_usc123', 'sq_usc', NOW(), NOW());
+('sq_usc', 'sq_usc123', 'sq_usc', NOW(), NOW()),
+
+-- Analyst = Full Dashboard Access (No Admin Features)
+('analyst', 'analyst123', 'analyst', NOW(), NOW()),
+
+-- Ops = Operations (Full Dashboard Access, No Admin Features)
+('ops', 'ops123', 'ops', NOW(), NOW()),
+
+-- Demo = Demo User (Full Dashboard Access, Can Edit Targets for Testing)
+('demo', 'demo123', 'demo', NOW(), NOW());
 
 -- 3. Verifikasi data yang sudah di-insert
 SELECT 
@@ -51,34 +60,47 @@ ORDER BY
         WHEN 'sq_myr' THEN 6
         WHEN 'sq_sgd' THEN 7
         WHEN 'sq_usc' THEN 8
-        ELSE 9
+        WHEN 'analyst' THEN 9
+        WHEN 'ops' THEN 10
+        WHEN 'demo' THEN 11
+        ELSE 12
     END;
 
 -- =============================================
 -- ROLE PERMISSIONS SUMMARY
 -- =============================================
 /*
-Admin = All Access All Page
-- dashboard, myr, sgd, usc, transaction, supabase, users
+1. Admin = All Access All Page + User Management + Admin Features
+   - dashboard, myr, sgd, usc, transaction, supabase, users, admin
 
-Executive = Limited Access > Dashboard, MYR, SGD, USC
-- dashboard, myr, sgd, usc
+2. Executive = Limited Access > Dashboard, MYR, SGD, USC (Read Only)
+   - dashboard, myr, sgd, usc
 
-Manager MYR = Limited Access > MYR
-- myr
+3. Manager MYR = Limited Access > MYR + Can Edit MYR Targets
+   - myr
 
-Manager SGD = Limited Access > SGD
-- sgd
+4. Manager SGD = Limited Access > SGD + Can Edit SGD Targets
+   - sgd
 
-Manager USC = Limited Access > USC
-- usc
+5. Manager USC = Limited Access > USC + Can Edit USC Targets
+   - usc
 
-SQ_MYR = Limited Access > MYR
-- myr
+6. SQ_MYR = Limited Access > MYR (Read Only)
+   - myr
 
-SQ_SGD = Limited Access > SGD
-- sgd
+7. SQ_SGD = Limited Access > SGD (Read Only)
+   - sgd
 
-SQ_USC = Limited Access > USC
-- usc
+8. SQ_USC = Limited Access > USC (Read Only)
+   - usc
+
+9. Analyst = Full Dashboard Access (Read Only, No Admin Features)
+   - dashboard, myr, sgd, usc
+
+10. Ops = Full Dashboard Access (Read Only, No Admin Features)
+    - dashboard, myr, sgd, usc
+
+11. Demo = Full Dashboard Access + Can Edit ALL Targets (For Testing & Feedback)
+    - dashboard, myr, sgd, usc
+    - Special permission: Can edit targets for MYR, SGD, USC (for testing purposes)
 */
