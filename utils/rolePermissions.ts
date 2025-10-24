@@ -6,6 +6,7 @@
 // 4. SQ = Limited Access: Currency Specific (MYR/SGD/USC) + Read Only
 // 5. Analyst = Full Dashboard Access (Dashboard, MYR, SGD, USC) + Read Only + No Admin Features
 // 6. Ops = Full Dashboard Access (Dashboard, MYR, SGD, USC) + Read Only + No Admin Features
+// 7. Demo = Full Dashboard Access (Dashboard, MYR, SGD, USC) + Read Only + For Presentation & Feedback
 
 export interface UserRole {
   id: string
@@ -142,6 +143,20 @@ export const USER_ROLES: { [key: string]: UserRole } = {
     ],
     canAccessUserManagement: false,
     isReadOnly: true
+  },
+  // Demo = Demo User (Full Dashboard Access, Read Only, For Presentation & Feedback)
+  'demo': {
+    id: 'demo',
+    name: 'demo',
+    displayName: 'Demo User',
+    permissions: [
+      'dashboard',
+      'myr',
+      'sgd',
+      'usc'
+    ],
+    canAccessUserManagement: false,
+    isReadOnly: true
   }
 }
 
@@ -255,6 +270,7 @@ export const getDefaultPageByRole = (userRole: string): string => {
       return '/usc/overview'
     case 'admin':
     case 'analyst':
+    case 'demo':
       return '/dashboard'
     case 'ops':
     case 'manager_xbpo':
