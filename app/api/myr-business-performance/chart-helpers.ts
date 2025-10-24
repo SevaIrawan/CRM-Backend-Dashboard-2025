@@ -131,15 +131,16 @@ export async function generateForecastQ4GGRChart(params: ChartParams): Promise<{
       .eq('line', 'ALL')
       .order('date', { ascending: true })
 
-    // Get target for current quarter
+    // Get target for current quarter (TOTAL only, not sum from brands!)
     const { data: targetData } = await supabase
       .from('bp_target')
-      .select('quarter, target_ggr')
+      .select('quarter, target_ggr, line')
       .eq('currency', currency)
       .eq('year', year)
       .eq('quarter', quarter)
 
-    const totalTarget = targetData?.reduce((sum: number, row: any) => sum + (row.target_ggr || 0), 0) || 0
+    const totalTargetRow = targetData?.find((row: any) => row.line === currency || row.line === 'ALL')
+    const totalTarget = totalTargetRow?.target_ggr || 0
 
     // Get max date in database (last data date)
     const maxDataDateStr = dailyData && dailyData.length > 0 
@@ -276,10 +277,10 @@ export async function generateForecastQ4GGRChart(params: ChartParams): Promise<{
     .eq('line', 'ALL')
     .order('period', { ascending: true })
 
-  // Fetch target data
+  // Fetch target data (TOTAL only, not sum from brands!)
   const { data: targetData } = await supabase
     .from('bp_target')
-    .select('quarter, target_ggr')
+    .select('quarter, target_ggr, line')
     .eq('currency', currency)
     .eq('year', year)
 
@@ -310,9 +311,9 @@ export async function generateForecastQ4GGRChart(params: ChartParams): Promise<{
     const actualGGR = found ? (found.ggr as number) : 0
     actualData.push(actualGGR)
 
-    // Target GGR
-    const targetRows = targetData?.filter((row: any) => row.quarter === q)
-    const targetGGR = targetRows && targetRows.length > 0 ? targetRows.reduce((sum: number, row: any) => sum + (row.target_ggr || 0), 0) : 0
+    // Target GGR (TOTAL only, not sum from brands!)
+    const targetRow = targetData?.find((row: any) => row.quarter === q && (row.line === currency || row.line === 'ALL'))
+    const targetGGR = targetRow?.target_ggr || 0
     targetDataArray.push(targetGGR)
 
     // Forecast GGR (only for current quarter if ongoing)

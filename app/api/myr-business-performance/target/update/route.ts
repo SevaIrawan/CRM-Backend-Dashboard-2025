@@ -109,6 +109,78 @@ export async function POST(request: NextRequest) {
     }
     
     // ============================================================================
+    // VALIDATION 3: Check percentage breakdown (for brand targets only)
+    // ============================================================================
+    // If saving a brand target (not currency total), validate that total percentage ≤ 100%
+    if (line !== currency && line !== 'ALL') {
+      console.log('🔍 [BP Target Update] Validating brand percentage breakdown...')
+      
+      // Step 1: Get TOTAL target for this quarter
+      const { data: totalTargetData } = await supabase
+        .from('bp_target')
+        .select('target_ggr')
+        .eq('currency', currency)
+        .eq('year', year)
+        .eq('quarter', quarter)
+        .eq('is_active', true)
+        .or(`line.eq.${currency},line.eq.ALL`)
+        .maybeSingle()
+      
+      if (!totalTargetData || !totalTargetData.target_ggr) {
+        return NextResponse.json(
+          { error: `Total target untuk ${currency} ${quarter} ${year} belum di-set. Harap set total target terlebih dahulu sebelum breakdown per brand.` },
+          { status: 400 }
+        )
+      }
+      
+      const totalTargetGGR = totalTargetData.target_ggr
+      console.log('📊 [BP Target Update] Total target GGR:', totalTargetGGR)
+      
+      // Step 2: Get all existing brand targets for this quarter (exclude current brand if editing)
+      const { data: existingBrandTargets } = await supabase
+        .from('bp_target')
+        .select('line, target_ggr')
+        .eq('currency', currency)
+        .eq('year', year)
+        .eq('quarter', quarter)
+        .eq('is_active', true)
+        .neq('line', currency)
+        .neq('line', 'ALL')
+        .neq('line', line) // Exclude current brand (for edit mode)
+      
+      // Step 3: Calculate total existing brand targets
+      const existingBrandTotal = existingBrandTargets?.reduce((sum: number, row: any) => sum + (row.target_ggr || 0), 0) || 0
+      console.log('📊 [BP Target Update] Existing brand targets total:', existingBrandTotal)
+      
+      // Step 4: Calculate new total (existing + new brand target)
+      const newBrandTotal = existingBrandTotal + (target_ggr || 0)
+      console.log('📊 [BP Target Update] New brand total (including new target):', newBrandTotal)
+      
+      // Step 5: Calculate percentage
+      const totalPercentage = (newBrandTotal / totalTargetGGR) * 100
+      console.log('📊 [BP Target Update] Total percentage:', totalPercentage.toFixed(2) + '%')
+      
+      // Step 6: Validate ≤ 100%
+      if (totalPercentage > 100) {
+        const currentBrandPercentage = ((target_ggr || 0) / totalTargetGGR) * 100
+        const existingPercentage = (existingBrandTotal / totalTargetGGR) * 100
+        const availablePercentage = 100 - existingPercentage
+        
+        console.warn(`❌ [BP Target Update] Percentage validation failed!`)
+        console.warn(`❌ [BP Target Update] Total percentage would be ${totalPercentage.toFixed(2)}% (> 100%)`)
+        
+        return NextResponse.json(
+          { 
+            error: `Total percentage breakdown melebihi 100%!\n\nBreakdown saat ini:\n- Brand lain: ${existingPercentage.toFixed(2)}%\n- ${line}: ${currentBrandPercentage.toFixed(2)}%\n- Total: ${totalPercentage.toFixed(2)}%\n\nSisa percentage yang tersedia: ${availablePercentage.toFixed(2)}%\n\nSilakan adjust target GGR untuk ${line} agar total tidak melebihi 100%.`
+          },
+          { status: 400 }
+        )
+      }
+      
+      console.log('✅ [BP Target Update] Percentage validation passed:', totalPercentage.toFixed(2) + '% ≤ 100%')
+    }
+    
+    // ============================================================================
     // CHECK IF TARGET EXISTS
     // ============================================================================
     const { data: existingTarget, error: fetchError } = await supabase
@@ -128,6 +200,67 @@ export async function POST(request: NextRequest) {
     
     const now = new Date().toISOString()
     const isUpdate = !!existingTarget
+    
+    // ============================================================================
+    // RESET OTHER BRAND TARGETS (if editing a brand target)
+    // ============================================================================
+    let resetBrands: string[] = []
+    
+    if (isUpdate && line !== currency && line !== 'ALL') {
+      console.log('🔄 [BP Target Update] Editing brand target - resetting other brands...')
+      
+      // Check if target_ggr has changed
+      const hasGGRChanged = existingTarget.target_ggr !== target_ggr
+      
+      if (hasGGRChanged) {
+        console.log('📊 [BP Target Update] GGR changed from', existingTarget.target_ggr, 'to', target_ggr)
+        
+        // Get all other brand targets (exclude current brand and MYR total)
+        const { data: otherBrandTargets } = await supabase
+          .from('bp_target')
+          .select('line, target_ggr')
+          .eq('currency', currency)
+          .eq('year', year)
+          .eq('quarter', quarter)
+          .eq('is_active', true)
+          .neq('line', line)
+          .neq('line', currency)
+          .neq('line', 'ALL')
+        
+        if (otherBrandTargets && otherBrandTargets.length > 0) {
+          console.log('🔄 [BP Target Update] Found', otherBrandTargets.length, 'other brand targets to reset')
+          
+          // Reset each brand target to 0
+          for (const brandTarget of otherBrandTargets) {
+            const resetResult = await supabase
+              .from('bp_target')
+              .update({
+                target_ggr: 0,
+                target_deposit_amount: 0,
+                target_deposit_cases: 0,
+                target_active_member: 0,
+                forecast_ggr: 0,
+                updated_at: now,
+                updated_by: user_email,
+                updated_by_role: user_role,
+                notes: `Reset akibat perubahan target ${line} oleh ${user_email}`
+              })
+              .eq('currency', currency)
+              .eq('line', brandTarget.line)
+              .eq('year', year)
+              .eq('quarter', quarter)
+              .eq('is_active', true)
+            
+            if (resetResult.error) {
+              console.error('⚠️ [BP Target Update] Failed to reset brand:', brandTarget.line, resetResult.error)
+            } else {
+              console.log('✅ [BP Target Update] Reset brand:', brandTarget.line)
+              resetBrands.push(brandTarget.line)
+            }
+          }
+        }
+      }
+    }
     
     // ============================================================================
     // PREPARE TARGET DATA
@@ -221,11 +354,19 @@ export async function POST(request: NextRequest) {
     // ============================================================================
     // RESPONSE
     // ============================================================================
+    let responseMessage = `Target ${isUpdate ? 'updated' : 'created'} successfully`
+    
+    // Add warning message if other brands were reset
+    if (resetBrands.length > 0) {
+      responseMessage += `\n\n⚠️ PERHATIAN: Target untuk brand lain (${resetBrands.join(', ')}) telah di-reset ke 0.\n\nSilakan set ulang target untuk brand tersebut agar total breakdown sesuai.`
+    }
+    
     return NextResponse.json({
       success: true,
-      message: `Target ${isUpdate ? 'updated' : 'created'} successfully`,
+      message: responseMessage,
       target: savedTarget,
-      action: isUpdate ? 'UPDATE' : 'CREATE'
+      action: isUpdate ? 'UPDATE' : 'CREATE',
+      resetBrands: resetBrands.length > 0 ? resetBrands : undefined
     })
     
   } catch (error) {

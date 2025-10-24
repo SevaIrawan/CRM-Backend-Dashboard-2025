@@ -79,6 +79,9 @@ export default function TargetEditModal({
   // Edit mode
   const [editMode, setEditMode] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  
+  // Success message (with potential warning about reset brands)
+  const [successMessage, setSuccessMessage] = useState<string>('')
 
   // ============================================================================
   // FETCH BRANDS & TARGETS ON MOUNT
@@ -152,6 +155,7 @@ export default function TargetEditModal({
     setEditMode(false)
     setEditingId(null)
     setError('')
+    setSuccessMessage('')
   }
 
   // ============================================================================
@@ -259,6 +263,8 @@ export default function TargetEditModal({
       const data = await response.json()
 
       if (response.ok) {
+        // Store the success message (may include warning about reset brands)
+        setSuccessMessage(data.message || 'Target saved successfully')
         setShowSuccessMessage(true)
         await fetchTargets() // Refresh list
         resetForm()
@@ -443,8 +449,9 @@ export default function TargetEditModal({
               </label>
               <input
                 type="number"
-                value={percentage}
-                onChange={(e) => setPercentage(Number(e.target.value))}
+                value={percentage === 0 ? '' : percentage}
+                onChange={(e) => setPercentage(e.target.value === '' ? 0 : Number(e.target.value))}
+                onFocus={(e) => e.target.select()}
                 disabled={isPercentageDisabled}
                 placeholder={isPercentageDisabled ? 'N/A' : 'e.g. 30'}
                 step="0.01"
@@ -528,8 +535,9 @@ export default function TargetEditModal({
               </label>
               <input
                 type="number"
-                value={inputData.ggr}
-                onChange={(e) => setInputData({ ...inputData, ggr: Number(e.target.value) })}
+                value={inputData.ggr === 0 ? '' : inputData.ggr}
+                onChange={(e) => setInputData({ ...inputData, ggr: e.target.value === '' ? 0 : Number(e.target.value) })}
+                onFocus={(e) => e.target.select()}
                 placeholder="e.g. 10000000"
                 style={{
                   width: '100%',
@@ -555,8 +563,9 @@ export default function TargetEditModal({
               </label>
               <input
                 type="number"
-                value={inputData.deposit_amount}
-                onChange={(e) => setInputData({ ...inputData, deposit_amount: Number(e.target.value) })}
+                value={inputData.deposit_amount === 0 ? '' : inputData.deposit_amount}
+                onChange={(e) => setInputData({ ...inputData, deposit_amount: e.target.value === '' ? 0 : Number(e.target.value) })}
+                onFocus={(e) => e.target.select()}
                 placeholder="Optional"
                 style={{
                   width: '100%',
@@ -582,8 +591,9 @@ export default function TargetEditModal({
               </label>
               <input
                 type="number"
-                value={inputData.deposit_cases}
-                onChange={(e) => setInputData({ ...inputData, deposit_cases: Number(e.target.value) })}
+                value={inputData.deposit_cases === 0 ? '' : inputData.deposit_cases}
+                onChange={(e) => setInputData({ ...inputData, deposit_cases: e.target.value === '' ? 0 : Number(e.target.value) })}
+                onFocus={(e) => e.target.select()}
                 placeholder="Optional"
                 style={{
                   width: '100%',
@@ -609,8 +619,9 @@ export default function TargetEditModal({
               </label>
               <input
                 type="number"
-                value={inputData.active_member}
-                onChange={(e) => setInputData({ ...inputData, active_member: Number(e.target.value) })}
+                value={inputData.active_member === 0 ? '' : inputData.active_member}
+                onChange={(e) => setInputData({ ...inputData, active_member: e.target.value === '' ? 0 : Number(e.target.value) })}
+                onFocus={(e) => e.target.select()}
                 placeholder="Optional"
                 style={{
                   width: '100%',
@@ -907,13 +918,18 @@ export default function TargetEditModal({
               <p style={{
                 fontSize: '14px',
                 color: '#6B7280',
-                marginBottom: '24px'
+                marginBottom: '24px',
+                whiteSpace: 'pre-line',
+                textAlign: 'left'
               }}>
-                Target has been saved to database
+                {successMessage || 'Target has been saved to database'}
               </p>
 
               <button
-                onClick={() => setShowSuccessMessage(false)}
+                onClick={() => {
+                  setShowSuccessMessage(false)
+                  setSuccessMessage('')
+                }}
                 style={{
                   padding: '10px 24px',
                   fontSize: '14px',

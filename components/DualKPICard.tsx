@@ -111,7 +111,7 @@ export default function DualKPICard({
           
           {/* KPI 1 Value */}
           <div style={{
-            fontSize: '20px',
+            fontSize: '16px',
             fontWeight: '700',
             color: '#1f2937'
           }}>
@@ -164,7 +164,7 @@ export default function DualKPICard({
           
           {/* KPI 2 Value */}
           <div style={{
-            fontSize: '20px',
+            fontSize: '16px',
             fontWeight: '700',
             color: '#1f2937'
           }}>

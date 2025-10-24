@@ -183,33 +183,37 @@ export async function GET(request: NextRequest) {
       
       for (const targetRow of targetData) {
         const brand = targetRow.line
-        const brandKPI = brandKPIs.find(b => b.brand === brand)
         
-        if (brandKPI) {
-          // Apply breakdown ratio if in daily mode
+        // Check if this is the TOTAL target (line = currency or 'ALL')
+        if (brand === currency || brand === 'ALL') {
+          // Assign to MYR Total, NOT sum from brands!
           const targetGgr = targetRow.target_ggr as number | null
           const targetDc = targetRow.target_deposit_cases as number | null
           const targetDa = targetRow.target_deposit_amount as number | null
           const targetAm = targetRow.target_active_member as number | null
           
-          brandKPI.ggrTarget = targetGgr ? targetGgr * breakdownRatio : null
-          brandKPI.dcTarget = targetDc ? targetDc * breakdownRatio : null
-          brandKPI.daTarget = targetDa ? targetDa * breakdownRatio : null
-          brandKPI.amTarget = targetAm ? targetAm * breakdownRatio : null
+          myrTotal.ggrTarget = targetGgr ? targetGgr * breakdownRatio : null
+          myrTotal.dcTarget = targetDc ? targetDc * breakdownRatio : null
+          myrTotal.daTarget = targetDa ? targetDa * breakdownRatio : null
+          myrTotal.amTarget = targetAm ? targetAm * breakdownRatio : null
+        } else {
+          // Assign to individual brand
+          const brandKPI = brandKPIs.find(b => b.brand === brand)
+          
+          if (brandKPI) {
+            // Apply breakdown ratio if in daily mode
+            const targetGgr = targetRow.target_ggr as number | null
+            const targetDc = targetRow.target_deposit_cases as number | null
+            const targetDa = targetRow.target_deposit_amount as number | null
+            const targetAm = targetRow.target_active_member as number | null
+            
+            brandKPI.ggrTarget = targetGgr ? targetGgr * breakdownRatio : null
+            brandKPI.dcTarget = targetDc ? targetDc * breakdownRatio : null
+            brandKPI.daTarget = targetDa ? targetDa * breakdownRatio : null
+            brandKPI.amTarget = targetAm ? targetAm * breakdownRatio : null
+          }
         }
       }
-      
-      // Calculate MYR total target
-      myrTotal.ggrTarget = brandKPIs.reduce((sum, b) => sum + (b.ggrTarget || 0), 0)
-      myrTotal.dcTarget = brandKPIs.reduce((sum, b) => sum + (b.dcTarget || 0), 0)
-      myrTotal.daTarget = brandKPIs.reduce((sum, b) => sum + (b.daTarget || 0), 0)
-      myrTotal.amTarget = brandKPIs.reduce((sum, b) => sum + (b.amTarget || 0), 0)
-      
-      // Set to null if sum is 0 (meaning no targets were set)
-      if (myrTotal.ggrTarget === 0) myrTotal.ggrTarget = null
-      if (myrTotal.dcTarget === 0) myrTotal.dcTarget = null
-      if (myrTotal.daTarget === 0) myrTotal.daTarget = null
-      if (myrTotal.amTarget === 0) myrTotal.amTarget = null
     }
     
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

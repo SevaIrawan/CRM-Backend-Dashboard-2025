@@ -606,12 +606,15 @@ export async function GET(request: NextRequest) {
     let forecastGGR = 0
 
     if (targetData && targetData.length > 0) {
-      // Sum targets from all brands
-      targetGGR = targetData.reduce((sum: number, row: any) => sum + (row.target_ggr || 0), 0)
-      targetDepositAmount = targetData.reduce((sum: number, row: any) => sum + (row.target_deposit_amount || 0), 0)
-      targetDepositCases = targetData.reduce((sum: number, row: any) => sum + (row.target_deposit_cases || 0), 0)
-      targetActiveMember = targetData.reduce((sum: number, row: any) => sum + (row.target_active_member || 0), 0)
-      forecastGGR = targetData.reduce((sum: number, row: any) => sum + (row.forecast_ggr || 0), 0)
+      // Get TOTAL target only (line = currency or 'ALL'), NOT sum all brands!
+      const totalTargetRow = targetData.find((row: any) => row.line === currency || row.line === 'ALL')
+      if (totalTargetRow) {
+        targetGGR = totalTargetRow.target_ggr || 0
+        targetDepositAmount = totalTargetRow.target_deposit_amount || 0
+        targetDepositCases = totalTargetRow.target_deposit_cases || 0
+        targetActiveMember = totalTargetRow.target_active_member || 0
+        forecastGGR = totalTargetRow.forecast_ggr || 0
+      }
     }
 
     const targetAchieveRate = targetGGR > 0 ? (mvData.ggr / targetGGR) * 100 : 0

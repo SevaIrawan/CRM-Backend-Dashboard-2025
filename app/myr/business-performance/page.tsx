@@ -579,7 +579,7 @@ export default function BusinessPerformancePage() {
             icon="User Value Metrics"
             kpi1={{
               label: 'DA',
-              value: loadingData ? 'Loading...' : formatCurrencyFull(kpiData?.depositAmount || 0),
+              value: loadingData ? 'Loading...' : formatCurrency(kpiData?.depositAmount || 0),
               comparison: {
                 percentage: loadingData ? '-' : `${comparison?.depositAmount >= 0 ? '+' : ''}${comparison?.depositAmount?.toFixed(2) || '0.00'}%`,
                 isPositive: (comparison?.depositAmount || 0) >= 0
@@ -587,7 +587,7 @@ export default function BusinessPerformancePage() {
             }}
             kpi2={{
               label: 'WA',
-              value: loadingData ? 'Loading...' : formatCurrencyFull(kpiData?.withdrawAmount || 0),
+              value: loadingData ? 'Loading...' : formatCurrency(kpiData?.withdrawAmount || 0),
               comparison: {
                 percentage: loadingData ? '-' : `${comparison?.withdrawAmount >= 0 ? '+' : ''}${comparison?.withdrawAmount?.toFixed(2) || '0.00'}%`,
                 isPositive: (comparison?.withdrawAmount || 0) >= 0
@@ -611,7 +611,7 @@ export default function BusinessPerformancePage() {
               { name: 'Forecast GGR', data: chartData?.forecastQ4GGR?.forecastData || [], color: '#F97316' }
             ]}
             categories={chartData?.forecastQ4GGR?.categories || []}
-            title="FORECAST Q4 - GROSS GAMING REVENUE"
+            title="FORECAST - GROSS GAMING REVENUE"
             currency="MYR"
             chartIcon={getChartIcon('Gross Gaming Revenue')}
             showDataLabels={true}
