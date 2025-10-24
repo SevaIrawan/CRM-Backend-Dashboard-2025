@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
         )
       }
       
-      const totalTargetGGR = totalTargetData.target_ggr
+      const totalTargetGGR: number = totalTargetData.target_ggr as number
       console.log('📊 [BP Target Update] Total target GGR:', totalTargetGGR)
       
       // Step 2: Get all existing brand targets for this quarter (exclude current brand if editing)
