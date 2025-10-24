@@ -460,8 +460,8 @@ export default function BusinessPerformancePage() {
               disabled={!isDateRangeMode}
             />
             
-            {/* EDIT TARGET BUTTON - Only for managers */}
-            {['manager_myr', 'admin'].includes(userRole) && (
+            {/* EDIT TARGET BUTTON - Only for managers, admin, and demo */}
+            {['manager_myr', 'admin', 'demo'].includes(userRole) && (
               <button
                 onClick={() => setIsTargetModalOpen(true)}
                 style={{
