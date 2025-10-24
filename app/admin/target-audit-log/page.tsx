@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Layout from '@/components/Layout'
 import Frame from '@/components/Frame'
-import SubHeader from '@/components/SubHeader'
+import StatCard from '@/components/StatCard'
 import { useRouter } from 'next/navigation'
 
 interface TargetAuditLog {
@@ -49,6 +49,14 @@ export default function TargetAuditLogPage() {
     endDate: ''
   })
   const [rowsPerPage, setRowsPerPage] = useState(20)
+  
+  // Stats state
+  const [stats, setStats] = useState({
+    totalRecords: 0,
+    createActions: 0,
+    updateActions: 0,
+    deleteActions: 0
+  })
 
   // Check admin access
   useEffect(() => {
@@ -88,6 +96,19 @@ export default function TargetAuditLogPage() {
         setTotalPages(data.totalPages)
         setTotalRecords(data.totalRecords)
         setCurrentPage(data.currentPage)
+        
+        // Calculate stats
+        const allLogs = data.logs || []
+        const createActions = allLogs.filter((log: any) => log.action === 'CREATE').length
+        const updateActions = allLogs.filter((log: any) => log.action === 'UPDATE').length
+        const deleteActions = allLogs.filter((log: any) => log.action === 'DELETE').length
+        
+        setStats({
+          totalRecords: data.totalRecords || 0,
+          createActions,
+          updateActions,
+          deleteActions
+        })
       } else {
         console.error('❌ [Target Audit Log] Error:', data.error)
       }
@@ -153,568 +174,507 @@ export default function TargetAuditLogPage() {
     )
   }
 
-  return (
-    <Layout>
-      <SubHeader
-        title="Target Audit Log"
-        subtitle="Track all target changes with complete audit trail"
-        showTimestamp={false}
-      />
-
-      <Frame>
-        {/* FILTERS */}
-        <div style={{
-          padding: '20px',
-          backgroundColor: '#F9FAFB',
-          borderRadius: '8px',
-          marginBottom: '20px',
-          border: '1px solid #E5E7EB'
-        }}>
-          <h3 style={{
-            fontSize: '14px',
-            fontWeight: '600',
-            color: '#111827',
-            marginBottom: '16px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px'
-          }}>
-            Filters
-          </h3>
-
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: '12px'
-          }}>
-            {/* Currency Filter */}
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '12px',
-                fontWeight: '500',
-                color: '#6B7280',
-                marginBottom: '6px'
-              }}>
-                Currency
-              </label>
-              <select
-                value={filters.currency}
-                onChange={(e) => handleFilterChange('currency', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  fontSize: '13px',
-                  border: '1px solid #D1D5DB',
-                  borderRadius: '6px',
-                  backgroundColor: '#FFFFFF'
-                }}
-              >
-                <option value="">All</option>
-                <option value="MYR">MYR</option>
-                <option value="SGD">SGD</option>
-                <option value="USC">USC</option>
-              </select>
-            </div>
-
-            {/* Line Filter */}
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '12px',
-                fontWeight: '500',
-                color: '#6B7280',
-                marginBottom: '6px'
-              }}>
-                Line/Brand
-              </label>
-              <input
-                type="text"
-                value={filters.line}
-                onChange={(e) => handleFilterChange('line', e.target.value)}
-                placeholder="e.g. SBMY, ALL"
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  fontSize: '13px',
-                  border: '1px solid #D1D5DB',
-                  borderRadius: '6px'
-                }}
-              />
-            </div>
-
-            {/* Year Filter */}
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '12px',
-                fontWeight: '500',
-                color: '#6B7280',
-                marginBottom: '6px'
-              }}>
-                Year
-              </label>
-              <input
-                type="number"
-                value={filters.year}
-                onChange={(e) => handleFilterChange('year', e.target.value)}
-                placeholder="e.g. 2025"
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  fontSize: '13px',
-                  border: '1px solid #D1D5DB',
-                  borderRadius: '6px'
-                }}
-              />
-            </div>
-
-            {/* Quarter Filter */}
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '12px',
-                fontWeight: '500',
-                color: '#6B7280',
-                marginBottom: '6px'
-              }}>
-                Quarter
-              </label>
-              <select
-                value={filters.quarter}
-                onChange={(e) => handleFilterChange('quarter', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  fontSize: '13px',
-                  border: '1px solid #D1D5DB',
-                  borderRadius: '6px',
-                  backgroundColor: '#FFFFFF'
-                }}
-              >
-                <option value="">All</option>
-                <option value="Q1">Q1</option>
-                <option value="Q2">Q2</option>
-                <option value="Q3">Q3</option>
-                <option value="Q4">Q4</option>
-              </select>
-            </div>
-
-            {/* Action Filter */}
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '12px',
-                fontWeight: '500',
-                color: '#6B7280',
-                marginBottom: '6px'
-              }}>
-                Action
-              </label>
-              <select
-                value={filters.action}
-                onChange={(e) => handleFilterChange('action', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  fontSize: '13px',
-                  border: '1px solid #D1D5DB',
-                  borderRadius: '6px',
-                  backgroundColor: '#FFFFFF'
-                }}
-              >
-                <option value="">All</option>
-                <option value="CREATE">CREATE</option>
-                <option value="UPDATE">UPDATE</option>
-                <option value="DELETE">DELETE</option>
-              </select>
-            </div>
-
-            {/* Changed By Filter */}
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '12px',
-                fontWeight: '500',
-                color: '#6B7280',
-                marginBottom: '6px'
-              }}>
-                Changed By
-              </label>
-              <input
-                type="text"
-                value={filters.changedBy}
-                onChange={(e) => handleFilterChange('changedBy', e.target.value)}
-                placeholder="Username"
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  fontSize: '13px',
-                  border: '1px solid #D1D5DB',
-                  borderRadius: '6px'
-                }}
-              />
-            </div>
-
-            {/* Start Date Filter */}
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '12px',
-                fontWeight: '500',
-                color: '#6B7280',
-                marginBottom: '6px'
-              }}>
-                Start Date
-              </label>
-              <input
-                type="date"
-                value={filters.startDate}
-                onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  fontSize: '13px',
-                  border: '1px solid #D1D5DB',
-                  borderRadius: '6px'
-                }}
-              />
-            </div>
-
-            {/* End Date Filter */}
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '12px',
-                fontWeight: '500',
-                color: '#6B7280',
-                marginBottom: '6px'
-              }}>
-                End Date
-              </label>
-              <input
-                type="date"
-                value={filters.endDate}
-                onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  fontSize: '13px',
-                  border: '1px solid #D1D5DB',
-                  borderRadius: '6px'
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div style={{
-            display: 'flex',
-            gap: '10px',
-            marginTop: '16px'
-          }}>
-            <button
-              onClick={() => setFilters({
-                currency: '',
-                line: '',
-                year: '',
-                quarter: '',
-                action: '',
-                changedBy: '',
-                startDate: '',
-                endDate: ''
-              })}
-              style={{
-                padding: '8px 16px',
-                fontSize: '13px',
-                fontWeight: '500',
-                color: '#6B7280',
-                backgroundColor: '#FFFFFF',
-                border: '1px solid #D1D5DB',
-                borderRadius: '6px',
-                cursor: 'pointer'
-              }}
-            >
-              Clear Filters
-            </button>
-
-            <button
-              onClick={handleExport}
-              style={{
-                padding: '8px 16px',
-                fontSize: '13px',
-                fontWeight: '500',
-                color: '#FFFFFF',
-                backgroundColor: '#10B981',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer'
-              }}
-            >
-              Export to CSV
-            </button>
-          </div>
-        </div>
-
-        {/* SUMMARY */}
-        <div style={{
-          padding: '16px 20px',
-          backgroundColor: '#F3F4F6',
-          borderRadius: '8px',
-          marginBottom: '20px',
-          border: '1px solid #E5E7EB'
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
-          }}>
-            <span style={{
-              fontSize: '14px',
-              fontWeight: '600',
-              color: '#374151'
-            }}>
-              Total Records: <span style={{ color: '#3B82F6' }}>{totalRecords.toLocaleString()}</span>
-            </span>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{
-                fontSize: '13px',
-                fontWeight: '500',
-                color: '#6B7280'
-              }}>
-                Rows per page:
-              </span>
-              <select
-                value={rowsPerPage}
-                onChange={(e) => setRowsPerPage(Number(e.target.value))}
-                style={{
-                  padding: '6px 10px',
-                  fontSize: '13px',
-                  border: '1px solid #D1D5DB',
-                  borderRadius: '6px',
-                  backgroundColor: '#FFFFFF'
-                }}
-              >
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* AUDIT LOG TABLE */}
-        {loading ? (
-          <div style={{
-            textAlign: 'center',
-            padding: '60px 20px',
-            color: '#6B7280'
-          }}>
-            Loading audit logs...
-          </div>
-        ) : logs.length === 0 ? (
-          <div style={{
-            textAlign: 'center',
-            padding: '60px 20px',
-            color: '#6B7280',
-            backgroundColor: '#F9FAFB',
-            borderRadius: '8px',
-            border: '1px solid #E5E7EB'
-          }}>
-            No audit logs found with current filters.
-          </div>
-        ) : (
-          <>
-            <div style={{
-              border: '1px solid #E5E7EB',
+  // Create custom SubHeader with filters using standard project classes
+  const customSubHeader = (
+    <div className="dashboard-subheader">
+      <div className="subheader-title">
+        {/* Title area - left side */}
+      </div>
+      
+      <div className="subheader-controls">
+        <div className="slicer-group">
+          <label className="slicer-label">CURRENCY:</label>
+          <select
+            value={filters.currency}
+            onChange={(e) => handleFilterChange('currency', e.target.value)}
+            className="subheader-select"
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #e5e7eb',
               borderRadius: '8px',
-              overflow: 'hidden'
-            }}>
+              backgroundColor: 'white',
+              fontSize: '14px',
+              color: '#374151',
+              cursor: 'pointer',
+              outline: 'none',
+              transition: 'all 0.2s ease',
+              minWidth: '120px',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+            }}
+          >
+            <option value="">All</option>
+            <option value="MYR">MYR</option>
+            <option value="SGD">SGD</option>
+            <option value="USC">USC</option>
+          </select>
+        </div>
+
+        <div className="slicer-group">
+          <label className="slicer-label">ACTION:</label>
+          <select
+            value={filters.action}
+            onChange={(e) => handleFilterChange('action', e.target.value)}
+            className="subheader-select"
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              backgroundColor: 'white',
+              fontSize: '14px',
+              color: '#374151',
+              cursor: 'pointer',
+              outline: 'none',
+              transition: 'all 0.2s ease',
+              minWidth: '120px',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+            }}
+          >
+            <option value="">All</option>
+            <option value="CREATE">CREATE</option>
+            <option value="UPDATE">UPDATE</option>
+            <option value="DELETE">DELETE</option>
+          </select>
+        </div>
+
+        <div className="slicer-group">
+          <label className="slicer-label">DATE RANGE:</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <input
+              type="date"
+              value={filters.startDate}
+              onChange={(e) => handleFilterChange('startDate', e.target.value)}
+              style={{
+                padding: '8px 12px',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                backgroundColor: 'white',
+                fontSize: '14px',
+                color: '#374151',
+                outline: 'none',
+                transition: 'all 0.2s ease',
+                minWidth: '140px',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+              }}
+            />
+            <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: '500' }}>to</span>
+            <input
+              type="date"
+              value={filters.endDate}
+              onChange={(e) => handleFilterChange('endDate', e.target.value)}
+              style={{
+                padding: '8px 12px',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                backgroundColor: 'white',
+                fontSize: '14px',
+                color: '#374151',
+                outline: 'none',
+                transition: 'all 0.2s ease',
+                minWidth: '140px',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
+  return (
+    <Layout pageTitle="Target Audit Log" customSubHeader={customSubHeader}>
+      <Frame variant="standard">
+        {/* Content Container with proper spacing - NO SCROLL */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '18px',
+          marginTop: '18px',
+          height: 'calc(100vh - 200px)',
+          overflow: 'hidden'
+        }}>
+          {/* ROW 1: KPI CARDS (4 cards in 1 horizontal row) */}
+          <div className="kpi-row">
+            <StatCard
+              title="TOTAL RECORDS"
+              value={stats.totalRecords}
+              icon="Total Records"
+            />
+            <StatCard
+              title="CREATE ACTIONS"
+              value={stats.createActions}
+              icon="Create Actions"
+            />
+            <StatCard
+              title="UPDATE ACTIONS"
+              value={stats.updateActions}
+              icon="Update Actions"
+            />
+            <StatCard
+              title="DELETE ACTIONS"
+              value={stats.deleteActions}
+              icon="Delete Actions"
+            />
+          </div>
+
+        {/* Audit Log Table */}
+        <div className="simple-table-container">
+          {loading ? (
+            <div className="loading-state">
+              <div className="loading-spinner"></div>
+              <span>Loading audit logs...</span>
+            </div>
+          ) : logs.length === 0 ? (
+            <div className="empty-state">
+              <span className="empty-icon">📋</span>
+              <span>No audit logs found with current filters.</span>
+            </div>
+          ) : (
+            <div className="simple-table-wrapper" style={{ padding: '0 20px', paddingBottom: '12px' }}>
               <div style={{
-                overflowX: 'auto'
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                overflow: 'hidden',
+                backgroundColor: 'white'
               }}>
-                <table style={{
-                  width: '100%',
-                  borderCollapse: 'collapse',
-                  fontSize: '13px'
-                }}>
-                  <thead style={{
-                    backgroundColor: '#F9FAFB',
-                    borderBottom: '2px solid #E5E7EB'
-                  }}>
-                    <tr>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', whiteSpace: 'nowrap' }}>ID</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', whiteSpace: 'nowrap' }}>Currency</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', whiteSpace: 'nowrap' }}>Line</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', whiteSpace: 'nowrap' }}>Period</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', whiteSpace: 'nowrap' }}>Action</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', whiteSpace: 'nowrap' }}>GGR</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', whiteSpace: 'nowrap' }}>Deposit Amount</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', whiteSpace: 'nowrap' }}>Deposit Cases</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', whiteSpace: 'nowrap' }}>Active Member</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', whiteSpace: 'nowrap' }}>Changed By</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', whiteSpace: 'nowrap' }}>Changed At</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151', whiteSpace: 'nowrap' }}>Reason</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {logs.map((log, index) => (
-                      <tr key={log.id} style={{
-                        backgroundColor: index % 2 === 0 ? '#FFFFFF' : '#F9FAFB',
-                        borderBottom: index < logs.length - 1 ? '1px solid #E5E7EB' : 'none'
-                      }}>
-                        <td style={{ padding: '12px 16px', color: '#6B7280' }}>{log.id}</td>
-                        <td style={{ padding: '12px 16px', color: '#111827', fontWeight: '600' }}>{log.currency}</td>
-                        <td style={{ padding: '12px 16px', color: '#111827', fontWeight: '500' }}>{log.line}</td>
-                        <td style={{ padding: '12px 16px', color: '#6B7280', whiteSpace: 'nowrap' }}>{log.quarter} {log.year}</td>
-                        <td style={{ padding: '12px 16px' }}>{getActionBadge(log.action)}</td>
-                        <td style={{ padding: '12px 16px' }}>
-                          {log.action === 'UPDATE' ? (
-                            <div>
-                              <div style={{ color: '#EF4444', textDecoration: 'line-through', fontSize: '11px' }}>
-                                {formatCurrency(log.old_target_ggr, log.currency)}
-                              </div>
-                              <div style={{ color: '#10B981', fontWeight: '600', fontSize: '12px' }}>
-                                {formatCurrency(log.new_target_ggr, log.currency)}
-                              </div>
-                            </div>
-                          ) : (
-                            <span style={{ color: '#111827', fontWeight: '500' }}>
-                              {formatCurrency(log.new_target_ggr, log.currency)}
-                            </span>
-                          )}
-                        </td>
-                        <td style={{ padding: '12px 16px' }}>
-                          {log.action === 'UPDATE' ? (
-                            <div>
-                              <div style={{ color: '#EF4444', textDecoration: 'line-through', fontSize: '11px' }}>
-                                {formatCurrency(log.old_target_deposit_amount, log.currency)}
-                              </div>
-                              <div style={{ color: '#10B981', fontWeight: '600', fontSize: '12px' }}>
-                                {formatCurrency(log.new_target_deposit_amount, log.currency)}
-                              </div>
-                            </div>
-                          ) : (
-                            <span style={{ color: '#111827', fontWeight: '500' }}>
-                              {formatCurrency(log.new_target_deposit_amount, log.currency)}
-                            </span>
-                          )}
-                        </td>
-                        <td style={{ padding: '12px 16px' }}>
-                          {log.action === 'UPDATE' ? (
-                            <div>
-                              <div style={{ color: '#EF4444', textDecoration: 'line-through', fontSize: '11px' }}>
-                                {formatNumber(log.old_target_deposit_cases)}
-                              </div>
-                              <div style={{ color: '#10B981', fontWeight: '600', fontSize: '12px' }}>
-                                {formatNumber(log.new_target_deposit_cases)}
-                              </div>
-                            </div>
-                          ) : (
-                            <span style={{ color: '#111827', fontWeight: '500' }}>
-                              {formatNumber(log.new_target_deposit_cases)}
-                            </span>
-                          )}
-                        </td>
-                        <td style={{ padding: '12px 16px' }}>
-                          {log.action === 'UPDATE' ? (
-                            <div>
-                              <div style={{ color: '#EF4444', textDecoration: 'line-through', fontSize: '11px' }}>
-                                {formatNumber(log.old_target_active_member)}
-                              </div>
-                              <div style={{ color: '#10B981', fontWeight: '600', fontSize: '12px' }}>
-                                {formatNumber(log.new_target_active_member)}
-                              </div>
-                            </div>
-                          ) : (
-                            <span style={{ color: '#111827', fontWeight: '500' }}>
-                              {formatNumber(log.new_target_active_member)}
-                            </span>
-                          )}
-                        </td>
-                        <td style={{ padding: '12px 16px' }}>
+                <table className="simple-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Currency</th>
+                    <th>Line</th>
+                    <th>Period</th>
+                    <th>Action</th>
+                    <th>GGR</th>
+                    <th>Deposit Amount</th>
+                    <th>Deposit Cases</th>
+                    <th>Active Member</th>
+                    <th>Changed By</th>
+                    <th>Changed At</th>
+                    <th>Reason</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {logs.map((log) => (
+                    <tr key={log.id}>
+                      <td>{log.id}</td>
+                      <td style={{ fontWeight: '600' }}>{log.currency}</td>
+                      <td style={{ fontWeight: '500' }}>{log.line}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>{log.quarter} {log.year}</td>
+                      <td>{getActionBadge(log.action)}</td>
+                      <td>
+                        {log.action === 'UPDATE' ? (
                           <div>
-                            <div style={{ color: '#111827', fontWeight: '500', fontSize: '12px' }}>{log.changed_by}</div>
-                            <div style={{ color: '#6B7280', fontSize: '11px' }}>{log.changed_by_role}</div>
+                            <div style={{ color: '#EF4444', textDecoration: 'line-through', fontSize: '11px' }}>
+                              {formatCurrency(log.old_target_ggr, log.currency)}
+                            </div>
+                            <div style={{ color: '#10B981', fontWeight: '600', fontSize: '12px' }}>
+                              {formatCurrency(log.new_target_ggr, log.currency)}
+                            </div>
                           </div>
-                        </td>
-                        <td style={{ padding: '12px 16px', color: '#6B7280', whiteSpace: 'nowrap', fontSize: '12px' }}>
-                          {new Date(log.changed_at).toLocaleString('en-GB', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </td>
-                        <td style={{ padding: '12px 16px', color: '#6B7280', maxWidth: '200px', fontSize: '11px' }}>
-                          {log.reason || '-'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
+                        ) : (
+                          <span style={{ fontWeight: '500' }}>
+                            {formatCurrency(log.new_target_ggr, log.currency)}
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        {log.action === 'UPDATE' ? (
+                          <div>
+                            <div style={{ color: '#EF4444', textDecoration: 'line-through', fontSize: '11px' }}>
+                              {formatCurrency(log.old_target_deposit_amount, log.currency)}
+                            </div>
+                            <div style={{ color: '#10B981', fontWeight: '600', fontSize: '12px' }}>
+                              {formatCurrency(log.new_target_deposit_amount, log.currency)}
+                            </div>
+                          </div>
+                        ) : (
+                          <span style={{ fontWeight: '500' }}>
+                            {formatCurrency(log.new_target_deposit_amount, log.currency)}
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        {log.action === 'UPDATE' ? (
+                          <div>
+                            <div style={{ color: '#EF4444', textDecoration: 'line-through', fontSize: '11px' }}>
+                              {formatNumber(log.old_target_deposit_cases)}
+                            </div>
+                            <div style={{ color: '#10B981', fontWeight: '600', fontSize: '12px' }}>
+                              {formatNumber(log.new_target_deposit_cases)}
+                            </div>
+                          </div>
+                        ) : (
+                          <span style={{ fontWeight: '500' }}>
+                            {formatNumber(log.new_target_deposit_cases)}
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        {log.action === 'UPDATE' ? (
+                          <div>
+                            <div style={{ color: '#EF4444', textDecoration: 'line-through', fontSize: '11px' }}>
+                              {formatNumber(log.old_target_active_member)}
+                            </div>
+                            <div style={{ color: '#10B981', fontWeight: '600', fontSize: '12px' }}>
+                              {formatNumber(log.new_target_active_member)}
+                            </div>
+                          </div>
+                        ) : (
+                          <span style={{ fontWeight: '500' }}>
+                            {formatNumber(log.new_target_active_member)}
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        <div>
+                          <div style={{ fontWeight: '500', fontSize: '12px' }}>{log.changed_by}</div>
+                          <div className="user-role">{log.changed_by_role}</div>
+                        </div>
+                      </td>
+                      <td style={{ whiteSpace: 'nowrap', fontSize: '12px' }}>
+                        {new Date(log.changed_at).toLocaleString('en-GB', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </td>
+                      <td style={{ maxWidth: '200px', fontSize: '11px' }}>
+                        {log.reason || '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
                 </table>
               </div>
             </div>
+          )}
 
-            {/* PAGINATION */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginTop: '20px',
-              padding: '12px 16px',
-              backgroundColor: '#F9FAFB',
-              borderRadius: '8px',
-              border: '1px solid #E5E7EB'
-            }}>
-              <span style={{
-                fontSize: '13px',
-                color: '#6B7280'
-              }}>
-                Page {currentPage} of {totalPages}
-              </span>
-
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  style={{
-                    padding: '6px 14px',
-                    fontSize: '13px',
-                    fontWeight: '500',
-                    color: currentPage === 1 ? '#9CA3AF' : '#374151',
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #D1D5DB',
-                    borderRadius: '6px',
-                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  Previous
-                </button>
-
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  style={{
-                    padding: '6px 14px',
-                    fontSize: '13px',
-                    fontWeight: '500',
-                    color: currentPage === totalPages ? '#9CA3AF' : '#374151',
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #D1D5DB',
-                    borderRadius: '6px',
-                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  Next
-                </button>
-              </div>
+          {/* Table Footer - Records Info + Pagination + Export */}
+          <div className="table-footer" style={{ padding: '0 20px' }}>
+            <div className="records-info">
+              Showing {logs.length} of {totalRecords.toLocaleString()} records
             </div>
-          </>
-        )}
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <label style={{ fontSize: '14px', color: '#6b7280' }}>Per Page:</label>
+                <select
+                  value={rowsPerPage}
+                  onChange={(e) => {
+                    setRowsPerPage(Number(e.target.value))
+                    setCurrentPage(1)
+                  }}
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '14px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    backgroundColor: 'white',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+
+              {totalPages > 1 && (
+                <div className="pagination-controls">
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="pagination-btn"
+                  >
+                    ← Prev
+                  </button>
+                  <span className="pagination-info">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="pagination-btn"
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
+
+              <button 
+                onClick={handleExport}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'background-color 0.2s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
+                title="Export to CSV"
+              >
+                📥 Export
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Slicer Info */}
+        <div className="slicer-info">
+          <p>Showing data for: {filters.currency || 'All Currency'} | {filters.action || 'All Actions'} | Date: {filters.startDate || 'All Time'} to {filters.endDate || 'Now'}</p>
+        </div>
+      </div>
       </Frame>
+
+      <style jsx>{`
+        /* Ensure 4 StatCards in 1 horizontal row */
+        .kpi-row {
+          display: grid !important;
+          grid-template-columns: repeat(4, 1fr) !important;
+          gap: 18px !important;
+        }
+
+        .loading-state,
+        .empty-state {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 60px 20px;
+          color: #6b7280;
+        }
+
+        .loading-spinner {
+          width: 32px;
+          height: 32px;
+          border: 3px solid #e5e7eb;
+          border-top: 3px solid #3b82f6;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-bottom: 16px;
+        }
+
+        .empty-icon {
+          font-size: 48px;
+          margin-bottom: 16px;
+        }
+
+        /* Table Container - Fit dalam 1 frame */
+        .simple-table-container {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          min-height: 0;
+        }
+
+        /* Table Wrapper - Scroll hanya di dalam table */
+        .simple-table-wrapper {
+          flex: 1;
+          overflow-y: auto;
+          min-height: 0;
+        }
+
+        /* Table Footer - Fixed di bawah, tidak ikut scroll */
+        .table-footer {
+          flex-shrink: 0;
+          margin-top: auto;
+        }
+
+        .user-role {
+          font-size: 12px;
+          color: #6b7280;
+        }
+
+        /* Pagination Button Styles */
+        .pagination-btn {
+          padding: 6px 12px;
+          border: 1px solid #d1d5db;
+          border-radius: 4px;
+          background: white;
+          color: #374151;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+          background: #f9fafb;
+          border-color: #9ca3af;
+        }
+
+        .pagination-btn:disabled {
+          background: #f9fafb;
+          color: #9ca3af;
+          cursor: not-allowed;
+          opacity: 0.6;
+        }
+
+        .pagination-info {
+          font-size: 14px;
+          color: #374151;
+          font-weight: 500;
+          padding: 0 8px;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        /* Global Table Styles - CRITICAL for full width and proper display */
+        :global(.simple-table) {
+          width: 100%;
+          border-collapse: collapse;
+          table-layout: auto;
+        }
+
+        :global(.simple-table thead) {
+          position: sticky;
+          top: 0;
+          background-color: #f9fafb;
+          z-index: 10;
+        }
+
+        :global(.simple-table th) {
+          padding: 12px 16px;
+          text-align: left;
+          font-weight: 600;
+          color: #374151;
+          font-size: 13px;
+          border-bottom: 2px solid #e5e7eb;
+          white-space: nowrap;
+        }
+
+        :global(.simple-table tbody tr) {
+          border-bottom: 1px solid #e5e7eb;
+        }
+
+        :global(.simple-table tbody tr:hover) {
+          background-color: #f9fafb;
+        }
+
+        :global(.simple-table td) {
+          padding: 12px 16px;
+          color: #374151;
+          font-size: 13px;
+          vertical-align: middle;
+        }
+
+        :global(.simple-table tbody tr:last-child) {
+          border-bottom: none;
+        }
+      `}</style>
     </Layout>
   )
 }
