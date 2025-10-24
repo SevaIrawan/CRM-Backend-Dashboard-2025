@@ -609,11 +609,11 @@ export async function GET(request: NextRequest) {
       // Get TOTAL target only (line = currency or 'ALL'), NOT sum all brands!
       const totalTargetRow = targetData.find((row: any) => row.line === currency || row.line === 'ALL')
       if (totalTargetRow) {
-        targetGGR = totalTargetRow.target_ggr || 0
-        targetDepositAmount = totalTargetRow.target_deposit_amount || 0
-        targetDepositCases = totalTargetRow.target_deposit_cases || 0
-        targetActiveMember = totalTargetRow.target_active_member || 0
-        forecastGGR = totalTargetRow.forecast_ggr || 0
+        targetGGR = (totalTargetRow.target_ggr as number) || 0
+        targetDepositAmount = (totalTargetRow.target_deposit_amount as number) || 0
+        targetDepositCases = (totalTargetRow.target_deposit_cases as number) || 0
+        targetActiveMember = (totalTargetRow.target_active_member as number) || 0
+        forecastGGR = (totalTargetRow.forecast_ggr as number) || 0
       }
     }
 
