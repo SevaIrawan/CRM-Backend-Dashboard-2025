@@ -232,6 +232,7 @@ export async function POST(request: NextRequest) {
           
           // Reset each brand target to 0
           for (const brandTarget of otherBrandTargets) {
+            const brandLine = (brandTarget as any).line as string
             const resetResult = await supabase
               .from('bp_target')
               .update({
@@ -246,16 +247,16 @@ export async function POST(request: NextRequest) {
                 notes: `Reset akibat perubahan target ${line} oleh ${user_email}`
               })
               .eq('currency', currency)
-              .eq('line', brandTarget.line)
+              .eq('line', brandLine)
               .eq('year', year)
               .eq('quarter', quarter)
               .eq('is_active', true)
             
             if (resetResult.error) {
-              console.error('⚠️ [BP Target Update] Failed to reset brand:', brandTarget.line, resetResult.error)
+              console.error('⚠️ [BP Target Update] Failed to reset brand:', brandLine, resetResult.error)
             } else {
-              console.log('✅ [BP Target Update] Reset brand:', brandTarget.line)
-              resetBrands.push(brandTarget.line)
+              console.log('✅ [BP Target Update] Reset brand:', brandLine)
+              resetBrands.push(brandLine)
             }
           }
         }
