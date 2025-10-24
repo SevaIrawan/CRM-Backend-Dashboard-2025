@@ -140,7 +140,7 @@ export async function generateForecastQ4GGRChart(params: ChartParams): Promise<{
       .eq('quarter', quarter)
 
     const totalTargetRow = targetData?.find((row: any) => row.line === currency || row.line === 'ALL')
-    const totalTarget = totalTargetRow?.target_ggr || 0
+    const totalTarget: number = (totalTargetRow?.target_ggr as number) || 0
 
     // Get max date in database (last data date)
     const maxDataDateStr = dailyData && dailyData.length > 0 
@@ -313,7 +313,7 @@ export async function generateForecastQ4GGRChart(params: ChartParams): Promise<{
 
     // Target GGR (TOTAL only, not sum from brands!)
     const targetRow = targetData?.find((row: any) => row.quarter === q && (row.line === currency || row.line === 'ALL'))
-    const targetGGR = targetRow?.target_ggr || 0
+    const targetGGR: number = (targetRow?.target_ggr as number) || 0
     targetDataArray.push(targetGGR)
 
     // Forecast GGR (only for current quarter if ongoing)
