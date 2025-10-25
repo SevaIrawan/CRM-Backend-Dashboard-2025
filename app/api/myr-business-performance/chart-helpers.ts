@@ -152,15 +152,6 @@ export async function generateForecastQ4GGRChart(params: ChartParams): Promise<{
     const daysElapsed = dailyData?.length || 1
     const avgDailyGGR = currentRealizedGGR / daysElapsed
 
-    console.log('[Forecast Calculation - Daily]', {
-      startDate,
-      endDate,
-      maxDataDateStr,
-      currentRealizedGGR,
-      daysElapsed,
-      avgDailyGGR
-    })
-
     // Generate all dates in the period
     const start = new Date(startDate)
     const end = new Date(endDate)
@@ -192,15 +183,6 @@ export async function generateForecastQ4GGRChart(params: ChartParams): Promise<{
     const qStart = new Date(quarterStartDate)
     const qEnd = new Date(quarterEndDate)
     const totalDaysInQuarter = Math.ceil((qEnd.getTime() - qStart.getTime()) / (1000 * 60 * 60 * 24)) + 1
-    
-    console.log('[Target Daily Calculation]', {
-      quarter,
-      quarterStartDate,
-      quarterEndDate,
-      totalDaysInQuarter,
-      totalTarget,
-      dailyTargetValue: totalTarget / totalDaysInQuarter
-    })
     
     const categories: string[] = []
     const actualData: number[] = []
@@ -297,8 +279,6 @@ export async function generateForecastQ4GGRChart(params: ChartParams): Promise<{
   const maxMonth = parseInt(maxDataDate.split('-')[1])
   const currentQuarter = maxMonth <= 3 ? 'Q1' : maxMonth <= 6 ? 'Q2' : maxMonth <= 9 ? 'Q3' : 'Q4'
 
-  console.log('[Forecast Calculation - Quarterly]', { maxDataDate, maxMonth, currentQuarter })
-
   // Build data arrays
   const quarters = ['Q1', 'Q2', 'Q3', 'Q4']
   const actualData: number[] = []
@@ -352,16 +332,6 @@ export async function generateForecastQ4GGRChart(params: ChartParams): Promise<{
 
       // Forecast = Current Realized + (Avg Daily × Remaining Days)
       const forecastGGR = actualGGR + (avgDailyGGR * remainingDays)
-
-      console.log(`[Forecast ${q}]`, {
-        quarterStartDate,
-        quarterEndDate,
-        actualGGR,
-        daysElapsed,
-        avgDailyGGR,
-        remainingDays,
-        forecastGGR
-      })
 
       forecastDataArray.push(forecastGGR)
     } else {

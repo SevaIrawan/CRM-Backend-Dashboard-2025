@@ -15,8 +15,6 @@ import { supabase } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔍 [BP Slicer API] Fetching options from bp_daily_summary_myr...')
-
     // ✅ CRITICAL FIX: Use bp_daily_summary_myr for daily mode date ranges
     // Query MV for all available data
     const { data, error } = await supabase
@@ -46,9 +44,6 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    console.log(`📊 [BP Slicer API] Found ${data.length} rows in bp_daily_summary_myr`)
-    console.log(`🔍 [BP Slicer API] Sample data (first 3 rows):`, data.slice(0, 3))
-
     // ============================================================================
     // EXTRACT UNIQUE YEARS
     // ============================================================================
@@ -57,7 +52,6 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => b - a) // Descending
 
     const years = uniqueYears.map(y => y.toString())
-    console.log(`📊 [BP Slicer API] Years:`, years)
 
     // ============================================================================
     // EXTRACT QUARTERS PER YEAR
@@ -90,8 +84,6 @@ export async function GET(request: NextRequest) {
       quarters[year] = Array.from(quartersByYear[year]).sort()
     })
 
-    console.log(`📊 [BP Slicer API] Quarters:`, quarters)
-
     // ============================================================================
     // EXTRACT UNIQUE BRANDS (FOR TARGET INPUT)
     // ============================================================================
@@ -105,8 +97,6 @@ export async function GET(request: NextRequest) {
           line !== 'ALL'
         )
     )).sort()
-
-    console.log(`📊 [BP Slicer API] Brands:`, uniqueBrands)
 
     // ============================================================================
     // CALCULATE DATE RANGES PER QUARTER (BOUNDED)
@@ -138,16 +128,12 @@ export async function GET(request: NextRequest) {
           .filter((date: any): date is string => date !== null && date !== undefined)
           .sort()
 
-        console.log(`🔍 [BP Slicer API] ${key} quarterDates count: ${quarterDates.length}, sample:`, quarterDates.slice(0, 3))
-
         quarterDateRanges[key] = {
           min: quarterDates.length > 0 ? quarterDates[0] : null,
           max: quarterDates.length > 0 ? quarterDates[quarterDates.length - 1] : null
         }
       })
     })
-
-    console.log(`📅 [BP Slicer API] Quarter date ranges:`, quarterDateRanges)
 
     // ============================================================================
     // DETERMINE DEFAULTS - USE LATEST AVAILABLE QUARTER FROM DATA (MAX DATE)
@@ -163,11 +149,6 @@ export async function GET(request: NextRequest) {
     
     const defaultQuarterKey = `${defaultYear}-${defaultQuarter}`
     const defaultQuarterRange = quarterDateRanges[defaultQuarterKey] || { min: null, max: null }
-    
-    console.log(`✅ [BP Slicer API] Defaults AUTO-DETECTED from LATEST DATA:`)
-    console.log(`   → Year: ${defaultYear} (most recent year)`)
-    console.log(`   → Quarter: ${defaultQuarter} (latest quarter based on max date)`)
-    console.log(`   → Date Range: ${defaultQuarterRange.min} to ${defaultQuarterRange.max}`)
 
     // ============================================================================
     // RESPONSE
@@ -192,8 +173,6 @@ export async function GET(request: NextRequest) {
         }
       }
     }
-
-    console.log('✅ [BP Slicer API] Response ready')
 
     return NextResponse.json(response)
 

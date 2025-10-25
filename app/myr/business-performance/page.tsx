@@ -10,13 +10,13 @@ import LineChart from '@/components/LineChart'
 import BarChart from '@/components/BarChart'
 import StackedBarChart from '@/components/StackedBarChart'
 import SankeyChart from '@/components/SankeyChart'
-import StandardChart2Line from '@/components/StandardChart2Line'
 import YearSlicer from '@/components/slicers/YearSlicer'
 import QuarterSlicer from '@/components/slicers/QuarterSlicer'
 import QuickDateFilter from '@/components/QuickDateFilter'
 import TargetEditModal from '@/components/TargetEditModal'
 import ActiveMemberDetailsModal from '@/components/ActiveMemberDetailsModal'
 import TargetAchieveModal from '@/components/TargetAchieveModal'
+import ChartZoomModal from '@/components/ChartZoomModal'
 import { getChartIcon } from '@/lib/CentralIcon'
 import { 
   QuickDateFilterType, 
@@ -73,7 +73,6 @@ export default function BusinessPerformancePage() {
         const userData = JSON.parse(sessionData)
         setUserEmail(userData.email || `${userData.username}@nexmax.com`)
         setUserRole(userData.role || 'manager_myr')
-        console.log('✅ [BP Page] User loaded:', userData.email, userData.role)
       } catch (error) {
         console.error('❌ [BP Page] Error parsing session:', error)
       }
@@ -87,6 +86,12 @@ export default function BusinessPerformancePage() {
   const [comparison, setComparison] = useState<any>(null)
   const [previousPeriod, setPreviousPeriod] = useState<any>(null)
   const [loadingData, setLoadingData] = useState(true)
+  
+  // Chart Zoom State
+  const [isZoomOpen, setIsZoomOpen] = useState(false)
+  const [zoomTitle, setZoomTitle] = useState('')
+  const [zoomChartType, setZoomChartType] = useState<'line' | 'bar' | 'stacked' | 'sankey'>('line')
+  const [zoomChartProps, setZoomChartProps] = useState<any>(null)
   
   // ============================================================================
   // FETCH SLICER OPTIONS ON MOUNT
@@ -108,7 +113,6 @@ export default function BusinessPerformancePage() {
   // QUICK DATE FILTER HANDLER
   // ============================================================================
   function handleQuickFilterChange(filterType: QuickDateFilterType) {
-    console.log('📅 [BP Page] Quick filter changed:', filterType)
     setActiveQuickFilter(filterType)
     
     // ✅ CRITICAL: Use LAST DATA DATE from slicerOptions, NOT today!
@@ -117,12 +121,10 @@ export default function BusinessPerformancePage() {
     const lastDataDate = slicerOptions?.quarterDateRanges?.[quarterKey]?.max
     
     const referenceDate = lastDataDate ? new Date(lastDataDate) : new Date()
-    console.log('📅 [BP Page] Using LAST DATA DATE as reference:', lastDataDate)
     
     // Calculate date range based on filter type
     const { startDate: newStart, endDate: newEnd } = calculateQuickDateRange(filterType, referenceDate)
     
-    console.log('📅 [BP Page] Calculated date range:', { newStart, newEnd })
     setStartDate(newStart)
     setEndDate(newEnd)
     // useEffect will auto-trigger fetchKPIData when startDate/endDate changes
@@ -132,7 +134,6 @@ export default function BusinessPerformancePage() {
   // TOGGLE HANDLER - Set default 7 days when Daily Mode activated
   // ============================================================================
   function handleToggleChange(enabled: boolean) {
-    console.log('🔄 [BP Page] Toggle changed:', enabled)
     setIsDateRangeMode(enabled)
     
     if (enabled) {
@@ -145,7 +146,6 @@ export default function BusinessPerformancePage() {
       const referenceDate = lastDataDate ? new Date(lastDataDate) : new Date()
       
       const { startDate: newStart, endDate: newEnd } = calculateQuickDateRange('7_DAYS', referenceDate)
-      console.log('📅 [BP Page] Default 7 days from last data:', { lastDataDate, newStart, newEnd })
       setStartDate(newStart)
       setEndDate(newEnd)
       // useEffect will auto-trigger fetchKPIData when isDateRangeMode/startDate/endDate changes
@@ -155,7 +155,6 @@ export default function BusinessPerformancePage() {
   
   async function fetchSlicerOptions() {
     try {
-      console.log('🔍 [BP Page] Fetching slicer options...')
       const response = await fetch('/api/myr-business-performance/slicer-options')
       
       if (!response.ok) {
@@ -163,7 +162,6 @@ export default function BusinessPerformancePage() {
       }
       
       const data = await response.json()
-      console.log('✅ [BP Page] Slicer options loaded:', data)
       
       setSlicerOptions(data)
       
@@ -185,7 +183,6 @@ export default function BusinessPerformancePage() {
   async function fetchKPIData() {
     try {
       setLoadingData(true)
-      console.log('🔍 [BP Page] Fetching KPI data...', { isDateRangeMode, startDate, endDate })
       
       // ✅ CRITICAL: Don't fetch if daily mode is ON but dates are empty
       if (isDateRangeMode && (!startDate || !endDate)) {
@@ -216,11 +213,6 @@ export default function BusinessPerformancePage() {
       const result = await response.json()
       
       if (result.success) {
-        console.log('✅ [BP Page] KPI data loaded (mode:', result.mode, '):', result.kpis)
-        console.log('✅ [BP Page] Chart data loaded:', result.charts)
-        console.log('✅ [BP Page] Daily Average loaded:', result.dailyAverage)
-        console.log('✅ [BP Page] Comparison loaded:', result.comparison)
-        console.log('✅ [BP Page] Previous Period loaded:', result.previousPeriod)
         setKpiData(result.kpis)
         setChartData(result.charts)
         setDailyAverage(result.dailyAverage)
@@ -253,7 +245,6 @@ export default function BusinessPerformancePage() {
     if (quarterDateRange.min && quarterDateRange.max) {
       setStartDate(quarterDateRange.min)
       setEndDate(quarterDateRange.max)
-      console.log(`📅 [BP Page] Quarter changed to ${quarterKey}, date range: ${quarterDateRange.min} to ${quarterDateRange.max}`)
     }
   }, [selectedYear, selectedQuarter, quarterKey, quarterDateRange.min, quarterDateRange.max])
   
@@ -616,6 +607,25 @@ export default function BusinessPerformancePage() {
             chartIcon={getChartIcon('Gross Gaming Revenue')}
             showDataLabels={true}
             forceSingleYAxis={true}
+            clickable={true}
+            onDoubleClick={() => {
+              setZoomTitle('FORECAST - GROSS GAMING REVENUE')
+              setZoomChartType('line')
+              setZoomChartProps({
+                series: [
+                  { name: 'Actual GGR', data: chartData?.forecastQ4GGR?.actualData || [], color: '#3B82F6' },
+                  { name: 'Target GGR', data: chartData?.forecastQ4GGR?.targetData || [], color: '#10b981' },
+                  { name: 'Forecast GGR', data: chartData?.forecastQ4GGR?.forecastData || [], color: '#F97316' }
+                ],
+                categories: chartData?.forecastQ4GGR?.categories || [],
+                title: 'FORECAST - GROSS GAMING REVENUE',
+                currency: 'MYR',
+                chartIcon: getChartIcon('Gross Gaming Revenue'),
+                showDataLabels: true,
+                forceSingleYAxis: true
+              })
+              setIsZoomOpen(true)
+            }}
           />
           
           {/* GGR Trend */}
@@ -632,6 +642,21 @@ export default function BusinessPerformancePage() {
             chartIcon={getChartIcon('Gross Gaming Revenue')}
             showDataLabels={true}
             color="#3B82F6"
+            clickable={true}
+            onDoubleClick={() => {
+              setZoomTitle('GROSS GAMING REVENUE TREND')
+              setZoomChartType('line')
+              setZoomChartProps({
+                series: [{ name: 'Gross Gaming Revenue', data: chartData?.ggrTrend?.data || [] }],
+                categories: chartData?.ggrTrend?.categories || [],
+                title: 'GROSS GAMING REVENUE TREND',
+                currency: 'MYR',
+                chartIcon: getChartIcon('Gross Gaming Revenue'),
+                showDataLabels: true,
+                color: '#3B82F6'
+              })
+              setIsZoomOpen(true)
+            }}
           />
         </div>
 
@@ -643,27 +668,63 @@ export default function BusinessPerformancePage() {
           minHeight: '350px'
         }}>
           {/* DA User vs GGR User Trend */}
-          <StandardChart2Line 
-            categories={chartData?.daUserVsGgrUser?.categories || []}
+          <LineChart 
             series={[
               { name: 'DA User', data: chartData?.daUserVsGgrUser?.daUserData || [] },
               { name: 'GGR User', data: chartData?.daUserVsGgrUser?.ggrUserData || [] }
             ]}
+            categories={chartData?.daUserVsGgrUser?.categories || []}
             title="DA USER VS GGR USER TREND"
             chartIcon={getChartIcon('Net Profit')}
             currency="MYR"
+            showDataLabels={true}
+            clickable={true}
+            onDoubleClick={() => {
+              setZoomTitle('DA USER VS GGR USER TREND')
+              setZoomChartType('line')
+              setZoomChartProps({
+                series: [
+                  { name: 'DA User', data: chartData?.daUserVsGgrUser?.daUserData || [] },
+                  { name: 'GGR User', data: chartData?.daUserVsGgrUser?.ggrUserData || [] }
+                ],
+                categories: chartData?.daUserVsGgrUser?.categories || [],
+                title: 'DA USER VS GGR USER TREND',
+                currency: 'MYR',
+                chartIcon: getChartIcon('Net Profit'),
+                showDataLabels: true
+              })
+              setIsZoomOpen(true)
+            }}
           />
           
           {/* ATV vs Purchase Frequency Trend */}
-          <StandardChart2Line 
-            categories={chartData?.atvVsPf?.categories || []}
+          <LineChart 
             series={[
               { name: 'ATV', data: chartData?.atvVsPf?.atvData || [] },
               { name: 'Purchase Frequency', data: chartData?.atvVsPf?.pfData || [] }
             ]}
+            categories={chartData?.atvVsPf?.categories || []}
             title="ATV VS PURCHASE FREQUENCY TREND"
             chartIcon={getChartIcon('Average Transaction Value')}
             currency="MYR"
+            showDataLabels={true}
+            clickable={true}
+            onDoubleClick={() => {
+              setZoomTitle('ATV VS PURCHASE FREQUENCY TREND')
+              setZoomChartType('line')
+              setZoomChartProps({
+                series: [
+                  { name: 'ATV', data: chartData?.atvVsPf?.atvData || [] },
+                  { name: 'Purchase Frequency', data: chartData?.atvVsPf?.pfData || [] }
+                ],
+                categories: chartData?.atvVsPf?.categories || [],
+                title: 'ATV VS PURCHASE FREQUENCY TREND',
+                currency: 'MYR',
+                chartIcon: getChartIcon('Average Transaction Value'),
+                showDataLabels: true
+              })
+              setIsZoomOpen(true)
+            }}
           />
         </div>
 
@@ -685,6 +746,23 @@ export default function BusinessPerformancePage() {
             currency="PERCENTAGE"
             chartIcon={getChartIcon('Winrate')}
             showDataLabels={true}
+            clickable={true}
+            onDoubleClick={() => {
+              setZoomTitle('WINRATE VS WITHDRAW RATE')
+              setZoomChartType('line')
+              setZoomChartProps({
+                series: [
+                  { name: 'Winrate', data: chartData?.winrateVsWithdrawRate?.winrateData || [] },
+                  { name: 'Withdraw Rate', data: chartData?.winrateVsWithdrawRate?.withdrawalRateData || [] }
+                ],
+                categories: chartData?.winrateVsWithdrawRate?.categories || [],
+                title: 'WINRATE VS WITHDRAW RATE',
+                currency: 'PERCENTAGE',
+                chartIcon: getChartIcon('Winrate'),
+                showDataLabels: true
+              })
+              setIsZoomOpen(true)
+            }}
           />
           
           {/* Active Member vs Pure Member Trend - Double Bar */}
@@ -702,6 +780,27 @@ export default function BusinessPerformancePage() {
               { label: 'Active Member', color: '#3B82F6' },
               { label: 'Pure Member', color: '#F97316' }
             ]}
+            clickable={true}
+            onDoubleClick={() => {
+              setZoomTitle('ACTIVE MEMBER VS PURE MEMBER TREND')
+              setZoomChartType('bar')
+              setZoomChartProps({
+                series: [
+                  { name: 'Active Member', data: chartData?.activeMemberVsPureMemberTrend?.activeMemberData || [], color: '#3B82F6' },
+                  { name: 'Pure Member', data: chartData?.activeMemberVsPureMemberTrend?.pureMemberData || [], color: '#F97316' }
+                ],
+                categories: chartData?.activeMemberVsPureMemberTrend?.categories || [],
+                title: 'ACTIVE MEMBER VS PURE MEMBER TREND',
+                currency: 'NUMBER',
+                chartIcon: getChartIcon('Active Member'),
+                showDataLabels: true,
+                customLegend: [
+                  { label: 'Active Member', color: '#3B82F6' },
+                  { label: 'Pure Member', color: '#F97316' }
+                ]
+              })
+              setIsZoomOpen(true)
+            }}
           />
         </div>
 
@@ -727,6 +826,27 @@ export default function BusinessPerformancePage() {
               { label: 'Retention Rate', color: '#3B82F6' },
               { label: 'Churn Rate', color: '#F97316' }
             ]}
+            clickable={true}
+            onDoubleClick={() => {
+              setZoomTitle('RETENTION VS CHURN RATE (%)')
+              setZoomChartType('bar')
+              setZoomChartProps({
+                series: [
+                  { name: 'Retention Rate', data: chartData?.retentionVsChurnRate?.retentionData || [], color: '#3B82F6' },
+                  { name: 'Churn Rate', data: chartData?.retentionVsChurnRate?.churnData || [], color: '#F97316' }
+                ],
+                categories: chartData?.retentionVsChurnRate?.categories || [],
+                title: 'RETENTION VS CHURN RATE (%)',
+                currency: 'PERCENTAGE',
+                chartIcon: getChartIcon('Retention Rate'),
+                showDataLabels: true,
+                customLegend: [
+                  { label: 'Retention Rate', color: '#3B82F6' },
+                  { label: 'Churn Rate', color: '#F97316' }
+                ]
+              })
+              setIsZoomOpen(true)
+            }}
           />
           
           {/* Reactivation Rate (Same as Activation Rate) - PER BRAND */}
@@ -740,6 +860,21 @@ export default function BusinessPerformancePage() {
             chartIcon={getChartIcon('Conversion Rate')}
             color="#3B82F6"
             showDataLabels={true}
+            clickable={true}
+            onDoubleClick={() => {
+              setZoomTitle('REACTIVATION RATE (%)')
+              setZoomChartType('bar')
+              setZoomChartProps({
+                series: [{ name: 'Reactivation Rate', data: chartData?.reactivationRate?.reactivationData || [] }],
+                categories: chartData?.reactivationRate?.categories || [],
+                title: 'REACTIVATION RATE (%)',
+                currency: 'PERCENTAGE',
+                chartIcon: getChartIcon('Conversion Rate'),
+                color: '#3B82F6',
+                showDataLabels: true
+              })
+              setIsZoomOpen(true)
+            }}
           />
         </div>
 
@@ -758,6 +893,20 @@ export default function BusinessPerformancePage() {
             currency="MYR"
             chartIcon={getChartIcon('Gross Gaming Revenue')}
             showDataLabels={true}
+            clickable={true}
+            onDoubleClick={() => {
+              setZoomTitle('BRAND GGR CONTRIBUTION (STACKED)')
+              setZoomChartType('stacked')
+              setZoomChartProps({
+                series: transformBrandGGRDataFromAPI(chartData?.brandGGRContribution || {}).series,
+                categories: transformBrandGGRDataFromAPI(chartData?.brandGGRContribution || {}).categories,
+                title: 'BRAND GGR CONTRIBUTION (STACKED)',
+                currency: 'MYR',
+                chartIcon: getChartIcon('Gross Gaming Revenue'),
+                showDataLabels: true
+              })
+              setIsZoomOpen(true)
+            }}
           />
           
           {/* AVG Bonus Usage - PER BRAND */}
@@ -771,6 +920,21 @@ export default function BusinessPerformancePage() {
             chartIcon={getChartIcon('Bonus')}
             color="#F97316"
             showDataLabels={true}
+            clickable={true}
+            onDoubleClick={() => {
+              setZoomTitle('AVG BONUS USAGE')
+              setZoomChartType('bar')
+              setZoomChartProps({
+                series: [{ name: 'Avg Bonus Usage', data: chartData?.bonusUsagePerBrand?.data || [] }],
+                categories: chartData?.bonusUsagePerBrand?.categories || [],
+                title: 'AVG BONUS USAGE',
+                currency: 'MYR',
+                chartIcon: getChartIcon('Bonus'),
+                color: '#F97316',
+                showDataLabels: true
+              })
+              setIsZoomOpen(true)
+            }}
           />
         </div>
 
@@ -786,6 +950,17 @@ export default function BusinessPerformancePage() {
             data={chartData?.sankey || { nodes: [], links: [] }}
             title="PURE USER GGR DISTRIBUTION PER BRAND"
             chartIcon={getChartIcon('Customer Flow')}
+            clickable={true}
+            onDoubleClick={() => {
+              setZoomTitle('PURE USER GGR DISTRIBUTION PER BRAND')
+              setZoomChartType('sankey')
+              setZoomChartProps({
+                data: chartData?.sankey || { nodes: [], links: [] },
+                title: 'PURE USER GGR DISTRIBUTION PER BRAND',
+                chartIcon: getChartIcon('Customer Flow')
+              })
+              setIsZoomOpen(true)
+            }}
           />
         </div>
 
@@ -811,7 +986,6 @@ export default function BusinessPerformancePage() {
         userEmail={userEmail}
         userRole={userRole}
         onSaveSuccess={() => {
-          console.log('✅ Target saved successfully, refreshing KPI data...')
           fetchKPIData()
         }}
       />
@@ -840,6 +1014,39 @@ export default function BusinessPerformancePage() {
         endDate={endDate}
         isDateRange={isDateRangeMode}
       />
+      
+      {/* Chart Zoom Modal */}
+      <ChartZoomModal
+        isOpen={isZoomOpen}
+        onClose={() => setIsZoomOpen(false)}
+        title={zoomTitle}
+        dataCount={zoomChartProps?.categories?.length || 4}
+      >
+        {zoomChartProps && zoomChartType === 'line' && (
+          <LineChart 
+            {...zoomChartProps}
+            clickable={false}
+          />
+        )}
+        {zoomChartProps && zoomChartType === 'bar' && (
+          <BarChart 
+            {...zoomChartProps}
+            clickable={false}
+          />
+        )}
+        {zoomChartProps && zoomChartType === 'stacked' && (
+          <StackedBarChart 
+            {...zoomChartProps}
+            clickable={false}
+          />
+        )}
+        {zoomChartProps && zoomChartType === 'sankey' && (
+          <SankeyChart 
+            {...zoomChartProps}
+            clickable={false}
+          />
+        )}
+      </ChartZoomModal>
     </Layout>
     </>
   )

@@ -23,9 +23,11 @@ interface SankeyChartProps {
   data: SankeyData;
   title?: string;
   chartIcon?: string;
+  onDoubleClick?: () => void;
+  clickable?: boolean;
 }
 
-export default function SankeyChart({ data, title, chartIcon }: SankeyChartProps) {
+export default function SankeyChart({ data, title, chartIcon, onDoubleClick, clickable = false }: SankeyChartProps) {
   
   // Custom Tooltip with full control over styling
   const CustomTooltip = ({ active, payload }: any) => {
@@ -128,16 +130,21 @@ export default function SankeyChart({ data, title, chartIcon }: SankeyChartProps
       boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
       display: 'flex',
       flexDirection: 'column',
-      transition: 'all 0.3s ease',
-      cursor: 'pointer'
+      transition: clickable ? 'all 0.2s ease' : undefined,
+      cursor: clickable ? 'pointer' : 'default'
     }}
+    onDoubleClick={clickable ? onDoubleClick : undefined}
     onMouseEnter={(e) => {
-      e.currentTarget.style.transform = 'translateY(-3px)';
-      e.currentTarget.style.boxShadow = '0 8px 25px 0 rgba(0, 0, 0, 0.12), 0 4px 10px 0 rgba(0, 0, 0, 0.08)';
+      if (clickable) {
+        e.currentTarget.style.transform = 'translateY(-2px)';
+        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+      }
     }}
     onMouseLeave={(e) => {
-      e.currentTarget.style.transform = 'translateY(0)';
-      e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)';
+      if (clickable) {
+        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)';
+      }
     }}>
       {/* Chart Title with Icon */}
       {title && (

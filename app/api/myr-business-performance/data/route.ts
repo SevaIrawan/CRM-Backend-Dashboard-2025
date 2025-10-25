@@ -386,8 +386,6 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate') || ''
     const endDate = searchParams.get('endDate') || ''
 
-    console.log('[BP API] Filters:', { currency, year, quarter, isDateRange, startDate, endDate })
-
     const mode: 'daily' | 'quarterly' = isDateRange ? 'daily' : 'quarterly'
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -460,7 +458,6 @@ export async function GET(request: NextRequest) {
       }
 
       if (!quarterData) {
-        console.warn('[BP API] No quarterly MV data found')
         mvData = {
           deposit_amount: 0,
           deposit_cases: 0,
@@ -499,13 +496,11 @@ export async function GET(request: NextRequest) {
 
     if (mode === 'quarterly') {
       // ✅ FAST: Use MV Quarter Table (NO additional queries!)
-      console.log('[BP API] Using MV Quarter Table for member metrics (FAST)')
       activeMember = mvData.active_member || 0
       pureUser = mvData.pure_member || 0
       pureUserGGR = mvData.ggr || 0
     } else {
       // ❌ SLOW: Query blue_whale_myr for COUNT DISTINCT (needed for random date ranges)
-      console.log('[BP API] Querying blue_whale_myr for member metrics (SLOW - random date range)')
       const [activeMemResult, pureUserResult, pureUserGGRResult] = await Promise.all([
         calculateActiveMember({ currency, startDate, endDate }),
         calculatePureUser({ currency, startDate, endDate }),
@@ -631,8 +626,6 @@ export async function GET(request: NextRequest) {
       endDate
     }
 
-    console.log('[BP API] Generating chart data...')
-
     const [
       ggrTrend,
       forecastQ4GGR,
@@ -659,12 +652,9 @@ export async function GET(request: NextRequest) {
       generateSankeyDiagram({ ...chartParams, pureUserGGR })
     ])
 
-    console.log('[BP API] Chart data generated successfully')
-
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // STEP 7.5: CALCULATE DAILY AVERAGE & MOM COMPARISON
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    console.log('[BP API] Calculating Daily Average & MoM Comparison...')
     
     // Get max date from data for comparison logic
     const { data: maxDateResult } = await supabase
@@ -686,13 +676,6 @@ export async function GET(request: NextRequest) {
       endDate || `${year}-12-31`,
       maxDateInData
     )
-    
-    console.log('[BP API] Previous Period:', previousPeriod)
-    console.log('[BP API] Comparison Mode:', previousPeriod.comparisonMode)
-    console.log('[BP API] Previous Period Dates:', {
-      prevStartDate: previousPeriod.prevStartDate,
-      prevEndDate: previousPeriod.prevEndDate
-    })
     
     // Fetch and calculate PREVIOUS PERIOD KPIs FOR MoM COMPARISON
     let prevPeriodActiveMember = 0
@@ -798,13 +781,11 @@ export async function GET(request: NextRequest) {
     // ✅ OPTIMIZATION: For QUARTER_TO_QUARTER comparison, use MV data
     if (mode === 'quarterly' && previousPeriod.comparisonMode === 'QUARTER_TO_QUARTER') {
       // ✅ FAST: Use MV Quarter Table for previous quarter (NO additional queries!)
-      console.log('[BP API] Using MV Quarter Table for previous period (FAST)')
       prevPeriodActiveMember = prevPeriodMvData.active_member || 0
       prevPeriodPureUser = prevPeriodMvData.pure_member || 0
       prevPeriodPureUserGGR = prevPeriodMvData.ggr || 0
     } else {
       // ❌ SLOW: Query blue_whale_myr for previous period (needed for date-to-date or daily mode)
-      console.log('[BP API] Querying blue_whale_myr for previous period (SLOW)')
       const [prevPeriodActiveMemberCalc, prevPeriodPureUserCalc, prevPeriodPureUserGGRCalc] = await Promise.all([
         calculateActiveMember({
           currency,
@@ -850,8 +831,6 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    console.log('[BP API] Daily Average Period:', { actualStartDate, actualEndDate, mode })
-    
     const dailyAverage = {
       grossGamingRevenue: calculateAverageDaily(pureUserGGR, actualStartDate, actualEndDate),
       depositAmount: calculateAverageDaily(mvData.deposit_amount, actualStartDate, actualEndDate),
@@ -885,16 +864,6 @@ export async function GET(request: NextRequest) {
       winrate: calculateMoMChange(mvData.winrate, prevPeriodMvData.winrate),
       withdrawalRate: calculateMoMChange(mvData.withdrawal_rate, prevPeriodMvData.withdrawal_rate)
     }
-    
-    console.log('[BP API] Daily Average & MoM Comparison calculated successfully')
-    console.log('[BP API] Comparison Results:', {
-      ggrCurrent: pureUserGGR,
-      ggrPrevious: prevPeriodPureUserGGR,
-      ggrComparison: comparison.grossGamingRevenue,
-      activeMemberCurrent: activeMember,
-      activeMemberPrevious: prevPeriodActiveMember,
-      activeMemberComparison: comparison.activeMember
-    })
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // STEP 8: BUILD RESPONSE
