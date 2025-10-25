@@ -129,8 +129,6 @@ function isCurrentMonth(year: string, month: string): boolean {
  */
 async function getMYRLastUpdateDate(year: string, month: string): Promise<number> {
   try {
-    console.log(`🔍 [MYR Daily Average] Getting last update date for ${month} ${year}...`)
-    
     const { data, error } = await supabase
       .from('blue_whale_myr')
       .select('date')
@@ -149,7 +147,6 @@ async function getMYRLastUpdateDate(year: string, month: string): Promise<number
     if (data && data.length > 0 && data[0].date) {
       const lastDate = new Date(String(data[0].date))
       const dayOfMonth = lastDate.getDate()
-      console.log(`✅ [MYR Daily Average] Last update date: ${dayOfMonth}`)
       return dayOfMonth
     }
     
@@ -171,17 +168,14 @@ async function getMYRCurrentMonthProgress(year: string, month: string): Promise<
   
   // Only use database for CURRENT ongoing month
   if (year === currentYear && month === currentMonth) {
-    console.log(`📅 [MYR Daily Average] CURRENT ongoing month detected: ${month} ${year}`)
     const lastUpdateDay = await getMYRLastUpdateDate(year, month)
     const currentDay = currentDate.getDate()
     const activeDays = Math.min(lastUpdateDay, currentDay)
-    console.log(`📅 [MYR Daily Average] Current month active days: ${activeDays}`)
     return activeDays
   }
   
   // For ALL past months, use total days
   const totalDays = getDaysInMonth(year, month)
-  console.log(`📅 [MYR Daily Average] Past/completed month: ${month} ${year}, total days: ${totalDays}`)
   return totalDays
 }
 
@@ -198,7 +192,6 @@ async function calculateMYRDailyAverage(monthlyValue: number, year: string, mont
   }
   
   const dailyAverage = monthlyValue / activeDays
-  console.log(`📊 [MYR Daily Average] ${month} ${year}: ${monthlyValue} ÷ ${activeDays} = ${dailyAverage.toFixed(2)}`)
   
   return dailyAverage
 }
@@ -216,8 +209,6 @@ function calculateMYRMoM(current: number, previous: number): number {
  */
 async function getMYRKPIData(year: string, month: string, line?: string): Promise<MYRKPIData> {
   try {
-    console.log(`🔍 [MYR KPI] Getting KPI data for ${month} ${year} from MV...`)
-    
     const monthIndex = getMonthIndex(month)
     const monthNumber = monthIndex === -1 ? 0 : monthIndex + 1 // Handle 'ALL' month as 0
     
@@ -281,7 +272,6 @@ async function getMYRKPIData(year: string, month: string, line?: string): Promis
       conversionRate: (row.conversion_rate as number) || 0
     }
 
-    console.log(`✅ [MYR KPI] KPI data loaded for ${month} ${year}`)
     return kpiData
 
   } catch (error) {
@@ -335,8 +325,6 @@ export async function calculateAllMYRDailyAverages(
   month: string
 ): Promise<MYRKPIData> {
   try {
-    console.log('🔄 [MYR Daily Average] Calculating Daily Average for ALL MYR KPIs...')
-    
     const dailyAverages: MYRKPIData = {
       activeMember: await calculateMYRDailyAverage(monthlyData.activeMember, year, month),
       depositAmount: await calculateMYRDailyAverage(monthlyData.depositAmount, year, month),
@@ -368,7 +356,6 @@ export async function calculateAllMYRDailyAverages(
       conversionRate: await calculateMYRDailyAverage(monthlyData.conversionRate, year, month)
     }
     
-    console.log('✅ [MYR Daily Average] All MYR KPIs Daily Average calculated')
     return dailyAverages
     
   } catch (error) {
@@ -386,8 +373,6 @@ export async function getAllMYRKPIsWithMoM(
   line?: string
 ): Promise<{ current: MYRKPIData, mom: MYRMoMData, dailyAverage: MYRKPIData }> {
   try {
-    console.log('🔄 [MYR MoM] Calculating MoM for ALL MYR KPIs...')
-    
     // Get current month data
     const currentData = await getMYRKPIData(year, month, line)
     
@@ -429,8 +414,6 @@ export async function getAllMYRKPIsWithMoM(
     
     // Calculate daily averages
     const dailyAverage = await calculateAllMYRDailyAverages(currentData, year, month)
-    
-    console.log('✅ [MYR MoM] All MYR KPIs with MoM calculated')
     
     return { current: currentData, mom, dailyAverage }
     
