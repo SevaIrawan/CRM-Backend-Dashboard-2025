@@ -1,13 +1,13 @@
 /**
- * SGD Daily Average dan MoM Comparison Logic
- * Menggunakan table blue_whale_sgd_monthly_summary (MV)
+ * MYR Daily Average dan MoM Comparison Logic
+ * Menggunakan table blue_whale_myr_monthly_summary (MV)
  * Mengikuti pattern yang sudah ada di USCDailyAverageAndMoM.ts
  */
 
 import { supabase } from '@/lib/supabase'
 
-// SGD-specific types - SYNC with blue_whale_sgd_monthly_summary MV
-export interface SGDKPIData {
+// MYR-specific types - SYNC with blue_whale_myr_monthly_summary MV
+export interface MYRKPIData {
   activeMember: number
   depositAmount: number
   withdrawAmount: number
@@ -38,7 +38,7 @@ export interface SGDKPIData {
   conversionRate: number
 }
 
-export interface SGDMoMData {
+export interface MYRMoMData {
   activeMember: number
   depositAmount: number
   withdrawAmount: number
@@ -125,22 +125,22 @@ function isCurrentMonth(year: string, month: string): boolean {
 }
 
 /**
- * Get last update date from blue_whale_sgd table for SGD
+ * Get last update date from blue_whale_myr table for MYR
  */
-async function getSGDLastUpdateDate(year: string, month: string): Promise<number> {
+async function getMYRLastUpdateDate(year: string, month: string): Promise<number> {
   try {
     const { data, error } = await supabase
-      .from('blue_whale_sgd')
+      .from('blue_whale_myr')
       .select('date')
       .eq('year', year)
       .eq('month', month)
-      .eq('currency', 'SGD')
+      .eq('currency', 'MYR')
       .not('date', 'is', null)
       .order('date', { ascending: false })
       .limit(1)
     
     if (error) {
-      console.error('❌ [SGD Daily Average] Error getting last update date:', error)
+      console.error('❌ [MYR Daily Average] Error getting last update date:', error)
       return getDaysInMonth(year, month)
     }
     
@@ -153,22 +153,22 @@ async function getSGDLastUpdateDate(year: string, month: string): Promise<number
     return getDaysInMonth(year, month)
     
   } catch (error) {
-    console.error('❌ [SGD Daily Average] Error getting last update date:', error)
+    console.error('❌ [MYR Daily Average] Error getting last update date:', error)
     return getDaysInMonth(year, month)
   }
 }
 
 /**
- * Get current month progress (days elapsed so far) for SGD
+ * Get current month progress (days elapsed so far) for MYR
  */
-async function getSGDCurrentMonthProgress(year: string, month: string): Promise<number> {
+async function getMYRCurrentMonthProgress(year: string, month: string): Promise<number> {
   const currentDate = new Date()
   const currentYear = currentDate.getFullYear().toString()
   const currentMonth = getMonthName(currentDate.getMonth())
   
   // Only use database for CURRENT ongoing month
   if (year === currentYear && month === currentMonth) {
-    const lastUpdateDay = await getSGDLastUpdateDate(year, month)
+    const lastUpdateDay = await getMYRLastUpdateDate(year, month)
     const currentDay = currentDate.getDate()
     const activeDays = Math.min(lastUpdateDay, currentDay)
     return activeDays
@@ -180,13 +180,13 @@ async function getSGDCurrentMonthProgress(year: string, month: string): Promise<
 }
 
 /**
- * Calculate daily average for SGD KPI
+ * Calculate daily average for MYR KPI
  */
-async function calculateSGDDailyAverage(monthlyValue: number, year: string, month: string): Promise<number> {
-  const activeDays = await getSGDCurrentMonthProgress(year, month)
+async function calculateMYRDailyAverage(monthlyValue: number, year: string, month: string): Promise<number> {
+  const activeDays = await getMYRCurrentMonthProgress(year, month)
   
   if (activeDays === 0 || activeDays < 1) {
-    console.warn(`⚠️ [SGD Daily Average] Invalid days (${activeDays}) for ${month} ${year}`)
+    console.warn(`⚠️ [MYR Daily Average] Invalid days (${activeDays}) for ${month} ${year}`)
     const fallbackDays = getDaysInMonth(year, month)
     return monthlyValue / fallbackDays
   }
@@ -199,23 +199,23 @@ async function calculateSGDDailyAverage(monthlyValue: number, year: string, mont
 /**
  * Calculate MoM percentage change (same as USCDailyAverageAndMoM.ts)
  */
-function calculateSGDMoM(current: number, previous: number): number {
+function calculateMYRMoM(current: number, previous: number): number {
   if (previous === 0) return current > 0 ? 100 : 0
   return ((current - previous) / previous) * 100
 }
 
 /**
- * Get SGD KPI data from MV table
+ * Get MYR KPI data from MV table
  */
-async function getSGDKPIData(year: string, month: string, line?: string): Promise<SGDKPIData> {
+async function getMYRKPIData(year: string, month: string, line?: string): Promise<MYRKPIData> {
   try {
     const monthIndex = getMonthIndex(month)
     const monthNumber = monthIndex === -1 ? 0 : monthIndex + 1 // Handle 'ALL' month as 0
     
     let query = supabase
-      .from('blue_whale_sgd_monthly_summary')
+      .from('blue_whale_myr_monthly_summary')
       .select('*')
-      .eq('currency', 'SGD')
+      .eq('currency', 'MYR')
       .eq('year', parseInt(year))
       .eq('month', monthNumber)
       .limit(1)
@@ -229,19 +229,19 @@ async function getSGDKPIData(year: string, month: string, line?: string): Promis
     const { data, error } = await query
 
     if (error) {
-      console.error('❌ [SGD KPI] Error fetching KPI data:', error)
+      console.error('❌ [MYR KPI] Error fetching KPI data:', error)
       throw error
     }
 
     if (!data || data.length === 0) {
-      console.warn(`⚠️ [SGD KPI] No data found for ${month} ${year}, line: ${line}`)
-      return getEmptySGDKPIData()
+      console.warn(`⚠️ [MYR KPI] No data found for ${month} ${year}, line: ${line}`)
+      return getEmptyMYRKPIData()
     }
 
     const row = data[0]
     
     // Map MV columns to KPI data structure
-    const kpiData: SGDKPIData = {
+    const kpiData: MYRKPIData = {
       activeMember: (row.active_member as number) || 0,
       depositAmount: (row.deposit_amount as number) || 0,
       withdrawAmount: (row.withdraw_amount as number) || 0,
@@ -275,15 +275,15 @@ async function getSGDKPIData(year: string, month: string, line?: string): Promis
     return kpiData
 
   } catch (error) {
-    console.error('❌ [SGD KPI] Error getting KPI data:', error)
-    return getEmptySGDKPIData()
+    console.error('❌ [MYR KPI] Error getting KPI data:', error)
+    return getEmptyMYRKPIData()
   }
 }
 
 /**
- * Get empty SGD KPI data structure
+ * Get empty MYR KPI data structure
  */
-function getEmptySGDKPIData(): SGDKPIData {
+function getEmptyMYRKPIData(): MYRKPIData {
   return {
     activeMember: 0,
     depositAmount: 0,
@@ -317,113 +317,113 @@ function getEmptySGDKPIData(): SGDKPIData {
 }
 
 /**
- * Calculate Daily Average for ALL SGD KPIs
+ * Calculate Daily Average for ALL MYR KPIs
  */
-export async function calculateAllSGDDailyAverages(
-  monthlyData: SGDKPIData,
+export async function calculateAllMYRDailyAverages(
+  monthlyData: MYRKPIData,
   year: string,
   month: string
-): Promise<SGDKPIData> {
+): Promise<MYRKPIData> {
   try {
-    const dailyAverages: SGDKPIData = {
-      activeMember: await calculateSGDDailyAverage(monthlyData.activeMember, year, month),
-      depositAmount: await calculateSGDDailyAverage(monthlyData.depositAmount, year, month),
-      withdrawAmount: await calculateSGDDailyAverage(monthlyData.withdrawAmount, year, month),
-      netProfit: await calculateSGDDailyAverage(monthlyData.netProfit, year, month),
-      purchaseFrequency: await calculateSGDDailyAverage(monthlyData.purchaseFrequency, year, month),
-      avgTransactionValue: await calculateSGDDailyAverage(monthlyData.avgTransactionValue, year, month),
-      pureMember: await calculateSGDDailyAverage(monthlyData.pureMember, year, month),
-      newRegister: await calculateSGDDailyAverage(monthlyData.newRegister, year, month),
-      newDepositor: await calculateSGDDailyAverage(monthlyData.newDepositor, year, month),
-      depositCases: await calculateSGDDailyAverage(monthlyData.depositCases, year, month),
-      withdrawCases: await calculateSGDDailyAverage(monthlyData.withdrawCases, year, month),
-      grossGamingRevenue: await calculateSGDDailyAverage(monthlyData.grossGamingRevenue, year, month),
-      winrate: await calculateSGDDailyAverage(monthlyData.winrate, year, month),
-      withdrawalRate: await calculateSGDDailyAverage(monthlyData.withdrawalRate, year, month),
-      daUser: await calculateSGDDailyAverage(monthlyData.daUser, year, month),
-      ggrUser: await calculateSGDDailyAverage(monthlyData.ggrUser, year, month),
-      addBonus: await calculateSGDDailyAverage(monthlyData.addBonus, year, month),
-      deductBonus: await calculateSGDDailyAverage(monthlyData.deductBonus, year, month),
-      addTransaction: await calculateSGDDailyAverage(monthlyData.addTransaction, year, month),
-      deductTransaction: await calculateSGDDailyAverage(monthlyData.deductTransaction, year, month),
-      betsAmount: await calculateSGDDailyAverage(monthlyData.betsAmount, year, month),
-      validAmount: await calculateSGDDailyAverage(monthlyData.validAmount, year, month),
-      casesBets: await calculateSGDDailyAverage(monthlyData.casesBets, year, month),
-      casesAdjustment: await calculateSGDDailyAverage(monthlyData.casesAdjustment, year, month),
-      bonus: await calculateSGDDailyAverage(monthlyData.bonus, year, month),
-      pureUser: await calculateSGDDailyAverage(monthlyData.pureUser, year, month),
-      holdPercentage: await calculateSGDDailyAverage(monthlyData.holdPercentage, year, month),
-      conversionRate: await calculateSGDDailyAverage(monthlyData.conversionRate, year, month)
+    const dailyAverages: MYRKPIData = {
+      activeMember: await calculateMYRDailyAverage(monthlyData.activeMember, year, month),
+      depositAmount: await calculateMYRDailyAverage(monthlyData.depositAmount, year, month),
+      withdrawAmount: await calculateMYRDailyAverage(monthlyData.withdrawAmount, year, month),
+      netProfit: await calculateMYRDailyAverage(monthlyData.netProfit, year, month),
+      purchaseFrequency: await calculateMYRDailyAverage(monthlyData.purchaseFrequency, year, month),
+      avgTransactionValue: await calculateMYRDailyAverage(monthlyData.avgTransactionValue, year, month),
+      pureMember: await calculateMYRDailyAverage(monthlyData.pureMember, year, month),
+      newRegister: await calculateMYRDailyAverage(monthlyData.newRegister, year, month),
+      newDepositor: await calculateMYRDailyAverage(monthlyData.newDepositor, year, month),
+      depositCases: await calculateMYRDailyAverage(monthlyData.depositCases, year, month),
+      withdrawCases: await calculateMYRDailyAverage(monthlyData.withdrawCases, year, month),
+      grossGamingRevenue: await calculateMYRDailyAverage(monthlyData.grossGamingRevenue, year, month),
+      winrate: await calculateMYRDailyAverage(monthlyData.winrate, year, month),
+      withdrawalRate: await calculateMYRDailyAverage(monthlyData.withdrawalRate, year, month),
+      daUser: await calculateMYRDailyAverage(monthlyData.daUser, year, month),
+      ggrUser: await calculateMYRDailyAverage(monthlyData.ggrUser, year, month),
+      addBonus: await calculateMYRDailyAverage(monthlyData.addBonus, year, month),
+      deductBonus: await calculateMYRDailyAverage(monthlyData.deductBonus, year, month),
+      addTransaction: await calculateMYRDailyAverage(monthlyData.addTransaction, year, month),
+      deductTransaction: await calculateMYRDailyAverage(monthlyData.deductTransaction, year, month),
+      betsAmount: await calculateMYRDailyAverage(monthlyData.betsAmount, year, month),
+      validAmount: await calculateMYRDailyAverage(monthlyData.validAmount, year, month),
+      casesBets: await calculateMYRDailyAverage(monthlyData.casesBets, year, month),
+      casesAdjustment: await calculateMYRDailyAverage(monthlyData.casesAdjustment, year, month),
+      bonus: await calculateMYRDailyAverage(monthlyData.bonus, year, month),
+      pureUser: await calculateMYRDailyAverage(monthlyData.pureUser, year, month),
+      holdPercentage: await calculateMYRDailyAverage(monthlyData.holdPercentage, year, month),
+      conversionRate: await calculateMYRDailyAverage(monthlyData.conversionRate, year, month)
     }
     
     return dailyAverages
     
   } catch (error) {
-    console.error('❌ [SGD Daily Average] Error calculating all SGD KPIs:', error)
-    return getEmptySGDKPIData()
+    console.error('❌ [MYR Daily Average] Error calculating all MYR KPIs:', error)
+    return getEmptyMYRKPIData()
   }
 }
 
 /**
- * Get ALL SGD KPIs with MoM Comparison (same pattern as USCDailyAverageAndMoM.ts)
+ * Get ALL MYR KPIs with MoM Comparison (same pattern as USCDailyAverageAndMoM.ts)
  */
-export async function getAllSGDKPIsWithMoM(
+export async function getAllMYRKPIsWithMoM(
   year: string,
   month: string,
   line?: string
-): Promise<{ current: SGDKPIData, mom: SGDMoMData, dailyAverage: SGDKPIData }> {
+): Promise<{ current: MYRKPIData, mom: MYRMoMData, dailyAverage: MYRKPIData }> {
   try {
     // Get current month data
-    const currentData = await getSGDKPIData(year, month, line)
+    const currentData = await getMYRKPIData(year, month, line)
     
     // Get previous month data
     const { year: prevYear, month: prevMonth } = getPreviousMonth(year, month)
-    const previousData = await getSGDKPIData(prevYear, prevMonth, line)
+    const previousData = await getMYRKPIData(prevYear, prevMonth, line)
     
     // Calculate MoM using same formula as USCDailyAverageAndMoM.ts
-    const mom: SGDMoMData = {
-      activeMember: calculateSGDMoM(currentData.activeMember, previousData.activeMember),
-      depositAmount: calculateSGDMoM(currentData.depositAmount, previousData.depositAmount),
-      withdrawAmount: calculateSGDMoM(currentData.withdrawAmount, previousData.withdrawAmount),
-      netProfit: calculateSGDMoM(currentData.netProfit, previousData.netProfit),
-      purchaseFrequency: calculateSGDMoM(currentData.purchaseFrequency, previousData.purchaseFrequency),
-      avgTransactionValue: calculateSGDMoM(currentData.avgTransactionValue, previousData.avgTransactionValue),
-      pureMember: calculateSGDMoM(currentData.pureMember, previousData.pureMember),
-      newRegister: calculateSGDMoM(currentData.newRegister, previousData.newRegister),
-      newDepositor: calculateSGDMoM(currentData.newDepositor, previousData.newDepositor),
-      depositCases: calculateSGDMoM(currentData.depositCases, previousData.depositCases),
-      withdrawCases: calculateSGDMoM(currentData.withdrawCases, previousData.withdrawCases),
-      grossGamingRevenue: calculateSGDMoM(currentData.grossGamingRevenue, previousData.grossGamingRevenue),
-      winrate: calculateSGDMoM(currentData.winrate, previousData.winrate),
-      withdrawalRate: calculateSGDMoM(currentData.withdrawalRate, previousData.withdrawalRate),
-      daUser: calculateSGDMoM(currentData.daUser, previousData.daUser),
-      ggrUser: calculateSGDMoM(currentData.ggrUser, previousData.ggrUser),
-      addBonus: calculateSGDMoM(currentData.addBonus, previousData.addBonus),
-      deductBonus: calculateSGDMoM(currentData.deductBonus, previousData.deductBonus),
-      addTransaction: calculateSGDMoM(currentData.addTransaction, previousData.addTransaction),
-      deductTransaction: calculateSGDMoM(currentData.deductTransaction, previousData.deductTransaction),
-      betsAmount: calculateSGDMoM(currentData.betsAmount, previousData.betsAmount),
-      validAmount: calculateSGDMoM(currentData.validAmount, previousData.validAmount),
-      casesBets: calculateSGDMoM(currentData.casesBets, previousData.casesBets),
-      casesAdjustment: calculateSGDMoM(currentData.casesAdjustment, previousData.casesAdjustment),
-      bonus: calculateSGDMoM(currentData.bonus, previousData.bonus),
-      pureUser: calculateSGDMoM(currentData.pureUser, previousData.pureUser),
-      holdPercentage: calculateSGDMoM(currentData.holdPercentage, previousData.holdPercentage),
-      conversionRate: calculateSGDMoM(currentData.conversionRate, previousData.conversionRate)
+    const mom: MYRMoMData = {
+      activeMember: calculateMYRMoM(currentData.activeMember, previousData.activeMember),
+      depositAmount: calculateMYRMoM(currentData.depositAmount, previousData.depositAmount),
+      withdrawAmount: calculateMYRMoM(currentData.withdrawAmount, previousData.withdrawAmount),
+      netProfit: calculateMYRMoM(currentData.netProfit, previousData.netProfit),
+      purchaseFrequency: calculateMYRMoM(currentData.purchaseFrequency, previousData.purchaseFrequency),
+      avgTransactionValue: calculateMYRMoM(currentData.avgTransactionValue, previousData.avgTransactionValue),
+      pureMember: calculateMYRMoM(currentData.pureMember, previousData.pureMember),
+      newRegister: calculateMYRMoM(currentData.newRegister, previousData.newRegister),
+      newDepositor: calculateMYRMoM(currentData.newDepositor, previousData.newDepositor),
+      depositCases: calculateMYRMoM(currentData.depositCases, previousData.depositCases),
+      withdrawCases: calculateMYRMoM(currentData.withdrawCases, previousData.withdrawCases),
+      grossGamingRevenue: calculateMYRMoM(currentData.grossGamingRevenue, previousData.grossGamingRevenue),
+      winrate: calculateMYRMoM(currentData.winrate, previousData.winrate),
+      withdrawalRate: calculateMYRMoM(currentData.withdrawalRate, previousData.withdrawalRate),
+      daUser: calculateMYRMoM(currentData.daUser, previousData.daUser),
+      ggrUser: calculateMYRMoM(currentData.ggrUser, previousData.ggrUser),
+      addBonus: calculateMYRMoM(currentData.addBonus, previousData.addBonus),
+      deductBonus: calculateMYRMoM(currentData.deductBonus, previousData.deductBonus),
+      addTransaction: calculateMYRMoM(currentData.addTransaction, previousData.addTransaction),
+      deductTransaction: calculateMYRMoM(currentData.deductTransaction, previousData.deductTransaction),
+      betsAmount: calculateMYRMoM(currentData.betsAmount, previousData.betsAmount),
+      validAmount: calculateMYRMoM(currentData.validAmount, previousData.validAmount),
+      casesBets: calculateMYRMoM(currentData.casesBets, previousData.casesBets),
+      casesAdjustment: calculateMYRMoM(currentData.casesAdjustment, previousData.casesAdjustment),
+      bonus: calculateMYRMoM(currentData.bonus, previousData.bonus),
+      pureUser: calculateMYRMoM(currentData.pureUser, previousData.pureUser),
+      holdPercentage: calculateMYRMoM(currentData.holdPercentage, previousData.holdPercentage),
+      conversionRate: calculateMYRMoM(currentData.conversionRate, previousData.conversionRate)
     }
     
     // Calculate daily averages
-    const dailyAverage = await calculateAllSGDDailyAverages(currentData, year, month)
+    const dailyAverage = await calculateAllMYRDailyAverages(currentData, year, month)
     
     return { current: currentData, mom, dailyAverage }
     
   } catch (error) {
-    console.error('❌ [SGD MoM] Error calculating SGD KPIs with MoM:', error)
+    console.error('❌ [MYR MoM] Error calculating MYR KPIs with MoM:', error)
     
     return {
-      current: getEmptySGDKPIData(),
-      mom: getEmptySGDKPIData(),
-      dailyAverage: getEmptySGDKPIData()
+      current: getEmptyMYRKPIData(),
+      mom: getEmptyMYRKPIData(),
+      dailyAverage: getEmptyMYRKPIData()
     }
   }
 }
@@ -431,7 +431,7 @@ export async function getAllSGDKPIsWithMoM(
 /**
  * Format MoM value (same as USCDailyAverageAndMoM.ts)
  */
-export function formatSGDMoMValue(value: number): string {
+export function formatMYRMoMValue(value: number): string {
   const num = Number(value) || 0
   return num > 0 ? `+${num.toFixed(1)}%` : `${num.toFixed(1)}%`
 }
@@ -439,7 +439,7 @@ export function formatSGDMoMValue(value: number): string {
 /**
  * Get comparison color (same as USCDailyAverageAndMoM.ts)
  */
-export function getSGDComparisonColor(value: number): string {
+export function getMYRComparisonColor(value: number): string {
   const num = Number(value) || 0
   return num > 0 ? '#059669' : num < 0 ? '#dc2626' : '#6b7280'
 }
@@ -447,14 +447,14 @@ export function getSGDComparisonColor(value: number): string {
 /**
  * Format daily average value
  */
-export function formatSGDDailyAverageValue(
+export function formatMYRDailyAverageValue(
   value: number,
   type: 'currency' | 'count' | 'percentage' = 'count'
 ): string {
   try {
     switch (type) {
       case 'currency':
-        return `SGD ${new Intl.NumberFormat('en-US', {
+        return `MYR ${new Intl.NumberFormat('en-US', {
           minimumFractionDigits: 0,
           maximumFractionDigits: 0
         }).format(value)}`
@@ -467,7 +467,7 @@ export function formatSGDDailyAverageValue(
         return new Intl.NumberFormat('en-US').format(Math.round(value))
     }
   } catch (error) {
-    console.error('❌ [SGD Daily Average] Error formatting value:', error)
+    console.error('❌ [MYR Daily Average] Error formatting value:', error)
     return '0'
   }
 }

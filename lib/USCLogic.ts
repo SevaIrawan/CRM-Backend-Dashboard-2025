@@ -159,14 +159,6 @@ export const USC_KPI_FORMULAS = {
   CUSTOMER_LIFETIME_VALUE: (avgTransactionValue: number, purchaseFrequency: number, avgCustomerLifespan: number): number => {
     const result = avgTransactionValue * purchaseFrequency * avgCustomerLifespan
     
-    console.log('🔍 [USCLogic] CLV Formula Debug:', {
-      avgTransactionValue,
-      purchaseFrequency,
-      avgCustomerLifespan,
-      result,
-      calculation: `${avgTransactionValue} × ${purchaseFrequency} × ${avgCustomerLifespan} = ${result}`
-    })
-    
     return result
   },
 
@@ -296,13 +288,10 @@ export async function getUSCRawKPIData(filters: USCSlicerFilters): Promise<USCRa
   const cacheKey = `usc_raw_kpi_USC_${filters.year}_${filters.month}_${filters.line || 'all'}`
   const cached = uscCache.get(cacheKey) as USCRawKPIData | undefined
   if (cached) {
-    console.log('🎯 [USCLogic] Using cached raw KPI data')
     return cached
   }
 
   try {
-    console.log('🔄 [USCLogic] Fetching raw KPI data from USC tables...')
-    console.log('🔍 [USCLogic] Filters:', filters)
 
     // ✅ PARALLEL FETCH - USC TABLES (HYBRID APPROACH)
     const [activeMemberResult, summaryDataResult, churnResult] = await Promise.all([
@@ -353,11 +342,6 @@ export async function getUSCRawKPIData(filters: USCSlicerFilters): Promise<USCRa
     const activeMemberData = activeMemberResult.data || []
     const summaryData = summaryDataResult.data || []
 
-    console.log('🔍 [USCLogic] Raw data counts:', {
-      activeMemberData: activeMemberData.length,
-      summaryData: summaryData.length
-    })
-
     // 1. ACTIVE MEMBER = unique count dari blue_whale_usc[userkey] WHERE deposit_cases > 0 (Master table)
     const uniqueUserKeys = Array.from(new Set(activeMemberData.map((item: Record<string, unknown>) => item.userkey).filter(Boolean)))
     const activeMembersCount = uniqueUserKeys.length
@@ -393,12 +377,6 @@ export async function getUSCRawKPIData(filters: USCSlicerFilters): Promise<USCRa
       valid_amount: 0,
       new_register: 0,
       new_depositor: 0
-    })
-
-    console.log('📊 [USCLogic] Aggregated data:', {
-      activeMembersCount,
-      pureUserCount,
-      summaryAgg
     })
 
     // Calculate derived values using centralized formulas
@@ -444,18 +422,6 @@ export async function getUSCRawKPIData(filters: USCSlicerFilters): Promise<USCRa
         total_customers: 0
       }
     }
-
-    console.log('✅ [USCLogic] Raw KPI data aggregated:', {
-      activeMembers: rawData.deposit.active_members,
-      depositAmount: rawData.deposit.deposit_amount,
-      withdrawAmount: rawData.withdraw.withdraw_amount,
-      grossProfit: rawData.member.ggr,
-      netProfit: rawData.member.net_profit,
-      newDepositor: rawData.newDepositor.new_depositor,
-      newRegister: rawData.newRegister.new_register,
-      pureUser: rawData.pureUser.unique_codes,
-      depositCases: rawData.deposit.deposit_cases
-    })
 
     uscCache.set(cacheKey, rawData)
     return rawData
@@ -553,25 +519,9 @@ async function getUSCChurnMembers(filters: USCSlicerFilters): Promise<{ churn_me
 
 export async function calculateUSCKPIs(filters: USCSlicerFilters): Promise<USCKPIData> {
   try {
-    console.log('🎯 [USCLogic] Calculating USC KPIs...')
-
     // ✅ Step 1: Get raw aggregated data
     const rawData = await getUSCRawKPIData(filters)
     
-    console.log('🔍 [USCLogic] Raw Data from Database:', {
-      filters,
-      rawData,
-      dataQuality: {
-        hasDepositData: rawData.deposit.deposit_amount > 0 && rawData.deposit.deposit_cases > 0,
-        hasActiveMembers: rawData.deposit.active_members > 0,
-        hasChurnData: rawData.churn.churn_members >= 0,
-        depositAmount: rawData.deposit.deposit_amount,
-        depositCases: rawData.deposit.deposit_cases,
-        activeMembers: rawData.deposit.active_members,
-        churnMembers: rawData.churn.churn_members
-      }
-    })
-
     // ✅ Step 2: Apply centralized formulas
     const winrate = USC_KPI_FORMULAS.WINRATE(rawData) // Winrate = GGR / Deposit Amount
     const avgTransactionValue = USC_KPI_FORMULAS.AVG_TRANSACTION_VALUE(rawData) // ATV = Deposit Amount / Deposit Cases
@@ -628,14 +578,7 @@ export async function calculateUSCKPIs(filters: USCSlicerFilters): Promise<USCKP
       lowValueCustomers: rawData.customerValue.low_value_customers,
       totalCustomers: rawData.customerValue.total_customers
     }
-
-    console.log('✅ [USCLogic] USC KPIs calculated successfully:', {
-      activeMember: result.activeMember,
-      netProfit: result.netProfit,
-      winrate: result.winrate,
-      churnRate: result.churnRate
-    })
-
+    
     return result
 
   } catch (error) {
@@ -753,8 +696,6 @@ export async function getAllUSCKPIsWithMoM(filters: USCSlicerFilters): Promise<{
 
 export async function getUSCSlicerData(): Promise<USCSlicerData> {
   try {
-    console.log('🔄 [USCLogic] Fetching USC slicer data...')
-
     const [yearsResult, monthsResult, linesResult] = await Promise.all([
       supabase.from('blue_whale_usc').select('year').eq('currency', 'USC'),
       supabase.from('blue_whale_usc').select('month').eq('currency', 'USC'),
@@ -774,8 +715,6 @@ export async function getUSCSlicerData(): Promise<USCSlicerData> {
     }
     months.sort((a, b) => (monthOrder[a] || 0) - (monthOrder[b] || 0))
 
-    console.log('✅ [USCLogic] USC Slicer data loaded:', { years: years.length, months: months.length, lines: lines.length })
-
     return { years, months, lines }
 
   } catch (error) {
@@ -786,8 +725,6 @@ export async function getUSCSlicerData(): Promise<USCSlicerData> {
 
 export async function getUSCMonthsForYear(year: string, line?: string): Promise<string[]> {
   try {
-    console.log('🔍 [getUSCMonthsForYear] DEBUGGING PARAMS:', { year, line })
-    
     let query = supabase
       .from('blue_whale_usc')
       .select('month')
@@ -796,7 +733,6 @@ export async function getUSCMonthsForYear(year: string, line?: string): Promise<
     
     if (line && line !== 'ALL') {
       query = query.eq('line', line)
-      console.log('🔍 [getUSCMonthsForYear] Adding line filter:', line)
     }
     
     const { data, error } = await query
@@ -804,10 +740,8 @@ export async function getUSCMonthsForYear(year: string, line?: string): Promise<
     if (error) throw error
 
     const rawMonths = (data || []).map((item: Record<string, unknown>) => item.month).filter(Boolean)
-    console.log('🔍 [getUSCMonthsForYear] Raw months from DB:', rawMonths)
     
     const months = Array.from(new Set(rawMonths)) as string[]
-    console.log('🔍 [getUSCMonthsForYear] Unique months:', months)
     
     // Sort months chronologically
     const monthOrder: { [key: string]: number } = {
@@ -816,7 +750,6 @@ export async function getUSCMonthsForYear(year: string, line?: string): Promise<
     }
     months.sort((a, b) => (monthOrder[a] || 0) - (monthOrder[b] || 0))
 
-    console.log('🔍 [getUSCMonthsForYear] FINAL SORTED MONTHS:', months)
     return months
 
   } catch (error) {
@@ -859,12 +792,9 @@ export async function getUSCLinesForYear(year?: string): Promise<string[]> {
 
 export async function getUSCLineChartData(filters: USCSlicerFilters): Promise<any> {
   try {
-    console.log('📈 [USCLogic] Fetching USC line chart data...')
-    console.log('🔍 [USCLogic] Filters:', filters)
     
     // Get dynamic months for the selected year and line
     const months = await getUSCMonthsForYear(filters.year, filters.line)
-    console.log('📅 [USCLogic] Dynamic months for chart:', months)
     
     if (!months || months.length === 0) {
       console.error('❌ [USCLogic] No months data available')
@@ -883,8 +813,6 @@ export async function getUSCLineChartData(filters: USCSlicerFilters): Promise<an
         return kpiData
       })
     )
-
-    console.log('📊 [USCLogic] Monthly data for charts:', monthlyData)
     
     // Create chart data from monthly data
     const netProfitData = monthlyData.map(data => data.netProfit)
@@ -984,6 +912,4 @@ export function formatUSCMoMValue(value: number): string {
   const num = Number(value) || 0
   return num > 0 ? `+${num.toFixed(1)}%` : `${num.toFixed(1)}%`
 }
-
-console.log('🎯 [USCLogic] USC Logic loaded successfully with currency locked to USC!')
 

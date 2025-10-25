@@ -41,8 +41,6 @@ export interface BrandPerformanceComparison {
 
 export async function getBrandPerformanceKPIs(filters: PeriodFilters): Promise<BrandPerformanceKPIs> {
   try {
-    console.log('🔄 [BrandPerformanceLogic] Fetching KPIs for period:', filters)
-
     // Fetch data from blue_whale_myr_summary table (aggregated data)
     const { data: summaryData, error: summaryError } = await supabase
       .from('blue_whale_myr_summary')
@@ -67,9 +65,6 @@ export async function getBrandPerformanceKPIs(filters: PeriodFilters): Promise<B
       console.error('❌ [BrandPerformanceLogic] Error fetching member data:', memberError)
       throw memberError
     }
-
-    console.log('📊 [BrandPerformanceLogic] Summary data count:', summaryData?.length || 0)
-    console.log('📊 [BrandPerformanceLogic] Member data count:', memberData?.length || 0)
 
     // Calculate KPIs from summary data
     const summaryRawData = summaryData || []
@@ -126,7 +121,6 @@ export async function getBrandPerformanceKPIs(filters: PeriodFilters): Promise<B
       purchaseFrequency
     }
 
-    console.log('✅ [BrandPerformanceLogic] KPIs calculated:', result)
     return result
 
   } catch (error) {
@@ -161,8 +155,6 @@ export async function getBrandPerformanceComparison(
   periodB: PeriodFilters
 ): Promise<BrandPerformanceComparison> {
   try {
-    console.log('🔄 [BrandPerformanceLogic] Calculating comparison between periods')
-
     // Get KPIs for both periods
     const [periodAData, periodBData] = await Promise.all([
       getBrandPerformanceKPIs(periodA),
@@ -212,7 +204,6 @@ export async function getBrandPerformanceComparison(
       percentageChange
     }
 
-    console.log('✅ [BrandPerformanceLogic] Comparison calculated:', result)
     return result
 
   } catch (error) {
@@ -317,5 +308,3 @@ export function getComparisonIcon(value: number): string {
   
   return num > 0 ? upIcon : num < 0 ? downIcon : neutralIcon
 }
-
-console.log('🎯 [BrandPerformanceLogic] Brand Performance Trends Logic loaded successfully!')
