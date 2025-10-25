@@ -4,17 +4,11 @@ import { createClient } from '@supabase/supabase-js'
 const SUPABASE_URL = 'https://bbuxfnchflhtulainndm.supabase.co'
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJidXhmbmNoZmxodHVsYWlubmRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4NDYzMjYsImV4cCI6MjA2OTQyMjMyNn0.AF6IiaeGB9-8FYZNKQsbnl5yZmSjBMj7Ag4eUunEbtc'
 
-console.log('🔧 Supabase Config Check:')
-console.log('📡 URL:', SUPABASE_URL)
-console.log('🔑 Key exists:', !!SUPABASE_ANON_KEY)
-console.log('🔑 Key length:', SUPABASE_ANON_KEY?.length || 0)
-
 // Singleton pattern to prevent multiple client instances
 let supabaseInstance: ReturnType<typeof createClient> | null = null
 
 const createSupabaseClient = () => {
   if (!supabaseInstance) {
-    console.log('🔄 Creating new Supabase client instance...')
     supabaseInstance = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: {
         autoRefreshToken: true,
@@ -34,7 +28,6 @@ const createSupabaseClient = () => {
         }
       }
     })
-    console.log('✅ Supabase client instance created')
   }
   return supabaseInstance
 }
@@ -45,12 +38,7 @@ export const supabase = createSupabaseClient()
 // Enhanced connection test with timeout and retry
 export const testSupabaseConnection = async () => {
   try {
-    console.log('🔗 Testing Supabase connection...')
-    console.log('📡 URL:', SUPABASE_URL)
-    console.log('🔑 Key exists:', !!SUPABASE_ANON_KEY)
-    
     // Test 1: Basic connection with timeout
-    console.log('🔄 Test 1: Basic connection test...')
     const { data: testData, error: testError } = await supabase
       .from('blue_whale_usc')
       .select('count')
@@ -67,10 +55,7 @@ export const testSupabaseConnection = async () => {
       return false
     }
     
-    console.log('✅ Basic connection test successful:', testData)
-    
     // Test 2: Check if table exists and has data - SIMPLIFIED
-    console.log('🔄 Test 2: Table existence test...')
     const { data: tableData, error: tableError } = await supabase
       .from('blue_whale_usc')
       .select('count')
@@ -81,7 +66,6 @@ export const testSupabaseConnection = async () => {
       return false
     }
     
-    console.log('✅ Table existence test successful:', tableData)
     return true
     
   } catch (error) {
@@ -93,8 +77,6 @@ export const testSupabaseConnection = async () => {
 // Get last update date function with better error handling
 export const getLastUpdateDate = async () => {
   try {
-    console.log('📅 Fetching last update date...')
-    
     // First, let's check if we can connect at all
     const isConnected = await testSupabaseConnection()
     if (!isConnected) {
@@ -102,7 +84,6 @@ export const getLastUpdateDate = async () => {
       return null
     }
     
-    console.log('🔄 Querying blue_whale_usc table...')
     const { data, error } = await supabase
       .from('blue_whale_usc')
       .select('date')
@@ -120,17 +101,11 @@ export const getLastUpdateDate = async () => {
       return null
     }
     
-    console.log('📊 Raw data from query:', data)
-    
     if (data && data.length > 0) {
       const lastDate = data[0].date
-      console.log('✅ Last update date found:', lastDate)
-      console.log('📅 Date type:', typeof lastDate)
-      console.log('📅 Date value:', lastDate)
       return lastDate
     }
     
-    console.log('⚠️ No data found in blue_whale_usc table')
     return null
     
   } catch (error) {

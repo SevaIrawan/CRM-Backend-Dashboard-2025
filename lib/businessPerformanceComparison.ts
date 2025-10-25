@@ -185,13 +185,6 @@ export function calculatePreviousPeriod(
       const prevQuarter = getPreviousQuarter(quarter, year)
       const prevRange = getQuarterDateRange(prevQuarter.quarter, prevQuarter.year)
       
-      console.log('📊 [Comparison] QUARTER-TO-QUARTER:', {
-        current: `${quarter} ${year}`,
-        previous: `${prevQuarter.quarter} ${prevQuarter.year}`,
-        currentRange: `${startDate} to ${endDate}`,
-        previousRange: `${prevRange.startDate} to ${prevRange.endDate}`
-      })
-      
       return {
         prevStartDate: prevRange.startDate,
         prevEndDate: prevRange.endDate,
@@ -199,11 +192,6 @@ export function calculatePreviousPeriod(
       }
     } else {
       // DATE-TO-DATE: Q4 Oct 1-20 → Sept 1-20
-      console.log('📊 [Comparison] DATE-TO-DATE (Partial Quarter):', {
-        current: `${quarter} ${year} (${startDate} to ${endDate})`,
-        previous: `${subtractOneMonth(startDate)} to ${subtractOneMonth(endDate)}`
-      })
-      
       return {
         prevStartDate: subtractOneMonth(startDate),
         prevEndDate: subtractOneMonth(endDate),
@@ -222,11 +210,6 @@ export function calculatePreviousPeriod(
       const prevStartDate = getFirstDayOfPreviousMonth(startDate)
       const prevEndDate = getLastDayOfPreviousMonth(endDate)
       
-      console.log('📊 [Comparison] MONTH-TO-MONTH:', {
-        current: `${startDate} to ${endDate}`,
-        previous: `${prevStartDate} to ${prevEndDate}`
-      })
-      
       return {
         prevStartDate,
         prevEndDate,
@@ -234,11 +217,6 @@ export function calculatePreviousPeriod(
       }
     } else {
       // DATE-TO-DATE: Oct 1-20 → Sept 1-20
-      console.log('📊 [Comparison] DATE-TO-DATE (Partial Month/Custom):', {
-        current: `${startDate} to ${endDate}`,
-        previous: `${subtractOneMonth(startDate)} to ${subtractOneMonth(endDate)}`
-      })
-      
       return {
         prevStartDate: subtractOneMonth(startDate),
         prevEndDate: subtractOneMonth(endDate),
@@ -271,14 +249,6 @@ export function calculateAverageDaily(
   if (totalDays <= 0) return 0
   
   const averageDaily = totalValue / totalDays
-  
-  console.log('📊 [Average Daily]:', {
-    totalValue,
-    startDate,
-    endDate,
-    totalDays,
-    averageDaily: averageDaily.toFixed(2)
-  })
   
   return averageDaily
 }
