@@ -599,6 +599,7 @@ export async function GET(request: NextRequest) {
     let targetDepositCases = 0
     let targetActiveMember = 0
     let forecastGGR = 0
+    let quarterlyTargetGGR = 0  // ✅ Store original quarterly target for logging
 
     if (targetData && targetData.length > 0) {
       // Get TOTAL target only (line = currency or 'ALL'), NOT sum all brands!
@@ -609,7 +610,44 @@ export async function GET(request: NextRequest) {
         targetDepositCases = (totalTargetRow.target_deposit_cases as number) || 0
         targetActiveMember = (totalTargetRow.target_active_member as number) || 0
         forecastGGR = (totalTargetRow.forecast_ggr as number) || 0
+        quarterlyTargetGGR = targetGGR  // ✅ Store for logging
       }
+    }
+
+    // ✅ DAILY MODE: Auto-calculate proportional target based on days in range
+    if (mode === 'daily' && startDate && endDate && targetGGR > 0) {
+      // Calculate days in current date range
+      const start = new Date(startDate)
+      const end = new Date(endDate)
+      const currentDays = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1  // +1 to include both dates
+      
+      // Calculate total days in quarter
+      const quarterMonths: Record<string, number[]> = {
+        'Q1': [1, 2, 3],     // Jan, Feb, Mar
+        'Q2': [4, 5, 6],     // Apr, May, Jun
+        'Q3': [7, 8, 9],     // Jul, Aug, Sep
+        'Q4': [10, 11, 12]   // Oct, Nov, Dec
+      }
+      
+      const months = quarterMonths[quarter || 'Q4'] || [10, 11, 12]
+      let quarterDays = 0
+      
+      for (const month of months) {
+        const daysInMonth = new Date(year, month, 0).getDate()  // Get days in specific month
+        quarterDays += daysInMonth
+      }
+      
+      // Calculate ratio and apply proportional breakdown
+      const ratio = currentDays / quarterDays
+      
+      targetGGR = Math.round(targetGGR * ratio)
+      targetDepositAmount = Math.round(targetDepositAmount * ratio)
+      targetDepositCases = Math.round(targetDepositCases * ratio)
+      targetActiveMember = Math.round(targetActiveMember * ratio)
+      forecastGGR = Math.round(forecastGGR * ratio)
+      
+      console.log(`✅ [DAILY MODE] Target auto-calculated: ${currentDays} days / ${quarterDays} days (ratio: ${ratio.toFixed(4)})`)
+      console.log(`   Quarterly Target: ${quarterlyTargetGGR} → Daily Target: ${targetGGR}`)
     }
 
     const targetAchieveRate = targetGGR > 0 ? (mvData.ggr / targetGGR) * 100 : 0
