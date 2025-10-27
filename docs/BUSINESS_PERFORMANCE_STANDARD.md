@@ -48,6 +48,30 @@ Business Performance Page adalah page khusus yang berbeda dengan page-page lain 
 - Actual line = Real performance (gradually approaching target)
 - Kalau Actual > Target = OVERACHIEVING ✅
 
+**Forecast GGR Formula:**
+```javascript
+Forecast GGR = Current Realized GGR + (Avg Daily GGR × Remaining Days)
+
+WHERE:
+  Avg Daily GGR = Current Realized GGR / Days Elapsed
+  Remaining Days = Total Days in Period - Days Elapsed
+```
+
+**Implementation:**
+- **File:** `app/api/myr-business-performance/chart-helpers.ts`
+- **Function:** `generateForecastQ4GGRChart()`
+- **Documentation:** `docs/FORECAST_GGR_SPECIFICATION.md`
+
+**Chart Behavior:**
+- **Past Quarters:** Forecast = Actual (no projection)
+- **Current Quarter:** Forecast = Actual + Projected Remaining
+- **Future Quarters:** Forecast = 0 (no data yet)
+
+**Zoom Functionality:** ✅
+- Double-click to open zoom modal
+- Full-width detailed view
+- ESC or backdrop click to close
+
 ### ROW 3: MIXED CHARTS (2 Charts)
 ```
 ┌────────────────────────────────────┬────────────────────────────────────┐

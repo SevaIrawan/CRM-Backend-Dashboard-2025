@@ -84,12 +84,15 @@ Untuk dokumentasi lengkap, silakan lihat:
 6. **[docs/BP_MV_LOGIC_SUMMARY.md](./docs/BP_MV_LOGIC_SUMMARY.md)** - Materialized Views logic
 7. **[docs/BP_API_LOGIC_REQUIREMENTS.md](./docs/BP_API_LOGIC_REQUIREMENTS.md)** - API requirements
 8. **[docs/BP_COMPARISON_STANDARD.md](./docs/BP_COMPARISON_STANDARD.md)** - Comparison standards
+9. **[docs/FORECAST_GGR_SPECIFICATION.md](./docs/FORECAST_GGR_SPECIFICATION.md)** - Forecast GGR formula & implementation
+10. **[docs/BP_TARGET_DAILY_MODE_FIX.md](./docs/BP_TARGET_DAILY_MODE_FIX.md)** - Target calculation fixes
 
 ### **🎨 UI/UX Standards:**
-9. **[NEXMAX_STANDARDS_COMPLETE_REFERENCE.md](./NEXMAX_STANDARDS_COMPLETE_REFERENCE.md)** - UI standards
-10. **[SUB_MENU_STANDARD_RULES.md](./SUB_MENU_STANDARD_RULES.md)** - Menu structure
-11. **[ICON_SYSTEM_GUIDE.md](./ICON_SYSTEM_GUIDE.md)** - Icon system
-12. **[docs/table-chart-popup-standard.md](./docs/table-chart-popup-standard.md)** - Modal standards
+11. **[NEXMAX_STANDARDS_COMPLETE_REFERENCE.md](./NEXMAX_STANDARDS_COMPLETE_REFERENCE.md)** - UI standards
+12. **[SUB_MENU_STANDARD_RULES.md](./SUB_MENU_STANDARD_RULES.md)** - Menu structure
+13. **[ICON_SYSTEM_GUIDE.md](./ICON_SYSTEM_GUIDE.md)** - Icon system
+14. **[docs/table-chart-popup-standard.md](./docs/table-chart-popup-standard.md)** - Modal standards
+15. **[docs/CHART_ZOOM_MODAL_FEATURE.md](./docs/CHART_ZOOM_MODAL_FEATURE.md)** - Chart zoom functionality
 
 ---
 

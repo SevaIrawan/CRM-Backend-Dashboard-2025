@@ -1,7 +1,7 @@
 # 📊 NEXMAX DASHBOARD - PROJECT STATUS REPORT
 
-**Date:** January 26, 2025  
-**Version:** 2.0 (Post-Optimization)  
+**Date:** October 27, 2025  
+**Version:** 2.1 (Latest Updates)  
 **Status:** ✅ **PRODUCTION READY**
 
 ---
@@ -9,6 +9,13 @@
 ## 🎯 EXECUTIVE SUMMARY
 
 NEXMAX Dashboard telah melalui comprehensive cleanup dan optimization. Semua dead code, unused components, dan obsolete documentation telah dihapus. Project sekarang dalam kondisi optimal untuk production.
+
+### **Latest Updates (October 2025):**
+- ✅ **ChartZoomModal** added to 16 charts across 3 pages
+- ✅ **Forecast GGR** formula fully documented and validated
+- ✅ **Business Performance** comparison icon colors fixed
+- ✅ **Target Achieve Rate** daily mode calculation corrected
+- ✅ **Documentation** fully updated and synchronized
 
 ---
 
@@ -33,6 +40,110 @@ NEXMAX Dashboard telah melalui comprehensive cleanup dan optimization. Semua dea
 - ✅ `components/DonutChart.tsx`
 
 **Impact:** 21% reduction in component files (38 → 30 files)
+
+---
+
+## 🚀 OCTOBER 2025 UPDATES
+
+### **1. CHARTZOOMMODAL FEATURE** ✅
+
+**Added double-click zoom functionality to 16 charts across 3 pages:**
+
+#### **Business Performance MYR (6 Charts):**
+- ✅ Forecast - Gross Gaming Revenue
+- ✅ Gross Gaming Revenue Trend
+- ✅ Deposit Amount vs Cases
+- ✅ Withdraw Amount vs Cases
+- ✅ DA User vs GGR User (Dual Line)
+- ✅ ATV vs PF (Dual Line)
+
+#### **Deposit Auto-Approval MYR (6 Charts):**
+- ✅ Average Processing Time Automation
+- ✅ Coverage Rate (Daily/Weekly Trend)
+- ✅ Transaction Volume Trend Analysis
+- ✅ Overdue Trans Automation
+- ✅ Processing Time Distribution Automation
+- ✅ Peak Hour Proc Time Automation
+
+#### **Withdraw Auto-Approval MYR (4 Charts):**
+- ✅ Average Processing Time Automation
+- ✅ Coverage Rate (Daily/Weekly Trend)
+- ✅ Overdue Trans Automation
+- ✅ Processing Time Distribution Automation
+
+**Technical Implementation:**
+- Component: `components/ChartZoomModal.tsx`
+- State management for modal control
+- Responsive sizing based on data points
+- Keyboard (ESC) and backdrop click to close
+- Disabled nested modals (clickable={false} in modal)
+
+**Documentation:**
+- ✅ Created `docs/CHART_ZOOM_MODAL_FEATURE.md`
+
+---
+
+### **2. FORECAST GGR VALIDATION** ✅
+
+**Confirmed and documented Forecast GGR formula:**
+
+```javascript
+Forecast GGR = Current Realized GGR + (Avg Daily GGR × Remaining Days)
+```
+
+**Implementation Details:**
+- **File:** `app/api/myr-business-performance/chart-helpers.ts`
+- **Function:** `generateForecastQ4GGRChart()`
+- **Lines:** 110-349
+- **Status:** Production-ready, tested, validated
+
+**Chart Display:**
+- **Title:** FORECAST - GROSS GAMING REVENUE
+- **Series:** 3 lines (Actual, Target, Forecast)
+- **Colors:** Blue, Green, Orange
+- **Modes:** Quarterly and Daily
+
+**Documentation:**
+- ✅ Created `docs/FORECAST_GGR_SPECIFICATION.md`
+- Includes formula, examples, limitations, and future enhancements
+
+---
+
+### **3. BUSINESS PERFORMANCE FIXES** ✅
+
+#### **A. Comparison Icon Colors Fixed:**
+- **Issue:** Comparison icons in DualKPICard displayed as black
+- **Fix:** Added `fill="currentColor"` to arrowUp/arrowDown SVG paths
+- **File:** `lib/CentralIcon.tsx` (Lines 88, 90)
+- **Result:** Icons now correctly inherit parent color (green/red)
+
+#### **B. Target Achieve Rate - Daily Mode Fix:**
+- **Issue:** Daily mode used full quarterly target instead of proportional breakdown
+- **Fix:** Implemented proportional target calculation
+- **Formula:** `Daily Target = (Quarterly Target / Total Quarter Days) × Selected Days`
+- **File:** `app/api/myr-business-performance/data/route.ts` (Lines 615-649)
+- **Documentation:** `docs/BP_TARGET_DAILY_MODE_FIX.md`
+
+#### **C. Progress Bar Color Logic Update:**
+- **Component:** `components/ProgressBarStatCard.tsx`
+- **Colors:** 
+  - Green: >90%
+  - Orange: 70-90%
+  - Red: <70%
+- **Added:** Status indicator badge (On Track, Behind, At Risk)
+
+---
+
+### **4. DOCUMENTATION OVERHAUL** ✅
+
+**New Documentation:**
+- ✅ `docs/FORECAST_GGR_SPECIFICATION.md` - Complete Forecast GGR spec
+- ✅ `docs/CHART_ZOOM_MODAL_FEATURE.md` - ChartZoomModal implementation guide
+
+**Updated Documentation:**
+- ✅ `PROJECT_STATUS_REPORT.md` - Added October 2025 updates
+- ✅ `README.md` - Synchronized with current state
+- ✅ All references to latest features
 
 ---
 
