@@ -490,7 +490,6 @@ export default function BusinessPerformancePage() {
             value={kpiData?.grossGamingRevenue || 0}
             target={kpiData?.targetGGR || 0}
             unit="%"
-            icon="targetCompletion"
             onDoubleClick={() => setIsTargetAchieveModalOpen(true)}
             clickable={true}
           />

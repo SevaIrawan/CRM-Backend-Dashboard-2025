@@ -45,11 +45,23 @@ export default function ProgressBarStatCard({
   
   // Determine progress bar color based on achievement
   const getProgressColor = () => {
-    if (achievementRate >= 100) return '#10b981' // Green - Target achieved
-    if (achievementRate >= 80) return '#3B82F6' // Blue - On track
-    if (achievementRate >= 60) return '#F97316' // Orange - Warning
-    return '#ef4444' // Red - Critical
+    if (achievementRate > 90) return '#10b981' // 🟢 Green - >90%
+    if (achievementRate > 70) return '#F97316' // 🟠 Orange - 70-90%
+    return '#ef4444' // 🔴 Red - <70%
   }
+  
+  // Determine status indicator
+  const getStatusIndicator = () => {
+    if (achievementRate > 90) {
+      return { label: 'On Track', color: '#10b981', bgColor: '#ffffff' }
+    }
+    if (achievementRate > 70) {
+      return { label: 'Behind', color: '#F97316', bgColor: '#ffffff' }
+    }
+    return { label: 'At Risk', color: '#ef4444', bgColor: '#ffffff' }
+  }
+  
+  const statusIndicator = getStatusIndicator()
   
   return (
     <div 
@@ -110,20 +122,29 @@ export default function ProgressBarStatCard({
               Edit
             </button>
           )}
-          {icon && (
-            <div className="stat-card-icon">
-              <div 
-                dangerouslySetInnerHTML={{ __html: iconSvg }}
-                style={{ 
-                  width: '20px', 
-                  height: '20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              />
-            </div>
-          )}
+          {/* Status Indicator Badge */}
+          <div style={{
+            padding: '4px 10px',
+            borderRadius: '12px',
+            backgroundColor: statusIndicator.bgColor,
+            border: `1px solid ${statusIndicator.color}`,
+            fontSize: '11px',
+            fontWeight: '600',
+            color: statusIndicator.color,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            whiteSpace: 'nowrap'
+          }}>
+            <span style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              backgroundColor: statusIndicator.color,
+              display: 'inline-block'
+            }}></span>
+            {statusIndicator.label}
+          </div>
         </div>
       </div>
       
