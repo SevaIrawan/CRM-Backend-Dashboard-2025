@@ -8,6 +8,7 @@ import StatCard from '@/components/StatCard'
 import LineChart from '@/components/LineChart'
 import BarChart from '@/components/BarChart'
 import OverdueDetailsModal from '@/components/OverdueDetailsModal'
+import ChartZoomModal from '@/components/ChartZoomModal'
 import { getChartIcon } from '@/lib/CentralIcon'
 import { formatCurrencyKPI, formatIntegerKPI, formatMoMChange, formatNumericKPI, formatPercentageKPI } from '@/lib/formatHelpers'
 
@@ -197,6 +198,13 @@ export default function MYRAutoApprovalMonitorPage() {
   const [selectedMonth, setSelectedMonth] = useState('')
   const [isWeekly, setIsWeekly] = useState(false)
   const [showOverdueModal, setShowOverdueModal] = useState(false)
+  
+  // State for chart zoom modal
+  const [isZoomOpen, setIsZoomOpen] = useState(false)
+  const [zoomChartType, setZoomChartType] = useState<'line' | 'bar' | null>(null)
+  const [zoomChartProps, setZoomChartProps] = useState<any>(null)
+  const [zoomTitle, setZoomTitle] = useState('')
+  
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
 
@@ -205,6 +213,14 @@ export default function MYRAutoApprovalMonitorPage() {
     const absValue = Math.abs(value)
     const sign = value >= 0 ? '+' : ''
     return `${sign}${absValue.toFixed(1)}%`
+  }
+  
+  // Handler for chart zoom (double-click)
+  const handleChartZoom = (chartProps: any, chartType: 'line' | 'bar', title: string) => {
+    setZoomChartProps(chartProps)
+    setZoomChartType(chartType)
+    setZoomTitle(title)
+    setIsZoomOpen(true)
   }
 
   // Helper function to calculate active days using STANDARD LOGIC
@@ -633,6 +649,21 @@ export default function MYRAutoApprovalMonitorPage() {
                      hideLegend={true}
                      showDataLabels={true}
                      chartIcon={getChartIcon('Processing Time')}
+                     clickable={true}
+                     onDoubleClick={() => handleChartZoom(
+                       {
+                         series: data?.weeklyProcessingTime ? [{
+                           name: 'Auto Approval Processing Time',
+                           data: data.weeklyProcessingTime.map(item => item.avgProcessingTime)
+                         }] : [],
+                         categories: data?.weeklyProcessingTime ? data.weeklyProcessingTime.map(item => item.week) : [],
+                         hideLegend: true,
+                         showDataLabels: true,
+                         color: '#3B82F6'
+                       },
+                       'line',
+                       isWeekly ? "AVERAGE PROCESSING TIME AUTOMATION (WEEKLY)" : "AVERAGE PROCESSING TIME AUTOMATION (DAILY)"
+                     )}
                    />
                    <LineChart
                      series={data?.weeklyCoverageRate ? [{
@@ -646,6 +677,21 @@ export default function MYRAutoApprovalMonitorPage() {
                      showDataLabels={true}
                      color="#FF8C00"
                      chartIcon={getChartIcon('Coverage Rate')}
+                     clickable={true}
+                     onDoubleClick={() => handleChartZoom(
+                       {
+                         series: data?.weeklyCoverageRate ? [{
+                           name: 'Coverage Rate',
+                           data: data.weeklyCoverageRate.map(item => item.coverageRate)
+                         }] : [],
+                         categories: data?.weeklyCoverageRate ? data.weeklyCoverageRate.map(item => item.week) : [],
+                         hideLegend: true,
+                         showDataLabels: true,
+                         color: '#FF8C00'
+                       },
+                       'line',
+                       isWeekly ? "COVERAGE RATE (WEEKLY TREND)" : "COVERAGE RATE (DAILY TREND)"
+                     )}
                    />
                  </div>
 
@@ -673,6 +719,31 @@ export default function MYRAutoApprovalMonitorPage() {
                        { label: 'Total Transaction', color: '#3B82F6' },
                        { label: 'Total Trans Automation', color: '#FF8C00' }
                      ]}
+                     clickable={true}
+                     onDoubleClick={() => handleChartZoom(
+                       {
+                         series: data?.totalTransactionsTrend && data?.automationTransactionsTrend ? [
+                           {
+                             name: 'Total Transaction Trend',
+                             data: data.totalTransactionsTrend.series[0].data,
+                             color: '#3B82F6'
+                           },
+                           {
+                             name: 'Total Trans Automation',
+                             data: data.automationTransactionsTrend.series[0].data,
+                             color: '#FF8C00'
+                           }
+                         ] : [],
+                         categories: data?.totalTransactionsTrend ? data.totalTransactionsTrend.categories : [],
+                         showDataLabels: true,
+                         customLegend: [
+                           { label: 'Total Transaction', color: '#3B82F6' },
+                           { label: 'Total Trans Automation', color: '#FF8C00' }
+                         ]
+                       },
+                       'bar',
+                       isWeekly ? "TRANSACTION VOLUME TREND ANALYSIS (WEEKLY)" : "TRANSACTION VOLUME TREND ANALYSIS (DAILY)"
+                     )}
                    />
                    <LineChart
                      series={data?.dailyOverdueCount ? [{
@@ -686,6 +757,21 @@ export default function MYRAutoApprovalMonitorPage() {
                      showDataLabels={true}
                      color="#3B82F6"
                      chartIcon={getChartIcon('Daily Overdue Count')}
+                     clickable={true}
+                     onDoubleClick={() => handleChartZoom(
+                       {
+                         series: data?.dailyOverdueCount ? [{
+                           name: 'Automation Overdue Count',
+                           data: data.dailyOverdueCount.map(item => item.overdueCount)
+                         }] : [],
+                         categories: data?.dailyOverdueCount ? data.dailyOverdueCount.map(item => item.date) : [],
+                         hideLegend: true,
+                         showDataLabels: true,
+                         color: '#3B82F6'
+                       },
+                       'line',
+                       isWeekly ? "OVERDUE TRANS AUTOMATION (WEEKLY)" : "OVERDUE TRANS AUTOMATION (Daily)"
+                     )}
                    />
                  </div>
 
@@ -703,6 +789,21 @@ export default function MYRAutoApprovalMonitorPage() {
                      showDataLabels={true}
                      color="#F97316"
                      chartIcon={getChartIcon('Processing Time Distribution')}
+                     clickable={true}
+                     onDoubleClick={() => handleChartZoom(
+                       {
+                         series: data?.dailyAutomationProcessingDistribution ? [{
+                           name: 'Automation Median Time',
+                           data: data.dailyAutomationProcessingDistribution.map(item => item.median)
+                         }] : [],
+                         categories: data?.dailyAutomationProcessingDistribution ? data.dailyAutomationProcessingDistribution.map(item => item.date) : [],
+                         hideLegend: true,
+                         showDataLabels: true,
+                         color: '#F97316'
+                       },
+                       'line',
+                       isWeekly ? "PROCESSING TIME DISTRIBUTION AUTOMATION (WEEKLY)" : "PROCESSING TIME DISTRIBUTION AUTOMATION PER DAY"
+                     )}
                    />
                    <LineChart
                      series={data?.peakHourProcessingTime ? [
@@ -723,6 +824,28 @@ export default function MYRAutoApprovalMonitorPage() {
                      color="#3B82F6"
                      chartIcon={getChartIcon('Peak Hour Processing Time')}
                      peakHourData={data?.peakHourProcessingTime}
+                     clickable={true}
+                     onDoubleClick={() => handleChartZoom(
+                       {
+                         series: data?.peakHourProcessingTime ? [
+                           {
+                             name: 'Automation Trans',
+                             data: data.peakHourProcessingTime.map(item => item.automationTransactions)
+                           },
+                           {
+                             name: 'AVG Proc Time Automation',
+                             data: data.peakHourProcessingTime.map(item => item.avgProcessingTimeAutomation)
+                           }
+                         ] : [],
+                         categories: data?.peakHourProcessingTime ? data.peakHourProcessingTime.map(item => item.period) : [],
+                         hideLegend: false,
+                         showDataLabels: true,
+                         color: '#3B82F6',
+                         peakHourData: data?.peakHourProcessingTime
+                       },
+                       'line',
+                       "PEAK HOUR PROC TIME AUTOMATION"
+                     )}
                    />
                  </div>
 
@@ -788,6 +911,27 @@ export default function MYRAutoApprovalMonitorPage() {
           }
         }
       `}</style>
+      
+      {/* Chart Zoom Modal */}
+      <ChartZoomModal
+        isOpen={isZoomOpen}
+        onClose={() => setIsZoomOpen(false)}
+        title={zoomTitle}
+        dataCount={zoomChartProps?.categories?.length || 4}
+      >
+        {zoomChartType === 'line' && zoomChartProps && (
+          <LineChart 
+            {...zoomChartProps}
+            clickable={false}
+          />
+        )}
+        {zoomChartType === 'bar' && zoomChartProps && (
+          <BarChart 
+            {...zoomChartProps}
+            clickable={false}
+          />
+        )}
+      </ChartZoomModal>
       
       {/* Overdue Details Modal */}
       <OverdueDetailsModal

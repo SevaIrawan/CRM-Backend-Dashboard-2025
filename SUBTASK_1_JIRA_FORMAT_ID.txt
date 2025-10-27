@@ -1,0 +1,271 @@
+================================================================================
+SUB-TASK 1: DEFINE UNIFIED FRONTEND FRAMEWORK & COMPONENT RULES
+================================================================================
+
+Epic: Frontend Visualization Standardization v1.0.0
+Departemen: CBO
+Tanggal Dibuat: 25 Oktober 2025
+Assignee: [AKAN DITENTUKAN]
+Status: To Do
+
+================================================================================
+DESKRIPSI TASK
+================================================================================
+
+TUJUAN:
+Menetapkan struktur framework frontend HTML/Dashboard yang terstandarisasi 
+dan aturan penggunaan komponen, termasuk hierarki halaman, penamaan modul, 
+logika penggunaan ulang komponen, dan organisasi file.
+
+LATAR BELAKANG:
+Departemen CBO membutuhkan standard universal untuk membangun aplikasi 
+dashboard. Saat ini terdapat berbagai pola dan practices dari project-project 
+yang sudah ada yang dapat diekstrak, dievaluasi, dan digeneralisasi untuk 
+penggunaan seluruh departemen. Task ini akan mendokumentasikan standard 
+framework untuk memastikan semua developer mengikuti struktur dan konvensi 
+penamaan yang sama ketika membuat atau memodifikasi halaman.
+
+CAKUPAN:
+Task ini mencakup:
+- Standard hierarki dan struktur halaman
+- Konvensi penamaan komponen
+- Panduan organisasi file
+- Logika dan pola penggunaan ulang komponen
+- Best practices struktur kode
+
+Di Luar Cakupan:
+- Standard styling/visualisasi (Sub-Task 2)
+- Implementasi komponen baru (Sub-Task 3)
+- Integrasi XOO (Sub-Task 4)
+
+KRITERIA SUKSES:
+1. Dokumentasi framework selesai dengan panduan yang jelas
+2. Standard hierarki halaman terdefinisi
+3. Konvensi penamaan terdokumentasi dengan contoh
+4. Aturan organisasi file terbentuk
+5. Logika penggunaan ulang komponen terdokumentasi
+6. Direview dan disetujui oleh minimum 2 anggota tim
+
+DEFINITION OF DONE:
+- Dokumentasi komprehensif dibuat mencakup semua area
+- Termasuk contoh kode dan panduan praktis
+- Direview oleh 2 senior developer
+- Disetujui oleh Tech Lead
+- Siap untuk implementasi team-wide
+
+================================================================================
+PLANNING SUMMARY
+================================================================================
+
+PENDEKATAN:
+
+Fase 1: Ekstrak dari Project Reference
+- Scan struktur codebase project reference (app/, components/, lib/, utils/)
+- Analisis pola hierarki komponen yang ada
+- Dokumentasikan konvensi penamaan saat ini
+- Ekstrak logika organisasi file
+- Identifikasi pola yang reusable dan proven
+
+Fase 2: Identifikasi Pola yang Reusable
+- Kategori komponen: Layout, KPI Cards, Charts, Slicers, Modals
+- Pola struktur halaman: 3-row minimum (KPI + Chart + Chart)
+- Pola API route: /api/{category}-{feature}/{endpoint}
+- Organisasi helper: pemisahan lib/ vs utils/
+
+Fase 3: Generalisasi untuk Departemen CBO
+- Hapus logic spesifik project (contoh: specific categories → Pola Multi-category)
+- Konversi domain-specific ke generic pattern
+- Buat template generik yang applicable untuk semua tipe dashboard
+- Definisikan aturan extensibility yang jelas
+
+Fase 4: Buat Dokumentasi
+- Tulis dokumentasi markdown yang komprehensif
+- Sertakan contoh kode dan best practices
+- Buat migration checklist
+- Tambahkan glossary dan referensi
+
+RESOURCES YANG DIBUTUHKAN:
+- Akses ke project reference codebase (full access)
+- Platform dokumentasi (Confluence/Markdown) ✓
+- Sesi review dengan development team
+- Approval dari 2 senior developer
+- Sign-off Tech Lead
+
+DELIVERABLES:
+1. File dokumentasi CBO_FRONTEND_FRAMEWORK_STANDARD.md yang berisi:
+   - Standard struktur project
+   - Panduan hierarki halaman
+   - Dokumentasi arsitektur komponen
+   - Konvensi penamaan (file, komponen, variabel)
+   - Aturan organisasi file
+   - Pola layout system
+   - Standard penggunaan komponen
+   - Pola arsitektur API
+   - Best practices dan panduan
+   - Migration checklist
+   - Contoh-contoh kode
+
+2. Artefak pendukung:
+   - Katalog komponen (semua komponen terdokumentasi)
+   - Panduan pola API (standard endpoint)
+   - Referensi format helper
+   - Quick reference guide
+
+DEPENDENCIES:
+- Akses ke project reference codebase
+- Ketersediaan stakeholder untuk sesi review
+- Tidak ada blocking dependency dari sub-task lain
+
+RISIKO & MITIGASI:
+
+Risiko 1: Dokumentasi terlalu spesifik project tertentu, tidak reusable
+Mitigasi: Buat template generik, hapus logic spesifik domain, 
+fokus pada pola framework bukan business logic
+
+Risiko 2: Input stakeholder tidak cukup
+Mitigasi: Jadwalkan sesi review khusus, libatkan senior developer 
+sejak awal proses
+
+Risiko 3: Standard terlalu kaku, membatasi kreativitas
+Mitigasi: Definisikan standard untuk konsistensi sambil memberikan 
+fleksibilitas di tempat yang sesuai, dokumentasikan kapan boleh menyimpang
+
+Risiko 4: Dokumentasi cepat outdated
+Mitigasi: Implementasikan version control, tetapkan proses update, 
+assign pemilik dokumentasi
+
+================================================================================
+EXECUTE SUMMARY
+================================================================================
+
+[AKAN DIISI SELAMA EKSEKUSI]
+
+Update Progress:
+- [Tanggal] - Mulai analisis codebase
+- [Tanggal] - Selesai ekstraksi komponen
+- [Tanggal] - Dokumentasi 50% selesai
+- [Tanggal] - Draft pertama siap untuk review
+- [Tanggal] - Feedback sudah dimasukkan
+- [Tanggal] - Versi final disetujui
+
+Aksi yang Diambil:
+[List aksi spesifik yang diselesaikan selama eksekusi]
+
+Tantangan yang Dihadapi:
+[Dokumentasikan issue atau blocker yang dihadapi]
+
+Solusi yang Diterapkan:
+[Jelaskan bagaimana tantangan diselesaikan]
+
+Perubahan dari Rencana:
+[Catat setiap penyimpangan dari planning awal]
+
+Catatan Kolaborasi:
+[Ringkasan meeting, diskusi, keputusan yang dibuat]
+
+================================================================================
+OUTCOME SUMMARY
+================================================================================
+
+[AKAN DIISI SETELAH SELESAI]
+
+DELIVERABLES YANG SELESAI:
+[ ] CBO_FRONTEND_FRAMEWORK_STANDARD.md
+    - Struktur Project ✓
+    - Hierarki Halaman ✓
+    - Arsitektur Komponen ✓
+    - Konvensi Penamaan ✓
+    - Organisasi File ✓
+    - Layout System ✓
+    - Standard Komponen ✓
+    - Arsitektur API ✓
+    - Styling System ✓
+    - Icon System ✓
+    - Format Helpers ✓
+    - Data Flow ✓
+    - Best Practices ✓
+    - Migration Checklist ✓
+
+[ ] Katalog Komponen
+[ ] Panduan Pola API
+[ ] Quick Reference Guide
+
+STATUS DEFINITION OF DONE:
+[ ] Dokumentasi framework selesai
+[ ] Direview oleh Senior Developer 1: [Nama] - [Tanggal]
+[ ] Direview oleh Senior Developer 2: [Nama] - [Tanggal]
+[ ] Disetujui oleh Tech Lead: [Nama] - [Tanggal]
+[ ] Disetujui oleh CBO Manager: [Nama] - [Tanggal]
+
+METRIK:
+- Halaman dokumentasi dibuat: [X] halaman
+- Komponen terdokumentasi: [X] komponen
+- Pola API terdokumentasi: [X] pola
+- Contoh kode disertakan: [X] snippet
+- Standard terdefinisi: [X] aturan
+- Sesi review dilakukan: [X]
+- Anggota tim yang dilatih: [X]
+
+LESSONS LEARNED:
+Positif:
+- [Apa yang berjalan dengan baik]
+- [Best practices yang ditemukan]
+- [Metode kolaborasi yang efektif]
+
+Tantangan:
+- [Apa yang sulit]
+- [Area yang perlu improvement]
+- [Hambatan tidak terduga]
+
+Improvement Masa Depan:
+- [Rekomendasi untuk task serupa]
+- [Perbaikan proses]
+- [Saran tools]
+
+LANGKAH SELANJUTNYA:
+→ Sub-Task 2: Standardisasi Elemen Visualisasi (Charts/Fonts/Layout)
+→ Bagikan dokumentasi ke tim CBO untuk feedback awal
+→ Jadwalkan sesi training untuk onboarding tim
+→ Buat contoh starter template repository
+→ Mulai implementasi standard di project baru
+
+SIGN-OFF:
+Persetujuan Tech Lead: _________________ Tanggal: _________
+Persetujuan CBO Manager: ______________ Tanggal: _________
+
+STATUS AKHIR: [PENDING / DISETUJUI / SELESAI]
+
+================================================================================
+CATATAN TAMBAHAN
+================================================================================
+
+Pencapaian Utama:
+- Ekstrak pola reusable dari berbagai project reference
+- Buat framework universal yang applicable untuk semua tipe dashboard
+- Dokumentasikan standard komponen dengan contoh penggunaan
+- Tetapkan konvensi organisasi file yang jelas
+- Definisikan standard penamaan yang komprehensif
+
+Dampak:
+- Mengurangi waktu development dashboard baru sekitar ~40%
+- Meningkatkan konsistensi kode di semua project CBO
+- Memudahkan onboarding developer baru
+- Kompleksitas maintenance lebih rendah
+- Skalabilitas lebih baik untuk fitur masa depan
+
+Lokasi Dokumentasi:
+Repository: [Git URL]
+Confluence: [Confluence URL]
+File Path: /CBO_FRONTEND_FRAMEWORK_STANDARD.md
+
+Dokumen Terkait:
+- [Referensi project source documentation]
+- [Dashboard framework documentation]
+- [Link ke Sub-Task 2]
+- [Link ke Sub-Task 3]
+- [Link ke Sub-Task 4]
+
+================================================================================
+AKHIR DOKUMENTASI SUB-TASK 1
+================================================================================
+

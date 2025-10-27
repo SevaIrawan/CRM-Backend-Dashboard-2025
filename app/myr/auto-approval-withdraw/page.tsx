@@ -8,6 +8,7 @@ import StatCard from '@/components/StatCard'
 import LineChart from '@/components/LineChart'
 import BarChart from '@/components/BarChart'
 import OverdueDetailsModal from '@/components/OverdueDetailsModal'
+import ChartZoomModal from '@/components/ChartZoomModal'
 import { getChartIcon } from '@/lib/CentralIcon'
 import { formatCurrencyKPI, formatIntegerKPI, formatMoMChange, formatNumericKPI, formatPercentageKPI } from '@/lib/formatHelpers'
 
@@ -183,6 +184,13 @@ export default function MYRAutoApprovalWithdrawPage() {
   const [selectedMonth, setSelectedMonth] = useState('')
   const [isWeekly, setIsWeekly] = useState(false)
   const [showOverdueModal, setShowOverdueModal] = useState(false)
+  
+  // State for chart zoom modal
+  const [isZoomOpen, setIsZoomOpen] = useState(false)
+  const [zoomChartType, setZoomChartType] = useState<'line' | 'bar' | null>(null)
+  const [zoomChartProps, setZoomChartProps] = useState<any>(null)
+  const [zoomTitle, setZoomTitle] = useState('')
+  
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
 
@@ -191,6 +199,14 @@ export default function MYRAutoApprovalWithdrawPage() {
     const absValue = Math.abs(value)
     const sign = value >= 0 ? '+' : ''
     return `${sign}${absValue.toFixed(1)}%`
+  }
+  
+  // Handler for chart zoom (double-click)
+  const handleChartZoom = (chartProps: any, chartType: 'line' | 'bar', title: string) => {
+    setZoomChartProps(chartProps)
+    setZoomChartType(chartType)
+    setZoomTitle(title)
+    setIsZoomOpen(true)
   }
 
   // Helper function to calculate active days using STANDARD LOGIC
@@ -613,6 +629,21 @@ export default function MYRAutoApprovalWithdrawPage() {
                      hideLegend={true}
                      showDataLabels={true}
                      chartIcon={getChartIcon('Processing Time')}
+                     clickable={true}
+                     onDoubleClick={() => handleChartZoom(
+                       {
+                         series: data?.weeklyProcessingTime ? [{
+                           name: 'Auto Approval Processing Time',
+                           data: data.weeklyProcessingTime.map(item => item.avgProcessingTime)
+                         }] : [],
+                         categories: data?.weeklyProcessingTime ? data.weeklyProcessingTime.map(item => item.week) : [],
+                         hideLegend: true,
+                         showDataLabels: true,
+                         color: '#3B82F6'
+                       },
+                       'line',
+                       isWeekly ? "AVERAGE PROCESSING TIME AUTOMATION (WEEKLY)" : "AVERAGE PROCESSING TIME AUTOMATION (DAILY)"
+                     )}
                    />
                    <LineChart
                      series={data?.weeklyCoverageRate ? [{
@@ -626,6 +657,21 @@ export default function MYRAutoApprovalWithdrawPage() {
                      showDataLabels={true}
                      color="#FF8C00"
                      chartIcon={getChartIcon('Coverage Rate')}
+                     clickable={true}
+                     onDoubleClick={() => handleChartZoom(
+                       {
+                         series: data?.weeklyCoverageRate ? [{
+                           name: 'Coverage Rate',
+                           data: data.weeklyCoverageRate.map(item => item.coverageRate)
+                         }] : [],
+                         categories: data?.weeklyCoverageRate ? data.weeklyCoverageRate.map(item => item.week) : [],
+                         hideLegend: true,
+                         showDataLabels: true,
+                         color: '#FF8C00'
+                       },
+                       'line',
+                       isWeekly ? "COVERAGE RATE (WEEKLY TREND)" : "COVERAGE RATE (DAILY TREND)"
+                     )}
                    />
                  </div>
 
@@ -643,6 +689,21 @@ export default function MYRAutoApprovalWithdrawPage() {
                      showDataLabels={true}
                      color="#3B82F6"
                      chartIcon={getChartIcon('Daily Overdue Count')}
+                     clickable={true}
+                     onDoubleClick={() => handleChartZoom(
+                       {
+                         series: data?.dailyOverdueCount ? [{
+                           name: 'Automation Overdue Count',
+                           data: data.dailyOverdueCount.map(item => item.overdueCount)
+                         }] : [],
+                         categories: data?.dailyOverdueCount ? data.dailyOverdueCount.map(item => item.date) : [],
+                         hideLegend: true,
+                         showDataLabels: true,
+                         color: '#3B82F6'
+                       },
+                       'line',
+                       isWeekly ? "OVERDUE TRANS AUTOMATION (WEEKLY)" : "OVERDUE TRANS AUTOMATION (Daily)"
+                     )}
                    />
                    <LineChart
                      series={data?.dailyAutomationProcessingDistribution ? [{
@@ -656,6 +717,21 @@ export default function MYRAutoApprovalWithdrawPage() {
                      showDataLabels={true}
                      color="#F97316"
                      chartIcon={getChartIcon('Processing Time Distribution')}
+                     clickable={true}
+                     onDoubleClick={() => handleChartZoom(
+                       {
+                         series: data?.dailyAutomationProcessingDistribution ? [{
+                           name: 'Automation Median Time',
+                           data: data.dailyAutomationProcessingDistribution.map(item => item.median)
+                         }] : [],
+                         categories: data?.dailyAutomationProcessingDistribution ? data.dailyAutomationProcessingDistribution.map(item => item.date) : [],
+                         hideLegend: true,
+                         showDataLabels: true,
+                         color: '#F97316'
+                       },
+                       'line',
+                       isWeekly ? "PROCESSING TIME DISTRIBUTION AUTOMATION (WEEKLY)" : "PROCESSING TIME DISTRIBUTION AUTOMATION PER DAY"
+                     )}
                    />
                  </div>
 
@@ -721,6 +797,27 @@ export default function MYRAutoApprovalWithdrawPage() {
           }
         }
       `}</style>
+      
+      {/* Chart Zoom Modal */}
+      <ChartZoomModal
+        isOpen={isZoomOpen}
+        onClose={() => setIsZoomOpen(false)}
+        title={zoomTitle}
+        dataCount={zoomChartProps?.categories?.length || 4}
+      >
+        {zoomChartType === 'line' && zoomChartProps && (
+          <LineChart 
+            {...zoomChartProps}
+            clickable={false}
+          />
+        )}
+        {zoomChartType === 'bar' && zoomChartProps && (
+          <BarChart 
+            {...zoomChartProps}
+            clickable={false}
+          />
+        )}
+      </ChartZoomModal>
       
       {/* Overdue Details Modal */}
       <OverdueDetailsModal

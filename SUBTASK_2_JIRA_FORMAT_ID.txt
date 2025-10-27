@@ -1,0 +1,283 @@
+================================================================================
+SUB-TASK 2: STANDARDISASI ELEMEN VISUALISASI
+================================================================================
+
+Epic: Frontend Visualization Standardization v1.0.0
+Departemen: CBO
+Tanggal Dibuat: 25 Oktober 2025
+Assignee: [AKAN DITENTUKAN]
+Status: To Do
+
+================================================================================
+DESKRIPSI TASK
+================================================================================
+
+TUJUAN:
+Menetapkan standardisasi elemen visualisasi termasuk chart, font, dan 
+layout system untuk memastikan konsistensi di semua aplikasi dashboard 
+Departemen CBO.
+
+LATAR BELAKANG:
+Setelah penetapan framework dan aturan komponen (Sub-Task 1), kita perlu 
+mendefinisikan standard untuk elemen visual agar semua dashboard memiliki 
+tampilan yang konsisten. Ini mencakup tipe chart, sistem typography, 
+color palette, aturan spacing, dan responsive behavior.
+
+CAKUPAN:
+Task ini mencakup:
+- Standard chart (tipe, konfigurasi, warna, interaksi)
+- Sistem typography (font, ukuran, weight, hierarki)
+- Standard layout (spacing, grid, responsive breakpoint)
+- Color palette (primary, secondary, status color)
+- Panduan konsistensi visual
+
+Di Luar Cakupan:
+- Implementasi komponen (dicakup di Sub-Task 3)
+- Pola integrasi (dicakup di Sub-Task 4)
+- Business logic dan pemrosesan data
+
+KRITERIA SUKSES:
+1. Standard chart terdokumentasi untuk semua tipe chart
+2. Sistem typography terdefinisi lengkap dengan contoh
+3. Standard layout termasuk spacing dan aturan grid
+4. Color palette terbentuk dengan panduan penggunaan
+5. Standard responsive design terdokumentasi
+6. Direview dan disetujui oleh minimum 2 anggota tim
+
+DEFINITION OF DONE:
+- Dokumen standard visualisasi komprehensif dibuat
+- Contoh konfigurasi chart disediakan untuk setiap tipe
+- Typography specimen dan panduan penggunaan disertakan
+- Contoh layout dengan code snippet
+- Color palette dengan kode hex dan aturan penggunaan
+- Direview oleh 2 senior developer
+- Disetujui oleh Tech Lead dan Design Lead (jika ada)
+
+================================================================================
+PLANNING SUMMARY
+================================================================================
+
+PENDEKATAN:
+
+Fase 1: Analisis Visualisasi yang Ada
+- Review implementasi chart dari project reference
+- Dokumentasikan pola penggunaan typography saat ini
+- Analisis layout dan sistem spacing yang digunakan
+- Ekstrak color palette dan pola penggunaan
+- Identifikasi inkonsistensi yang perlu distandarisasi
+
+Fase 2: Research Industry Standards
+- Studi design system: Material Design, Carbon, Ant Design
+- Research best practices Chart.js dan Recharts
+- Review standard aksesibilitas (WCAG 2.1)
+- Benchmark dengan dashboard terkemuka di industri
+- Identifikasi gap dan peluang improvement
+
+Fase 3: Definisikan Standard CBO
+- Tipe chart: Line, Bar, Donut, Stacked, Mixed, Sankey
+- Konfigurasi chart: warna, tooltip, legend, label
+- Typography: font family, ukuran, weight, line height
+- Layout: spacing scale, grid system, breakpoint
+- Warna: primary palette, status color, chart color
+- Aturan responsive behavior
+
+Fase 4: Buat Dokumentasi
+- Tulis standard visualisasi komprehensif
+- Sertakan contoh visual dan code snippet
+- Buat template konfigurasi chart
+- Dokumentasikan typography scale dan penggunaan
+- Berikan contoh layout dan panduan
+
+RESOURCES YANG DIBUTUHKAN:
+- Akses ke visualisasi project reference
+- Design tools (Figma/Sketch) untuk mockup
+- Dokumentasi chart library (Chart.js, Recharts)
+- Referensi design system
+- Review dari Design Lead (jika ada)
+- Approval dari 2 senior developer
+
+DELIVERABLES:
+1. Dokumentasi CBO_VISUALIZATION_STANDARDS.md berisi:
+   - Standard chart untuk setiap tipe
+   - Template konfigurasi chart
+   - Spesifikasi sistem typography
+   - Panduan layout dan spacing
+   - Color palette dengan aturan penggunaan
+   - Standard responsive design
+   - Panduan aksesibilitas
+   - Contoh kode dan snippet
+
+2. Artefak pendukung:
+   - Template konfigurasi chart (JSON/object)
+   - Typography specimen sheet
+   - Referensi color palette
+   - Contoh layout grid
+   - Quick reference card
+
+DEPENDENCIES:
+- Sub-Task 1 selesai (standard framework)
+- Akses ke codebase project reference
+- Ketersediaan stakeholder untuk review
+
+RISIKO & MITIGASI:
+
+Risiko 1: Standard terlalu kaku, membatasi fleksibilitas desain
+Mitigasi: Definisikan core standard dengan fleksibilitas untuk edge case, 
+dokumentasikan kapan deviasi acceptable
+
+Risiko 2: Keterbatasan chart library mencegah standardisasi
+Mitigasi: Research multiple chart solution, pilih library paling fleksibel, 
+dokumentasikan workaround
+
+Risiko 3: Requirement aksesibilitas konflik dengan estetika desain
+Mitigasi: Prioritaskan aksesibilitas, cari solusi kreatif yang 
+memenuhi kedua requirement
+
+Risiko 4: Color palette tidak bekerja untuk semua use case
+Mitigasi: Buat base palette dengan extension guideline, izinkan 
+variasi warna kontekstual dengan approval
+
+================================================================================
+EXECUTE SUMMARY
+================================================================================
+
+[AKAN DIISI SELAMA EKSEKUSI]
+
+Update Progress:
+- [Tanggal] - Mulai analisis visualisasi
+- [Tanggal] - Selesai standard chart
+- [Tanggal] - Sistem typography terdefinisi
+- [Tanggal] - Panduan layout terdokumentasi
+- [Tanggal] - Draft pertama siap untuk review
+- [Tanggal] - Versi final disetujui
+
+Aksi yang Diambil:
+[List aksi spesifik yang diselesaikan selama eksekusi]
+
+Tantangan yang Dihadapi:
+[Dokumentasikan issue atau blocker yang dihadapi]
+
+Solusi yang Diterapkan:
+[Jelaskan bagaimana tantangan diselesaikan]
+
+Perubahan dari Rencana:
+[Catat setiap penyimpangan dari planning awal]
+
+Catatan Kolaborasi:
+[Ringkasan meeting, diskusi, keputusan yang dibuat]
+
+================================================================================
+OUTCOME SUMMARY
+================================================================================
+
+[AKAN DIISI SETELAH SELESAI]
+
+DELIVERABLES YANG SELESAI:
+[ ] CBO_VISUALIZATION_STANDARDS.md
+    - Standard Chart ✓
+      - Konfigurasi Line Chart
+      - Konfigurasi Bar Chart
+      - Konfigurasi Donut Chart
+      - Konfigurasi Stacked Bar Chart
+      - Konfigurasi Mixed Chart
+      - Konfigurasi Sankey Chart
+    - Sistem Typography ✓
+      - Font family
+      - Size scale
+      - Weight scale
+      - Aturan line height
+    - Standard Layout ✓
+      - Spacing scale
+      - Grid system
+      - Responsive breakpoint
+    - Color Palette ✓
+      - Primary color
+      - Status color
+      - Chart color
+      - Panduan penggunaan
+    - Panduan Aksesibilitas ✓
+
+[ ] Template Konfigurasi Chart
+[ ] Typography Specimen Sheet
+[ ] Referensi Color Palette
+[ ] Contoh Layout Grid
+
+STATUS DEFINITION OF DONE:
+[ ] Standard visualisasi terdokumentasi
+[ ] Direview oleh Senior Developer 1: [Nama] - [Tanggal]
+[ ] Direview oleh Senior Developer 2: [Nama] - [Tanggal]
+[ ] Disetujui oleh Tech Lead: [Nama] - [Tanggal]
+[ ] Disetujui oleh Design Lead: [Nama] - [Tanggal] (jika ada)
+
+METRIK:
+- Tipe chart terdokumentasi: [X] tipe
+- Template konfigurasi dibuat: [X] template
+- Item typography scale: [X] ukuran
+- Entry color palette: [X] warna
+- Contoh layout disediakan: [X] contoh
+- Code snippet disertakan: [X] snippet
+- Sesi review dilakukan: [X]
+
+LESSONS LEARNED:
+Positif:
+- [Apa yang berjalan dengan baik]
+- [Pola visualisasi efektif]
+- [Keberhasilan aksesibilitas]
+
+Tantangan:
+- [Keputusan sulit]
+- [Keterbatasan teknis]
+- [Trade-off yang dibuat]
+
+Improvement Masa Depan:
+- [Enhancement design system]
+- [Update chart library]
+- [Tipe chart tambahan yang dibutuhkan]
+
+LANGKAH SELANJUTNYA:
+→ Sub-Task 3: Develop Frontend Style Library untuk Reuse
+→ Buat chart component library dengan standard baru
+→ Update project existing untuk ikuti standard baru
+→ Lakukan design review session dengan tim
+→ Buat website/site dokumentasi style guide
+
+SIGN-OFF:
+Persetujuan Tech Lead: _________________ Tanggal: _________
+Persetujuan Design Lead: _______________ Tanggal: _________
+Persetujuan CBO Manager: ______________ Tanggal: _________
+
+STATUS AKHIR: [PENDING / DISETUJUI / SELESAI]
+
+================================================================================
+CATATAN TAMBAHAN
+================================================================================
+
+Pencapaian Utama:
+- Standardisasi semua tipe chart dengan konfigurasi konsisten
+- Membentuk sistem typography komprehensif
+- Buat sistem layout yang fleksibel namun konsisten
+- Definisikan color palette yang accessible
+- Dokumentasikan pola responsive design
+
+Dampak:
+- Identitas visual konsisten di semua dashboard
+- Peningkatan compliance aksesibilitas
+- Handoff desain-ke-development lebih cepat
+- Mengurangi decision fatigue dalam desain
+- Konsistensi user experience lebih baik
+
+Lokasi Dokumentasi:
+Repository: [Git URL]
+Confluence: [Confluence URL]
+File Path: /CBO_VISUALIZATION_STANDARDS.md
+
+Dokumen Terkait:
+- CBO_FRONTEND_FRAMEWORK_STANDARD.md (Sub-Task 1)
+- [Link ke Sub-Task 3]
+- [Link ke Sub-Task 4]
+- Referensi design system (Material Design, Carbon, dll.)
+
+================================================================================
+AKHIR DOKUMENTASI SUB-TASK 2
+================================================================================
+

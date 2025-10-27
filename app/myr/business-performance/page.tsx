@@ -396,7 +396,7 @@ export default function BusinessPerformancePage() {
             color: '#374151',
             margin: 0
           }}>
-            Wireframe Preview - Design for Management Approval
+            
           </h2>
           
           {/* Slicers */}
