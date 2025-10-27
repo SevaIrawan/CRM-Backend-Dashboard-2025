@@ -591,22 +591,25 @@ export default function BarChart({
   };
 
   return (
-    <div style={{ 
-      height: '100%', // Dynamic height based on container
-      minHeight: '350px', // Minimum height
-      width: '100%', 
-      padding: '0',
-      position: 'relative',
-      backgroundColor: '#ffffff',
-      border: '1px solid #ffffff', // White border
-      borderRadius: '8px',
-      boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
-      display: 'flex',
-      flexDirection: 'column',
-      transition: clickable ? 'all 0.2s ease' : undefined,
-      cursor: clickable ? 'pointer' : 'default'
-    }}
-    onDoubleClick={clickable ? onDoubleClick : undefined}
+    <div 
+      role="img"
+      aria-label={`${title} bar chart${series.length > 1 ? ` with ${series.length} data series` : ''}. Double-click to enlarge.`}
+      style={{ 
+        height: '100%', // Dynamic height based on container
+        minHeight: '350px', // Minimum height
+        width: '100%', 
+        padding: '0',
+        position: 'relative',
+        backgroundColor: '#ffffff',
+        border: '1px solid #ffffff', // White border
+        borderRadius: '8px',
+        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+        display: 'flex',
+        flexDirection: 'column',
+        transition: clickable ? 'all 0.2s ease' : undefined,
+        cursor: clickable ? 'pointer' : 'default'
+      }}
+      onDoubleClick={clickable ? onDoubleClick : undefined}
     onMouseEnter={(e) => {
       if (clickable) {
         e.currentTarget.style.transform = 'translateY(-2px)';

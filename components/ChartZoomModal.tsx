@@ -59,6 +59,9 @@ export default function ChartZoomModal({
   return createPortal(
     <div
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="chart-zoom-title"
       style={{
         position: 'fixed',
         top: 0,
@@ -99,16 +102,22 @@ export default function ChartZoomModal({
             flexShrink: 0
           }}
         >
-          <h3 style={{
-            fontSize: '16px',
-            fontWeight: '600',
-            color: '#374151',
-            margin: 0
-          }}>
+          <h3 
+            id="chart-zoom-title"
+            style={{
+              fontSize: '16px',
+              fontWeight: '600',
+              color: '#374151',
+              margin: 0
+            }}
+          >
             {title}
           </h3>
           <button
             onClick={onClose}
+            aria-label="Close chart zoom modal"
+            onFocus={(e) => e.currentTarget.style.outline = '2px solid #3B82F6'}
+            onBlur={(e) => e.currentTarget.style.outline = 'none'}
             style={{
               background: 'none',
               border: 'none',
@@ -117,7 +126,8 @@ export default function ChartZoomModal({
               color: '#6B7280',
               padding: '0 8px',
               lineHeight: '1',
-              transition: 'color 0.2s ease'
+              transition: 'color 0.2s ease',
+              borderRadius: '4px'
             }}
             onMouseEnter={(e) => e.currentTarget.style.color = '#EF4444'}
             onMouseLeave={(e) => e.currentTarget.style.color = '#6B7280'}

@@ -45,6 +45,15 @@ export default function StatCard({
       className={`stat-card ${className} ${clickable ? 'clickable' : ''}`}
       onClick={clickable ? onClick : undefined}
       onDoubleClick={clickable ? onDoubleClick : undefined}
+      onKeyDown={clickable ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onClick?.()
+        }
+      } : undefined}
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      aria-label={clickable ? `${title}: ${value}. ${comparison ? `${comparison.percentage} ${comparison.text || 'MoM'}` : ''}` : undefined}
       style={{ cursor: clickable ? 'pointer' : 'default' }}
     >
       <div className="stat-card-header">
@@ -119,6 +128,18 @@ export default function StatCard({
         
         .stat-card.clickable:active {
           transform: translateY(0);
+        }
+        
+        /* Accessibility: Focus Indicator */
+        .stat-card.clickable:focus {
+          outline: 2px solid #3B82F6;
+          outline-offset: 2px;
+          box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        }
+        
+        .stat-card.clickable:focus:not(:focus-visible) {
+          outline: none;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
       `}</style>
     </div>

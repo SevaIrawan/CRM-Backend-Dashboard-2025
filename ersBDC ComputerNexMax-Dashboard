@@ -1,0 +1,285 @@
+[1mdiff --git a/app/myr/business-performance/page.tsx b/app/myr/business-performance/page.tsx[m
+[1mindex f228ab5..0df4336 100644[m
+[1m--- a/app/myr/business-performance/page.tsx[m
+[1m+++ b/app/myr/business-performance/page.tsx[m
+[36m@@ -376,11 +376,7 @@[m [mexport default function BusinessPerformancePage() {[m
+   }[m
+ [m
+   return ([m
+[31m-    <>[m
+[31m-      {/* Custom Styles for Business Performance Page */}[m
+[31m-      <style jsx>{customKPIStyles}</style>[m
+[31m-      [m
+[31m-      <Layout [m
+[32m+[m[32m    <Layout[m[41m [m
+         pageTitle="Business Performance"[m
+         customSubHeader={[m
+         <div style={{[m
+[36m@@ -388,7 +384,8 @@[m [mexport default function BusinessPerformancePage() {[m
+           justifyContent: 'space-between',[m
+           alignItems: 'center',[m
+           padding: '0 24px',[m
+[31m-          width: '100%'[m
+[32m+[m[32m          width: '100%',[m
+[32m+[m[32m          height: '100%'[m
+         }}>[m
+           <h2 style={{[m
+             fontSize: '14px',[m
+[36m@@ -435,13 +432,35 @@[m [mexport default function BusinessPerformancePage() {[m
+               />[m
+             </div>[m
+             [m
+[31m-            {/* TOGGLE: DIANTARA QUARTER DAN QUICK DATE FILTER */}[m
+[31m-            <div [m
+[31m-              className={`mode-toggle ${isDateRangeMode ? 'active' : ''}`}[m
+[31m-              onClick={() => handleToggleChange(!isDateRangeMode)}[m
+[31m-              title={isDateRangeMode ? 'Switch to Month Mode (Click to OFF)' : 'Switch to Date Range Mode (Click to ON)'}[m
+[31m-            >[m
+[31m-              <div className="mode-toggle-knob" />[m
+[32m+[m[32m            {/* MODE TOGGLE with CLEAR LABELS */}[m
+[32m+[m[32m            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>[m
+[32m+[m[32m              <span style={{ fontSize: '12px', fontWeight: '500', color: '#374151', textTransform: 'uppercase' }}>[m
+[32m+[m[32m                MODE:[m
+[32m+[m[32m              </span>[m
+[32m+[m[32m              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>[m
+[32m+[m[32m                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>[m
+[32m+[m[32m                  <input[m
+[32m+[m[32m                    type="radio"[m
+[32m+[m[32m                    name="viewMode"[m
+[32m+[m[32m                    value="quarterly"[m
+[32m+[m[32m                    checked={!isDateRangeMode}[m
+[32m+[m[32m                    onChange={() => handleToggleChange(false)}[m
+[32m+[m[32m                    style={{ margin: 0, cursor: 'pointer' }}[m
+[32m+[m[32m                  />[m
+[32m+[m[32m                  <span style={{ fontSize: '14px', color: '#374151' }}>Quarterly</span>[m
+[32m+[m[32m                </label>[m
+[32m+[m[32m                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>[m
+[32m+[m[32m                  <input[m
+[32m+[m[32m                    type="radio"[m
+[32m+[m[32m                    name="viewMode"[m
+[32m+[m[32m                    value="daily"[m
+[32m+[m[32m                    checked={isDateRangeMode}[m
+[32m+[m[32m                    onChange={() => handleToggleChange(true)}[m
+[32m+[m[32m                    style={{ margin: 0, cursor: 'pointer' }}[m
+[32m+[m[32m                  />[m
+[32m+[m[32m                  <span style={{ fontSize: '14px', color: '#374151' }}>Daily</span>[m
+[32m+[m[32m                </label>[m
+[32m+[m[32m              </div>[m
+             </div>[m
+             [m
+             {/* QUICK DATE FILTER - ALWAYS VISIBLE, DISABLED WHEN TOGGLE OFF */}[m
+[36m@@ -477,13 +496,20 @@[m [mexport default function BusinessPerformancePage() {[m
+         </div>[m
+       }[m
+     >[m
+[31m-      <Frame className="bp-page">[m
+[31m-        {/* ROW 1: KPI Cards (6 cards) */}[m
+[31m-        <div className="kpi-row" style={{ [m
+[31m-          display: 'grid', [m
+[31m-          gridTemplateColumns: 'repeat(6, 1fr)', [m
+[31m-          gap: '18px' [m
+[32m+[m[32m      <Frame variant="standard">[m
+[32m+[m[32m        {/* Content Container with proper spacing and scroll */}[m
+[32m+[m[32m        <div style={{[m
+[32m+[m[32m          display: 'flex',[m
+[32m+[m[32m          flexDirection: 'column',[m
+[32m+[m[32m          gap: '18px',[m
+[32m+[m[32m          marginTop: '20px'[m
+         }}>[m
+[32m+[m[32m          {/* ROW 1: KPI Cards (6 cards) */}[m
+[32m+[m[32m          <div className="kpi-row" style={{[m[41m [m
+[32m+[m[32m            display: 'grid',[m[41m [m
+[32m+[m[32m            gridTemplateColumns: 'repeat(6, 1fr)',[m[41m [m
+[32m+[m[32m            gap: '18px'[m
+[32m+[m[32m          }}>[m
+           {/* Target Achieve Rate */}[m
+           <ProgressBarStatCard [m
+             title="Target Achieve Rate"[m
+[36m@@ -584,15 +610,16 @@[m [mexport default function BusinessPerformancePage() {[m
+               }[m
+             }}[m
+           />[m
+[31m-        </div>[m
+[32m+[m[32m          </div>[m
+ [m
+[31m-        {/* ROW 2: Line Charts (2 charts) */}[m
+[31m-        <div style={{ [m
+[31m-          display: 'grid', [m
+[31m-          gridTemplateColumns: 'repeat(2, 1fr)', [m
+[31m-          gap: '18px',[m
+[31m-          minHeight: '350px'[m
+[31m-        }}>[m
+[32m+[m[32m          {/* ROW 2: Line Charts (2 charts) */}[m
+[32m+[m[32m          <div style={{[m[41m [m
+[32m+[m[32m            display: 'grid',[m[41m [m
+[32m+[m[32m            gridTemplateColumns: 'repeat(2, 1fr)',[m[41m [m
+[32m+[m[32m            gap: '18px',[m
+[32m+[m[32m            marginBottom: '24px',[m
+[32m+[m[32m            minHeight: '350px'[m
+[32m+[m[32m          }}>[m
+           {/* Forecast Q4 - Actual vs Target vs Forecast */}[m
+           <LineChart [m
+             series={[[m
+[36m@@ -657,15 +684,16 @@[m [mexport default function BusinessPerformancePage() {[m
+               setIsZoomOpen(true)[m
+             }}[m
+           />[m
+[31m-        </div>[m
+[32m+[m[32m          </div>[m
+ [m
+[31m-        {/* ROW 3: DA User vs GGR User & ATV vs PF Trend (2 Dual Line Charts) */}[m
+[31m-        <div style={{ [m
+[31m-          display: 'grid', [m
+[31m-          gridTemplateColumns: 'repeat(2, 1fr)', [m
+[31m-          gap: '18px',[m
+[31m-          minHeight: '350px'[m
+[31m-        }}>[m
+[32m+[m[32m          {/* ROW 3: DA User vs GGR User & ATV vs PF Trend (2 Dual Line Charts) */}[m
+[32m+[m[32m          <div style={{[m[41m [m
+[32m+[m[32m            display: 'grid',[m[41m [m
+[32m+[m[32m            gridTemplateColumns: 'repeat(2, 1fr)',[m[41m [m
+[32m+[m[32m            gap: '18px',[m
+[32m+[m[32m            marginBottom: '24px',[m
+[32m+[m[32m            minHeight: '350px'[m
+[32m+[m[32m          }}>[m
+           {/* DA User vs GGR User Trend */}[m
+           <LineChart [m
+             series={[[m
+[36m@@ -725,15 +753,16 @@[m [mexport default function BusinessPerformancePage() {[m
+               setIsZoomOpen(true)[m
+             }}[m
+           />[m
+[31m-        </div>[m
+[32m+[m[32m          </div>[m
+ [m
+[31m-        {/* ROW 4: Dual Line Chart + Bar Chart */}[m
+[31m-        <div style={{ [m
+[31m-          display: 'grid', [m
+[31m-          gridTemplateColumns: 'repeat(2, 1fr)', [m
+[31m-          gap: '18px',[m
+[31m-          minHeight: '350px'[m
+[31m-        }}>[m
+[32m+[m[32m          {/* ROW 4: Dual Line Chart + Bar Chart */}[m
+[32m+[m[32m          <div style={{[m[41m [m
+[32m+[m[32m            display: 'grid',[m[41m [m
+[32m+[m[32m            gridTemplateColumns: 'repeat(2, 1fr)',[m[41m [m
+[32m+[m[32m            gap: '18px',[m
+[32m+[m[32m            marginBottom: '24px',[m
+[32m+[m[32m            minHeight: '350px'[m
+[32m+[m[32m          }}>[m
+           {/* Winrate & Withdraw Rate - Dual Line */}[m
+           <LineChart [m
+             series={[[m
+[36m@@ -801,15 +830,16 @@[m [mexport default function BusinessPerformancePage() {[m
+               setIsZoomOpen(true)[m
+             }}[m
+           />[m
+[31m-        </div>[m
+[32m+[m[32m          </div>[m
+ [m
+[31m-        {/* ROW 5: Bar Charts (2 separate bars) */}[m
+[31m-        <div style={{ [m
+[31m-          display: 'grid', [m
+[31m-          gridTemplateColumns: 'repeat(2, 1fr)', [m
+[31m-          gap: '18px',[m
+[31m-          minHeight: '350px'[m
+[31m-        }}>[m
+[32m+[m[32m          {/* ROW 5: Bar Charts (2 separate bars) */}[m
+[32m+[m[32m          <div style={{[m[41m [m
+[32m+[m[32m            display: 'grid',[m[41m [m
+[32m+[m[32m            gridTemplateColumns: 'repeat(2, 1fr)',[m[41m [m
+[32m+[m[32m            gap: '18px',[m
+[32m+[m[32m            marginBottom: '24px',[m
+[32m+[m[32m            minHeight: '350px'[m
+[32m+[m[32m          }}>[m
+           {/* Retention Rate - PER BRAND */}[m
+           <BarChart [m
+             series={[[m
+[36m@@ -875,15 +905,16 @@[m [mexport default function BusinessPerformancePage() {[m
+               setIsZoomOpen(true)[m
+             }}[m
+           />[m
+[31m-        </div>[m
+[32m+[m[32m          </div>[m
+ [m
+[31m-        {/* ROW 6: Stacked Bar Chart + Bar Chart */}[m
+[31m-        <div style={{ [m
+[31m-          display: 'grid', [m
+[31m-          gridTemplateColumns: 'repeat(2, 1fr)', [m
+[31m-          gap: '18px',[m
+[31m-          minHeight: '350px'[m
+[31m-        }}>[m
+[32m+[m[32m          {/* ROW 6: Stacked Bar Chart + Bar Chart */}[m
+[32m+[m[32m          <div style={{[m[41m [m
+[32m+[m[32m            display: 'grid',[m[41m [m
+[32m+[m[32m            gridTemplateColumns: 'repeat(2, 1fr)',[m[41m [m
+[32m+[m[32m            gap: '18px',[m
+[32m+[m[32m            marginBottom: '24px',[m
+[32m+[m[32m            minHeight: '350px'[m
+[32m+[m[32m          }}>[m
+           {/* Stacked Bar Chart - Brand GGR Contribution */}[m
+           <StackedBarChart [m
+             series={transformBrandGGRDataFromAPI(chartData?.brandGGRContribution || {}).series}[m
+[36m@@ -935,15 +966,16 @@[m [mexport default function BusinessPerformancePage() {[m
+               setIsZoomOpen(true)[m
+             }}[m
+           />[m
+[31m-        </div>[m
+[32m+[m[32m          </div>[m
+ [m
+[31m-        {/* ROW 7: Sankey Chart (Full Width) */}[m
+[31m-        <div style={{ [m
+[31m-          display: 'grid', [m
+[31m-          gridTemplateColumns: '1fr', [m
+[31m-          gap: '18px',[m
+[31m-          minHeight: '400px'[m
+[31m-        }}>[m
+[32m+[m[32m          {/* ROW 7: Sankey Chart (Full Width) */}[m
+[32m+[m[32m          <div style={{[m[41m [m
+[32m+[m[32m            display: 'grid',[m[41m [m
+[32m+[m[32m            gridTemplateColumns: '1fr',[m[41m [m
+[32m+[m[32m            gap: '18px',[m
+[32m+[m[32m            marginBottom: '24px',[m
+[32m+[m[32m            minHeight: '400px'[m
+[32m+[m[32m          }}>[m
+           {/* Sankey Diagram - Pure User GGR Distribution */}[m
+           <SankeyChart [m
+             data={chartData?.sankey || { nodes: [], links: [] }}[m
+[36m@@ -961,18 +993,19 @@[m [mexport default function BusinessPerformancePage() {[m
+               setIsZoomOpen(true)[m
+             }}[m
+           />[m
+[31m-        </div>[m
+[32m+[m[32m          </div>[m
+ [m
+[31m-        {/* Slicer Info */}[m
+[31m-        <div className="slicer-info">[m
+[31m-          <p>[m
+[31m-            {loadingData [m
+[31m-              ? 'Loading data...'[m
+[31m-              : isDateRangeMode [m
+[31m-                ? `Showing data for: ${selectedYear} | Date Range: ${startDate} to ${endDate} | Real Data from Database`[m
+[31m-                : `Showing data for: ${selectedYear} | ${selectedQuarter} | Real Data from Database`[m
+[31m-            }[m
+[31m-          </p>[m
+[32m+[m[32m          {/* Slicer Info */}[m
+[32m+[m[32m          <div className="slicer-info">[m
+[32m+[m[32m            <p>[m
+[32m+[m[32m              {loadingData[m[41m [m
+[32m+[m[32m                ? 'Loading data...'[m
+[32m+[m[32m                : isDateRangeMode[m[41m [m
+[32m+[m[32m                  ? `Showing data for: ${selectedYear} | Date Range: ${startDate} to ${endDate} | Real Data from Database`[m
+[32m+[m[32m                  : `Showing data for: ${selectedYear} | ${selectedQuarter} | Real Data from Database`[m
+[32m+[m[32m              }[m
+[32m+[m[32m            </p>[m
+[32m+[m[32m          </div>[m
+         </div>[m
+       </Frame>[m
+       [m
+[36m@@ -1047,6 +1080,5 @@[m [mexport default function BusinessPerformancePage() {[m
+         )}[m
+       </ChartZoomModal>[m
+     </Layout>[m
+[31m-    </>[m
+   )[m
+ }[m

@@ -376,11 +376,7 @@ export default function BusinessPerformancePage() {
   }
 
   return (
-    <>
-      {/* Custom Styles for Business Performance Page */}
-      <style jsx>{customKPIStyles}</style>
-      
-      <Layout 
+    <Layout 
         pageTitle="Business Performance"
         customSubHeader={
         <div style={{
@@ -388,7 +384,8 @@ export default function BusinessPerformancePage() {
           justifyContent: 'space-between',
           alignItems: 'center',
           padding: '0 24px',
-          width: '100%'
+          width: '100%',
+          height: '100%'
         }}>
           <h2 style={{
             fontSize: '14px',
@@ -435,13 +432,33 @@ export default function BusinessPerformancePage() {
               />
             </div>
             
-            {/* TOGGLE: DIANTARA QUARTER DAN QUICK DATE FILTER */}
+            {/* TOGGLE SWITCH - NO LABEL */}
             <div 
-              className={`mode-toggle ${isDateRangeMode ? 'active' : ''}`}
               onClick={() => handleToggleChange(!isDateRangeMode)}
-              title={isDateRangeMode ? 'Switch to Month Mode (Click to OFF)' : 'Switch to Date Range Mode (Click to ON)'}
+              title={isDateRangeMode ? 'Daily Mode (Click to switch to Quarterly)' : 'Quarterly Mode (Click to switch to Daily)'}
+              style={{
+                position: 'relative',
+                width: '52px',
+                height: '26px',
+                backgroundColor: isDateRangeMode ? '#10b981' : '#ef4444',
+                borderRadius: '13px',
+                cursor: 'pointer',
+                transition: 'background-color 0.3s ease',
+                boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)'
+              }}
             >
-              <div className="mode-toggle-knob" />
+              <div style={{
+                position: 'absolute',
+                top: '3px',
+                left: '3px',
+                width: '20px',
+                height: '20px',
+                backgroundColor: '#ffffff',
+                borderRadius: '50%',
+                transform: isDateRangeMode ? 'translateX(26px)' : 'translateX(0)',
+                transition: 'transform 0.3s ease',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+              }} />
             </div>
             
             {/* QUICK DATE FILTER - ALWAYS VISIBLE, DISABLED WHEN TOGGLE OFF */}
@@ -477,13 +494,20 @@ export default function BusinessPerformancePage() {
         </div>
       }
     >
-      <Frame className="bp-page">
-        {/* ROW 1: KPI Cards (6 cards) */}
-        <div className="kpi-row" style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(6, 1fr)', 
-          gap: '18px' 
+      <Frame variant="standard">
+        {/* Content Container with proper spacing and scroll */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '18px',
+          marginTop: '20px'
         }}>
+          {/* ROW 1: KPI Cards (6 cards) */}
+          <div className="kpi-row" style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(6, 1fr)', 
+            gap: '18px'
+          }}>
           {/* Target Achieve Rate */}
           <ProgressBarStatCard 
             title="Target Achieve Rate"
@@ -584,15 +608,16 @@ export default function BusinessPerformancePage() {
               }
             }}
           />
-        </div>
+          </div>
 
-        {/* ROW 2: Line Charts (2 charts) */}
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(2, 1fr)', 
-          gap: '18px',
-          minHeight: '350px'
-        }}>
+          {/* ROW 2: Line Charts (2 charts) */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(2, 1fr)', 
+            gap: '18px',
+            marginBottom: '24px',
+            minHeight: '350px'
+          }}>
           {/* Forecast Q4 - Actual vs Target vs Forecast */}
           <LineChart 
             series={[
@@ -657,15 +682,16 @@ export default function BusinessPerformancePage() {
               setIsZoomOpen(true)
             }}
           />
-        </div>
+          </div>
 
-        {/* ROW 3: DA User vs GGR User & ATV vs PF Trend (2 Dual Line Charts) */}
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(2, 1fr)', 
-          gap: '18px',
-          minHeight: '350px'
-        }}>
+          {/* ROW 3: DA User vs GGR User & ATV vs PF Trend (2 Dual Line Charts) */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(2, 1fr)', 
+            gap: '18px',
+            marginBottom: '24px',
+            minHeight: '350px'
+          }}>
           {/* DA User vs GGR User Trend */}
           <LineChart 
             series={[
@@ -725,15 +751,16 @@ export default function BusinessPerformancePage() {
               setIsZoomOpen(true)
             }}
           />
-        </div>
+          </div>
 
-        {/* ROW 4: Dual Line Chart + Bar Chart */}
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(2, 1fr)', 
-          gap: '18px',
-          minHeight: '350px'
-        }}>
+          {/* ROW 4: Dual Line Chart + Bar Chart */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(2, 1fr)', 
+            gap: '18px',
+            marginBottom: '24px',
+            minHeight: '350px'
+          }}>
           {/* Winrate & Withdraw Rate - Dual Line */}
           <LineChart 
             series={[
@@ -801,15 +828,16 @@ export default function BusinessPerformancePage() {
               setIsZoomOpen(true)
             }}
           />
-        </div>
+          </div>
 
-        {/* ROW 5: Bar Charts (2 separate bars) */}
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(2, 1fr)', 
-          gap: '18px',
-          minHeight: '350px'
-        }}>
+          {/* ROW 5: Bar Charts (2 separate bars) */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(2, 1fr)', 
+            gap: '18px',
+            marginBottom: '24px',
+            minHeight: '350px'
+          }}>
           {/* Retention Rate - PER BRAND */}
           <BarChart 
             series={[
@@ -875,15 +903,16 @@ export default function BusinessPerformancePage() {
               setIsZoomOpen(true)
             }}
           />
-        </div>
+          </div>
 
-        {/* ROW 6: Stacked Bar Chart + Bar Chart */}
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(2, 1fr)', 
-          gap: '18px',
-          minHeight: '350px'
-        }}>
+          {/* ROW 6: Stacked Bar Chart + Bar Chart */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(2, 1fr)', 
+            gap: '18px',
+            marginBottom: '24px',
+            minHeight: '350px'
+          }}>
           {/* Stacked Bar Chart - Brand GGR Contribution */}
           <StackedBarChart 
             series={transformBrandGGRDataFromAPI(chartData?.brandGGRContribution || {}).series}
@@ -935,15 +964,16 @@ export default function BusinessPerformancePage() {
               setIsZoomOpen(true)
             }}
           />
-        </div>
+          </div>
 
-        {/* ROW 7: Sankey Chart (Full Width) */}
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: '1fr', 
-          gap: '18px',
-          minHeight: '400px'
-        }}>
+          {/* ROW 7: Sankey Chart (Full Width) */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: '1fr', 
+            gap: '18px',
+            marginBottom: '24px',
+            minHeight: '400px'
+          }}>
           {/* Sankey Diagram - Pure User GGR Distribution */}
           <SankeyChart 
             data={chartData?.sankey || { nodes: [], links: [] }}
@@ -961,18 +991,19 @@ export default function BusinessPerformancePage() {
               setIsZoomOpen(true)
             }}
           />
-        </div>
+          </div>
 
-        {/* Slicer Info */}
-        <div className="slicer-info">
-          <p>
-            {loadingData 
-              ? 'Loading data...'
-              : isDateRangeMode 
-                ? `Showing data for: ${selectedYear} | Date Range: ${startDate} to ${endDate} | Real Data from Database`
-                : `Showing data for: ${selectedYear} | ${selectedQuarter} | Real Data from Database`
-            }
-          </p>
+          {/* Slicer Info */}
+          <div className="slicer-info">
+            <p>
+              {loadingData 
+                ? 'Loading data...'
+                : isDateRangeMode 
+                  ? `Showing data for: ${selectedYear} | Date Range: ${startDate} to ${endDate} | Real Data from Database`
+                  : `Showing data for: ${selectedYear} | ${selectedQuarter} | Real Data from Database`
+              }
+            </p>
+          </div>
         </div>
       </Frame>
       
@@ -1047,6 +1078,5 @@ export default function BusinessPerformancePage() {
         )}
       </ChartZoomModal>
     </Layout>
-    </>
   )
 }
