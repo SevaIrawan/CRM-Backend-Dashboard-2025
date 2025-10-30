@@ -6,7 +6,9 @@ import { formatCurrencyKPI, formatIntegerKPI } from '@/lib/formatHelpers'
 interface OverdueTransaction {
   date: string
   time?: string
-  type: string
+  type?: string
+  approval?: string
+  line: string
   uniqueCode: string
   userName: string
   amount: number
@@ -105,7 +107,8 @@ export default function OverdueDetailsModal({
   const handleExport = async () => {
     try {
       setExporting(true)
-      const headers = ['Date Time', 'Type', 'Unique Code', 'User Name', 'Amount', 'Operator', 'Process Time', 'Processing Time (s)']
+      const typeLabel = type === 'withdraw' ? 'Approval' : 'Type'
+      const headers = ['Date Time', typeLabel, 'Brand', 'Unique Code', 'User Name', 'Amount', 'Operator', 'Process Time', 'Processing Time (s)']
       const allRows: string[] = []
       allRows.push(headers.join(','))
 
@@ -139,9 +142,11 @@ export default function OverdueDetailsModal({
         if (!rows.length) break
         rows.forEach(t => {
           const dateTime = t.time ? `${t.date} ${t.time}` : t.date
+          const typeOrApproval = type === 'withdraw' ? (t.approval || 'N/A') : (t.type || 'N/A')
           allRows.push([
             dateTime,
-            t.type,
+            typeOrApproval,
+            t.line,
             t.uniqueCode,
             t.userName,
             String(t.amount),
@@ -172,7 +177,7 @@ export default function OverdueDetailsModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full mx-4 max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-lg shadow-xl max-w-[95vw] w-full mx-4 max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b">
           <div>
@@ -229,28 +234,31 @@ export default function OverdueDetailsModal({
               <table className="min-w-full" style={{ borderCollapse: 'collapse', border: '1px solid #e5e7eb' }}>
                 <thead className="sticky top-0" style={{ zIndex: 10 }}>
                   <tr>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white' }}>
+                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
                       Date Time
                     </th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white' }}>
-                      Type
+                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
+                      {type === 'withdraw' ? 'Approval' : 'Type'}
                     </th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white' }}>
+                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
+                      Brand
+                    </th>
+                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
                       Unique Code
                     </th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white' }}>
+                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
                       User Name
                     </th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white' }}>
+                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
                       Amount
                     </th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white' }}>
+                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
                       Operator
                     </th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white' }}>
+                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
                       Process Time
                     </th>
-                    <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white' }}>
+                    <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
                       {`Threshold >${thresholdSec}s`}
                     </th>
                   </tr>
@@ -262,7 +270,10 @@ export default function OverdueDetailsModal({
                         {transaction.time ? `${transaction.date} ${transaction.time}` : transaction.date}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
-                        {transaction.type}
+                        {type === 'withdraw' ? transaction.approval : transaction.type}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
+                        {transaction.line}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
                         {transaction.uniqueCode}

@@ -70,6 +70,36 @@ export async function GET(request: NextRequest) {
           const uniqueMonths = Array.from(new Set(
             monthData?.map(row => row.month).filter(Boolean) || []
           )).sort()
+    
+    // Build month date ranges map
+    const monthDateRanges: Record<string, { min: string | null, max: string | null }> = {}
+    
+    for (const year of uniqueYears) {
+      for (const month of uniqueMonths) {
+        // Skip if year or month is invalid
+        if (!year || !month) continue
+        
+        const { data: monthDates } = await supabase
+          .from('withdraw')
+          .select('date')
+          .eq('currency', 'MYR')
+          .eq('year', parseInt(year))
+          .eq('month', month)
+          .not('date', 'is', null)
+          .order('date', { ascending: true })
+          
+        if (monthDates && monthDates.length > 0) {
+          const dates = monthDates
+            .map(d => d.date)
+            .filter((date): date is string => typeof date === 'string' && date.length > 0)
+          const monthKey = `${year}-${month}`
+          monthDateRanges[monthKey] = {
+            min: dates.length > 0 ? dates[0] : null,
+            max: dates.length > 0 ? dates[dates.length - 1] : null
+          }
+        }
+      }
+    }
 
     // Get latest record for defaults - FORCE MAX DATE DATA
     const { data: latestRecord } = await supabase
@@ -92,16 +122,23 @@ export async function GET(request: NextRequest) {
     const defaultYear = latestRecord?.[0]?.year?.toString() || (uniqueYears.length > 0 ? uniqueYears[uniqueYears.length - 1] : '')
     const defaultMonth = latestRecord?.[0]?.month || (uniqueMonths.length > 0 ? uniqueMonths[uniqueMonths.length - 1] : '')
     
-    console.log('🔍 [FORCE MAX DATE] Forced defaults:', { defaultLine, defaultYear, defaultMonth })
+    // Get default date range (This Month)
+    const defaultMonthKey = `${defaultYear}-${defaultMonth}`
+    const defaultMonthRange = monthDateRanges[defaultMonthKey]
+    
+    console.log('🔍 [FORCE MAX DATE] Forced defaults:', { defaultLine, defaultYear, defaultMonth, defaultMonthRange })
 
           const slicerOptions = {
             lines: linesWithAll,
             years: uniqueYears,
             months: uniqueMonths,
+            monthDateRanges,
             defaults: {
               line: defaultLine,
               year: defaultYear,
-              month: defaultMonth
+              month: defaultMonth,
+              startDate: defaultMonthRange?.min || undefined,
+              endDate: defaultMonthRange?.max || undefined
             }
           }
 
