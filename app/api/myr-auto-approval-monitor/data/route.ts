@@ -30,15 +30,17 @@ export async function GET(request: NextRequest) {
     const line = searchParams.get('line')
     const year = searchParams.get('year')
     const month = searchParams.get('month')
-    const isWeekly = searchParams.get('isWeekly') === 'true'
-    const isMonthly = searchParams.get('isMonthly') === 'true'
+    const isDateRange = searchParams.get('isDateRange') === 'true'
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
     
     console.log('🔍 [DEBUG] Query parameters:', {
       line,
       year,
       month,
-      isWeekly,
-      isMonthly
+      isDateRange,
+      startDate,
+      endDate
     })
     
     // Build query filters
@@ -53,20 +55,51 @@ export async function GET(request: NextRequest) {
       proc_sec: 'not null'
     })
     
-    if (line) {
+    // Line filter: Skip if "ALL" to fetch all lines
+    if (line && line !== 'ALL') {
       depositQuery = depositQuery.eq('line', line)
       console.log('🔍 [DEBUG] Added line filter:', line)
+    } else {
+      console.log('🔍 [DEBUG] Line filter: ALL (no filter applied, fetching all lines)')
     }
     
-    if (year) {
-      depositQuery = depositQuery.eq('year', parseInt(year))
-      console.log('🔍 [DEBUG] Added year filter:', year)
-    }
-    
-    if (month) {
-      // Month is already just the month name (e.g., "September")
-      depositQuery = depositQuery.eq('month', month)
-      console.log('🔍 [DEBUG] Added month filter:', month)
+    // Date filtering logic
+    if (isDateRange && startDate && endDate) {
+      // Daily Mode: Use date range filter
+      depositQuery = depositQuery
+        .gte('date', startDate)
+        .lte('date', endDate)
+      console.log('🔍 [DEBUG] Added date range filter:', { startDate, endDate })
+      
+      // Validate minimum 7 days
+      const start = new Date(startDate)
+      const end = new Date(endDate)
+      const daysDiff = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+      
+      if (daysDiff < 7) {
+        console.warn('⚠️ [DEBUG] Date range less than 7 days, adjusting...')
+        // Adjust start date to ensure minimum 7 days
+        const adjustedStart = new Date(end)
+        adjustedStart.setDate(end.getDate() - 6) // 7 days total including end date
+        const adjustedStartStr = adjustedStart.toISOString().split('T')[0]
+        
+        depositQuery = depositQuery
+          .gte('date', adjustedStartStr)
+          .lte('date', endDate)
+        console.log('🔍 [DEBUG] Adjusted date range to minimum 7 days:', { adjustedStartStr, endDate })
+      }
+    } else {
+      // Monthly Mode: Use year and month filter
+      if (year) {
+        depositQuery = depositQuery.eq('year', parseInt(year))
+        console.log('🔍 [DEBUG] Added year filter:', year)
+      }
+      
+      if (month) {
+        // Month is already just the month name (e.g., "September")
+        depositQuery = depositQuery.eq('month', month)
+        console.log('🔍 [DEBUG] Added month filter:', month)
+      }
     }
     
     const { data: depositData, error } = await depositQuery
@@ -321,7 +354,7 @@ export async function GET(request: NextRequest) {
         hour,
         totalTransactions: dayHourlyData[hour].length,
         automationTransactions: dayHourlyData[hour].filter(d => 
-          (d.operator_group === 'Automation' || d.operator_group === 'BOT') && d.date >= '2025-09-22'
+          (d.operator_group === 'Automation' || d.operator_group === 'BOT')
         ).length
       })))
       
@@ -489,7 +522,7 @@ export async function GET(request: NextRequest) {
       }
       
       // Calculate processing time distribution stats for AUTOMATION ONLY
-      const automationProcessingTimes = automationTransactions.filter(d => d.date >= '2025-09-22').map((d: any) => d.proc_sec || 0).filter(t => t > 0).sort((a, b) => a - b)
+      const automationProcessingTimes = automationTransactions.map((d: any) => d.proc_sec || 0).filter(t => t > 0).sort((a, b) => a - b)
       const automationProcessingTimeStats = {
         min: automationProcessingTimes.length > 0 ? automationProcessingTimes[0] : 0,
         max: automationProcessingTimes.length > 0 ? automationProcessingTimes[automationProcessingTimes.length - 1] : 0,
@@ -505,13 +538,13 @@ export async function GET(request: NextRequest) {
         manualTransactions: manualTransactions.length,
         avgProcessingTimeAll: totalTransactions > 0 ? 
           periodData.reduce((sum, d) => sum + (d.proc_sec || 0), 0) / totalTransactions : 0,
-        avgProcessingTimeAutomation: automationTransactions.filter(d => d.date >= '2025-09-22').length > 0 ? 
-          automationTransactions.filter(d => d.date >= '2025-09-22').reduce((sum, d) => sum + (d.proc_sec || 0), 0) / automationTransactions.filter(d => d.date >= '2025-09-22').length : 0,
+        avgProcessingTimeAutomation: automationTransactions.length > 0 ? 
+          automationTransactions.reduce((sum, d) => sum + (d.proc_sec || 0), 0) / automationTransactions.length : 0,
         avgProcessingTimeManual: manualTransactions.length > 0 ? 
           manualTransactions.reduce((sum, d) => sum + (d.proc_sec || 0), 0) / manualTransactions.length : 0,
         automationRate: totalTransactions > 0 ? (automationTransactions.length / totalTransactions) * 100 : 0,
         overdueTransactions: periodData.filter(d => (d.proc_sec || 0) > 30).length,
-        automationOverdueTransactions: automationTransactions.filter(d => (d.proc_sec || 0) > 30 && d.date >= '2025-09-22').length,
+        automationOverdueTransactions: automationTransactions.filter(d => (d.proc_sec || 0) > 30).length,
         fastProcessingRate: totalTransactions > 0 ? 
           (periodData.filter(d => (d.proc_sec || 0) <= 10).length / totalTransactions) * 100 : 0,
         // Add processing time distribution stats (ALL transactions)
@@ -523,7 +556,8 @@ export async function GET(request: NextRequest) {
     
     // Generate chart data based on period
     let chartData = {}
-    const period = isMonthly ? 'monthly' : (isWeekly ? 'weekly' : 'daily')
+    // Always use daily grouping - for both date range mode and monthly mode
+    const period = 'daily'
     const groupedData = groupDataByPeriod(depositData, period)
     
     // Sort periods chronologically
@@ -841,7 +875,8 @@ export async function GET(request: NextRequest) {
               .eq('year', parseInt(prevYear))
               .eq('month', prevMonth)
             
-            if (line) {
+            // Line filter: Skip if "ALL" to fetch all lines
+            if (line && line !== 'ALL') {
               prevMonthQuery = prevMonthQuery.eq('line', line)
             }
             

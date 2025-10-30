@@ -6,6 +6,7 @@ import { formatCurrencyKPI, formatIntegerKPI } from '@/lib/formatHelpers'
 interface OverdueTransaction {
   date: string
   time?: string
+  type: string
   uniqueCode: string
   userName: string
   amount: number
@@ -91,7 +92,7 @@ export default function OverdueDetailsModal({
   const handleExport = async () => {
     try {
       setExporting(true)
-      const headers = ['Date Time', 'Unique Code', 'User Name', 'Amount', 'Operator', 'Process Time', 'Processing Time (s)']
+      const headers = ['Date Time', 'Type', 'Unique Code', 'User Name', 'Amount', 'Operator', 'Process Time', 'Processing Time (s)']
       const allRows: string[] = []
       allRows.push(headers.join(','))
 
@@ -119,6 +120,7 @@ export default function OverdueDetailsModal({
           const dateTime = t.time ? `${t.date} ${t.time}` : t.date
           allRows.push([
             dateTime,
+            t.type,
             t.uniqueCode,
             t.userName,
             String(t.amount),
@@ -210,6 +212,9 @@ export default function OverdueDetailsModal({
                       Date Time
                     </th>
                     <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white' }}>
+                      Type
+                    </th>
+                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white' }}>
                       Unique Code
                     </th>
                     <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white' }}>
@@ -234,6 +239,9 @@ export default function OverdueDetailsModal({
                     <tr key={index} className="hover:bg-gray-50">
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
                         {transaction.time ? `${transaction.date} ${transaction.time}` : transaction.date}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
+                        {transaction.type}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
                         {transaction.uniqueCode}

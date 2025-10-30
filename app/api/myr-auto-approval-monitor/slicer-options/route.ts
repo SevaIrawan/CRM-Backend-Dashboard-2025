@@ -82,6 +82,31 @@ export async function GET(request: NextRequest) {
           const uniqueMonths = Array.from(new Set(
             monthData?.map(row => row.month).filter(Boolean) || []
           )).sort()
+          
+          // Get month date ranges (min/max dates per year-month)
+          const monthDateRanges: Record<string, { min: string | null, max: string | null }> = {}
+          
+          for (const year of uniqueYears) {
+            for (const month of uniqueMonths) {
+              const { data: monthDates } = await supabase
+                .from('deposit')
+                .select('date')
+                .eq('currency', 'MYR')
+                .eq('year', parseInt(year))
+                .eq('month', month)
+                .not('date', 'is', null)
+                .order('date', { ascending: true })
+                
+              if (monthDates && monthDates.length > 0) {
+                const dates = monthDates.map(d => d.date).filter(Boolean)
+                const monthKey = `${year}-${month}`
+                monthDateRanges[monthKey] = {
+                  min: dates[0] || null,
+                  max: dates[dates.length - 1] || null
+                }
+              }
+            }
+          }
 
     // Get latest record for defaults - FORCE MAX DATE DATA
     const { data: latestRecord } = await supabase
@@ -104,16 +129,24 @@ export async function GET(request: NextRequest) {
     const defaultYear = latestRecord?.[0]?.year?.toString() || (uniqueYears.length > 0 ? uniqueYears[uniqueYears.length - 1] : '')
     const defaultMonth = latestRecord?.[0]?.month || (uniqueMonths.length > 0 ? uniqueMonths[uniqueMonths.length - 1] : '')
     
-    console.log('🔍 [FORCE MAX DATE] Forced defaults:', { defaultLine, defaultYear, defaultMonth })
+    // Get default month date range for startDate/endDate
+    const defaultMonthKey = `${defaultYear}-${defaultMonth}`
+    const defaultStartDate = monthDateRanges[defaultMonthKey]?.min || null
+    const defaultEndDate = monthDateRanges[defaultMonthKey]?.max || null
+    
+    console.log('🔍 [FORCE MAX DATE] Forced defaults:', { defaultLine, defaultYear, defaultMonth, defaultStartDate, defaultEndDate })
 
           const slicerOptions = {
             lines: linesWithAll,
             years: uniqueYears,
             months: uniqueMonths,
+            monthDateRanges,
             defaults: {
               line: defaultLine,
               year: defaultYear,
-              month: defaultMonth
+              month: defaultMonth,
+              startDate: defaultStartDate,
+              endDate: defaultEndDate
             }
           }
 

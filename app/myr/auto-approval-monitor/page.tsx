@@ -9,18 +9,23 @@ import LineChart from '@/components/LineChart'
 import BarChart from '@/components/BarChart'
 import OverdueDetailsModal from '@/components/OverdueDetailsModal'
 import ChartZoomModal from '@/components/ChartZoomModal'
+import QuickDateFilter from '@/components/QuickDateFilter'
 import { getChartIcon } from '@/lib/CentralIcon'
 import { formatCurrencyKPI, formatIntegerKPI, formatMoMChange, formatNumericKPI, formatPercentageKPI } from '@/lib/formatHelpers'
+import { QuickDateFilterType, calculateQuickDateRange } from '@/lib/businessPerformanceHelper'
 
 // Types for slicer options API
 interface SlicerOptions {
   lines: string[]
   years: string[]
   months: string[]
+  monthDateRanges: Record<string, { min: string | null, max: string | null }>
   defaults: {
     line: string
     year: string
     month: string
+    startDate: string | null
+    endDate: string | null
   }
 }
 
@@ -156,6 +161,16 @@ export default function MYRAutoApprovalMonitorPage() {
   
   const [data, setData] = useState<AutoApprovalData | null>(null)
   
+  // Date Range States (for Daily Mode)
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  
+  // Quick Date Filter State (for Daily Mode)
+  const [activeQuickFilter, setActiveQuickFilter] = useState<QuickDateFilterType>('7_DAYS')
+  
+  // Toggle State: FALSE = Monthly Mode (default), TRUE = Daily Mode
+  const [isDateRangeMode, setIsDateRangeMode] = useState(false)
+  
   // Debug logging for data state changes
   useEffect(() => {
     console.log('📊 [DEBUG] Data state changed:', data)
@@ -196,7 +211,6 @@ export default function MYRAutoApprovalMonitorPage() {
   const [selectedLine, setSelectedLine] = useState('')
   const [selectedYear, setSelectedYear] = useState('')
   const [selectedMonth, setSelectedMonth] = useState('')
-  const [isWeekly, setIsWeekly] = useState(false)
   const [showOverdueModal, setShowOverdueModal] = useState(false)
   
   // State for chart zoom modal
@@ -221,6 +235,46 @@ export default function MYRAutoApprovalMonitorPage() {
     setZoomChartType(chartType)
     setZoomTitle(title)
     setIsZoomOpen(true)
+  }
+
+  // ============================================================================
+  // QUICK DATE FILTER HANDLER
+  // ============================================================================
+  function handleQuickFilterChange(filterType: QuickDateFilterType) {
+    setActiveQuickFilter(filterType)
+    
+    // Use LAST DATA DATE from slicerOptions, NOT today
+    const monthKey = `${selectedYear}-${selectedMonth}`
+    const lastDataDate = slicerOptions?.monthDateRanges?.[monthKey]?.max
+    
+    const referenceDate = lastDataDate ? new Date(lastDataDate) : new Date()
+    
+    // Calculate date range based on filter type
+    const { startDate: newStart, endDate: newEnd } = calculateQuickDateRange(filterType, referenceDate)
+    
+    setStartDate(newStart)
+    setEndDate(newEnd)
+  }
+  
+  // ============================================================================
+  // TOGGLE HANDLER - Set default 7 days when Daily Mode activated
+  // ============================================================================
+  function handleToggleChange(enabled: boolean) {
+    setIsDateRangeMode(enabled)
+    
+    if (enabled) {
+      // DEFAULT: Set to 7 DAYS
+      setActiveQuickFilter('7_DAYS')
+      
+      // Use LAST DATA DATE from slicerOptions
+      const monthKey = `${selectedYear}-${selectedMonth}`
+      const lastDataDate = slicerOptions?.monthDateRanges?.[monthKey]?.max
+      const referenceDate = lastDataDate ? new Date(lastDataDate) : new Date()
+      
+      const { startDate: newStart, endDate: newEnd } = calculateQuickDateRange('7_DAYS', referenceDate)
+      setStartDate(newStart)
+      setEndDate(newEnd)
+    }
   }
 
   // Helper function to calculate active days using STANDARD LOGIC
@@ -301,6 +355,8 @@ export default function MYRAutoApprovalMonitorPage() {
           setSelectedLine(result.data.defaults.line || result.data.lines[0] || '')
           setSelectedYear(result.data.defaults.year || result.data.years[0] || '')
           setSelectedMonth(result.data.defaults.month || result.data.months[0] || '')
+          if (result.data.defaults.startDate) setStartDate(result.data.defaults.startDate)
+          if (result.data.defaults.endDate) setEndDate(result.data.defaults.endDate)
           console.log('✅ [DEBUG] Slicer options loaded and defaults set')
         } else {
           setLoadError('Failed to load slicer options')
@@ -318,9 +374,15 @@ export default function MYRAutoApprovalMonitorPage() {
 
   // Load KPI data when slicers change
   useEffect(() => {
-    console.log('🔄 [DEBUG] useEffect triggered with:', { selectedLine, selectedYear, selectedMonth, isWeekly })
+    console.log('🔄 [DEBUG] useEffect triggered with:', { selectedLine, selectedYear, selectedMonth, isDateRangeMode })
     if (!selectedLine || !selectedYear || !selectedMonth) {
       console.log('❌ [DEBUG] Missing required slicer values, skipping data load')
+      return
+    }
+    
+    // Don't fetch if daily mode is ON but dates are empty
+    if (isDateRangeMode && (!startDate || !endDate)) {
+      console.warn('⚠️ [DEBUG] Daily mode active but dates not set yet, skipping fetch')
       return
     }
 
@@ -333,14 +395,20 @@ export default function MYRAutoApprovalMonitorPage() {
         setLoadError(null)
         
         // Use year and month parameters directly from slicers
-        console.log('🔍 [DEBUG] Using slicer parameters:', { selectedLine, selectedYear, selectedMonth, isWeekly })
+        console.log('🔍 [DEBUG] Using slicer parameters:', { selectedLine, selectedYear, selectedMonth, isDateRangeMode })
         
         const params = new URLSearchParams({
           line: selectedLine,
           year: selectedYear,
           month: selectedMonth,
-          isWeekly: isWeekly.toString()
+          isDateRange: isDateRangeMode.toString()
         })
+        
+        // Add date range params if in daily mode
+        if (isDateRangeMode && startDate && endDate) {
+          params.append('startDate', startDate)
+          params.append('endDate', endDate)
+        }
         
         console.log('🔍 [DEBUG] Loading KPI data with params:', params.toString())
         console.log('🔍 [DEBUG] Full URL:', `/api/myr-auto-approval-monitor/data?${params}`)
@@ -385,7 +453,7 @@ export default function MYRAutoApprovalMonitorPage() {
 
     const timeoutId = setTimeout(loadKPIData, 100)
     return () => clearTimeout(timeoutId)
-  }, [selectedLine, selectedYear, selectedMonth, isWeekly])
+  }, [selectedLine, selectedYear, selectedMonth, isDateRangeMode, startDate, endDate])
 
 
   const customSubHeader = (
@@ -434,21 +502,22 @@ export default function MYRAutoApprovalMonitorPage() {
           </select>
         </div>
 
-        {/* Month Slicer */}
+        {/* Month Slicer - Disabled when Daily Mode is active */}
         <div className="slicer-group">
           <label className="slicer-label">MONTH:</label>
           <select
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
+            disabled={isDateRangeMode}
             className="subheader-select"
             style={{
               padding: '8px 12px',
               border: '1px solid #e5e7eb',
               borderRadius: '8px',
-              backgroundColor: 'white',
+              backgroundColor: isDateRangeMode ? '#F3F4F6' : 'white',
               fontSize: '14px',
-              color: '#374151',
-              cursor: 'pointer',
+              color: isDateRangeMode ? '#9CA3AF' : '#374151',
+              cursor: isDateRangeMode ? 'not-allowed' : 'pointer',
               outline: 'none',
               transition: 'all 0.2s ease',
               minWidth: '140px',
@@ -456,41 +525,58 @@ export default function MYRAutoApprovalMonitorPage() {
             }}
           >
             {slicerOptions?.months?.map((month) => (
-                  <option key={month} value={month}>
+              <option key={month} value={month}>
                 {month}
-                  </option>
+              </option>
             ))}
           </select>
         </div>
 
-        {/* Daily/Weekly Toggle */}
+        {/* Daily Mode Toggle (Red/Green) */}
         <div className="slicer-group">
-          <label className="slicer-label">MODE:</label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-              <input
-                type="radio"
-                name="dataMode"
-                value="daily"
-                checked={!isWeekly}
-                onChange={() => setIsWeekly(false)}
-                style={{ margin: 0 }}
-              />
-              <span style={{ fontSize: '14px' }}>Daily</span>
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-              <input
-                type="radio"
-                name="dataMode"
-                value="weekly"
-                checked={isWeekly}
-                onChange={() => setIsWeekly(true)}
-                style={{ margin: 0 }}
-              />
-              <span style={{ fontSize: '14px' }}>Weekly</span>
-            </label>
+          <label className="slicer-label">DAILY MODE:</label>
+          <div 
+            className={`mode-toggle ${isDateRangeMode ? 'active' : ''}`}
+            onClick={() => handleToggleChange(!isDateRangeMode)}
+            style={{
+              position: 'relative',
+              width: '52px',
+              height: '26px',
+              backgroundColor: isDateRangeMode ? '#10b981' : '#ef4444',
+              borderRadius: '13px',
+              cursor: 'pointer',
+              transition: 'background-color 0.3s ease',
+              boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)'
+            }}
+          >
+            <div 
+              className="mode-toggle-knob"
+              style={{
+                position: 'absolute',
+                top: '3px',
+                left: '3px',
+                width: '20px',
+                height: '20px',
+                backgroundColor: '#ffffff',
+                borderRadius: '50%',
+                transition: 'transform 0.3s ease',
+                transform: isDateRangeMode ? 'translateX(26px)' : 'translateX(0)',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+              }}
+            />
           </div>
         </div>
+
+        {/* Quick Date Filter - Only visible when Daily Mode is ON */}
+        {isDateRangeMode && (
+          <div className="slicer-group">
+            <label className="slicer-label">DATE RANGE:</label>
+            <QuickDateFilter
+              activeFilter={activeQuickFilter}
+              onFilterChange={handleQuickFilterChange}
+            />
+          </div>
+        )}
       </div>
     </div>
   )
@@ -644,7 +730,7 @@ export default function MYRAutoApprovalMonitorPage() {
                        data: data.weeklyProcessingTime.map(item => item.avgProcessingTime)
                      }] : []}
                      categories={data?.weeklyProcessingTime ? data.weeklyProcessingTime.map(item => item.week) : []}
-                     title={isWeekly ? "AVERAGE PROCESSING TIME AUTOMATION (WEEKLY)" : "AVERAGE PROCESSING TIME AUTOMATION (DAILY)"}
+                     title={isDateRangeMode ? "AVERAGE PROCESSING TIME AUTOMATION (DAILY)" : "AVERAGE PROCESSING TIME AUTOMATION (MONTHLY)"}
                      currency="MYR"
                      hideLegend={true}
                      showDataLabels={true}
@@ -662,7 +748,7 @@ export default function MYRAutoApprovalMonitorPage() {
                          color: '#3B82F6'
                        },
                        'line',
-                       isWeekly ? "AVERAGE PROCESSING TIME AUTOMATION (WEEKLY)" : "AVERAGE PROCESSING TIME AUTOMATION (DAILY)"
+                       isDateRangeMode ? "AVERAGE PROCESSING TIME AUTOMATION (DAILY)" : "AVERAGE PROCESSING TIME AUTOMATION (MONTHLY)"
                      )}
                    />
                    <LineChart
@@ -671,7 +757,7 @@ export default function MYRAutoApprovalMonitorPage() {
                        data: data.weeklyCoverageRate.map(item => item.coverageRate)
                      }] : []}
                      categories={data?.weeklyCoverageRate ? data.weeklyCoverageRate.map(item => item.week) : []}
-                     title={isWeekly ? "COVERAGE RATE (WEEKLY TREND)" : "COVERAGE RATE (DAILY TREND)"}
+                     title={isDateRangeMode ? "COVERAGE RATE (DAILY TREND)" : "COVERAGE RATE (MONTHLY TREND)"}
                      currency="MYR"
                      hideLegend={true}
                      showDataLabels={true}
@@ -690,7 +776,7 @@ export default function MYRAutoApprovalMonitorPage() {
                          color: '#FF8C00'
                        },
                        'line',
-                       isWeekly ? "COVERAGE RATE (WEEKLY TREND)" : "COVERAGE RATE (DAILY TREND)"
+                       isDateRangeMode ? "COVERAGE RATE (DAILY TREND)" : "COVERAGE RATE (MONTHLY TREND)"
                      )}
                    />
                  </div>
@@ -711,7 +797,7 @@ export default function MYRAutoApprovalMonitorPage() {
                        }
                      ] : []}
                      categories={data?.totalTransactionsTrend ? data.totalTransactionsTrend.categories : []}
-                     title={isWeekly ? "TRANSACTION VOLUME TREND ANALYSIS (WEEKLY)" : "TRANSACTION VOLUME TREND ANALYSIS (DAILY)"}
+                     title={isDateRangeMode ? "TRANSACTION VOLUME TREND ANALYSIS (DAILY)" : "TRANSACTION VOLUME TREND ANALYSIS (MONTHLY)"}
                      currency="MYR"
                      showDataLabels={true}
                      chartIcon={getChartIcon('Transaction Volume')}
@@ -742,7 +828,7 @@ export default function MYRAutoApprovalMonitorPage() {
                          ]
                        },
                        'bar',
-                       isWeekly ? "TRANSACTION VOLUME TREND ANALYSIS (WEEKLY)" : "TRANSACTION VOLUME TREND ANALYSIS (DAILY)"
+                       isDateRangeMode ? "TRANSACTION VOLUME TREND ANALYSIS (DAILY)" : "TRANSACTION VOLUME TREND ANALYSIS (MONTHLY)"
                      )}
                    />
                    <LineChart
@@ -751,7 +837,7 @@ export default function MYRAutoApprovalMonitorPage() {
                        data: data.dailyOverdueCount.map(item => item.overdueCount)
                      }] : []}
                      categories={data?.dailyOverdueCount ? data.dailyOverdueCount.map(item => item.date) : []}
-                     title={isWeekly ? "OVERDUE TRANS AUTOMATION (WEEKLY)" : "OVERDUE TRANS AUTOMATION (Daily)"}
+                     title={isDateRangeMode ? "OVERDUE TRANS AUTOMATION (DAILY)" : "OVERDUE TRANS AUTOMATION (MONTHLY)"}
                      currency="MYR"
                      hideLegend={true}
                      showDataLabels={true}
@@ -770,7 +856,7 @@ export default function MYRAutoApprovalMonitorPage() {
                          color: '#3B82F6'
                        },
                        'line',
-                       isWeekly ? "OVERDUE TRANS AUTOMATION (WEEKLY)" : "OVERDUE TRANS AUTOMATION (Daily)"
+                       isDateRangeMode ? "OVERDUE TRANS AUTOMATION (DAILY)" : "OVERDUE TRANS AUTOMATION (MONTHLY)"
                      )}
                    />
                  </div>
@@ -783,7 +869,7 @@ export default function MYRAutoApprovalMonitorPage() {
                        data: data.dailyAutomationProcessingDistribution.map(item => item.median)
                      }] : []}
                      categories={data?.dailyAutomationProcessingDistribution ? data.dailyAutomationProcessingDistribution.map(item => item.date) : []}
-                     title={isWeekly ? "PROCESSING TIME DISTRIBUTION AUTOMATION (WEEKLY)" : "PROCESSING TIME DISTRIBUTION AUTOMATION PER DAY"}
+                     title={isDateRangeMode ? "PROCESSING TIME DISTRIBUTION AUTOMATION (DAILY)" : "PROCESSING TIME DISTRIBUTION AUTOMATION (MONTHLY)"}
                      currency="MYR"
                      hideLegend={true}
                      showDataLabels={true}
@@ -802,7 +888,7 @@ export default function MYRAutoApprovalMonitorPage() {
                          color: '#F97316'
                        },
                        'line',
-                       isWeekly ? "PROCESSING TIME DISTRIBUTION AUTOMATION (WEEKLY)" : "PROCESSING TIME DISTRIBUTION AUTOMATION PER DAY"
+                       isDateRangeMode ? "PROCESSING TIME DISTRIBUTION AUTOMATION (DAILY)" : "PROCESSING TIME DISTRIBUTION AUTOMATION (MONTHLY)"
                      )}
                    />
                    <LineChart
@@ -851,8 +937,10 @@ export default function MYRAutoApprovalMonitorPage() {
 
           {/* Slicer Info */}
           <div className="slicer-info">
-            <p>Showing data for: {selectedLine} | {selectedYear} | {selectedMonth} | {
-              isWeekly ? 'WEEKLY MODE' : 'DAILY MODE'
+            <p>Showing data for: {selectedLine} | {selectedYear} | {
+              isDateRangeMode 
+                ? `${startDate} to ${endDate} (Daily Mode)` 
+                : `${selectedMonth} (Monthly Mode)`
             }</p>
           </div>
         </div>

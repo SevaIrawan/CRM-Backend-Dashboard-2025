@@ -93,6 +93,7 @@ export async function GET(request: NextRequest) {
     const formattedData = data?.map((t: any) => ({
       date: t.date || '',
       time: t.time || '',
+      type: t.type || 'N/A',
       uniqueCode: t.unique_code || t.userkey || 'N/A',
       userName: t.user_name || 'N/A',
       amount: t.amount || 0,
