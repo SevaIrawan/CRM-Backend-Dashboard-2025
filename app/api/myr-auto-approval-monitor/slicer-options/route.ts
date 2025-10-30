@@ -101,11 +101,13 @@ export async function GET(request: NextRequest) {
                 .order('date', { ascending: true })
                 
               if (monthDates && monthDates.length > 0) {
-                const dates = monthDates.map(d => d.date).filter(Boolean)
+                const dates = monthDates
+                  .map(d => d.date)
+                  .filter((date): date is string => typeof date === 'string' && date.length > 0)
                 const monthKey = `${year}-${month}`
                 monthDateRanges[monthKey] = {
-                  min: dates[0] || null,
-                  max: dates[dates.length - 1] || null
+                  min: dates.length > 0 ? dates[0] : null,
+                  max: dates.length > 0 ? dates[dates.length - 1] : null
                 }
               }
             }
