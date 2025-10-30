@@ -88,6 +88,9 @@ export async function GET(request: NextRequest) {
           
           for (const year of uniqueYears) {
             for (const month of uniqueMonths) {
+              // Skip if year is invalid
+              if (!year) continue
+              
               const { data: monthDates } = await supabase
                 .from('deposit')
                 .select('date')
