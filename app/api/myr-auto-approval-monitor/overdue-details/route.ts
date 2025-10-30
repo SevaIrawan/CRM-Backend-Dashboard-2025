@@ -9,6 +9,9 @@ export async function GET(request: NextRequest) {
     const line = searchParams.get('line')
     const year = searchParams.get('year')
     const month = searchParams.get('month')
+    const isDateRange = searchParams.get('isDateRange') === 'true'
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
     const pageParam = searchParams.get('page')
     const limitParam = searchParams.get('limit')
     const threshold = 30
@@ -16,7 +19,7 @@ export async function GET(request: NextRequest) {
     const page = Math.max(1, parseInt(pageParam || '1'))
     const limit = Math.max(1, Math.min(1000, parseInt(limitParam || '100'))) // default 100, max 1000
     
-    console.log('🔍 [DEBUG] Query parameters:', { line, year, month, page, limit })
+    console.log('🔍 [DEBUG] Query parameters:', { line, year, month, isDateRange, startDate, endDate, page, limit })
     
     // Simple query first - just get some data
     // -------------------------
@@ -33,11 +36,21 @@ export async function GET(request: NextRequest) {
     if (line && line !== 'ALL') {
       countQuery = countQuery.eq('line', line)
     }
-    if (year) {
-      countQuery = countQuery.eq('year', parseInt(year))
-    }
-    if (month) {
-      countQuery = countQuery.eq('month', month)
+    
+    // Date filtering logic
+    if (isDateRange && startDate && endDate) {
+      // Daily Mode: Use date range filter
+      countQuery = countQuery
+        .gte('date', startDate)
+        .lte('date', endDate)
+    } else {
+      // Monthly Mode: Use year and month filter
+      if (year) {
+        countQuery = countQuery.eq('year', parseInt(year))
+      }
+      if (month) {
+        countQuery = countQuery.eq('month', month)
+      }
     }
 
     const countRes = await countQuery
@@ -62,12 +75,20 @@ export async function GET(request: NextRequest) {
       query = query.eq('line', line)
     }
     
-    if (year) {
-      query = query.eq('year', parseInt(year))
-    }
-    
-    if (month) {
-      query = query.eq('month', month)
+    // Date filtering logic
+    if (isDateRange && startDate && endDate) {
+      // Daily Mode: Use date range filter
+      query = query
+        .gte('date', startDate)
+        .lte('date', endDate)
+    } else {
+      // Monthly Mode: Use year and month filter
+      if (year) {
+        query = query.eq('year', parseInt(year))
+      }
+      if (month) {
+        query = query.eq('month', month)
+      }
     }
     
     const { data, error } = await query

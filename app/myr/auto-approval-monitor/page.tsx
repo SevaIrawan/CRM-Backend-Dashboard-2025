@@ -1029,6 +1029,9 @@ export default function MYRAutoApprovalMonitorPage() {
         line={selectedLine}
         year={selectedYear}
         month={selectedMonth}
+        isDateRange={isDateRangeMode}
+        startDate={startDate}
+        endDate={endDate}
       />
     </Layout>
   )

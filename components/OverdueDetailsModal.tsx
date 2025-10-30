@@ -22,6 +22,9 @@ interface OverdueDetailsModalProps {
   line: string
   year: string
   month: string
+  isDateRange?: boolean
+  startDate?: string
+  endDate?: string
   type?: 'deposit' | 'withdraw' // Type to determine which API endpoint to use
 }
 
@@ -32,6 +35,9 @@ export default function OverdueDetailsModal({
   line,
   year,
   month,
+  isDateRange = false,
+  startDate,
+  endDate,
   type = 'deposit' // Default to deposit for backward compatibility
 }: OverdueDetailsModalProps) {
   const [transactions, setTransactions] = useState<OverdueTransaction[]>([])
@@ -50,7 +56,7 @@ export default function OverdueDetailsModal({
     if (isOpen) {
       fetchOverdueDetails()
     }
-  }, [isOpen, line, year, month, page, limit])
+  }, [isOpen, line, year, month, isDateRange, startDate, endDate, page, limit])
 
   const fetchOverdueDetails = async () => {
     setLoading(true)
@@ -64,6 +70,13 @@ export default function OverdueDetailsModal({
         page: String(page),
         limit: String(limit)
       })
+      
+      // Add date range params if in daily mode
+      if (isDateRange && startDate && endDate) {
+        params.append('isDateRange', 'true')
+        params.append('startDate', startDate)
+        params.append('endDate', endDate)
+      }
       
       // Determine API endpoint based on type
       const apiEndpoint = type === 'withdraw' 
@@ -112,6 +125,14 @@ export default function OverdueDetailsModal({
           page: String(p),
           limit: String(exportLimit)
         })
+        
+        // Add date range params if in daily mode
+        if (isDateRange && startDate && endDate) {
+          params.append('isDateRange', 'true')
+          params.append('startDate', startDate)
+          params.append('endDate', endDate)
+        }
+        
         const res = await fetch(`${apiEndpoint}?${params}`)
         const json = await res.json()
         const rows: OverdueTransaction[] = json?.data?.overdueTransactions || []
