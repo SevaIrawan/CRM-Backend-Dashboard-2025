@@ -120,11 +120,12 @@ export default function USCCustomerRetentionPage() {
     fetchCustomerRetentionData()
   }, [])
 
+  // Only reload on pagination change, NOT on slicer change
   useEffect(() => {
-    if (pagination.currentPage > 0) {
+    if (pagination.currentPage > 1) {
       fetchCustomerRetentionData()
     }
-  }, [line, year, month, dateRange, filterMode, pagination.currentPage])
+  }, [pagination.currentPage])
 
   const fetchSlicerOptions = async () => {
     try {
@@ -186,7 +187,6 @@ export default function USCCustomerRetentionPage() {
     setMonth(selectedMonth)
     setFilterMode('month')
     setUseDateRange(false)
-    resetPagination()
   }
 
   const handleDateRangeChange = (field: 'start' | 'end', value: string) => {
@@ -195,7 +195,6 @@ export default function USCCustomerRetentionPage() {
       setFilterMode('daterange')
       setUseDateRange(true)
       setMonth('ALL')
-      resetPagination()
     }
   }
 
@@ -209,11 +208,16 @@ export default function USCCustomerRetentionPage() {
       setFilterMode('month')
       setDateRange({ start: '', end: '' }) // Clear date range
     }
-    resetPagination()
   }
 
   const resetPagination = () => {
     setPagination(prev => ({ ...prev, currentPage: 1 }))
+  }
+
+  // Manual Search trigger
+  const handleApplyFilters = () => {
+    resetPagination()
+    fetchCustomerRetentionData()
   }
 
   const handlePageChange = (newPage: number) => {
@@ -284,10 +288,7 @@ export default function USCCustomerRetentionPage() {
           <label className="slicer-label">LINE:</label>
           <select 
             value={line} 
-            onChange={(e) => {
-              setLine(e.target.value)
-              resetPagination()
-            }}
+            onChange={(e) => setLine(e.target.value)}
             className={`slicer-select ${slicerLoading ? 'disabled' : ''}`}
             disabled={slicerLoading}
           >
@@ -302,10 +303,7 @@ export default function USCCustomerRetentionPage() {
           <label className="slicer-label">YEAR:</label>
           <select 
             value={year} 
-            onChange={(e) => {
-              setYear(e.target.value)
-              resetPagination()
-            }}
+            onChange={(e) => setYear(e.target.value)}
             className="slicer-select"
           >
             <option value="ALL">All</option>
@@ -333,11 +331,12 @@ export default function USCCustomerRetentionPage() {
         </div>
 
         <button 
-          onClick={handleExport}
-          disabled={exporting || customerRetentionData.length === 0}
-          className={`export-button ${exporting || customerRetentionData.length === 0 ? 'disabled' : ''}`}
+          onClick={handleApplyFilters}
+          disabled={loading}
+          className={`export-button ${loading ? 'disabled' : ''}`}
+          style={{ backgroundColor: '#10b981' }}
         >
-          {exporting ? 'Exporting...' : 'Export'}
+          {loading ? 'Loading...' : 'Search'}
         </button>
       </div>
     </div>
@@ -361,9 +360,9 @@ export default function USCCustomerRetentionPage() {
             </div>
           ) : (
             <>
-              <div className="simple-table-container">
+              <div className="simple-table-container" style={{ padding: '0 32px', maxWidth: '100%' }}>
                 {/* Date Range Controls Only - No Title */}
-                <div className="table-header-controls">
+                <div className="table-header-controls" style={{ marginBottom: '16px' }}>
                   <div className="date-range-controls">
                     <div className="date-range-toggle">
                       <label className="toggle-label">
@@ -404,17 +403,25 @@ export default function USCCustomerRetentionPage() {
                 <div className="simple-table-wrapper">
                   <table className="simple-table" style={{
                     borderCollapse: 'collapse',
-                    border: '1px solid #e0e0e0'
+                    border: '1px solid #e0e0e0',
+                    width: '100%',
+                    fontSize: '14px'
                   }}>
                     <thead>
                       <tr>
                         {customerRetentionData.length > 0 && getSortedColumns(Object.keys(customerRetentionData[0]))
                           .map((column) => (
                             <th key={column} style={{ 
+                              padding: '10px 14px',
                               textAlign: 'left',
-                              border: '1px solid #e0e0e0',
-                              borderBottom: '2px solid #d0d0d0',
-                              padding: '8px 12px'
+                              fontWeight: 600,
+                              border: '1px solid #4b5563',
+                              borderBottom: '1px solid #4b5563',
+                              borderRight: '1px solid #4b5563',
+                              backgroundColor: '#374151',
+                              color: 'white',
+                              whiteSpace: 'nowrap',
+                              fontSize: '12px'
                             }}>
                               {column.toUpperCase().replace(/_/g, ' ')}
                             </th>
@@ -423,13 +430,20 @@ export default function USCCustomerRetentionPage() {
                     </thead>
                     <tbody>
                       {customerRetentionData.map((row, index) => (
-                        <tr key={index}>
+                        <tr key={index} style={{ 
+                          backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa'
+                        }}>
                           {getSortedColumns(Object.keys(row))
                             .map((column) => (
                               <td key={column} style={{ 
+                                padding: '10px 14px',
                                 textAlign: getColumnAlignment(column, row[column]) as 'left' | 'right' | 'center',
-                                border: '1px solid #e0e0e0',
-                                padding: '8px 12px'
+                                border: '1px solid #e5e7eb',
+                                borderBottom: '1px solid #e5e7eb',
+                                borderRight: '1px solid #e5e7eb',
+                                fontSize: '12px',
+                                color: '#1f2937',
+                                whiteSpace: 'nowrap'
                               }}>
                                 {formatTableCell(row[column])}
                               </td>
@@ -440,35 +454,45 @@ export default function USCCustomerRetentionPage() {
                   </table>
                 </div>
 
-                {/* Table Footer - Records Info + Pagination */}
+                {/* Table Footer - Records Info + Pagination + Export */}
                 <div className="table-footer">
                   <div className="records-info">
                     Showing {Math.min(customerRetentionData.length, 1000)} of {pagination.totalRecords.toLocaleString()} records
                   </div>
                   
-                  {pagination.totalPages > 1 && (
-                    <div className="pagination-controls">
-                      <button
-                        onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage - 1 }))}
-                        disabled={!pagination.hasPrevPage}
-                        className="pagination-btn"
-                      >
-                        ← Prev
-                      </button>
-                      
-                      <span className="pagination-info">
-                        Page {pagination.currentPage} of {pagination.totalPages}
-                      </span>
-                      
-                      <button
-                        onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage + 1 }))}
-                        disabled={!pagination.hasNextPage}
-                        className="pagination-btn"
-                      >
-                        Next →
-                      </button>
-                    </div>
-                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    {pagination.totalPages > 1 && (
+                      <div className="pagination-controls">
+                        <button
+                          onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage - 1 }))}
+                          disabled={!pagination.hasPrevPage}
+                          className="pagination-btn"
+                        >
+                          ← Prev
+                        </button>
+                        
+                        <span className="pagination-info">
+                          Page {pagination.currentPage} of {pagination.totalPages}
+                        </span>
+                        
+                        <button
+                          onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage + 1 }))}
+                          disabled={!pagination.hasNextPage}
+                          className="pagination-btn"
+                        >
+                          Next →
+                        </button>
+                      </div>
+                    )}
+
+                    <button 
+                      onClick={handleExport}
+                      disabled={exporting || customerRetentionData.length === 0}
+                      className={`export-button ${exporting || customerRetentionData.length === 0 ? 'disabled' : ''}`}
+                    >
+                      {exporting ? 'Exporting...' : 'Export'}
+                    </button>
+                  </div>
                 </div>
               </div>
             </>
