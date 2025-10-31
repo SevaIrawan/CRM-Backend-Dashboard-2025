@@ -120,8 +120,9 @@ export default function ActivityTracker({ children }: ActivityTrackerProps) {
         }
         
         const loginAt = Number(session?.loginAt || 0)
+        console.log('🔍 [ActivityTracker] Comparing - Flag:', flag, 'LoginAt:', loginAt, 'Should logout?', flag > 0 && (!loginAt || flag > loginAt))
         if (loginAt && flag <= loginAt) {
-          console.log('🔍 [ActivityTracker] Flag older than login, skipping. Flag:', flag, 'LoginAt:', loginAt)
+          console.log('⏭️ [ActivityTracker] Flag older than login, skipping. Flag:', flag, 'LoginAt:', loginAt)
           return
         }
         
