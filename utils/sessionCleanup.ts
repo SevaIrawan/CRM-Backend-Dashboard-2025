@@ -16,17 +16,18 @@ export const cleanupSession = () => {
 
 export const validateSession = () => {
   try {
-    // Check for force logout flag (except admin)
-    const forceLogoutFlag = localStorage.getItem('nexmax_force_logout_all') || sessionStorage.getItem('nexmax_force_logout_all')
+    // Check for force logout flag (except admin) and compare with loginAt
+    const forceLogoutFlagStr = localStorage.getItem('nexmax_force_logout_all') || sessionStorage.getItem('nexmax_force_logout_all')
     
     const session = localStorage.getItem('nexmax_session')
     if (!session) return null
     
     const sessionData = JSON.parse(session)
+    const loginAt = Number(sessionData?.loginAt || 0)
+    const forceLogoutFlag = forceLogoutFlagStr ? Number(forceLogoutFlagStr) : 0
     
-    // If force logout flag exists and user is NOT admin, force logout
-    if (forceLogoutFlag && sessionData.role !== 'admin') {
-      console.log('🚪 Force logout detected for non-admin user:', sessionData.username)
+    // If force logout flag is newer than this session and user is NOT admin, force logout
+    if (forceLogoutFlag && (!loginAt || forceLogoutFlag > loginAt) && sessionData.role !== 'admin') {
       cleanupSession()
       // Clear the flag after logout (one-time use)
       localStorage.removeItem('nexmax_force_logout_all')

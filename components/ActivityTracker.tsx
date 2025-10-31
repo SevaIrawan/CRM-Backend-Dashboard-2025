@@ -100,6 +100,8 @@ export default function ActivityTracker({ children }: ActivityTrackerProps) {
         if (!flag || !sessionRaw) return
         const session = JSON.parse(sessionRaw)
         if (session?.role === 'admin') return
+        const loginAt = Number(session?.loginAt || 0)
+        if (loginAt && flag <= loginAt) return
         // Force logout now
         console.log('🚪 [ActivityTracker] Force logout detected. Logging out user:', session?.username)
         cleanupSession()

@@ -75,13 +75,19 @@ export default function LoginPage() {
         return
       }
 
-      // Store user data in localStorage
+      // Store user data in localStorage with login timestamp
+      const loginAt = Date.now()
       localStorage.setItem('nexmax_session', JSON.stringify({
         id: users.id,
         username: users.username,
         role: users.role,
-        email: users.email || `${users.username}@nexmax.com`
+        email: users.email || `${users.username}@nexmax.com`,
+        loginAt
       }))
+
+      // Clear force-logout flag locally on successful login
+      localStorage.removeItem('nexmax_force_logout_all')
+      sessionStorage.removeItem('nexmax_force_logout_all')
 
       // ✅ ACTIVITY TRACKING: Log login activity (except admin)
       console.log('🔍 [LOGIN] User role:', users.role)
