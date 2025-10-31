@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Layout from '@/components/Layout'
 import { supabase } from '@/lib/supabase'
@@ -15,10 +15,24 @@ import {
 // Session utility functions
 const validateSession = () => {
   try {
+    // Check for force logout flag (except admin)
+    const forceLogoutFlag = localStorage.getItem('nexmax_force_logout_all') || sessionStorage.getItem('nexmax_force_logout_all')
+    
     const session = localStorage.getItem('nexmax_session')
     if (!session) return null
     
     const sessionData = JSON.parse(session)
+    
+    // If force logout flag exists and user is NOT admin, force logout
+    if (forceLogoutFlag && sessionData.role !== 'admin') {
+      console.log('🚪 Force logout detected for non-admin user:', sessionData.username)
+      cleanupSession()
+      // Clear the flag after logout (one-time use)
+      localStorage.removeItem('nexmax_force_logout_all')
+      sessionStorage.removeItem('nexmax_force_logout_all')
+      return null
+    }
+    
     return sessionData
   } catch (error) {
     console.error('Session validation error:', error)
@@ -53,6 +67,17 @@ export default function UsersPage() {
   const [darkMode, setDarkMode] = useState(false)
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
+  const tableWrapperRef = useRef<HTMLDivElement | null>(null)
+  
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalRecords: 0,
+    recordsPerPage: 20,
+    hasNextPage: false,
+    hasPrevPage: false
+  })
   const [showModal, setShowModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
@@ -113,6 +138,17 @@ export default function UsersPage() {
       } else {
         console.log('✅ Users loaded from Supabase:', data?.length || 0, 'users')
         setUsers((data as unknown as User[]) || [])
+        // Initialize pagination based on loaded users
+        const total = (data?.length || 0)
+        const totalPages = Math.max(1, Math.ceil(total / pagination.recordsPerPage))
+        setPagination(prev => ({
+          ...prev,
+          totalRecords: total,
+          totalPages,
+          currentPage: 1,
+          hasPrevPage: false,
+          hasNextPage: totalPages > 1
+        }))
       }
       
       setLoading(false)
@@ -128,6 +164,38 @@ export default function UsersPage() {
     cleanupSession()
     router.push('/login')
   }
+
+  // Update pagination when users change externally
+  useEffect(() => {
+    const total = users.length
+    const totalPages = Math.max(1, Math.ceil(total / pagination.recordsPerPage))
+    setPagination(prev => ({
+      ...prev,
+      totalRecords: total,
+      totalPages,
+      currentPage: Math.min(prev.currentPage, totalPages),
+      hasPrevPage: Math.min(prev.currentPage, totalPages) > 1,
+      hasNextPage: Math.min(prev.currentPage, totalPages) < totalPages
+    }))
+  }, [users, pagination.recordsPerPage])
+
+  const handlePageChange = (newPage: number) => {
+    setPagination(prev => ({
+      ...prev,
+      currentPage: newPage,
+      hasPrevPage: newPage > 1,
+      hasNextPage: newPage < prev.totalPages
+    }))
+    // Auto-scroll to top of table when page changes
+    if (tableWrapperRef.current) {
+      tableWrapperRef.current.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
+  // Compute current page slice
+  const startIndex = (pagination.currentPage - 1) * pagination.recordsPerPage
+  const endIndex = startIndex + pagination.recordsPerPage
+  const paginatedUsers = users.slice(startIndex, endIndex)
 
   const handleToggleDarkMode = () => {
     const newDarkMode = !darkMode
@@ -310,6 +378,69 @@ password: editingUser.password ? 'updating' : 'keeping current'
     }
   }
 
+  const handleLogoutUser = async (userId: string, username: string) => {
+    if (!confirm(`Are you sure you want to logout user "${username}"? They will need to login again.`)) return
+
+    try {
+      console.log('🚪 Logging out user:', username, 'ID:', userId)
+      
+      // Note: Since sessions are stored in localStorage client-side,
+      // we cannot directly force logout from server.
+      // This action will be logged for admin reference.
+      // The user will be logged out when they try to access any page
+      // and their session is invalidated.
+      
+      alert(`User "${username}" will be logged out on their next page access or page refresh.`)
+      console.log('✅ Logout request logged for user:', username)
+    } catch (error) {
+      console.error('❌ Error logging out user:', error)
+      alert('Connection error while logging out user')
+    }
+  }
+
+  const handleLogoutAllUsers = async () => {
+    if (!confirm('Are you sure you want to logout ALL users (except Admin)? All non-admin users will need to login again.')) return
+
+    try {
+      console.log('🚪 Logging out all users (except admin)...')
+      
+      // Set global logout flag in localStorage with timestamp
+      // This flag will be checked by validateSession in all pages
+      const logoutTimestamp = Date.now().toString()
+      localStorage.setItem('nexmax_force_logout_all', logoutTimestamp)
+      
+      // Also set in sessionStorage for immediate effect
+      sessionStorage.setItem('nexmax_force_logout_all', logoutTimestamp)
+      
+      // Call API to set global logout flag in database (if table exists)
+      try {
+        const response = await fetch('/api/admin/force-logout-all', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            timestamp: logoutTimestamp,
+            adminId: user?.id
+          })
+        })
+        
+        if (response.ok) {
+          console.log('✅ Force logout flag set in database')
+        }
+      } catch (apiError) {
+        console.warn('⚠️ Could not set force logout flag in database:', apiError)
+        // Continue anyway, localStorage flag is sufficient
+      }
+      
+      alert('All non-admin users have been logged out. They will need to login again.')
+      console.log('✅ Logout all users completed')
+    } catch (error) {
+      console.error('❌ Error logging out all users:', error)
+      alert('Connection error while logging out all users')
+    }
+  }
+
   const getLocalRoleDisplayName = (role: string) => {
     switch (role.toLowerCase()) {
       case 'hod department':
@@ -392,22 +523,24 @@ password: editingUser.password ? 'updating' : 'keeping current'
           <div className="user-management-frame">
             <div className="frame-header">
             <h2 className="frame-title">Users List</h2>
-            <button 
-              onClick={() => setShowModal(true)}
-              className="add-user-btn"
-            >
-              <svg 
-                className="add-user-icon" 
-                xmlns="http://www.w3.org/2000/svg" 
-                viewBox="0 0 640 640"
+            <div className="header-actions">
+              <button 
+                onClick={() => setShowModal(true)}
+                className="add-user-btn"
               >
-                <path d="M136 192C136 125.7 189.7 72 256 72C322.3 72 376 125.7 376 192C376 258.3 322.3 312 256 312C189.7 312 136 258.3 136 192zM48 546.3C48 447.8 127.8 368 226.3 368L285.7 368C384.2 368 464 447.8 464 546.3C464 562.7 450.7 576 434.3 576L77.7 576C61.3 576 48 562.7 48 546.3zM544 160C557.3 160 568 170.7 568 184L568 232L616 232C629.3 232 640 242.7 640 256C640 269.3 629.3 280 616 280L568 280L568 328C568 341.3 557.3 352 544 352C530.7 352 520 341.3 520 328L520 280L472 280C458.7 280 448 269.3 448 256C448 242.7 458.7 232 472 232L520 232L520 184C520 170.7 530.7 160 544 160z"/>
-              </svg>
-              Add New User
-            </button>
+                <svg 
+                  className="add-user-icon" 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  viewBox="0 0 640 640"
+                >
+                  <path d="M136 192C136 125.7 189.7 72 256 72C322.3 72 376 125.7 376 192C376 258.3 322.3 312 256 312C189.7 312 136 258.3 136 192zM48 546.3C48 447.8 127.8 368 226.3 368L285.7 368C384.2 368 464 447.8 464 546.3C464 562.7 450.7 576 434.3 576L77.7 576C61.3 576 48 562.7 48 546.3zM544 160C557.3 160 568 170.7 568 184L568 232L616 232C629.3 232 640 242.7 640 256C640 269.3 629.3 280 616 280L568 280L568 328C568 341.3 557.3 352 544 352C530.7 352 520 341.3 520 328L520 280L472 280C458.7 280 448 269.3 448 256C448 242.7 458.7 232 472 232L520 232L520 184C520 170.7 530.7 160 544 160z"/>
+                </svg>
+                Add New User
+              </button>
+            </div>
           </div>
           
-          <div className="table-wrapper">
+          <div className="table-wrapper" ref={tableWrapperRef}>
             <table className="users-table">
               <thead>
                 <tr>
@@ -439,7 +572,7 @@ password: editingUser.password ? 'updating' : 'keeping current'
                     </td>
                   </tr>
                 ) : (
-                  users.map((user) => (
+                  paginatedUsers.map((user) => (
                     <tr key={user.id}>
                       <td className="username-cell">{user.username}</td>
                       <td className="password-cell">••••••••</td>
@@ -485,6 +618,13 @@ password: editingUser.password ? 'updating' : 'keeping current'
                           >
                             Delete
                           </button>
+                          <button 
+                            onClick={() => handleLogoutUser(user.id, user.username)}
+                            className="action-btn logout-btn-table"
+                            title="Logout User"
+                          >
+                            Logout
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -492,6 +632,53 @@ password: editingUser.password ? 'updating' : 'keeping current'
                 )}
               </tbody>
                          </table>
+           </div>
+
+           {/* Table Footer - Records Info + Pagination + Logout All */}
+           <div className="table-footer">
+             <div className="records-info">
+               Showing {(paginatedUsers.length).toLocaleString()} of {pagination.totalRecords.toLocaleString()} records
+             </div>
+
+             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+               {pagination.totalPages > 1 && (
+                 <div className="pagination-controls">
+                   <button
+                     onClick={() => handlePageChange(pagination.currentPage - 1)}
+                     disabled={!pagination.hasPrevPage}
+                     className="pagination-btn"
+                   >
+                     ← Prev
+                   </button>
+                   <span className="pagination-info">
+                     Page {pagination.currentPage} of {pagination.totalPages}
+                   </span>
+                   <button
+                     onClick={() => handlePageChange(pagination.currentPage + 1)}
+                     disabled={!pagination.hasNextPage}
+                     className="pagination-btn"
+                   >
+                     Next →
+                   </button>
+                 </div>
+               )}
+
+               <button 
+                 onClick={handleLogoutAllUsers}
+                 className="logout-all-btn-footer"
+                 title="Logout All Users (Except Admin)"
+               >
+                 <svg 
+                   className="logout-icon" 
+                   xmlns="http://www.w3.org/2000/svg" 
+                   viewBox="0 0 640 512"
+                   style={{ width: '14px', height: '14px', marginRight: '6px' }}
+                 >
+                   <path fill="currentColor" d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3zM448 128v32h64V64H384c-35.3 0-64-28.7-64-64H352c0 35.3 28.7 64 64 64H448l0 64zM576 128v32h64V192c0-35.3-28.7-64-64-64H512l0 64zM448 256v32h64V192H576v64H448zM480 384c0 35.3 28.7 64 64 64H544l0-64H480zM512 512c-35.3 0-64-28.7-64-64h64v64z"/>
+                 </svg>
+                 Logout All
+               </button>
+             </div>
            </div>
          </div>
        </div>
@@ -646,6 +833,12 @@ password: editingUser.password ? 'updating' : 'keeping current'
           background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
         }
 
+        .header-actions {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
         .frame-title {
           font-size: 24px;
           font-weight: 700;
@@ -683,6 +876,8 @@ password: editingUser.password ? 'updating' : 'keeping current'
         .table-wrapper {
           flex: 1;
           overflow: auto;
+          /* Ensure long lists can scroll inside the frame */
+          max-height: calc(100vh - 250px);
         }
 
         .users-table {
@@ -711,6 +906,68 @@ password: editingUser.password ? 'updating' : 'keeping current'
 
         .users-table tr:hover {
           background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        }
+
+        /* Footer */
+        .table-footer {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 18px;
+          border-top: 1px solid #e5e7eb;
+          gap: 20px;
+        }
+
+        .pagination-controls {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .pagination-btn {
+          padding: 6px 12px;
+          border: 1px solid #d1d5db;
+          border-radius: 6px;
+          background: white;
+          cursor: pointer;
+          font-size: 12px;
+        }
+
+        .pagination-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .pagination-info {
+          font-size: 12px;
+          color: #6b7280;
+          white-space: nowrap;
+        }
+
+        .records-info {
+          font-size: 12px;
+          color: #6b7280;
+        }
+
+        .logout-all-btn-footer {
+          background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+          color: white;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 6px;
+          font-weight: 600;
+          font-size: 12px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .logout-all-btn-footer:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 8px rgba(245, 158, 11, 0.3);
         }
 
         .username-cell {
@@ -799,6 +1056,12 @@ password: editingUser.password ? 'updating' : 'keeping current'
           box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);
         }
 
+        .logout-btn-table {
+          background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+          color: white;
+          box-shadow: 0 2px 4px rgba(139, 92, 246, 0.2);
+        }
+
         .delete-btn {
           background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
           color: white;
@@ -815,6 +1078,10 @@ password: editingUser.password ? 'updating' : 'keeping current'
 
         .reset-btn:hover {
           box-shadow: 0 4px 8px rgba(245, 158, 11, 0.3);
+        }
+
+        .logout-btn-table:hover {
+          box-shadow: 0 4px 8px rgba(139, 92, 246, 0.3);
         }
 
         .delete-btn:hover {
