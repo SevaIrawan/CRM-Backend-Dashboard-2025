@@ -472,15 +472,7 @@ export default function BrandPerformanceTrendsPage() {
                 />
               </div>
 
-              {/* Footer: Export */}
-              <div className="table-footer" style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderTop: 'none', borderRadius: '0 0 8px 8px' }}>
-                <div className="records-info">{tableData.length.toLocaleString()} brands</div>
-                <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
-                  <button onClick={handleExportCSV} disabled={exporting || tableData.length === 0} className={`export-button ${exporting || tableData.length === 0 ? 'disabled' : ''}`}>
-                    {exporting ? 'Exporting...' : 'Export CSV'}
-                  </button>
-                </div>
-              </div>
+              
 
               {/* Row 2: Active Member & Deposit Cases Charts */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
