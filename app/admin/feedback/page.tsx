@@ -720,10 +720,7 @@ export default function AdminFeedbackPage() {
           </Frame>
           </div>
 
-          {/* Slicer Info */}
-          <div className="slicer-info">
-            <p>Showing data for: {filters.status || 'All Status'} | {filters.priority || 'All Priority'} | {filters.search ? `Search: "${filters.search}"` : 'All Feedbacks'}</p>
-          </div>
+          {/* Slicer info removed as requested */}
         </div>
       </Frame>
 

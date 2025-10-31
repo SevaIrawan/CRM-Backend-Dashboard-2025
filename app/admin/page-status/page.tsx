@@ -675,10 +675,7 @@ export default function PageStatusPage() {
         </div>
       </div>
 
-      {/* Slicer Info */}
-      <div className="slicer-info">
-        <p>Showing data for: {filterSection || 'All Sections'} | {filterStatus || 'All Status'} | {searchTerm ? `Search: "${searchTerm}"` : 'All Pages'}</p>
-      </div>
+      {/* Slicer info removed as requested */}
       </div>
   </Frame>
 

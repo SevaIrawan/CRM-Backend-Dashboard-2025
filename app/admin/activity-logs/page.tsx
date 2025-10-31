@@ -520,10 +520,7 @@ export default function ActivityLogsPage() {
             </div>
           </div>
 
-          {/* Slicer Info */}
-          <div className="slicer-info">
-            <p>Showing data for: {filters.role || 'All Roles'} | {filters.activityType || 'All Activities'} | Date: {filters.startDate || 'All Time'} to {filters.endDate || 'Now'}</p>
-          </div>
+          {/* Slicer info removed as requested */}
         </div>
         </Frame>
 
