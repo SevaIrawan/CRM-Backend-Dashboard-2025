@@ -1,14 +1,36 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
-// In-memory force logout flag (per server instance)
-let FORCE_LOGOUT_AT = 0
-
 export async function GET() {
   try {
-    return NextResponse.json({ success: true, forceLogoutAt: FORCE_LOGOUT_AT })
-  } catch (error) {
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+    // Read from system_flags
+    const { data, error } = await supabase
+      .from('system_flags')
+      .select('value, updated_at')
+      .eq('key', 'force_logout_at')
+      .maybeSingle()
+
+    if (error) {
+      console.error('❌ [ForceLogout GET] DB error:', error)
+      console.error('❌ [ForceLogout GET] Error details:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      })
+      return NextResponse.json({ success: false, error: 'DB error', details: error.message }, { status: 500 })
+    }
+
+    const forceLogoutAt = data?.value ? Number(data.value) : 0
+    console.log('✅ [ForceLogout GET] Retrieved flag:', { 
+      value: data?.value, 
+      forceLogoutAt,
+      updated_at: data?.updated_at 
+    })
+    return NextResponse.json({ success: true, forceLogoutAt })
+  } catch (error: any) {
+    console.error('❌ [ForceLogout GET] Exception:', error)
+    return NextResponse.json({ success: false, error: 'Internal server error', message: error?.message }, { status: 500 })
   }
 }
 
@@ -38,14 +60,23 @@ export async function POST(request: Request) {
       )
     }
 
-    // Set in-memory flag for all clients to read via GET
-    FORCE_LOGOUT_AT = Number(timestamp) || Date.now()
-    console.log('🔐 Force logout all users requested by admin:', adminId, 'at', FORCE_LOGOUT_AT)
+    const forceLogoutAt = Number(timestamp) || Date.now()
+    // Upsert into system_flags
+    const { error: upsertError } = await supabase
+      .from('system_flags')
+      .upsert({ key: 'force_logout_at', value: String(forceLogoutAt) }, { onConflict: 'key' })
+
+    if (upsertError) {
+      console.error('❌ [ForceLogout POST] Upsert error:', upsertError)
+      return NextResponse.json({ success: false, error: 'DB upsert error' }, { status: 500 })
+    }
+
+    console.log('🔐 Force logout all users requested by admin:', adminId, 'at', forceLogoutAt)
 
     return NextResponse.json({
       success: true,
       message: 'Force logout flag set successfully',
-      forceLogoutAt: FORCE_LOGOUT_AT
+      forceLogoutAt
     })
   } catch (error) {
     console.error('❌ Error in force-logout-all API:', error)
