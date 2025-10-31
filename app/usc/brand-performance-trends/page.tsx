@@ -282,15 +282,7 @@ export default function BrandPerformanceTrendsPage() {
                 <input type="date" value={tempAEnd} min="2021-01-01" max="2025-12-31" onChange={e=>setTempAEnd(e.target.value)} />
               </div>
 
-              {/* Footer: Export */}
-              <div className="table-footer" style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderTop: 'none', borderRadius: '0 0 8px 8px' }}>
-                <div className="records-info">{tableData.length.toLocaleString()} brands</div>
-                <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
-                  <button onClick={handleExportCSV} disabled={exporting || tableData.length === 0} className={`export-button ${exporting || tableData.length === 0 ? 'disabled' : ''}`}>
-                    {exporting ? 'Exporting...' : 'Export CSV'}
-                  </button>
-                </div>
-              </div>
+              
               <div style={{ display:'flex', justifyContent:'flex-end', gap:8, marginTop:10 }}>
                 <button onClick={()=>setShowPickerA(false)} style={{ padding:'6px 10px', border:'1px solid #e5e7eb', borderRadius:6 }}>Cancel</button>
                 <button onClick={()=>{ if (tempAStart && tempAEnd){ setPeriodAStart(tempAStart); setPeriodAEnd(tempAEnd);} setShowPickerA(false) }} style={{ padding:'6px 10px', background:'#1e293b', color:'white', borderRadius:6 }}>Apply</button>
