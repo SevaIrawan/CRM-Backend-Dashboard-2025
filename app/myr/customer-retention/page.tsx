@@ -122,7 +122,9 @@ export default function MYRCustomerRetentionPage() {
 
   // Only reload on pagination change, NOT on slicer change
   useEffect(() => {
-    if (pagination.currentPage > 1) {
+    // Skip initial render (handled by first useEffect)
+    const isInitialMount = pagination.currentPage === 1 && pagination.totalPages === 1 && pagination.totalRecords === 0
+    if (!isInitialMount) {
       fetchCustomerRetentionData()
     }
   }, [pagination.currentPage])
@@ -360,9 +362,9 @@ export default function MYRCustomerRetentionPage() {
             </div>
           ) : (
             <>
-              <div className="simple-table-container" style={{ padding: '0 32px', maxWidth: '100%' }}>
+              <div className="simple-table-container">
                 {/* Date Range Controls Only - No Title */}
-                <div className="table-header-controls" style={{ marginBottom: '16px' }}>
+                <div className="table-header-controls">
                   <div className="date-range-controls">
                     <div className="date-range-toggle">
                       <label className="toggle-label">
@@ -403,25 +405,17 @@ export default function MYRCustomerRetentionPage() {
                 <div className="simple-table-wrapper">
                   <table className="simple-table" style={{
                     borderCollapse: 'collapse',
-                    border: '1px solid #e0e0e0',
-                    width: '100%',
-                    fontSize: '14px'
+                    border: '1px solid #e0e0e0'
                   }}>
                     <thead>
                       <tr>
                         {customerRetentionData.length > 0 && getSortedColumns(Object.keys(customerRetentionData[0]))
                           .map((column) => (
                             <th key={column} style={{ 
-                              padding: '10px 14px',
                               textAlign: 'left',
-                              fontWeight: 600,
-                              border: '1px solid #4b5563',
-                              borderBottom: '1px solid #4b5563',
-                              borderRight: '1px solid #4b5563',
-                              backgroundColor: '#374151',
-                              color: 'white',
-                              whiteSpace: 'nowrap',
-                              fontSize: '12px'
+                              border: '1px solid #e0e0e0',
+                              borderBottom: '2px solid #d0d0d0',
+                              padding: '8px 12px'
                             }}>
                               {column.toUpperCase().replace(/_/g, ' ')}
                             </th>
@@ -430,20 +424,13 @@ export default function MYRCustomerRetentionPage() {
                     </thead>
                     <tbody>
                       {customerRetentionData.map((row, index) => (
-                        <tr key={index} style={{ 
-                          backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa'
-                        }}>
+                        <tr key={index}>
                           {getSortedColumns(Object.keys(row))
                             .map((column) => (
                               <td key={column} style={{ 
-                                padding: '10px 14px',
                                 textAlign: getColumnAlignment(column, row[column]) as 'left' | 'right' | 'center',
-                                border: '1px solid #e5e7eb',
-                                borderBottom: '1px solid #e5e7eb',
-                                borderRight: '1px solid #e5e7eb',
-                                fontSize: '12px',
-                                color: '#1f2937',
-                                whiteSpace: 'nowrap'
+                                border: '1px solid #e0e0e0',
+                                padding: '8px 12px'
                               }}>
                                 {formatTableCell(row[column])}
                               </td>
@@ -495,18 +482,10 @@ export default function MYRCustomerRetentionPage() {
                   </div>
                 </div>
               </div>
-
-              {/* Slicer Info */}
-              <div className="slicer-info">
-                <p>Showing data for: {line} | {year} | {useDateRange ? `${dateRange.start} to ${dateRange.end}` : month}</p>
-              </div>
             </>
           )}
         </div>
       </Frame>
-
-      <style jsx>{`
-      `}</style>
     </Layout>
   )
 }

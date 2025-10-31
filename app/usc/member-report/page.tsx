@@ -162,11 +162,14 @@ export default function USCMemberReportPage() {
     fetchMemberReportData()
   }, [])
 
+  // Only reload on pagination change, NOT on slicer change
   useEffect(() => {
-    if (pagination.currentPage > 0) {
+    // Skip initial render (handled by first useEffect)
+    const isInitialMount = pagination.currentPage === 1 && pagination.totalPages === 1 && pagination.totalRecords === 0
+    if (!isInitialMount) {
       fetchMemberReportData()
     }
-  }, [line, year, month, dateRange, filterMode, pagination.currentPage])
+  }, [pagination.currentPage])
 
   const fetchSlicerOptions = async () => {
     try {
@@ -228,7 +231,6 @@ export default function USCMemberReportPage() {
     setMonth(selectedMonth)
     setFilterMode('month')
     setUseDateRange(false)
-    resetPagination()
   }
 
   const handleDateRangeChange = (field: 'start' | 'end', value: string) => {
@@ -237,7 +239,6 @@ export default function USCMemberReportPage() {
       setFilterMode('daterange')
       setUseDateRange(true)
       setMonth('ALL')
-      resetPagination()
     }
   }
 
@@ -251,11 +252,16 @@ export default function USCMemberReportPage() {
       setFilterMode('month')
       setDateRange({ start: '', end: '' }) // Clear date range
     }
-    resetPagination()
   }
 
   const resetPagination = () => {
     setPagination(prev => ({ ...prev, currentPage: 1 }))
+  }
+
+  // Manual Search trigger
+  const handleApplyFilters = () => {
+    resetPagination()
+    fetchMemberReportData()
   }
 
   const handlePageChange = (newPage: number) => {
@@ -326,10 +332,7 @@ export default function USCMemberReportPage() {
           <label className="slicer-label">LINE:</label>
           <select 
             value={line} 
-            onChange={(e) => {
-              setLine(e.target.value)
-              resetPagination()
-            }}
+            onChange={(e) => setLine(e.target.value)}
             className={`slicer-select ${slicerLoading ? 'disabled' : ''}`}
             disabled={slicerLoading}
           >
@@ -344,10 +347,7 @@ export default function USCMemberReportPage() {
           <label className="slicer-label">YEAR:</label>
           <select 
             value={year} 
-            onChange={(e) => {
-              setYear(e.target.value)
-              resetPagination()
-            }}
+            onChange={(e) => setYear(e.target.value)}
             className="slicer-select"
           >
             <option value="ALL">All</option>
@@ -375,11 +375,12 @@ export default function USCMemberReportPage() {
         </div>
 
         <button 
-          onClick={handleExport}
-          disabled={exporting || memberReportData.length === 0}
-          className={`export-button ${exporting || memberReportData.length === 0 ? 'disabled' : ''}`}
+          onClick={handleApplyFilters}
+          disabled={loading}
+          className={`export-button ${loading ? 'disabled' : ''}`}
+          style={{ backgroundColor: '#10b981' }}
         >
-{exporting ? 'Exporting Large Dataset...' : 'Export'}
+          {loading ? 'Loading...' : 'Search'}
         </button>
       </div>
     </div>
@@ -482,35 +483,45 @@ export default function USCMemberReportPage() {
                   </table>
                 </div>
 
-                {/* Table Footer - Records Info + Pagination */}
+                {/* Table Footer - Records Info + Pagination + Export */}
                 <div className="table-footer">
                   <div className="records-info">
                     Showing {Math.min(memberReportData.length, 1000)} of {pagination.totalRecords.toLocaleString()} records
                   </div>
                   
-                  {pagination.totalPages > 1 && (
-                    <div className="pagination-controls">
-                      <button
-                        onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage - 1 }))}
-                        disabled={!pagination.hasPrevPage}
-                        className="pagination-btn"
-                      >
-                        ← Prev
-                      </button>
-                      
-                      <span className="pagination-info">
-                        Page {pagination.currentPage} of {pagination.totalPages}
-                      </span>
-                      
-                      <button
-                        onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage + 1 }))}
-                        disabled={!pagination.hasNextPage}
-                        className="pagination-btn"
-                      >
-                        Next →
-                      </button>
-                    </div>
-                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    {pagination.totalPages > 1 && (
+                      <div className="pagination-controls">
+                        <button
+                          onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage - 1 }))}
+                          disabled={!pagination.hasPrevPage}
+                          className="pagination-btn"
+                        >
+                          ← Prev
+                        </button>
+                        
+                        <span className="pagination-info">
+                          Page {pagination.currentPage} of {pagination.totalPages}
+                        </span>
+                        
+                        <button
+                          onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage + 1 }))}
+                          disabled={!pagination.hasNextPage}
+                          className="pagination-btn"
+                        >
+                          Next →
+                        </button>
+                      </div>
+                    )}
+
+                    <button 
+                      onClick={handleExport}
+                      disabled={exporting || memberReportData.length === 0}
+                      className={`export-button ${exporting || memberReportData.length === 0 ? 'disabled' : ''}`}
+                    >
+                      {exporting ? 'Exporting...' : 'Export'}
+                    </button>
+                  </div>
                 </div>
               </div>
             </>
