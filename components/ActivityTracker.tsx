@@ -82,28 +82,51 @@ export default function ActivityTracker({ children }: ActivityTrackerProps) {
   useEffect(() => {
     const checkForceLogout = async () => {
       try {
-        // 1) Check server flag (shared across clients)
+        // 1) Check server flag (shared across clients) - from database
         let serverFlag = 0
         try {
-          const res = await fetch('/api/admin/force-logout-all', { cache: 'no-store' })
+          const res = await fetch('/api/admin/force-logout-all', { 
+            cache: 'no-store',
+            method: 'GET'
+          })
           if (res.ok) {
             const json = await res.json()
             serverFlag = Number(json?.forceLogoutAt || 0)
+            console.log('🔍 [ActivityTracker] Server flag:', serverFlag, 'from API')
+          } else {
+            console.warn('⚠️ [ActivityTracker] API response not OK:', res.status)
           }
-        } catch {}
+        } catch (fetchError) {
+          console.error('❌ [ActivityTracker] Fetch error:', fetchError)
+        }
 
         // 2) Check local flag (fallback)
         const localFlagStr = localStorage.getItem('nexmax_force_logout_all') || sessionStorage.getItem('nexmax_force_logout_all')
         const localFlag = localFlagStr ? Number(localFlagStr) : 0
         const flag = Math.max(serverFlag, localFlag)
+        
         const sessionRaw = localStorage.getItem('nexmax_session')
-        if (!flag || !sessionRaw) return
+        if (!flag || !sessionRaw) {
+          if (flag > 0 && !sessionRaw) {
+            console.log('🔍 [ActivityTracker] Flag exists but no session')
+          }
+          return
+        }
+        
         const session = JSON.parse(sessionRaw)
-        if (session?.role === 'admin') return
+        if (session?.role === 'admin') {
+          console.log('🔍 [ActivityTracker] Admin user, skipping logout')
+          return
+        }
+        
         const loginAt = Number(session?.loginAt || 0)
-        if (loginAt && flag <= loginAt) return
+        if (loginAt && flag <= loginAt) {
+          console.log('🔍 [ActivityTracker] Flag older than login, skipping. Flag:', flag, 'LoginAt:', loginAt)
+          return
+        }
+        
         // Force logout now
-        console.log('🚪 [ActivityTracker] Force logout detected. Logging out user:', session?.username)
+        console.log('🚪 [ActivityTracker] Force logout detected! Flag:', flag, 'LoginAt:', loginAt, 'User:', session?.username)
         cleanupSession()
         // Clear the flag locally so we do not re-trigger
         localStorage.removeItem('nexmax_force_logout_all')

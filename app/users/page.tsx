@@ -404,15 +404,15 @@ password: editingUser.password ? 'updating' : 'keeping current'
     try {
       console.log('🚪 Logging out all users (except admin)...')
       
-      // Set global logout flag in localStorage with timestamp
-      // This flag will be checked by validateSession in all pages
-      const logoutTimestamp = Date.now().toString()
-      localStorage.setItem('nexmax_force_logout_all', logoutTimestamp)
+      // Set global logout flag timestamp
+      const logoutTimestamp = Date.now()
+      console.log('📅 [LogoutAll] Timestamp:', logoutTimestamp)
       
-      // Also set in sessionStorage for immediate effect
-      sessionStorage.setItem('nexmax_force_logout_all', logoutTimestamp)
+      // Set local flags (fallback)
+      localStorage.setItem('nexmax_force_logout_all', String(logoutTimestamp))
+      sessionStorage.setItem('nexmax_force_logout_all', String(logoutTimestamp))
       
-      // Call API to set global logout flag in database (if table exists)
+      // Call API to set global logout flag in database
       try {
         const response = await fetch('/api/admin/force-logout-all', {
           method: 'POST',
@@ -426,17 +426,22 @@ password: editingUser.password ? 'updating' : 'keeping current'
         })
         
         if (response.ok) {
-          console.log('✅ Force logout flag set in database')
+          const result = await response.json()
+          console.log('✅ [LogoutAll] Force logout flag set in database:', result)
+          alert('All non-admin users have been logged out. They will need to login again.')
+        } else {
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+          console.error('❌ [LogoutAll] API error:', response.status, errorData)
+          alert(`Failed to logout all users: ${errorData.error || 'API error'}`)
         }
       } catch (apiError) {
-        console.warn('⚠️ Could not set force logout flag in database:', apiError)
-        // Continue anyway, localStorage flag is sufficient
+        console.error('❌ [LogoutAll] API request failed:', apiError)
+        alert('Failed to set logout flag in database. Please try again.')
       }
       
-      alert('All non-admin users have been logged out. They will need to login again.')
-      console.log('✅ Logout all users completed')
+      console.log('✅ [LogoutAll] Logout all users request completed')
     } catch (error) {
-      console.error('❌ Error logging out all users:', error)
+      console.error('❌ [LogoutAll] Error logging out all users:', error)
       alert('Connection error while logging out all users')
     }
   }
