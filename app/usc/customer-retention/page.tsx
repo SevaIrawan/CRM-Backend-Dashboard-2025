@@ -486,6 +486,9 @@ export default function USCCustomerRetentionPage() {
           )}
         </div>
       </Frame>
+      <style jsx>{`
+        .slicer-info { display: none !important; }
+      `}</style>
     </Layout>
   )
 }
