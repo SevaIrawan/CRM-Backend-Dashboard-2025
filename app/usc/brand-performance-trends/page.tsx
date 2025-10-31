@@ -49,6 +49,7 @@ export default function BrandPerformanceTrendsPage() {
   const [tempBEnd, setTempBEnd] = useState('')
   const [data, setData] = useState<BrandPerformanceData | null>(null)
   const [tableData, setTableData] = useState<any[]>([])
+  const [exporting, setExporting] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
@@ -206,15 +207,35 @@ export default function BrandPerformanceTrendsPage() {
         setSlicerOptions(opt)
 
         const latest = new Date(opt.defaults.latestDate)
+        // Default 7 days based on max date (latestDate)
         const bEnd = new Date(latest)
-        const bStart = new Date(latest); bStart.setDate(bStart.getDate() - 29)
-        const aEnd = new Date(bStart); aEnd.setDate(aEnd.getDate() - 1)
-        const aStart = new Date(aEnd); aStart.setDate(aStart.getDate() - 29)
+        const bStart = new Date(latest); bStart.setDate(bStart.getDate() - 6)
+        // Period A: same 7-day window on previous month
+        const aEnd = new Date(bEnd); aEnd.setMonth(aEnd.getMonth() - 1)
+        const aStart = new Date(bStart); aStart.setMonth(aStart.getMonth() - 1)
 
-        setPeriodBEnd(bEnd.toISOString().split('T')[0])
-        setPeriodBStart(bStart.toISOString().split('T')[0])
-        setPeriodAEnd(aEnd.toISOString().split('T')[0])
-        setPeriodAStart(aStart.toISOString().split('T')[0])
+        const bEndStr = bEnd.toISOString().split('T')[0]
+        const bStartStr = bStart.toISOString().split('T')[0]
+        const aEndStr = aEnd.toISOString().split('T')[0]
+        const aStartStr = aStart.toISOString().split('T')[0]
+
+        setPeriodBEnd(bEndStr)
+        setPeriodBStart(bStartStr)
+        setPeriodAEnd(aEndStr)
+        setPeriodAStart(aStartStr)
+
+        // Initial load once with defaults (no auto-reload on subsequent changes)
+        const params = new URLSearchParams({
+          periodAStart: aStartStr,
+          periodAEnd: aEndStr,
+          periodBStart: bStartStr,
+          periodBEnd: bEndStr,
+        })
+        const dataRes = await fetch(`/api/usc-brand-performance-trends/data?${params}`)
+        const dataJson = await dataRes.json()
+        if (!dataJson.success) throw new Error('Failed to load data')
+        setData(dataJson.data)
+        setTableData(dataJson.data?.rows || [])
       } catch (e: any) {
         setError(e.message || 'Failed to init')
       } finally {
@@ -224,43 +245,24 @@ export default function BrandPerformanceTrendsPage() {
     init()
   }, [])
 
-  useEffect(() => {
-    const load = async () => {
-      if (!periodAStart || !periodAEnd || !periodBStart || !periodBEnd) return
-      setLoading(true)
-      setError(null)
-      try {
-        const params = new URLSearchParams({ periodAStart, periodAEnd, periodBStart, periodBEnd })
-        const res = await fetch(`/api/usc-brand-performance-trends/data?${params}`)
-        const json = await res.json()
-        if (!json.success) throw new Error('Failed to load data')
-        setData(json.data)
-      } catch (e: any) {
-        setError(e.message || 'Failed to load')
-      } finally {
-        setLoading(false)
-      }
+  // Manual fetch via Search button (no auto-reload on date changes)
+  const handleApplyFilters = async () => {
+    if (!periodAStart || !periodAEnd || !periodBStart || !periodBEnd) return
+    setLoading(true)
+    setError(null)
+    try {
+      const params = new URLSearchParams({ periodAStart, periodAEnd, periodBStart, periodBEnd })
+      const res = await fetch(`/api/usc-brand-performance-trends/data?${params}`)
+      const json = await res.json()
+      if (!json.success) throw new Error('Failed to load data')
+      setData(json.data)
+      setTableData(json.data?.rows || [])
+    } catch (e: any) {
+      setError(e.message || 'Failed to load')
+    } finally {
+      setLoading(false)
     }
-    load()
-  }, [periodAStart, periodAEnd, periodBStart, periodBEnd])
-
-  // Load table data
-  useEffect(() => {
-    const loadTableData = async () => {
-      if (!periodAStart || !periodAEnd || !periodBStart || !periodBEnd) return
-      try {
-        const params = new URLSearchParams({ periodAStart, periodAEnd, periodBStart, periodBEnd })
-        const res = await fetch(`/api/usc-brand-performance-trends/data?${params}`)
-        const json = await res.json()
-        if (json.success) {
-          setTableData(json.data?.rows || [])
-        }
-      } catch (e: any) {
-        console.error('Failed to load table data:', e)
-      }
-    }
-    loadTableData()
-  }, [periodAStart, periodAEnd, periodBStart, periodBEnd])
+  }
 
   const customSubHeader = (
     <div className="dashboard-subheader">
@@ -278,6 +280,16 @@ export default function BrandPerformanceTrendsPage() {
                 <input type="date" value={tempAStart} min="2021-01-01" max="2025-12-31" onChange={e=>setTempAStart(e.target.value)} />
                 <span style={{ color:'#6b7280' }}>to</span>
                 <input type="date" value={tempAEnd} min="2021-01-01" max="2025-12-31" onChange={e=>setTempAEnd(e.target.value)} />
+              </div>
+
+              {/* Footer: Export */}
+              <div className="table-footer" style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderTop: 'none', borderRadius: '0 0 8px 8px' }}>
+                <div className="records-info">{tableData.length.toLocaleString()} brands</div>
+                <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
+                  <button onClick={handleExportCSV} disabled={exporting || tableData.length === 0} className={`export-button ${exporting || tableData.length === 0 ? 'disabled' : ''}`}>
+                    {exporting ? 'Exporting...' : 'Export CSV'}
+                  </button>
+                </div>
               </div>
               <div style={{ display:'flex', justifyContent:'flex-end', gap:8, marginTop:10 }}>
                 <button onClick={()=>setShowPickerA(false)} style={{ padding:'6px 10px', border:'1px solid #e5e7eb', borderRadius:6 }}>Cancel</button>
@@ -306,9 +318,36 @@ export default function BrandPerformanceTrendsPage() {
             </div>
           )}
         </div>
+      <button onClick={handleApplyFilters} className="export-button">
+        Search
+      </button>
       </div>
     </div>
   )
+
+  const handleExportCSV = async () => {
+    if (!periodAStart || !periodAEnd || !periodBStart || !periodBEnd) return
+    try {
+      setExporting(true)
+      const params = new URLSearchParams({ periodAStart, periodAEnd, periodBStart, periodBEnd })
+      const res = await fetch(`/api/usc-brand-performance-trends/export?${params}`)
+      if (!res.ok) throw new Error('Export failed')
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `brand_performance_trends_usc_${periodBEnd}.csv`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error('Export error:', e)
+      alert('Export failed. Please try again.')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   return (
     <Layout customSubHeader={customSubHeader}>
@@ -332,6 +371,8 @@ export default function BrandPerformanceTrendsPage() {
                   <p className="text-sm text-gray-500">Fetching real-time data from database...</p>
                 </div>
               </div>
+
+              {/* Loading state only - no footer here */}
             </div>
           )}
 
@@ -559,7 +600,14 @@ export default function BrandPerformanceTrendsPage() {
 
               {/* Row 6: Brand Comparison Table */}
               <div className="grid grid-cols-1 gap-6 mb-6">
-                <div className="overflow-x-auto">
+                <div style={{
+                  background: '#ffffff',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                  padding: '16px'
+                }}>
+                  <div className="overflow-x-auto" style={{ maxHeight: 'calc(100vh - 300px)' }}>
                   <table className="w-full" style={{
                     borderCollapse: 'collapse',
                     border: '1px solid #e0e0e0'
@@ -1515,6 +1563,15 @@ export default function BrandPerformanceTrendsPage() {
                       </tr>
                     </tbody>
                   </table>
+                  </div>
+                  <div className="table-footer" style={{ background: '#ffffff', borderTop: '1px solid #e5e7eb', marginTop: '8px', borderRadius: '0 0 8px 8px' }}>
+                    <div className="records-info">{tableData.length.toLocaleString()} brands</div>
+                    <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
+                      <button onClick={handleExportCSV} disabled={exporting || tableData.length === 0} className={`export-button ${exporting || tableData.length === 0 ? 'disabled' : ''}`}>
+                        {exporting ? 'Exporting...' : 'Export CSV'}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
 
