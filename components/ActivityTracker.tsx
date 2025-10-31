@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { logActivityViaAPI, getStoredSessionId } from '@/lib/activityLogger'
+import { cleanupSession } from '@/utils/sessionCleanup'
 
 interface ActivityTrackerProps {
   children: React.ReactNode
@@ -76,6 +77,48 @@ export default function ActivityTracker({ children }: ActivityTrackerProps) {
     
     return () => clearTimeout(timer)
   }, [pathname])
+
+  // Force-logout watcher: detect admin-triggered global logout and logout non-admins immediately
+  useEffect(() => {
+    const checkForceLogout = async () => {
+      try {
+        // 1) Check server flag (shared across clients)
+        let serverFlag = 0
+        try {
+          const res = await fetch('/api/admin/force-logout-all', { cache: 'no-store' })
+          if (res.ok) {
+            const json = await res.json()
+            serverFlag = Number(json?.forceLogoutAt || 0)
+          }
+        } catch {}
+
+        // 2) Check local flag (fallback)
+        const localFlagStr = localStorage.getItem('nexmax_force_logout_all') || sessionStorage.getItem('nexmax_force_logout_all')
+        const localFlag = localFlagStr ? Number(localFlagStr) : 0
+        const flag = Math.max(serverFlag, localFlag)
+        const sessionRaw = localStorage.getItem('nexmax_session')
+        if (!flag || !sessionRaw) return
+        const session = JSON.parse(sessionRaw)
+        if (session?.role === 'admin') return
+        // Force logout now
+        console.log('🚪 [ActivityTracker] Force logout detected. Logging out user:', session?.username)
+        cleanupSession()
+        // Clear the flag locally so we do not re-trigger
+        localStorage.removeItem('nexmax_force_logout_all')
+        sessionStorage.removeItem('nexmax_force_logout_all')
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login'
+        }
+      } catch (e) {
+        console.error('❌ [ActivityTracker] Force logout check error:', e)
+      }
+    }
+
+    // Immediate check and then poll every 2s for responsiveness
+    checkForceLogout()
+    const interval = setInterval(checkForceLogout, 2000)
+    return () => clearInterval(interval)
+  }, [])
 
   return <>{children}</>
 }

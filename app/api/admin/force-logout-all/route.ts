@@ -1,6 +1,17 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
+// In-memory force logout flag (per server instance)
+let FORCE_LOGOUT_AT = 0
+
+export async function GET() {
+  try {
+    return NextResponse.json({ success: true, forceLogoutAt: FORCE_LOGOUT_AT })
+  } catch (error) {
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json()
@@ -27,18 +38,14 @@ export async function POST(request: Request) {
       )
     }
 
-    // Store force logout timestamp
-    // Note: This can be stored in a settings table or similar
-    // For now, we'll just log it and rely on localStorage flag
-    console.log('🔐 Force logout all users requested by admin:', adminId, 'at', timestamp)
-
-    // Optionally: Update a global settings table if it exists
-    // For now, localStorage flag is sufficient
+    // Set in-memory flag for all clients to read via GET
+    FORCE_LOGOUT_AT = Number(timestamp) || Date.now()
+    console.log('🔐 Force logout all users requested by admin:', adminId, 'at', FORCE_LOGOUT_AT)
 
     return NextResponse.json({
       success: true,
       message: 'Force logout flag set successfully',
-      timestamp
+      forceLogoutAt: FORCE_LOGOUT_AT
     })
   } catch (error) {
     console.error('❌ Error in force-logout-all API:', error)
