@@ -325,6 +325,9 @@ export default function BrandPerformanceTrendsPage() {
     </div>
   )
 
+  // Move export handler above any usages to avoid hoisting issues
+  
+
   const handleExportCSV = async () => {
     if (!periodAStart || !periodAEnd || !periodBStart || !periodBEnd) return
     try {
