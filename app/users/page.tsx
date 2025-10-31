@@ -179,6 +179,13 @@ export default function UsersPage() {
     }))
   }, [users, pagination.recordsPerPage])
 
+  // Auto-scroll table to top whenever dataset changes significantly
+  useEffect(() => {
+    if (tableWrapperRef.current) {
+      tableWrapperRef.current.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }, [users.length])
+
   const handlePageChange = (newPage: number) => {
     setPagination(prev => ({
       ...prev,
@@ -384,14 +391,36 @@ password: editingUser.password ? 'updating' : 'keeping current'
     try {
       console.log('🚪 Logging out user:', username, 'ID:', userId)
       
-      // Note: Since sessions are stored in localStorage client-side,
-      // we cannot directly force logout from server.
-      // This action will be logged for admin reference.
-      // The user will be logged out when they try to access any page
-      // and their session is invalidated.
+      const logoutTimestamp = Date.now()
+      const flagKey = `force_logout_user_${userId}`
       
-      alert(`User "${username}" will be logged out on their next page access or page refresh.`)
-      console.log('✅ Logout request logged for user:', username)
+      // Set flag in database for this specific user
+      try {
+        const response = await fetch('/api/admin/force-logout-user', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId,
+            timestamp: logoutTimestamp,
+            adminId: user?.id
+          })
+        })
+        
+        if (response.ok) {
+          const result = await response.json()
+          console.log('✅ [LogoutUser] Force logout flag set for user:', username, result)
+          alert(`User "${username}" has been logged out. They will need to login again.`)
+        } else {
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+          console.error('❌ [LogoutUser] API error:', response.status, errorData)
+          alert(`Failed to logout user: ${errorData.error || 'API error'}`)
+        }
+      } catch (apiError) {
+        console.error('❌ [LogoutUser] API request failed:', apiError)
+        alert('Failed to set logout flag. Please try again.')
+      }
     } catch (error) {
       console.error('❌ Error logging out user:', error)
       alert('Connection error while logging out user')
@@ -545,8 +574,9 @@ password: editingUser.password ? 'updating' : 'keeping current'
             </div>
           </div>
           
-          <div className="table-wrapper" ref={tableWrapperRef}>
-            <table className="users-table">
+          <div className="simple-table-container">
+            <div className="simple-table-wrapper" ref={tableWrapperRef}>
+            <table className="users-table simple-table">
               <thead>
                 <tr>
                                       <th>Username</th>
@@ -638,6 +668,7 @@ password: editingUser.password ? 'updating' : 'keeping current'
               </tbody>
                          </table>
            </div>
+          </div>
 
            {/* Table Footer - Records Info + Pagination + Logout All */}
            <div className="table-footer">
@@ -878,40 +909,44 @@ password: editingUser.password ? 'updating' : 'keeping current'
           fill: currentColor;
         }
 
-        .table-wrapper {
-          flex: 1;
-          overflow: auto;
-          /* Ensure long lists can scroll inside the frame */
-          max-height: calc(100vh - 250px);
+        .simple-table-container { flex: 1; }
+        .simple-table-wrapper {
+          max-height: calc(100vh - 260px);
+          overflow-y: auto;
+          overflow-x: auto;
+          scroll-behavior: smooth;
         }
 
         .users-table {
           width: 100%;
           border-collapse: collapse;
-          font-size: 14px;
+          font-size: 12px; /* compact standard */
+          border: 1px solid #e0e0e0; /* full table border */
         }
 
         .users-table th {
-          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-          padding: 16px 20px;
+          background-color: #374151; /* dark header standard */
+          color: #ffffff;
+          padding: 10px 14px; /* compact standard */
           text-align: left;
           font-weight: 600;
-          color: #374151;
-          border-bottom: 2px solid #e5e7eb;
+          border: 1px solid #4b5563;
           position: sticky;
           top: 0;
-          z-index: 10;
+          z-index: 10; /* freeze header above rows */
+          white-space: nowrap;
         }
 
         .users-table td {
-          padding: 16px 20px;
-          border-bottom: 1px solid #f3f4f6;
+          padding: 10px 14px; /* compact */
+          border: 1px solid #e0e0e0; /* row borders */
           color: #374151;
+          white-space: nowrap;
         }
 
-        .users-table tr:hover {
-          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        }
+        .users-table tbody tr:nth-child(even) { background: #f8f9fa; }
+        .users-table tbody tr:nth-child(odd) { background: #ffffff; }
+        .users-table tbody tr:hover { background: #eef2f7; }
 
         /* Footer */
         .table-footer {
