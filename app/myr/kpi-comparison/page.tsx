@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Layout from '@/components/Layout'
 import Frame from '@/components/Frame'
+import SubheaderNotice from '@/components/SubheaderNotice'
 import SubHeader from '@/components/SubHeader'
 
 interface SlicerOptions {
@@ -56,8 +57,9 @@ export default function KPIComparisonPage() {
 
   // Data states
   const [comparisonData, setComparisonData] = useState<ComparisonData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [autoLoaded, setAutoLoaded] = useState<boolean>(false);
 
   // Fetch slicer options
   useEffect(() => {
@@ -76,16 +78,17 @@ export default function KPIComparisonPage() {
         setSlicerOptions(data);
         setSelectedLine(data.defaults.line);
         
-        // Set default date ranges (last 30 days for Period B, 30 days before that for Period A)
+        // Default ranges: 7 days for Period B ending at max date,
+        // and same 7-day window for previous month for Period A
         const latestDate = new Date(data.defaults.latestDate);
         const periodBEndDate = new Date(latestDate);
         const periodBStartDate = new Date(latestDate);
-        periodBStartDate.setDate(periodBStartDate.getDate() - 29); // 30 days range
+        periodBStartDate.setDate(periodBStartDate.getDate() - 6); // 7 days inclusive
         
-        const periodAEndDate = new Date(periodBStartDate);
-        periodAEndDate.setDate(periodAEndDate.getDate() - 1); // Day before Period B starts
-        const periodAStartDate = new Date(periodAEndDate);
-        periodAStartDate.setDate(periodAStartDate.getDate() - 29); // 30 days range
+        const periodAEndDate = new Date(periodBEndDate);
+        periodAEndDate.setMonth(periodAEndDate.getMonth() - 1);
+        const periodAStartDate = new Date(periodBStartDate);
+        periodAStartDate.setMonth(periodAStartDate.getMonth() - 1);
         
         setPeriodBEnd(periodBEndDate.toISOString().split('T')[0]);
         setPeriodBStart(periodBStartDate.toISOString().split('T')[0]);
@@ -101,41 +104,38 @@ export default function KPIComparisonPage() {
     fetchSlicerOptions();
   }, []);
 
-  // Fetch comparison data
-  useEffect(() => {
-    if (!periodAStart || !periodAEnd || !periodBStart || !periodBEnd) {
+  // Manual Search trigger (no auto-reload on slicer change)
+  const handleSearch = async () => {
+    if (!periodAStart || !periodAEnd || !periodBStart || !periodBEnd) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams({
+        line: selectedLine,
+        periodAStart,
+        periodAEnd,
+        periodBStart,
+        periodBEnd
+      });
+      const response = await fetch(`/api/myr-kpi-comparison/data?${params}`);
+      if (!response.ok) throw new Error('Failed to load comparison data');
+      const data = await response.json();
+      setComparisonData(data);
+    } catch (err) {
+      console.error('Error fetching comparison data:', err);
+      setError('Failed to load comparison data');
+    } finally {
       setLoading(false);
-      return;
     }
+  };
 
-    const fetchComparisonData = async () => {
-      setLoading(true);
-      setError(null);
-      
-      try {
-        const params = new URLSearchParams({
-          line: selectedLine,
-          periodAStart,
-          periodAEnd,
-          periodBStart,
-          periodBEnd
-        });
-
-        const response = await fetch(`/api/myr-kpi-comparison/data?${params}`);
-        if (!response.ok) throw new Error('Failed to load comparison data');
-        
-        const data = await response.json();
-        setComparisonData(data);
-      } catch (err) {
-        console.error('Error fetching comparison data:', err);
-        setError('Failed to load comparison data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchComparisonData();
-  }, [selectedLine, periodAStart, periodAEnd, periodBStart, periodBEnd]);
+  // Auto-load once after defaults are set
+  useEffect(() => {
+    if (!autoLoaded && periodAStart && periodAEnd && periodBStart && periodBEnd) {
+      setAutoLoaded(true);
+      handleSearch();
+    }
+  }, [autoLoaded, periodAStart, periodAEnd, periodBStart, periodBEnd, selectedLine]);
 
   // Format number based on type
   const formatValue = (value: number, type: string): string => {
@@ -154,6 +154,12 @@ export default function KPIComparisonPage() {
         return value.toLocaleString('en-US');
     }
   };
+
+  const formatDate = (d: string) => {
+    if (!d) return ''
+    const dt = new Date(d)
+    return dt.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
 
   // Export CSV function
   const handleExportCSV = () => {
@@ -194,7 +200,11 @@ export default function KPIComparisonPage() {
   const customSubHeader = (
     <div className="dashboard-subheader">
       <div className="subheader-title">
-        {/* Title area - left side */}
+        <SubheaderNotice
+          show={true}
+          label="NOTICE"
+          message="Verification in progress — Please allow until 14:00 GMT+7 for adjustment validation to ensure 100% accurate data."
+        />
       </div>
       
       <div className="subheader-controls" style={{ gap: '16px' }}>
@@ -381,15 +391,15 @@ export default function KPIComparisonPage() {
           </select>
         </div>
 
-        {/* Export Button */}
+        {/* Search Button */}
         <div className="slicer-group">
           <button
-            onClick={handleExportCSV}
+            onClick={handleSearch}
             className="subheader-select"
             style={{ 
-              background: '#16a34a', 
+              background: '#10b981', 
               color: 'white', 
-              border: '1px solid #16a34a',
+              border: '1px solid #10b981',
               cursor: 'pointer',
               minWidth: '120px',
               padding: '8px 12px',
@@ -397,8 +407,9 @@ export default function KPIComparisonPage() {
               fontSize: '14px',
               boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
             }}
+            disabled={loading}
           >
-            Export CSV
+            {loading ? 'Loading...' : 'Search'}
           </button>
         </div>
       </div>
@@ -408,10 +419,19 @@ export default function KPIComparisonPage() {
   return (
     <Layout customSubHeader={customSubHeader}>
       <Frame>
-        <div className="p-6">
+        <div>
           {loading && (
-            <div className="text-center py-8">
-              <p className="text-gray-600">Loading comparison data...</p>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              flexDirection: 'column',
+              padding: '24px'
+            }}>
+              <div className="kpi-spinner" />
+              <div style={{ marginTop: '8px', color: '#111827', fontWeight: 600 }}>
+                Loading KPI Comparison
+              </div>
             </div>
           )}
 
@@ -422,11 +442,18 @@ export default function KPIComparisonPage() {
           )}
 
           {!loading && !error && comparisonData && (
-            <div className="overflow-x-auto" style={{ maxHeight: 'calc(100vh - 300px)' }}>
-              <table className="w-full" style={{
-                borderCollapse: 'collapse',
-                border: '1px solid #e0e0e0'
-              }}>
+            <div style={{
+              background: '#ffffff',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+              padding: '16px'
+            }}>
+              <div className="overflow-x-auto" style={{ maxHeight: 'calc(100vh - 300px)' }}>
+                <table className="w-full" style={{
+                  borderCollapse: 'collapse',
+                  border: '1px solid #e0e0e0'
+                }}>
                 <thead className="sticky top-0" style={{ zIndex: 10, position: 'sticky', top: 0, pointerEvents: 'none' }}>
                   <tr>
                     <th style={{ 
@@ -536,26 +563,51 @@ export default function KPIComparisonPage() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+                </table>
+              </div>
             </div>
           )}
 
-          {!loading && !error && !comparisonData && (
-            <div className="text-center py-8">
-              <p className="text-gray-600">Please select date ranges to view comparison data.</p>
-            </div>
-          )}
+          
 
-          {/* Slicer Info */}
+          {/* Footer: Records info + Export */}
           {!loading && comparisonData && (
-            <div className="slicer-info">
-              <p>Showing data for: {selectedLine} | Period A: {periodAStart} to {periodAEnd} | Period B: {periodBStart} to {periodBEnd}</p>
+            <div className="table-footer" style={{
+              background: '#ffffff',
+              border: '1px solid #e5e7eb',
+              borderTop: 'none',
+              borderRadius: '0 0 8px 8px'
+            }}>
+              <div className="records-info">
+                {comparisonData.comparisonData.length.toLocaleString()} metrics
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <button 
+                  onClick={handleExportCSV}
+                  disabled={!comparisonData?.comparisonData?.length}
+                  className={`export-button ${!comparisonData?.comparisonData?.length ? 'disabled' : ''}`}
+                >
+                  Export CSV
+                </button>
+              </div>
             </div>
           )}
         </div>
       </Frame>
 
       <style jsx>{`
+        .kpi-spinner {
+          width: 28px;
+          height: 28px;
+          border: 3px solid #e5e7eb;
+          border-top: 3px solid #2563eb;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
       `}</style>
     </Layout>
   );

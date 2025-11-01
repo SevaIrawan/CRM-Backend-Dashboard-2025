@@ -291,7 +291,30 @@ export default function MYROverviewPage() {
   const customSubHeader = (
     <div className="dashboard-subheader">
       <div className="subheader-title">
-        {/* Title area - left side */}
+        {/* Subtitle/alert: data verification notice (English + attention animation) */}
+        <div
+          title="Data verification in progress"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '6px 12px',
+            borderRadius: '9999px',
+            background: '#fde047',
+            border: '1px solid #f59e0b',
+            color: '#111827',
+            fontSize: '12px',
+            fontWeight: 700,
+            boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
+          }}
+        >
+          <span style={{ fontSize: '14px', lineHeight: 1 }}>⚠️</span>
+          <span style={{ textTransform: 'uppercase', fontWeight: 800 }}>NOTICE</span>
+          <span style={{ opacity: 0.6 }}>•</span>
+          <span>
+            Verification in progress — Please allow until 14:00 GMT+7 for adjustment validation to ensure 100% accurate data.
+          </span>
+        </div>
       </div>
       
       <div className="subheader-controls">
@@ -691,7 +714,7 @@ export default function MYROverviewPage() {
           </div>
         </div>
       </Frame>
-
+      {/* Caption only – no extra CSS required */}
     </Layout>
   );
 }

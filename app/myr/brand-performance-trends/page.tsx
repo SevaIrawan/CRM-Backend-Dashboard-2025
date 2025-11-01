@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Layout from '@/components/Layout'
 import Frame from '@/components/Frame'
+import SubheaderNotice from '@/components/SubheaderNotice'
 import ComparisonStatCard from '@/components/ComparisonStatCard'
 import BarChart from '@/components/BarChart'
 import LineChart from '@/components/LineChart'
@@ -266,7 +267,13 @@ export default function BrandPerformanceTrendsPage() {
 
   const customSubHeader = (
     <div className="dashboard-subheader">
-      <div className="subheader-title" />
+      <div className="subheader-title">
+        <SubheaderNotice
+          show={true}
+          label="NOTICE"
+          message="Verification in progress — Please allow until 14:00 GMT+7 for adjustment validation to ensure 100% accurate data."
+        />
+      </div>
       <div className="subheader-controls" style={{ gap: '16px', marginRight: '40px' }}>
         {/* Period A */}
         <div className="slicer-group" style={{ position: 'relative' }}>

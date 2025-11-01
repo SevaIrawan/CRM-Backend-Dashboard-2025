@@ -2,11 +2,12 @@
 
 import React from 'react'
 import Layout from '@/components/Layout'
+import SubheaderNotice from '@/components/SubheaderNotice'
 import ComingSoon from '@/components/ComingSoon'
 
 export default function SGDBusinessPerformancePage() {
   return (
-    <Layout>
+    <Layout customSubHeader={<div className="dashboard-subheader"><div className="subheader-title"><SubheaderNotice show={true} label="NOTICE" message="Verification in progress — Please allow until 14:00 GMT+7 for adjustment validation to ensure 100% accurate data." /></div></div>}>
       <div className="p-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Business Performance SGD</h1>

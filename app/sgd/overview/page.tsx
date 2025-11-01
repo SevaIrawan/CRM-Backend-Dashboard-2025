@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import Layout from '@/components/Layout';
 import Frame from '@/components/Frame';
+import SubheaderNotice from '@/components/SubheaderNotice';
 import { LineSlicer } from '@/components/slicers';
 import StatCard from '@/components/StatCard';
 import { getChartIcon } from '@/lib/CentralIcon';
@@ -291,7 +292,11 @@ export default function SGDOverviewPage() {
   const customSubHeader = (
     <div className="dashboard-subheader">
       <div className="subheader-title">
-        {/* Title area - left side */}
+        <SubheaderNotice
+          show={true}
+          label="NOTICE"
+          message="Verification in progress — Please allow until 14:00 GMT+7 for adjustment validation to ensure 100% accurate data."
+        />
       </div>
       
       <div className="subheader-controls">

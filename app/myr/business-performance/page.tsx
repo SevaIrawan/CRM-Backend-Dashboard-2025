@@ -17,6 +17,7 @@ import TargetEditModal from '@/components/TargetEditModal'
 import ActiveMemberDetailsModal from '@/components/ActiveMemberDetailsModal'
 import TargetAchieveModal from '@/components/TargetAchieveModal'
 import ChartZoomModal from '@/components/ChartZoomModal'
+import SubheaderNotice from '@/components/SubheaderNotice'
 import { getChartIcon } from '@/lib/CentralIcon'
 import { 
   QuickDateFilterType, 
@@ -387,14 +388,13 @@ export default function BusinessPerformancePage() {
           width: '100%',
           height: '100%'
         }}>
-          <h2 style={{
-            fontSize: '14px',
-            fontWeight: '600',
-            color: '#374151',
-            margin: 0
-          }}>
-            
-          </h2>
+          <div>
+            <SubheaderNotice
+              show={true}
+              label="NOTICE"
+              message="Verification in progress — Please allow until 14:00 GMT+7 for adjustment validation to ensure 100% accurate data."
+            />
+          </div>
           
           {/* Slicers */}
           <div style={{
