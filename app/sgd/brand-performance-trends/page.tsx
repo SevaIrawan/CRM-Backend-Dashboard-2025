@@ -269,7 +269,7 @@ export default function BrandPerformanceTrendsPage() {
     <div className="dashboard-subheader">
       <div className="subheader-title">
         <SubheaderNotice
-          show={true}
+          show={false}
           label="NOTICE"
           message="Verification in progress — Please allow until 14:00 GMT+7 for adjustment validation to ensure 100% accurate data."
         />
