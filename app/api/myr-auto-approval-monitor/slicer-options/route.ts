@@ -81,7 +81,18 @@ export async function GET(request: NextRequest) {
           // Process months data (get distinct month names only)
           const uniqueMonths = Array.from(new Set(
             monthData?.map(row => row.month).filter(Boolean) || []
-          )).sort()
+          ))
+          
+          console.log('🔍 [DEBUG MONTHS] Raw month data count:', monthData?.length)
+          console.log('🔍 [DEBUG MONTHS] Unique months BEFORE sort:', uniqueMonths)
+          console.log('🔍 [DEBUG MONTHS] Has November?:', uniqueMonths.includes('November'))
+          
+          // Sort chronologically
+          const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 
+                             'July', 'August', 'September', 'October', 'November', 'December']
+          const sortedMonths = uniqueMonths.sort((a, b) => monthOrder.indexOf(a) - monthOrder.indexOf(b))
+          
+          console.log('🔍 [DEBUG MONTHS] Sorted months:', sortedMonths)
           
           // Get month date ranges (min/max dates per year-month)
           const monthDateRanges: Record<string, { min: string | null, max: string | null }> = {}
@@ -144,7 +155,7 @@ export async function GET(request: NextRequest) {
           const slicerOptions = {
             lines: linesWithAll,
             years: uniqueYears,
-            months: uniqueMonths,
+            months: sortedMonths,
             monthDateRanges,
             defaults: {
               line: defaultLine,
@@ -158,9 +169,9 @@ export async function GET(request: NextRequest) {
           console.log('✅ [MYR Auto Approval Monitor API] Simple slicer options:', {
             lines: linesWithAll.length,
             years: uniqueYears.length,
-            months: uniqueMonths.length,
+            months: sortedMonths.length,
             availableYears: uniqueYears,
-            availableMonths: uniqueMonths.slice(0, 5), // Show first 5 months
+            availableMonths: sortedMonths, // Show ALL months
             defaults: { defaultLine, defaultYear, defaultMonth }
           })
 

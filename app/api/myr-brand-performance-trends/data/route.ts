@@ -21,8 +21,15 @@ export async function GET(request: NextRequest) {
       periodB: { start: periodBStart, end: periodBEnd }
     })
 
-    // Get REAL DATA from database - all possible brands
-    const allBrands = ['SBMY', 'LVMY', 'STMY', 'JMMY', 'UVMY', 'FWMY']
+    // ✅ FETCH ALL BRANDS FROM DATABASE (NOT HARDCODE)
+    const { data: allBrandsData } = await supabase
+      .from('blue_whale_myr_summary')
+      .select('line')
+      .eq('currency', 'MYR')
+      .not('line', 'is', null)
+    
+    const allBrands = Array.from(new Set(allBrandsData?.map(row => row.line).filter(Boolean) || []))
+    console.log('📊 [Brand Comparison MYR] All brands from database:', allBrands)
     
     // Calculate overall KPIs for both periods
     const calculateOverallKPIs = async (startDate: string, endDate: string) => {

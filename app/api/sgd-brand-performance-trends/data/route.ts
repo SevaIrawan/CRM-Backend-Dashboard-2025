@@ -21,8 +21,15 @@ export async function GET(request: NextRequest) {
       periodB: { start: periodBStart, end: periodBEnd }
     })
 
-    // Get REAL DATA from database - all possible brands (SGD)
-    const allBrands = ['ABSG', 'AMSG', 'OK188', 'UWSG', 'OXSG', 'KBSG', 'FWSG', 'JMSG', 'WBSG', 'M8SG', 'M24SG', '17SG']
+    // ✅ FETCH ALL BRANDS FROM DATABASE (NOT HARDCODE)
+    const { data: allBrandsData } = await supabase
+      .from('blue_whale_sgd_summary')
+      .select('line')
+      .eq('currency', 'SGD')
+      .not('line', 'is', null)
+    
+    const allBrands = Array.from(new Set(allBrandsData?.map(row => row.line).filter(Boolean) || []))
+    console.log('📊 [Brand Comparison SGD] All brands from database:', allBrands)
     
     // Calculate overall KPIs for both periods
     const calculateOverallKPIs = async (startDate: string, endDate: string) => {
@@ -124,6 +131,12 @@ export async function GET(request: NextRequest) {
     const periodBAvailableBrands = await checkBrandDataAvailability(periodBStart, periodBEnd)
 
     console.log('📊 Available brands:', {
+      periodA: periodAAvailableBrands,
+      periodB: periodBAvailableBrands
+    })
+
+    // ✅ Each period shows ONLY brands that have data in that specific period
+    console.log('📊 Brands per period:', {
       periodA: periodAAvailableBrands,
       periodB: periodBAvailableBrands
     })
