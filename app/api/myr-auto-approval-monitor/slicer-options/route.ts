@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
           // Sort chronologically
           const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 
                              'July', 'August', 'September', 'October', 'November', 'December']
-          const sortedMonths = uniqueMonths.sort((a, b) => monthOrder.indexOf(a) - monthOrder.indexOf(b))
+          const sortedMonths = uniqueMonths.sort((a: string, b: string) => monthOrder.indexOf(a) - monthOrder.indexOf(b))
           
           console.log('🔍 [DEBUG MONTHS] Sorted months:', sortedMonths)
           
