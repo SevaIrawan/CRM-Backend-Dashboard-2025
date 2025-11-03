@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       .eq('currency', 'SGD')
       .not('line', 'is', null)
     
-    const allBrands = Array.from(new Set(allBrandsData?.map(row => row.line).filter(Boolean) || []))
+    const allBrands: string[] = Array.from(new Set(allBrandsData?.map((row: any) => row.line).filter(Boolean) || []))
     console.log('📊 [Brand Comparison SGD] All brands from database:', allBrands)
     
     // Calculate overall KPIs for both periods
@@ -104,8 +104,8 @@ export async function GET(request: NextRequest) {
     ])
 
     // Check data availability for each brand in each period - only brands with active members > 0
-    const checkBrandDataAvailability = async (startDate: string, endDate: string) => {
-      const availableBrands = []
+    const checkBrandDataAvailability = async (startDate: string, endDate: string): Promise<string[]> => {
+      const availableBrands: string[] = []
       
       for (const brand of allBrands) {
         // Check if brand has active members (deposit_cases > 0) in the period
