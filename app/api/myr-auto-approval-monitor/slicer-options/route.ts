@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
           // Process months data (get distinct month names only)
           const uniqueMonths = Array.from(new Set(
             monthData?.map(row => row.month).filter(Boolean) || []
-          ))
+          )) as string[]
           
           console.log('🔍 [DEBUG MONTHS] Raw month data count:', monthData?.length)
           console.log('🔍 [DEBUG MONTHS] Unique months BEFORE sort:', uniqueMonths)
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
           // Sort chronologically
           const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 
                              'July', 'August', 'September', 'October', 'November', 'December']
-          const sortedMonths = uniqueMonths.sort((a: string, b: string) => monthOrder.indexOf(a) - monthOrder.indexOf(b))
+          const sortedMonths = uniqueMonths.sort((a, b) => monthOrder.indexOf(a) - monthOrder.indexOf(b))
           
           console.log('🔍 [DEBUG MONTHS] Sorted months:', sortedMonths)
           
