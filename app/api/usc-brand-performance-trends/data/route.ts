@@ -139,8 +139,8 @@ export async function GET(request: NextRequest) {
         
         // Brand available if has ANY data (active_member > 0 OR deposit_cases > 0)
         const hasData = data && data.length > 0 && (
-          (data[0].active_member && data[0].active_member > 0) ||
-          (data[0].deposit_cases && data[0].deposit_cases > 0)
+          ((data[0] as any).active_member && (data[0] as any).active_member > 0) ||
+          ((data[0] as any).deposit_cases && (data[0] as any).deposit_cases > 0)
         )
         
         if (!error && hasData) {
