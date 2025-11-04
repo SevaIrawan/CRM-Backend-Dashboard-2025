@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    const uniqueLines = Array.from(new Set(allLines?.map(row => row.line).filter(Boolean) || []))
+    const uniqueLines = Array.from(new Set(allLines?.map(row => row.line).filter(Boolean) || [])) as string[]
     const cleanLines = uniqueLines.filter(line => line !== 'ALL' && line !== 'All')
     
     console.log('🔍 [USC Overview API] RAW BRANDS FROM DATABASE:', {

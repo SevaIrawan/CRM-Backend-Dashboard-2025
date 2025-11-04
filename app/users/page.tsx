@@ -262,7 +262,7 @@ password: 'hidden for security'
       } else {
         console.log('✅ User added successfully:', data)
         alert('User added successfully!')
-        setFormData({ username: '', password: '', role: 'user' })
+        setFormData({ username: '', password: '', role: 'user', allowed_brands: [] })
         setShowModal(false)
         fetchUsers() // Refresh the list
       }
