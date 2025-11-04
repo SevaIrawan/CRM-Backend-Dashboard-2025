@@ -10,10 +10,25 @@ export async function GET(request: NextRequest) {
   const line = searchParams.get('line')
   const year = searchParams.get('year')
 
+  // ✅ Get user's allowed brands from request header
+  const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
+  const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
+
   try {
     console.log('📈 [USC Member-Analytic Chart API] Fetching chart data:', { 
-      currency, line, year 
+      currency, line, year, user_allowed_brands: userAllowedBrands 
     })
+
+    // ✅ Validate brand access for Squad Lead
+    if (line && line !== 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
+      if (!userAllowedBrands.includes(line)) {
+        return NextResponse.json({
+          success: false,
+          error: 'Unauthorized',
+          message: `You do not have access to brand "${line}"`
+        }, { status: 403 })
+      }
+    }
 
     // Get available months for the year
     let monthsQuery = supabase

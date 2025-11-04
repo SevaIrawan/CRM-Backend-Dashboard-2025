@@ -7,6 +7,7 @@
 // 5. Analyst = Full Dashboard Access (Dashboard, MYR, SGD, USC) + Read Only + No Admin Features
 // 6. Ops = Full Dashboard Access (Dashboard, MYR, SGD, USC) + Read Only + No Admin Features
 // 7. Demo = Full Dashboard Access (Dashboard, MYR, SGD, USC) + Can Edit ALL Targets (Testing) + For Presentation & Feedback
+// 8. Squad Lead = Limited Access: Specific Brands within Currency (MYR/SGD/USC) + Read Only
 
 export interface UserRole {
   id: string
@@ -15,6 +16,7 @@ export interface UserRole {
   permissions: string[]
   canAccessUserManagement: boolean
   isReadOnly: boolean
+  allowedBrands?: string[] | null // NEW: null = ALL brands, array = specific brands only
 }
 
 export const USER_ROLES: { [key: string]: UserRole } = {
@@ -156,13 +158,61 @@ export const USER_ROLES: { [key: string]: UserRole } = {
       'usc'
     ],
     canAccessUserManagement: false,
-    isReadOnly: true  // Read-only for most features, but can edit targets for testing purposes
+    isReadOnly: true,  // Read-only for most features, but can edit targets for testing purposes
+    allowedBrands: null
+  },
+  // Squad Lead = Limited Access > Specific Brands Only (Market auto-detected from brands) + Read Only
+  'squad_lead': {
+    id: 'squad_lead',
+    name: 'squad_lead',
+    displayName: 'Squad Lead',
+    permissions: ['myr', 'sgd', 'usc'], // Base permissions - will be filtered by Sidebar based on allowed_brands
+    canAccessUserManagement: false,
+    isReadOnly: true,
+    allowedBrands: null // Will be populated from database per user
   }
+}
+
+// NEW: Detect market from allowed brands
+export const getMarketFromBrands = (allowedBrands: string[] | null): string | null => {
+  if (!allowedBrands || allowedBrands.length === 0) return null
+  
+  const firstBrand = allowedBrands[0]
+  const suffix = firstBrand.slice(-2).toUpperCase()
+  
+  // KH = USC (Khmer/Cambodia brands)
+  if (suffix === 'KH' || firstBrand.includes('KH') || firstBrand.includes('CAM') || firstBrand.includes('WIN')) return 'usc'
+  // MY = MYR
+  if (suffix === 'MY') return 'myr'
+  // SG = SGD
+  if (suffix === 'SG') return 'sgd'
+  
+  return null
 }
 
 // Helper functions for role management
 export const getRoleInfo = (roleName: string): UserRole | null => {
   const role = USER_ROLES[roleName.toLowerCase()]
+  
+  // ✅ NEW: For Squad Lead, dynamically add market permission based on brands
+  if (roleName.toLowerCase() === 'squad_lead' && typeof window !== 'undefined') {
+    const userStr = localStorage.getItem('nexmax_user')
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr)
+        const market = getMarketFromBrands(user.allowed_brands)
+        if (market && role) {
+          return {
+            ...role,
+            permissions: [market] // Dynamic permission based on brands
+          }
+        }
+      } catch (error) {
+        console.error('Error detecting market for Squad Lead:', error)
+      }
+    }
+  }
+  
   return role || null
 }
 
@@ -268,6 +318,8 @@ export const getDefaultPageByRole = (userRole: string): string => {
     case 'manager_usc':
     case 'sq_usc':
       return '/usc/overview'
+    case 'squad_lead':  // Squad Lead default: based on first allowed brand's market
+      return '/usc/overview' // Default to USC, will be dynamic based on allowed_brands
     case 'admin':
     case 'analyst':
     case 'demo':
@@ -278,4 +330,29 @@ export const getDefaultPageByRole = (userRole: string): string => {
     default:
       return '/myr/overview' // fallback to MYR overview
   }
+}
+
+// NEW: Get user's allowed brands from session
+export const getUserAllowedBrands = (): string[] | null => {
+  if (typeof window === 'undefined') return null
+  const userStr = localStorage.getItem('nexmax_user')
+  if (!userStr) return null
+  try {
+    const user = JSON.parse(userStr)
+    return user.allowed_brands || null // null = ALL brands (unrestricted)
+  } catch {
+    return null
+  }
+}
+
+// NEW: Check if user can access specific brand
+export const canAccessBrand = (brandName: string): boolean => {
+  const allowedBrands = getUserAllowedBrands()
+  if (!allowedBrands || allowedBrands.length === 0) return true // null/empty = access ALL brands
+  return allowedBrands.includes(brandName)
+}
+
+// NEW: Check if user is Squad Lead
+export const isSquadLead = (userRole: string): boolean => {
+  return userRole === 'squad_lead'
 } 

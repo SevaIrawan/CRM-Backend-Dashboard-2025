@@ -5,18 +5,35 @@ export async function POST(request: NextRequest) {
   try {
     const { currency, line, year, month, startDate, endDate, filterMode, exportType } = await request.json()
 
+    // ✅ Get user's allowed brands from request header
+    const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
+    const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
+
     console.log('📊 [USC Member-Analytic Export API] Exporting REAL DATA with USC lock:', { 
-      currency, line, year, month, startDate, endDate, filterMode, exportType 
+      currency, line, year, month, startDate, endDate, filterMode, exportType, user_allowed_brands: userAllowedBrands 
     })
+
+    // ✅ Validate brand access for Squad Lead
+    if (line && line !== 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
+      if (!userAllowedBrands.includes(line)) {
+        return NextResponse.json({
+          success: false,
+          error: 'Unauthorized',
+          message: `You do not have access to brand "${line}"`
+        }, { status: 403 })
+      }
+    }
 
     // Build query for REAL DATA export from blue_whale_usc_summary (MV) - USC currency locked
     let query = supabase.from('blue_whale_usc_summary').select('date, line, year, month, deposit_amount, withdraw_amount, deposit_cases, withdraw_cases, net_profit, ggr, valid_amount, add_bonus, deduct_bonus, add_transaction, deduct_transaction, new_register, new_depositor, active_member, pure_member')
       .eq('currency', 'USC') // Currency LOCKED to USC
 
     // Apply filters based on selections - ALL REAL DATA
-    // "ALL" means get ALL lines data (no line filter), not literal "ALL" in database
+    // ✅ For Squad Lead: if line is 'ALL', filter to their allowed brands
     if (line && line !== 'ALL' && line !== 'all') {
       query = query.eq('line', line)
+    } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
+      query = query.in('line', userAllowedBrands)
     }
 
     if (year && year !== 'ALL') {

@@ -58,6 +58,7 @@ interface User {
   username: string
   password: string
   role: string
+  allowed_brands?: string[] | null
   created_at?: string
   updated_at?: string
 }
@@ -85,9 +86,12 @@ export default function UsersPage() {
   const [formData, setFormData] = useState({
     username: '',
     password: '',
-    role: 'user'
+    role: 'user',
+    allowed_brands: [] as string[]
   })
   const [availableRoles] = useState(getAvailableRoles())
+  const [availableBrands, setAvailableBrands] = useState<string[]>([])
+  const [brandsLoading, setBrandsLoading] = useState(false)
   const [authLoading, setAuthLoading] = useState(true)
   const router = useRouter()
 

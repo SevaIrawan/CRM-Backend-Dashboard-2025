@@ -68,21 +68,31 @@ export default function LoginPage() {
       }
 
       // Validate role exists in system
-      const validRoles = ['admin', 'executive', 'manager_myr', 'manager_sgd', 'manager_usc', 'sq_myr', 'sq_sgd', 'sq_usc', 'analyst', 'ops', 'demo']
+      const validRoles = ['admin', 'executive', 'manager_myr', 'manager_sgd', 'manager_usc', 'sq_myr', 'sq_sgd', 'sq_usc', 'analyst', 'ops', 'demo', 'squad_lead']
       if (!validRoles.includes(users.role)) {
         setError(`Invalid user role: ${users.role}. Please contact administrator.`)
         setLoading(false)
         return
       }
 
-      // Store user data in localStorage with login timestamp
+      // Store user data in localStorage with login timestamp + allowed_brands
       const loginAt = Date.now()
       localStorage.setItem('nexmax_session', JSON.stringify({
         id: users.id,
         username: users.username,
         role: users.role,
         email: users.email || `${users.username}@nexmax.com`,
+        allowed_brands: users.allowed_brands || null, // NEW: Store allowed brands for Squad Lead
         loginAt
+      }))
+      
+      // Also store in nexmax_user for compatibility with rolePermissions.ts helpers
+      localStorage.setItem('nexmax_user', JSON.stringify({
+        id: users.id,
+        username: users.username,
+        role: users.role,
+        allowed_brands: users.allowed_brands || null,
+        loginAt: new Date(loginAt).toISOString()
       }))
 
       // Clear force-logout flag locally on successful login

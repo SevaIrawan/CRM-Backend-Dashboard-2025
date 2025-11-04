@@ -80,9 +80,24 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
 
+    // ✅ Get user's allowed brands from request header
+    const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
+    const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
+
     console.log('📊 [USC Member-Analytic Retention API] Fetching retention data from blue_whale_usc:', {
-      currency: 'USC', year, month, line, startDate, endDate
+      currency: 'USC', year, month, line, startDate, endDate, user_allowed_brands: userAllowedBrands
     })
+
+    // ✅ Validate brand access for Squad Lead
+    if (line && line !== 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
+      if (!userAllowedBrands.includes(line)) {
+        return NextResponse.json({
+          success: false,
+          error: 'Unauthorized',
+          message: `You do not have access to brand "${line}"`
+        }, { status: 403 })
+      }
+    }
 
     // STEP 1: Get active members with their active days from blue_whale_usc
     const activeMembersMap = await getActiveMembersWithDays(year, month, line, startDate, endDate)

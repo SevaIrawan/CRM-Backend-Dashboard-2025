@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { applyBrandFilter } from '@/utils/brandAccessHelper'
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,7 +15,16 @@ export async function GET(request: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log('🔄 [USC Overview Chart API] Fetching chart data for:', { year, line })
+    // ✅ NEW: Get user's allowed brands from request header
+    const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
+    const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
+    
+    console.log('🔄 [USC Overview Chart API] Fetching chart data for:', { 
+      year, 
+      line,
+      user_allowed_brands: userAllowedBrands,
+      is_squad_lead: userAllowedBrands !== null && userAllowedBrands.length > 0
+    })
 
     // Query monthly data for entire year from MV
     let query = supabase
@@ -24,10 +34,33 @@ export async function GET(request: NextRequest) {
       .eq('year', parseInt(year))
       .gt('month', 0)  // Exclude rollup (month=0)
 
-    if (line && line !== 'ALL') {
-      query = query.eq('line', line)
-    } else {
-      query = query.eq('line', 'ALL')
+    // ✅ NEW: Apply brand filter with user permission check
+    try {
+      if (line && line !== 'ALL') {
+        query = query.eq('line', line)
+        // Validate Squad Lead access
+        if (userAllowedBrands && userAllowedBrands.length > 0 && !userAllowedBrands.includes(line)) {
+          return NextResponse.json({
+            success: false,
+            error: 'Unauthorized',
+            message: `You do not have access to brand "${line}"`
+          }, { status: 403 })
+        }
+      } else {
+        // If Squad Lead selects 'ALL', filter to their brands only
+        if (userAllowedBrands && userAllowedBrands.length > 0) {
+          query = query.in('line', userAllowedBrands)
+        } else {
+          query = query.eq('line', 'ALL')
+        }
+      }
+    } catch (filterError) {
+      console.error('❌ Brand filter error:', filterError)
+      return NextResponse.json({
+        success: false,
+        error: 'Brand access validation failed',
+        message: filterError instanceof Error ? filterError.message : 'Unknown error'
+      }, { status: 403 })
     }
 
     const { data, error } = await query.order('month', { ascending: true })

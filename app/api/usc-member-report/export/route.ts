@@ -5,15 +5,29 @@ export async function POST(request: NextRequest) {
   try {
     const { line, year, month, startDate, endDate, filterMode } = await request.json()
 
+    // ✅ NEW: Get user's allowed brands from request header
+    const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
+    const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
+
     console.log('📥 Exporting blue_whale_usc data with filters:', { 
-      line, year, month, startDate, endDate, filterMode 
+      line, year, month, startDate, endDate, filterMode,
+      user_allowed_brands: userAllowedBrands
     })
 
     // Build query with same filters as data endpoint (no currency filter needed)
     let query = supabase.from('blue_whale_usc').select('userkey, user_name, unique_code, date, line, year, month, vip_level, operator, traffic, register_date, first_deposit_date, first_deposit_amount, last_deposit_date, days_inactive, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, add_transaction, deduct_transaction, cases_adjustment, cases_bets, bets_amount, valid_amount, ggr, net_profit, last_activity_days')
 
+    // ✅ NEW: Apply brand filter with user permission check
     if (line && line !== 'ALL') {
+      if (userAllowedBrands && userAllowedBrands.length > 0 && !userAllowedBrands.includes(line)) {
+        return NextResponse.json({
+          error: 'Unauthorized',
+          message: `You do not have access to brand "${line}"`
+        }, { status: 403 })
+      }
       query = query.filter('line', 'eq', line)
+    } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
+      query = query.in('line', userAllowedBrands)
     }
 
     if (year && year !== 'ALL') {

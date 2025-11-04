@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { filterBrandsByUser, removeAllOptionForSquadLead, getDefaultBrandForSquadLead } from '@/utils/brandAccessHelper'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -7,6 +8,10 @@ export async function GET(request: NextRequest) {
 
   try {
     console.log('🔍 [USC Member-Analytic API] Fetching slicer options for USC currency lock')
+
+    // ✅ Get user's allowed brands from request header
+    const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
+    const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
 
     // Currency is LOCKED to USC for this page
     const currencies = ['USC']
@@ -37,7 +42,13 @@ export async function GET(request: NextRequest) {
 
     const uniqueLines = Array.from(new Set(allLines?.map(row => row.line).filter(Boolean) || []))
     const cleanLines = uniqueLines.filter(line => line !== 'ALL' && line !== 'All')
-    const linesWithAll = ['ALL', ...cleanLines.sort()]
+    
+    // ✅ Filter brands based on user permission
+    const filteredBrands = filterBrandsByUser(cleanLines, userAllowedBrands)
+    let linesWithAll = ['ALL', ...filteredBrands.sort()]
+    
+    // ✅ Remove 'ALL' option for Squad Lead users
+    linesWithAll = removeAllOptionForSquadLead(linesWithAll, userAllowedBrands)
 
     // Get years from MV - NO LIMIT
     const { data: allYears, error: yearsError } = await supabase
@@ -122,6 +133,11 @@ export async function GET(request: NextRequest) {
       ...monthsWithYearInfo
     ]
 
+    // ✅ Set default line for Squad Lead to first brand, others to 'ALL'
+    const defaultLine = userAllowedBrands && userAllowedBrands.length > 0 
+      ? getDefaultBrandForSquadLead(userAllowedBrands) || filteredBrands[0] 
+      : 'ALL'
+    
     const slicerOptions = {
       currencies, // Locked to USC
       lines: linesWithAll,
@@ -133,7 +149,7 @@ export async function GET(request: NextRequest) {
       },
       defaults: {
         currency: 'USC',
-        line: 'ALL',
+        line: defaultLine, // ✅ Auto-select first brand for Squad Lead
         year: defaultYear,
         month: defaultMonth
       }

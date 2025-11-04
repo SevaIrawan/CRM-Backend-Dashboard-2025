@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { filterBrandsByUser } from '@/utils/brandAccessHelper'
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,9 +17,15 @@ export async function GET(request: NextRequest) {
       }, { status: 400 })
     }
 
+    // ✅ Get user's allowed brands from request header
+    const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
+    const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
+
     console.log('🔄 [Brand Performance API] Fetching data for periods:', {
       periodA: { start: periodAStart, end: periodAEnd },
-      periodB: { start: periodBStart, end: periodBEnd }
+      periodB: { start: periodBStart, end: periodBEnd },
+      user_allowed_brands: userAllowedBrands,
+      is_squad_lead: userAllowedBrands !== null && userAllowedBrands?.length > 0
     })
 
     // ✅ FETCH ALL BRANDS FROM DATABASE (NOT HARDCODE)
@@ -28,8 +35,17 @@ export async function GET(request: NextRequest) {
       .eq('currency', 'USC')
       .not('line', 'is', null)
     
-    const allBrands: string[] = Array.from(new Set(allBrandsData?.map((row: any) => row.line).filter(Boolean) || []))
-    console.log('📊 [Brand Comparison USC] All brands from database:', allBrands)
+    const allBrandsFromDB: string[] = Array.from(new Set(allBrandsData?.map((row: any) => row.line).filter(Boolean) || []))
+    
+    // ✅ Filter brands: Admin = ALL brands, Squad Lead = their brands only
+    const allBrands: string[] = filterBrandsByUser(allBrandsFromDB, userAllowedBrands)
+    
+    console.log('📊 [Brand Comparison USC] Brands for this user:', {
+      total_available: allBrandsFromDB.length,
+      user_access: allBrands.length,
+      brands: allBrands,
+      filtered: userAllowedBrands !== null
+    })
     
     // Calculate overall KPIs for both periods
     const calculateOverallKPIs = async (startDate: string, endDate: string) => {
@@ -107,32 +123,48 @@ export async function GET(request: NextRequest) {
     const checkBrandDataAvailability = async (startDate: string, endDate: string): Promise<string[]> => {
       const availableBrands: string[] = []
       
+      console.log(`🔍 [checkBrandDataAvailability] Checking ${allBrands.length} brands for period ${startDate} to ${endDate}`)
+      console.log(`🔍 [checkBrandDataAvailability] All brands to check:`, allBrands)
+      
       for (const brand of allBrands) {
-        // Check if brand has active members (deposit_cases > 0) in the period
+        // Check if brand has data in the period - use summary table for consistency
         const { data, error } = await supabase
-          .from('blue_whale_usc')
-          .select('userkey')
+          .from('blue_whale_usc_summary')
+          .select('active_member, deposit_cases')
           .eq('currency', 'USC')
           .eq('line', brand)
           .gte('date', startDate)
           .lte('date', endDate)
-          .gt('deposit_cases', 0)
           .limit(1)
         
-        if (!error && data && data.length > 0) {
+        // Brand available if has ANY data (active_member > 0 OR deposit_cases > 0)
+        const hasData = data && data.length > 0 && (
+          (data[0].active_member && data[0].active_member > 0) ||
+          (data[0].deposit_cases && data[0].deposit_cases > 0)
+        )
+        
+        if (!error && hasData) {
           availableBrands.push(brand)
+          console.log(`✅ [checkBrandDataAvailability] Brand "${brand}" HAS data in this period`)
+        } else {
+          console.log(`❌ [checkBrandDataAvailability] Brand "${brand}" NO data in this period (error: ${error?.message || 'no data'})`)
         }
       }
       
+      console.log(`✅ [checkBrandDataAvailability] Final available brands:`, availableBrands)
       return availableBrands
     }
 
     const periodAAvailableBrands = await checkBrandDataAvailability(periodAStart, periodAEnd)
     const periodBAvailableBrands = await checkBrandDataAvailability(periodBStart, periodBEnd)
+    
+    // ✅ UNION of brands (brands that have data in Period A OR Period B)
+    const allAvailableBrands = Array.from(new Set([...periodAAvailableBrands, ...periodBAvailableBrands])).sort()
 
     console.log('📊 Available brands:', {
       periodA: periodAAvailableBrands,
-      periodB: periodBAvailableBrands
+      periodB: periodBAvailableBrands,
+      union: allAvailableBrands
     })
 
     // Calculate differences and percentage changes
@@ -280,92 +312,189 @@ export async function GET(request: NextRequest) {
       })
     )
 
-    // Prepare chart data with REAL DATA - dynamic based on available brands
+    // ✅ Prepare chart data - USE UNION BRANDS (brands with data in Period A OR Period B)
+    // For ALL brands in union: show their data if exists, or 0 if not
     const activeMemberComparison = {
       series: [
-        { name: 'Active Member Period A', data: brandData.filter(b => periodAAvailableBrands.includes(b.brand)).map(b => b.periodA?.activeMember || 0) },
-        { name: 'Active Member Period B', data: brandData.filter(b => periodBAvailableBrands.includes(b.brand)).map(b => b.periodB?.activeMember || 0) }
+        { 
+          name: 'Active Member Period A', 
+          data: allAvailableBrands.map(brand => {
+            const brandItem = brandData.find(b => b.brand === brand)
+            return brandItem?.periodA?.activeMember || 0
+          })
+        },
+        { 
+          name: 'Active Member Period B', 
+          data: allAvailableBrands.map(brand => {
+            const brandItem = brandData.find(b => b.brand === brand)
+            return brandItem?.periodB?.activeMember || 0
+          })
+        }
       ],
       categories: {
-        periodA: periodAAvailableBrands,
-        periodB: periodBAvailableBrands
+        periodA: allAvailableBrands,
+        periodB: allAvailableBrands
       }
     }
 
     const depositCasesComparison = {
       series: [
-        { name: 'Deposit Cases Period A', data: brandData.filter(b => periodAAvailableBrands.includes(b.brand)).map(b => b.periodA?.depositCases || 0) },
-        { name: 'Deposit Cases Period B', data: brandData.filter(b => periodBAvailableBrands.includes(b.brand)).map(b => b.periodB?.depositCases || 0) }
+        { 
+          name: 'Deposit Cases Period A', 
+          data: allAvailableBrands.map(brand => {
+            const brandItem = brandData.find(b => b.brand === brand)
+            return brandItem?.periodA?.depositCases || 0
+          })
+        },
+        { 
+          name: 'Deposit Cases Period B', 
+          data: allAvailableBrands.map(brand => {
+            const brandItem = brandData.find(b => b.brand === brand)
+            return brandItem?.periodB?.depositCases || 0
+          })
+        }
       ],
       categories: {
-        periodA: periodAAvailableBrands,
-        periodB: periodBAvailableBrands
+        periodA: allAvailableBrands,
+        periodB: allAvailableBrands
       }
     }
 
     const depositAmountTrend = {
       series: [
-        { name: 'Deposit Amount Period A', data: brandData.filter(b => periodAAvailableBrands.includes(b.brand)).map(b => b.periodA?.depositAmount || 0) },
-        { name: 'Deposit Amount Period B', data: brandData.filter(b => periodBAvailableBrands.includes(b.brand)).map(b => b.periodB?.depositAmount || 0) }
+        { 
+          name: 'Deposit Amount Period A', 
+          data: allAvailableBrands.map(brand => {
+            const brandItem = brandData.find(b => b.brand === brand)
+            return brandItem?.periodA?.depositAmount || 0
+          })
+        },
+        { 
+          name: 'Deposit Amount Period B', 
+          data: allAvailableBrands.map(brand => {
+            const brandItem = brandData.find(b => b.brand === brand)
+            return brandItem?.periodB?.depositAmount || 0
+          })
+        }
       ],
       categories: {
-        periodA: periodAAvailableBrands,
-        periodB: periodBAvailableBrands
+        periodA: allAvailableBrands,
+        periodB: allAvailableBrands
       }
     }
 
     const netProfitTrend = {
       series: [
-        { name: 'Net Profit Period A', data: brandData.filter(b => periodAAvailableBrands.includes(b.brand)).map(b => b.periodA?.netProfit || 0) },
-        { name: 'Net Profit Period B', data: brandData.filter(b => periodBAvailableBrands.includes(b.brand)).map(b => b.periodB?.netProfit || 0) }
+        { 
+          name: 'Net Profit Period A', 
+          data: allAvailableBrands.map(brand => {
+            const brandItem = brandData.find(b => b.brand === brand)
+            return brandItem?.periodA?.netProfit || 0
+          })
+        },
+        { 
+          name: 'Net Profit Period B', 
+          data: allAvailableBrands.map(brand => {
+            const brandItem = brandData.find(b => b.brand === brand)
+            return brandItem?.periodB?.netProfit || 0
+          })
+        }
       ],
       categories: {
-        periodA: periodAAvailableBrands,
-        periodB: periodBAvailableBrands
+        periodA: allAvailableBrands,
+        periodB: allAvailableBrands
       }
     }
 
     const ggrUserComparison = {
       series: [
-        { name: 'GGR User Period A', data: brandData.filter(b => periodAAvailableBrands.includes(b.brand)).map(b => b.periodA?.ggrUser || 0) },
-        { name: 'GGR User Period B', data: brandData.filter(b => periodBAvailableBrands.includes(b.brand)).map(b => b.periodB?.ggrUser || 0) }
+        { 
+          name: 'GGR User Period A', 
+          data: allAvailableBrands.map(brand => {
+            const brandItem = brandData.find(b => b.brand === brand)
+            return brandItem?.periodA?.ggrUser || 0
+          })
+        },
+        { 
+          name: 'GGR User Period B', 
+          data: allAvailableBrands.map(brand => {
+            const brandItem = brandData.find(b => b.brand === brand)
+            return brandItem?.periodB?.ggrUser || 0
+          })
+        }
       ],
       categories: {
-        periodA: periodAAvailableBrands,
-        periodB: periodBAvailableBrands
+        periodA: allAvailableBrands,
+        periodB: allAvailableBrands
       }
     }
 
     const daUserComparison = {
       series: [
-        { name: 'DA User Period A', data: brandData.filter(b => periodAAvailableBrands.includes(b.brand)).map(b => b.periodA?.daUser || 0) },
-        { name: 'DA User Period B', data: brandData.filter(b => periodBAvailableBrands.includes(b.brand)).map(b => b.periodB?.daUser || 0) }
+        { 
+          name: 'DA User Period A', 
+          data: allAvailableBrands.map(brand => {
+            const brandItem = brandData.find(b => b.brand === brand)
+            return brandItem?.periodA?.daUser || 0
+          })
+        },
+        { 
+          name: 'DA User Period B', 
+          data: allAvailableBrands.map(brand => {
+            const brandItem = brandData.find(b => b.brand === brand)
+            return brandItem?.periodB?.daUser || 0
+          })
+        }
       ],
       categories: {
-        periodA: periodAAvailableBrands,
-        periodB: periodBAvailableBrands
+        periodA: allAvailableBrands,
+        periodB: allAvailableBrands
       }
     }
 
     const atvTrend = {
       series: [
-        { name: 'ATV Period A', data: brandData.filter(b => periodAAvailableBrands.includes(b.brand)).map(b => b.periodA?.atv || 0) },
-        { name: 'ATV Period B', data: brandData.filter(b => periodBAvailableBrands.includes(b.brand)).map(b => b.periodB?.atv || 0) }
+        { 
+          name: 'ATV Period A', 
+          data: allAvailableBrands.map(brand => {
+            const brandItem = brandData.find(b => b.brand === brand)
+            return brandItem?.periodA?.atv || 0
+          })
+        },
+        { 
+          name: 'ATV Period B', 
+          data: allAvailableBrands.map(brand => {
+            const brandItem = brandData.find(b => b.brand === brand)
+            return brandItem?.periodB?.atv || 0
+          })
+        }
       ],
       categories: {
-        periodA: periodAAvailableBrands,
-        periodB: periodBAvailableBrands
+        periodA: allAvailableBrands,
+        periodB: allAvailableBrands
       }
     }
 
     const purchaseFrequencyTrend = {
       series: [
-        { name: 'Purchase Frequency Period A', data: brandData.filter(b => periodAAvailableBrands.includes(b.brand)).map(b => b.periodA?.purchaseFrequency || 0) },
-        { name: 'Purchase Frequency Period B', data: brandData.filter(b => periodBAvailableBrands.includes(b.brand)).map(b => b.periodB?.purchaseFrequency || 0) }
+        { 
+          name: 'Purchase Frequency Period A', 
+          data: allAvailableBrands.map(brand => {
+            const brandItem = brandData.find(b => b.brand === brand)
+            return brandItem?.periodA?.purchaseFrequency || 0
+          })
+        },
+        { 
+          name: 'Purchase Frequency Period B', 
+          data: allAvailableBrands.map(brand => {
+            const brandItem = brandData.find(b => b.brand === brand)
+            return brandItem?.periodB?.purchaseFrequency || 0
+          })
+        }
       ],
       categories: {
-        periodA: periodAAvailableBrands,
-        periodB: periodBAvailableBrands
+        periodA: allAvailableBrands,
+        periodB: allAvailableBrands
       }
     }
 

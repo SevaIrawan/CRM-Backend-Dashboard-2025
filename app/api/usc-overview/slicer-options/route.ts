@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { filterBrandsByUser, removeAllOptionForSquadLead, getDefaultBrandForSquadLead } from '@/utils/brandAccessHelper'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -7,6 +8,15 @@ export async function GET(request: NextRequest) {
 
   try {
     console.log('🔍 [USC Overview API] Fetching slicer options for USC currency lock')
+
+    // ✅ NEW: Get user's allowed brands from request header (client will send this)
+    const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
+    const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
+    
+    console.log('🔐 [USC Overview API] User brand access:', {
+      allowed_brands: userAllowedBrands,
+      is_squad_lead: userAllowedBrands !== null && userAllowedBrands.length > 0
+    })
 
     // Currency is LOCKED to USC for this page
     const currencies = ['USC']
@@ -37,7 +47,40 @@ export async function GET(request: NextRequest) {
 
     const uniqueLines = Array.from(new Set(allLines?.map(row => row.line).filter(Boolean) || []))
     const cleanLines = uniqueLines.filter(line => line !== 'ALL' && line !== 'All')
-    const linesWithAll = ['ALL', ...cleanLines.sort()]
+    
+    console.log('🔍 [USC Overview API] RAW BRANDS FROM DATABASE:', {
+      total: uniqueLines.length,
+      all_brands: uniqueLines,
+      clean_brands: cleanLines
+    })
+    
+    console.log('🔍 [USC Overview API] USER PERMISSION:', {
+      allowed_brands: userAllowedBrands,
+      is_squad_lead: userAllowedBrands !== null && userAllowedBrands?.length > 0
+    })
+    
+    // ✅ NEW: Filter brands based on user permission
+    const filteredBrands = filterBrandsByUser(cleanLines, userAllowedBrands)
+    
+    console.log('🔍 [USC Overview API] AFTER filterBrandsByUser:', {
+      filtered_brands: filteredBrands
+    })
+    
+    let linesWithAll = ['ALL', ...filteredBrands.sort()]
+    
+    console.log('🔍 [USC Overview API] AFTER adding ALL:', {
+      lines_with_all: linesWithAll
+    })
+    
+    // ✅ NEW: Remove 'ALL' option for Squad Lead users
+    linesWithAll = removeAllOptionForSquadLead(linesWithAll, userAllowedBrands)
+    
+    console.log('✅ [USC Overview API] FINAL BRANDS FOR USER:', {
+      total_available: cleanLines.length,
+      user_access: filteredBrands.length,
+      has_all_option: linesWithAll.includes('ALL'),
+      final_brands: linesWithAll
+    })
 
     // Get years from MV - NO LIMIT
     const { data: allYears, error: yearsError } = await supabase
@@ -131,6 +174,11 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 [USC Slicer] Month-year mapping:', monthYearMap)
 
+    // ✅ NEW: Set default line for Squad Lead to first brand, others to 'ALL'
+    const defaultLine = userAllowedBrands && userAllowedBrands.length > 0 
+      ? getDefaultBrandForSquadLead(userAllowedBrands) || filteredBrands[0] 
+      : 'ALL'
+    
     const slicerOptions = {
       currencies, // Locked to USC
       lines: linesWithAll,
@@ -142,7 +190,7 @@ export async function GET(request: NextRequest) {
       },
       defaults: {
         currency: 'USC',
-        line: 'ALL',
+        line: defaultLine, // ✅ NEW: Auto-select first brand for Squad Lead
         year: defaultYear,
         month: defaultMonth
       }

@@ -10,10 +10,25 @@ export async function GET(request: NextRequest) {
   const year = searchParams.get('year')
   const month = searchParams.get('month')
 
+  // ✅ Get user's allowed brands from request header
+  const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
+  const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
+
   try {
     console.log('📊 [USC Member-Analytic KPI API] Fetching KPI data:', { 
-      currency, line, year, month 
+      currency, line, year, month, user_allowed_brands: userAllowedBrands 
     })
+
+    // ✅ Validate brand access for Squad Lead
+    if (line && line !== 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
+      if (!userAllowedBrands.includes(line)) {
+        return NextResponse.json({
+          success: false,
+          error: 'Unauthorized',
+          message: `You do not have access to brand "${line}"`
+        }, { status: 403 })
+      }
+    }
 
     // Calculate all KPIs using USCLogic (hybrid approach)
     const kpiData = await calculateUSCKPIs({

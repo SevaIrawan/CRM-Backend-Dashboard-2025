@@ -105,7 +105,16 @@ export default function USCMemberAnalyticPage() {
         setIsLoading(true);
         setLoadError(null);
 
-        const response = await fetch('/api/usc-member-analytic/slicer-options');
+        // Get user's allowed brands from localStorage
+        const userStr = localStorage.getItem('nexmax_user')
+        const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
+
+        const response = await fetch('/api/usc-member-analytic/slicer-options', {
+          headers: {
+            'x-user-allowed-brands': JSON.stringify(allowedBrands)
+          },
+          cache: 'no-store'
+        });
         const result = await response.json();
 
         if (result.success) {
@@ -156,8 +165,16 @@ export default function USCMemberAnalyticPage() {
         
         console.log('✅ [USC Member Analytic] KPI data loaded successfully');
         
+        // Get user's allowed brands from localStorage
+        const userStr = localStorage.getItem('nexmax_user')
+        const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
+        
         // Get chart data from USC Member Analytic Chart API endpoint
-        const chartResponse = await fetch(`/api/usc-member-analytic/chart-data?line=${selectedLine}&year=${selectedYear}`);
+        const chartResponse = await fetch(`/api/usc-member-analytic/chart-data?line=${selectedLine}&year=${selectedYear}`, {
+          headers: {
+            'x-user-allowed-brands': JSON.stringify(allowedBrands)
+          }
+        });
         const chartResult = await chartResponse.json();
         
         if (chartResult.success) {

@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { filterBrandsByUser, removeAllOptionForSquadLead } from '@/utils/brandAccessHelper'
 
 export async function GET(request: NextRequest) {
   try {
     console.log('🔍 [USC KPI Comparison API] Fetching slicer options for USC currency')
+
+    // ✅ NEW: Get user's allowed brands from request header
+    const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
+    const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
 
     // Get DISTINCT lines from MV
     const { data: allLines, error: linesError } = await supabase
@@ -23,7 +28,11 @@ export async function GET(request: NextRequest) {
 
     const uniqueLines = Array.from(new Set(allLines?.map(row => row.line).filter(Boolean) || []))
     const cleanLines = uniqueLines.filter(line => line !== 'ALL' && line !== 'All')
-    const linesWithAll = ['ALL', ...cleanLines.sort()]
+    
+    // ✅ NEW: Filter brands based on user permission
+    const filteredLines = filterBrandsByUser(cleanLines, userAllowedBrands)
+    let linesWithAll = ['ALL', ...filteredLines.sort()]
+    linesWithAll = removeAllOptionForSquadLead(linesWithAll, userAllowedBrands)
 
     // Get latest record for date range defaults from master table (real-time data)
     const { data: latestRecord } = await supabase

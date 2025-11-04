@@ -84,7 +84,16 @@ export default function USCOverviewPage() {
         setIsLoading(true);
         setLoadError(null);
 
-        const response = await fetch('/api/usc-overview/slicer-options');
+        // Get user's allowed brands from localStorage
+        const userStr = localStorage.getItem('nexmax_user');
+        const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null;
+
+        const response = await fetch('/api/usc-overview/slicer-options', {
+          headers: {
+            'x-user-allowed-brands': JSON.stringify(allowedBrands)
+          },
+          cache: 'no-store' // ✅ Prevent caching
+        });
         const result = await response.json();
 
         if (result.success) {
@@ -156,8 +165,16 @@ export default function USCOverviewPage() {
         
         console.log('🔄 [USC Overview] Loading Chart data (MONTHLY for entire year)...');
         
+        // Get user's allowed brands from localStorage
+        const userStr = localStorage.getItem('nexmax_user');
+        const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null;
+        
         // Get chart data from MV table (pre-aggregated)
-        const chartResponse = await fetch(`/api/usc-overview/chart-data?line=${selectedLine}&year=${selectedYear}`);
+        const chartResponse = await fetch(`/api/usc-overview/chart-data?line=${selectedLine}&year=${selectedYear}`, {
+          headers: {
+            'x-user-allowed-brands': JSON.stringify(allowedBrands)
+          }
+        });
         const chartResult = await chartResponse.json();
         
         console.log('📊 [USC Overview] Chart API Response:', chartResult);

@@ -14,9 +14,15 @@ export async function GET(request: NextRequest) {
   const page = parseInt(searchParams.get('page') || '1')
   const limit = parseInt(searchParams.get('limit') || '1000')
 
+  // ✅ NEW: Get user's allowed brands from request header
+  const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
+  const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
+
   try {
     console.log('📊 Fetching blue_whale_usc data with filters:', { 
-      currency, line, year, month, startDate, endDate, filterMode, page, limit 
+      currency, line, year, month, startDate, endDate, filterMode, page, limit,
+      user_allowed_brands: userAllowedBrands,
+      is_squad_lead: userAllowedBrands !== null && userAllowedBrands.length > 0
     })
 
     // Build base query for filtering - using blue_whale_usc table
@@ -24,8 +30,20 @@ export async function GET(request: NextRequest) {
 
     // No currency filter needed since table is blue_whale_usc
 
+    // ✅ NEW: Apply brand filter with user permission check
     if (line && line !== 'ALL') {
+      // Validate Squad Lead access
+      if (userAllowedBrands && userAllowedBrands.length > 0 && !userAllowedBrands.includes(line)) {
+        return NextResponse.json({
+          success: false,
+          error: 'Unauthorized',
+          message: `You do not have access to brand "${line}"`
+        }, { status: 403 })
+      }
       baseQuery = baseQuery.filter('line', 'eq', line)
+    } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
+      // Squad Lead selected 'ALL' (though they shouldn't have this option) - filter to their brands
+      baseQuery = baseQuery.in('line', userAllowedBrands)
     }
 
     if (year && year !== 'ALL') {
@@ -43,8 +61,11 @@ export async function GET(request: NextRequest) {
     let countQuery = supabase.from('blue_whale_usc').select('*', { count: 'exact', head: true })
     
     // Apply same filters to count query (no currency filter needed)
+    // ✅ NEW: Apply brand filter with user permission check
     if (line && line !== 'ALL') {
       countQuery = countQuery.filter('line', 'eq', line)
+    } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
+      countQuery = countQuery.in('line', userAllowedBrands)
     }
     if (year && year !== 'ALL') {
       countQuery = countQuery.filter('year', 'eq', parseInt(year))

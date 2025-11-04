@@ -25,7 +25,7 @@ interface Pagination {
 }
 
 export default function USCCustomerRetentionPage() {
-  const [line, setLine] = useState('ALL')
+  const [line, setLine] = useState('')
   const [year, setYear] = useState('ALL')
   const [month, setMonth] = useState('ALL')
   const [dateRange, setDateRange] = useState({ start: '', end: '' })
@@ -116,8 +116,12 @@ export default function USCCustomerRetentionPage() {
   }
 
   useEffect(() => {
-    fetchSlicerOptions()
-    fetchCustomerRetentionData()
+    // Small delay to ensure localStorage is ready after login
+    const timer = setTimeout(() => {
+      fetchSlicerOptions()
+      fetchCustomerRetentionData()
+    }, 100)
+    return () => clearTimeout(timer)
   }, [])
 
   // Only reload on pagination change, NOT on slicer change
@@ -133,11 +137,37 @@ export default function USCCustomerRetentionPage() {
     try {
       setSlicerLoading(true)
       
-      const response = await fetch('/api/usc-customer-retention/slicer-options')
+      const userStr = localStorage.getItem('nexmax_user')
+      const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
+      
+      console.log('🔍 [Customer Retention CLIENT] Fetching slicer with brands:', allowedBrands)
+      
+      const response = await fetch('/api/usc-customer-retention/slicer-options', {
+        headers: {
+          'x-user-allowed-brands': JSON.stringify(allowedBrands)
+        },
+        cache: 'no-store' // ✅ Prevent caching
+      })
       const result = await response.json()
+      
+      console.log('📊 [Customer Retention CLIENT] Slicer API response:', {
+        success: result.success,
+        lines_count: result.data?.lines?.length,
+        lines: result.data?.lines
+      })
       
       if (result.success) {
         setSlicerOptions(result.data)
+        
+        console.log('🔍 [Customer Retention CLIENT] Is Squad Lead?', allowedBrands && allowedBrands.length > 0)
+        console.log('🔍 [Customer Retention CLIENT] Lines from API:', result.data.lines)
+        
+        // ✅ Auto-set line to first option from API (ALL for Admin, first brand for Squad Lead)
+        if (result.data.lines.length > 0) {
+          const firstOption = result.data.lines[0]
+          setLine(firstOption)
+          console.log('✅ [Customer Retention] Auto-set line to first option:', firstOption)
+        }
       }
     } catch (error) {
       console.error('Error fetching usc-customer-retention slicer options:', error)
@@ -160,7 +190,14 @@ export default function USCCustomerRetentionPage() {
         limit: pagination.recordsPerPage.toString()
       })
 
-      const response = await fetch(`/api/usc-customer-retention/data?${params}`)
+      const userStr = localStorage.getItem('nexmax_user')
+      const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
+
+      const response = await fetch(`/api/usc-customer-retention/data?${params}`, {
+        headers: {
+          'x-user-allowed-brands': JSON.stringify(allowedBrands)
+        }
+      })
       const result = await response.json()
       
       if (result.success) {
@@ -233,10 +270,14 @@ export default function USCCustomerRetentionPage() {
       // Show progress message for large exports
       console.log('📤 Starting export for customer retention data...')
       
+      const userStr = localStorage.getItem('nexmax_user')
+      const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
+      
       const response = await fetch('/api/usc-customer-retention/export', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-allowed-brands': JSON.stringify(allowedBrands)
         },
         body: JSON.stringify({
           line,
@@ -294,7 +335,6 @@ export default function USCCustomerRetentionPage() {
             className={`slicer-select ${slicerLoading ? 'disabled' : ''}`}
             disabled={slicerLoading}
           >
-            <option value="ALL">All</option>
             {slicerOptions.lines.map((lineOption) => (
               <option key={lineOption} value={lineOption}>{lineOption}</option>
             ))}

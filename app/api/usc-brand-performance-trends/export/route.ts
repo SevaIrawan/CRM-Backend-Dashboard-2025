@@ -19,7 +19,15 @@ export async function GET(request: NextRequest) {
       periodBEnd,
     })
 
-    const dataRes = await fetch(`${origin}/api/usc-brand-performance-trends/data?${params.toString()}`, { cache: 'no-store' })
+    // ✅ NEW: Pass user's allowed brands to data API
+    const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
+    
+    const dataRes = await fetch(`${origin}/api/usc-brand-performance-trends/data?${params.toString()}`, { 
+      cache: 'no-store',
+      headers: {
+        'x-user-allowed-brands': userAllowedBrandsHeader || 'null'
+      }
+    })
     const dataJson = await dataRes.json()
     if (!dataJson?.success) {
       return new Response('Failed to build export data', { status: 500 })

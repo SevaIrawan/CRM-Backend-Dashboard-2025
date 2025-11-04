@@ -65,7 +65,15 @@ export default function KPIComparisonPage() {
   useEffect(() => {
     const fetchSlicerOptions = async () => {
       try {
-        const response = await fetch('/api/usc-kpi-comparison/slicer-options');
+        const userStr = localStorage.getItem('nexmax_user')
+        const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
+        
+        const response = await fetch('/api/usc-kpi-comparison/slicer-options', {
+          headers: {
+            'x-user-allowed-brands': JSON.stringify(allowedBrands)
+          },
+          cache: 'no-store' // ✅ Prevent caching
+        });
         if (!response.ok) throw new Error('Failed to load slicer options');
         
         const result = await response.json();
@@ -117,7 +125,15 @@ export default function KPIComparisonPage() {
         periodBStart,
         periodBEnd
       });
-      const response = await fetch(`/api/usc-kpi-comparison/data?${params}`);
+      
+      const userStr = localStorage.getItem('nexmax_user')
+      const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
+      
+      const response = await fetch(`/api/usc-kpi-comparison/data?${params}`, {
+        headers: {
+          'x-user-allowed-brands': JSON.stringify(allowedBrands)
+        }
+      });
       if (!response.ok) throw new Error('Failed to load comparison data');
       const data = await response.json();
       setComparisonData(data);

@@ -201,7 +201,15 @@ export default function BrandPerformanceTrendsPage() {
   useEffect(() => {
     const init = async () => {
       try {
-        const res = await fetch('/api/usc-brand-performance-trends/slicer-options')
+        const userStr = localStorage.getItem('nexmax_user')
+        const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
+        
+        const res = await fetch('/api/usc-brand-performance-trends/slicer-options', {
+          headers: {
+            'x-user-allowed-brands': JSON.stringify(allowedBrands)
+          },
+          cache: 'no-store' // ✅ Prevent caching
+        })
         const json = await res.json()
         if (!json.success) throw new Error('Failed to load slicers')
         const opt: SlicerOptions = json.data
@@ -232,7 +240,11 @@ export default function BrandPerformanceTrendsPage() {
           periodBStart: bStartStr,
           periodBEnd: bEndStr,
         })
-        const dataRes = await fetch(`/api/usc-brand-performance-trends/data?${params}`)
+        const dataRes = await fetch(`/api/usc-brand-performance-trends/data?${params}`, {
+          headers: {
+            'x-user-allowed-brands': JSON.stringify(allowedBrands)
+          }
+        })
         const dataJson = await dataRes.json()
         if (!dataJson.success) throw new Error('Failed to load data')
         setData(dataJson.data)
@@ -252,8 +264,15 @@ export default function BrandPerformanceTrendsPage() {
     setLoading(true)
     setError(null)
     try {
+      const userStr = localStorage.getItem('nexmax_user')
+      const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
+      
       const params = new URLSearchParams({ periodAStart, periodAEnd, periodBStart, periodBEnd })
-      const res = await fetch(`/api/usc-brand-performance-trends/data?${params}`)
+      const res = await fetch(`/api/usc-brand-performance-trends/data?${params}`, {
+        headers: {
+          'x-user-allowed-brands': JSON.stringify(allowedBrands)
+        }
+      })
       const json = await res.json()
       if (!json.success) throw new Error('Failed to load data')
       setData(json.data)
@@ -331,8 +350,15 @@ export default function BrandPerformanceTrendsPage() {
     if (!periodAStart || !periodAEnd || !periodBStart || !periodBEnd) return
     try {
       setExporting(true)
+      const userStr = localStorage.getItem('nexmax_user')
+      const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
+      
       const params = new URLSearchParams({ periodAStart, periodAEnd, periodBStart, periodBEnd })
-      const res = await fetch(`/api/usc-brand-performance-trends/export?${params}`)
+      const res = await fetch(`/api/usc-brand-performance-trends/export?${params}`, {
+        headers: {
+          'x-user-allowed-brands': JSON.stringify(allowedBrands)
+        }
+      })
       if (!res.ok) throw new Error('Export failed')
       const blob = await res.blob()
       const url = window.URL.createObjectURL(blob)
