@@ -82,11 +82,13 @@ export default function UsersPage() {
   const [showModal, setShowModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [editMarket, setEditMarket] = useState('USC') // Track market for editing Squad Lead
   const [sidebarExpanded, setSidebarExpanded] = useState(true)
   const [formData, setFormData] = useState({
     username: '',
     password: '',
     role: 'user',
+    market: 'USC', // Default market for Squad Lead
     allowed_brands: [] as string[]
   })
   const [availableRoles] = useState(getAvailableRoles())
@@ -124,6 +126,39 @@ export default function UsersPage() {
     fetchUsers()
     setAuthLoading(false)
   }, []) // Remove router from dependency to prevent re-runs
+
+  // Fetch available brands from database based on market
+  const fetchAvailableBrands = async (market: string) => {
+    try {
+      setBrandsLoading(true)
+      console.log(`🔍 Fetching available ${market} brands...`)
+      
+      // Determine table based on market
+      const tableName = market === 'MYR' ? 'blue_whale_myr' : 
+                        market === 'SGD' ? 'blue_whale_sgd' : 
+                        'blue_whale_usc'
+      
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('line')
+        .not('line', 'is', null)
+      
+      if (error) {
+        console.error(`❌ Error fetching ${market} brands:`, error)
+        setAvailableBrands([])
+      } else {
+        const uniqueBrands = Array.from(new Set(data?.map(row => row.line).filter(Boolean) || [])) as string[]
+        const cleanBrands = uniqueBrands.filter(b => b !== 'ALL' && b !== 'All').sort()
+        setAvailableBrands(cleanBrands)
+        console.log(`✅ Available ${market} brands loaded:`, cleanBrands.length)
+      }
+    } catch (error) {
+      console.error(`❌ Error loading ${market} brands:`, error)
+      setAvailableBrands([])
+    } finally {
+      setBrandsLoading(false)
+    }
+  }
 
   const fetchUsers = async () => {
     try {
@@ -236,11 +271,18 @@ export default function UsersPage() {
       return
     }
 
+    // Validation for Squad Lead: must select at least 1 brand
+    if (formData.role === 'squad_lead' && formData.allowed_brands.length === 0) {
+      alert('Squad Lead must have at least 1 allowed brand')
+      return
+    }
+
     try {
       console.log('➕ Adding new user:', {
         username: formData.username,
         role: formData.role,
-password: 'hidden for security'
+        allowed_brands: formData.role === 'squad_lead' ? formData.allowed_brands : null,
+        password: 'hidden for security'
       })
       
       const { data, error } = await supabase
@@ -248,7 +290,8 @@ password: 'hidden for security'
         .insert([{
           username: formData.username.trim(),
           password: formData.password.trim(),
-          role: formData.role
+          role: formData.role,
+          allowed_brands: formData.role === 'squad_lead' ? formData.allowed_brands : null
         }])
         .select()
 
@@ -262,7 +305,7 @@ password: 'hidden for security'
       } else {
         console.log('✅ User added successfully:', data)
         alert('User added successfully!')
-        setFormData({ username: '', password: '', role: 'user', allowed_brands: [] })
+        setFormData({ username: '', password: '', role: 'user', market: 'USC', allowed_brands: [] })
         setShowModal(false)
         fetchUsers() // Refresh the list
       }
@@ -278,6 +321,21 @@ password: 'hidden for security'
       password: '' // Don't show current password
     })
     setShowEditModal(true)
+    
+    // Fetch brands if editing Squad Lead
+    if (userToEdit.role === 'squad_lead') {
+      // Detect market from existing allowed_brands
+      let detectedMarket = 'USC' // Default
+      if (userToEdit.allowed_brands && userToEdit.allowed_brands.length > 0) {
+        const firstBrand = userToEdit.allowed_brands[0]
+        const suffix = firstBrand.slice(-2).toUpperCase()
+        if (suffix === 'MY') detectedMarket = 'MYR'
+        else if (suffix === 'SG') detectedMarket = 'SGD'
+        else if (suffix === 'KH' || firstBrand.includes('KH') || firstBrand.includes('CAM')) detectedMarket = 'USC'
+      }
+      setEditMarket(detectedMarket)
+      fetchAvailableBrands(detectedMarket)
+    }
   }
 
   const handleUpdateUser = async (e: React.FormEvent) => {
@@ -293,18 +351,25 @@ password: 'hidden for security'
       alert('Password must be at least 6 characters')
       return
     }
+    // Validation for Squad Lead: must select at least 1 brand
+    if (editingUser.role === 'squad_lead' && (!editingUser.allowed_brands || editingUser.allowed_brands.length === 0)) {
+      alert('Squad Lead must have at least 1 allowed brand')
+      return
+    }
 
     try {
       console.log('✏️ Updating user:', {
         id: editingUser.id,
         username: editingUser.username,
         role: editingUser.role,
-password: editingUser.password ? 'updating' : 'keeping current'
+        allowed_brands: editingUser.role === 'squad_lead' ? editingUser.allowed_brands : null,
+        password: editingUser.password ? 'updating' : 'keeping current'
       })
       
       const updateData: any = {
         username: editingUser.username.trim(),
-        role: editingUser.role
+        role: editingUser.role,
+        allowed_brands: editingUser.role === 'squad_lead' ? editingUser.allowed_brands : null
       }
       
       // Only update password if provided
@@ -495,6 +560,8 @@ password: editingUser.password ? 'updating' : 'keeping current'
         return 'EXECUTIVE'
       case 'usc_dep':
         return 'USC_DEP'
+      case 'squad_lead':
+        return 'SQUAD LEAD'
       default:
         return role.toUpperCase()
     }
@@ -586,6 +653,7 @@ password: editingUser.password ? 'updating' : 'keeping current'
                                       <th>Username</th>
                     <th>Password</th>
                     <th>Role</th>
+                    <th>Allowed Brands</th>
                     <th>Created At</th>
                     <th>Updated At</th>
                     <th>Actions</th>
@@ -619,6 +687,31 @@ password: editingUser.password ? 'updating' : 'keeping current'
                                                  <span className={`role-badge role-${user.role.toLowerCase().replace(/\s+/g, '-')}`}>
                            {getLocalRoleDisplayName(user.role)}
                          </span>
+                      </td>
+                      <td className="brands-cell" style={{fontSize: '12px', minWidth: '250px', whiteSpace: 'normal'}}>
+                        {user.role === 'squad_lead' && user.allowed_brands && user.allowed_brands.length > 0 ? (
+                          <div style={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: '4px',
+                            lineHeight: '1.4'
+                          }}>
+                            {user.allowed_brands.map((brand: string) => (
+                              <span key={brand} style={{
+                                backgroundColor: '#e3f2fd',
+                                color: '#1976d2',
+                                padding: '2px 6px',
+                                borderRadius: '3px',
+                                fontSize: '11px',
+                                fontWeight: 500
+                              }}>
+                                {brand}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span style={{color: '#999'}}>All Brands</span>
+                        )}
                       </td>
                       <td className="date-cell">
                         {user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', {
@@ -762,7 +855,14 @@ password: editingUser.password ? 'updating' : 'keeping current'
                 <label>Role</label>
                 <select
                   value={formData.role}
-                  onChange={(e) => setFormData({...formData, role: e.target.value})}
+                  onChange={(e) => {
+                    const newRole = e.target.value
+                    setFormData({...formData, role: newRole, allowed_brands: [], market: 'USC'})
+                    // Fetch brands if role is squad_lead
+                    if (newRole === 'squad_lead') {
+                      fetchAvailableBrands('USC') // Default to USC
+                    }
+                  }}
                 >
                   {availableRoles.map(role => (
                     <option key={role} value={role}>
@@ -771,6 +871,76 @@ password: editingUser.password ? 'updating' : 'keeping current'
                   ))}
                 </select>
               </div>
+
+              {/* Show Market Selection for Squad Lead */}
+              {formData.role === 'squad_lead' && (
+                <div className="form-group">
+                  <label>Market</label>
+                  <select
+                    value={formData.market}
+                    onChange={(e) => {
+                      const selectedMarket = e.target.value
+                      setFormData({...formData, market: selectedMarket, allowed_brands: []})
+                      fetchAvailableBrands(selectedMarket)
+                    }}
+                  >
+                    <option value="MYR">MYR (Malaysia)</option>
+                    <option value="SGD">SGD (Singapore)</option>
+                    <option value="USC">USC (Cambodia)</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Show Brand Selection for Squad Lead */}
+              {formData.role === 'squad_lead' && (
+                <div className="form-group">
+                  <label>Allowed Brands ({formData.market} Market)</label>
+                  {brandsLoading ? (
+                    <p style={{fontSize: '12px', color: '#666'}}>Loading brands...</p>
+                  ) : (
+                    <div style={{
+                      maxHeight: '200px',
+                      overflowY: 'auto',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      padding: '8px',
+                      backgroundColor: '#f9f9f9'
+                    }}>
+                      {availableBrands.length === 0 ? (
+                        <p style={{fontSize: '12px', color: '#666', margin: 0}}>No brands available</p>
+                      ) : (
+                        availableBrands.map(brand => (
+                          <label key={brand} style={{display: 'block', marginBottom: '6px', cursor: 'pointer'}}>
+                            <input
+                              type="checkbox"
+                              checked={formData.allowed_brands.includes(brand)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFormData({
+                                    ...formData,
+                                    allowed_brands: [...formData.allowed_brands, brand]
+                                  })
+                                } else {
+                                  setFormData({
+                                    ...formData,
+                                    allowed_brands: formData.allowed_brands.filter(b => b !== brand)
+                                  })
+                                }
+                              }}
+                              style={{marginRight: '8px'}}
+                            />
+                            <span style={{fontSize: '13px'}}>{brand}</span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  )}
+                  <p style={{fontSize: '11px', color: '#666', marginTop: '4px', marginBottom: 0}}>
+                    Selected: {formData.allowed_brands.length} brand(s)
+                  </p>
+                </div>
+              )}
+
               <div className="modal-actions">
                 <button type="button" className="cancel-btn" onClick={() => setShowModal(false)}>
                   Cancel
@@ -822,7 +992,15 @@ password: editingUser.password ? 'updating' : 'keeping current'
                 <label>Role</label>
                 <select
                   value={editingUser.role}
-                  onChange={(e) => setEditingUser({...editingUser, role: e.target.value})}
+                  onChange={(e) => {
+                    const newRole = e.target.value
+                    setEditingUser({...editingUser, role: newRole, allowed_brands: newRole === 'squad_lead' ? (editingUser.allowed_brands || []) : null})
+                    // Fetch brands if role is squad_lead
+                    if (newRole === 'squad_lead') {
+                      setEditMarket('USC') // Default to USC
+                      fetchAvailableBrands('USC')
+                    }
+                  }}
                 >
                   {availableRoles.map(role => (
                     <option key={role} value={role}>
@@ -831,6 +1009,78 @@ password: editingUser.password ? 'updating' : 'keeping current'
                   ))}
                 </select>
               </div>
+
+              {/* Show Market Selection for Squad Lead */}
+              {editingUser.role === 'squad_lead' && (
+                <div className="form-group">
+                  <label>Market</label>
+                  <select
+                    value={editMarket}
+                    onChange={(e) => {
+                      const selectedMarket = e.target.value
+                      setEditMarket(selectedMarket)
+                      setEditingUser({...editingUser, allowed_brands: []})
+                      fetchAvailableBrands(selectedMarket)
+                    }}
+                  >
+                    <option value="MYR">MYR (Malaysia)</option>
+                    <option value="SGD">SGD (Singapore)</option>
+                    <option value="USC">USC (Cambodia)</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Show Brand Selection for Squad Lead */}
+              {editingUser.role === 'squad_lead' && (
+                <div className="form-group">
+                  <label>Allowed Brands ({editMarket} Market)</label>
+                  {brandsLoading ? (
+                    <p style={{fontSize: '12px', color: '#666'}}>Loading brands...</p>
+                  ) : (
+                    <div style={{
+                      maxHeight: '200px',
+                      overflowY: 'auto',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      padding: '8px',
+                      backgroundColor: '#f9f9f9'
+                    }}>
+                      {availableBrands.length === 0 ? (
+                        <p style={{fontSize: '12px', color: '#666', margin: 0}}>No brands available</p>
+                      ) : (
+                        availableBrands.map(brand => (
+                          <label key={brand} style={{display: 'block', marginBottom: '6px', cursor: 'pointer'}}>
+                            <input
+                              type="checkbox"
+                              checked={(editingUser.allowed_brands || []).includes(brand)}
+                              onChange={(e) => {
+                                const currentBrands = editingUser.allowed_brands || []
+                                if (e.target.checked) {
+                                  setEditingUser({
+                                    ...editingUser,
+                                    allowed_brands: [...currentBrands, brand]
+                                  })
+                                } else {
+                                  setEditingUser({
+                                    ...editingUser,
+                                    allowed_brands: currentBrands.filter(b => b !== brand)
+                                  })
+                                }
+                              }}
+                              style={{marginRight: '8px'}}
+                            />
+                            <span style={{fontSize: '13px'}}>{brand}</span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  )}
+                  <p style={{fontSize: '11px', color: '#666', marginTop: '4px', marginBottom: 0}}>
+                    Selected: {(editingUser.allowed_brands || []).length} brand(s)
+                  </p>
+                </div>
+              )}
+
               <div className="modal-actions">
                 <button type="button" className="cancel-btn" onClick={() => setShowEditModal(false)}>
                   Cancel
@@ -915,7 +1165,7 @@ password: editingUser.password ? 'updating' : 'keeping current'
 
         .simple-table-container { flex: 1; }
         .simple-table-wrapper {
-          max-height: calc(100vh - 260px);
+          max-height: 610px; /* Header ~50px + 12 rows data (~47px each) = 610px total */
           overflow-y: auto;
           overflow-x: auto;
           scroll-behavior: smooth;
