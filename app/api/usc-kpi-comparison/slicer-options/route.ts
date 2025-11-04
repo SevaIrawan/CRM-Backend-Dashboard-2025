@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    const uniqueLines = Array.from(new Set(allLines?.map(row => row.line).filter(Boolean) || []))
+    const uniqueLines = Array.from(new Set(allLines?.map(row => row.line).filter(Boolean) || [])) as string[]
     const cleanLines = uniqueLines.filter(line => line !== 'ALL' && line !== 'All')
     
     // ✅ NEW: Filter brands based on user permission
