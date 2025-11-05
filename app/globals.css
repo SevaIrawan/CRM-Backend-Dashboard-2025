@@ -17,13 +17,15 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background-color: #f8f9fa;
   overflow: hidden; /* Prevent body scroll */
+  /* ✅ PREVENT WHITE FLASH during transitions */
+  min-height: 100vh;
+  min-width: 100vw;
 }
 
 /* PERFORMANCE OPTIMIZATION - Smooth transitions */
 * {
-  will-change: auto;
+  /* ✅ REMOVED: will-change global (cause overhead) - now specific per element */
   backface-visibility: hidden;
-  perspective: 1000px;
 }
 
 /* Smooth page transitions */
@@ -50,6 +52,9 @@ body {
   background-color: #f8f9fa;
   overflow: hidden; /* No scroll for main container */
   position: relative;
+  /* ✅ PREVENT WHITE FLASH - ensure full coverage */
+  min-height: 100vh;
+  min-width: 100vw;
 }
 
 /* ===========================================
@@ -59,12 +64,16 @@ body {
 .content-container {
   flex: 1;
   margin-left: 280px; /* CENTRALIZED: Jarak dari sidebar */
-  transition: margin-left 0.3s ease;
+  /* ✅ OPTIMIZED: Only transition margin-left */
+  transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   height: 100vh;
   overflow: hidden;
   padding-top: 130px; /* CENTRALIZED: Jarak dari header + subheader */
   display: flex;
   flex-direction: column;
+  transform: translateZ(0); /* Hardware acceleration */
+  will-change: margin-left;
+  backface-visibility: hidden; /* Prevent flickering */
 }
 
 .content-container.collapsed {
@@ -805,11 +814,13 @@ body {
   overflow: hidden; /* NO SCROLL for sidebar */
   display: flex;
   flex-direction: column;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Smoother easing */
+  /* ✅ OPTIMIZED: Only transition width (not "all") */
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   /* Performance optimizations */
   transform: translateZ(0); /* Hardware acceleration */
-  will-change: width, transform;
-  contain: layout style paint;
+  will-change: width; /* Only width will change */
+  contain: layout style;
+  backface-visibility: hidden; /* Prevent flickering */
 }
 
 .sidebar.collapsed {
@@ -855,8 +866,12 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  transition: all 0.3s ease;
+  /* ✅ OPTIMIZED: Only transition left and width */
+  transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden; /* NO SCROLL for header */
+  transform: translateZ(0); /* Hardware acceleration */
+  will-change: left, width;
+  backface-visibility: hidden; /* Prevent flickering */
 }
 
 .header.collapsed {
@@ -877,8 +892,12 @@ body {
   display: flex;
   align-items: center;
   padding: 0 24px;
-  transition: all 0.3s ease;
+  /* ✅ OPTIMIZED: Only transition left and width */
+  transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transform: translateZ(0); /* Hardware acceleration */
+  will-change: left, width;
+  backface-visibility: hidden; /* Prevent flickering */
 }
 
 .subheader.collapsed {
@@ -938,13 +957,17 @@ body {
   right: 0;
   bottom: 0;
   background-color: #f8f9fa;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Smoother easing */
+  /* ✅ OPTIMIZED: Only transition left and width - FASTER! */
+  transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: auto; /* Scroll only for main content */
   width: calc(100vw - 280px);
   /* Performance optimizations */
   transform: translateZ(0); /* Hardware acceleration */
-  will-change: transform, left, width;
-  contain: layout style paint;
+  will-change: left, width; /* Only what actually changes */
+  contain: layout style;
+  backface-visibility: hidden; /* Prevent flickering */
+  /* ✅ NEW: Ensure no white flash during transition */
+  -webkit-overflow-scrolling: touch;
 }
 
 .main-content.has-subheader {

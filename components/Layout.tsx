@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import SubHeader from './SubHeader'
@@ -34,6 +34,11 @@ export default function Layout({
 }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(sidebarExpanded)
 
+  // ✅ OPTIMIZED: Memoize setSidebarOpen to prevent unnecessary re-renders
+  const handleSetSidebarOpen = useCallback((open: boolean) => {
+    setSidebarOpen(open)
+  }, [])
+
   return (
     <ActivityTracker>
       <AccessControl>
@@ -42,7 +47,7 @@ export default function Layout({
           
           <Sidebar 
             sidebarOpen={sidebarOpen} 
-            setSidebarOpen={setSidebarOpen}
+            setSidebarOpen={handleSetSidebarOpen}
             darkMode={darkMode}
             onToggleDarkMode={onToggleDarkMode}
             onLogout={onLogout}
@@ -52,7 +57,7 @@ export default function Layout({
           <Header 
             pageTitle={pageTitle}
             sidebarOpen={sidebarOpen}
-            setSidebarOpen={setSidebarOpen}
+            setSidebarOpen={handleSetSidebarOpen}
             darkMode={darkMode}
             onToggleDarkMode={onToggleDarkMode}
             onLogout={onLogout}

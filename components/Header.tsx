@@ -197,7 +197,29 @@ export default function Header({
               fontSize: '20px',
               cursor: 'pointer',
               marginRight: '16px',
-              color: '#6b7280'
+              color: '#6b7280',
+              /* ✅ OPTIMIZED: Faster button response */
+              transition: 'color 0.15s ease, transform 0.15s ease',
+              padding: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              userSelect: 'none', /* Prevent text selection on click */
+              WebkitTapHighlightColor: 'transparent' /* Remove mobile tap highlight */
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = '#3b82f6'
+              e.currentTarget.style.transform = 'scale(1.1)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = '#6b7280'
+              e.currentTarget.style.transform = 'scale(1)'
+            }}
+            onMouseDown={(e) => {
+              e.currentTarget.style.transform = 'scale(0.95)'
+            }}
+            onMouseUp={(e) => {
+              e.currentTarget.style.transform = 'scale(1.1)'
             }}
           >
             ☰
