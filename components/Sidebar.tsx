@@ -41,7 +41,7 @@ const filterMenuItemsByRole = (menuItems: any[], userRole: string) => {
   
   return menuItems.map(item => {
     // Filter MYR pages for MYR roles and executive
-    if (item.title === 'MYR' && item.submenu && (userRole === 'manager_myr' || userRole === 'sq_myr' || userRole === 'squad_lead' || userRole === 'executive')) {
+    if (item.title === 'MYR' && item.submenu && (userRole === 'manager_myr' || userRole === 'sq_myr' || userRole === 'squad_lead_myr' || userRole === 'executive')) {
       return {
         ...item,
         submenu: item.submenu.filter((subItem: any) => 
@@ -51,7 +51,7 @@ const filterMenuItemsByRole = (menuItems: any[], userRole: string) => {
     }
     
     // Filter SGD pages for SGD roles and executive
-    if (item.title === 'SGD' && item.submenu && (userRole === 'manager_sgd' || userRole === 'sq_sgd' || userRole === 'squad_lead' || userRole === 'executive')) {
+    if (item.title === 'SGD' && item.submenu && (userRole === 'manager_sgd' || userRole === 'sq_sgd' || userRole === 'squad_lead_sgd' || userRole === 'executive')) {
       return {
         ...item,
         submenu: item.submenu.filter((subItem: any) => 
@@ -61,7 +61,7 @@ const filterMenuItemsByRole = (menuItems: any[], userRole: string) => {
     }
     
     // Filter USC pages for USC roles and executive
-    if (item.title === 'USC' && item.submenu && (userRole === 'manager_usc' || userRole === 'sq_usc' || userRole === 'squad_lead' || userRole === 'executive')) {
+    if (item.title === 'USC' && item.submenu && (userRole === 'manager_usc' || userRole === 'sq_usc' || userRole === 'squad_lead_usc' || userRole === 'executive')) {
       return {
         ...item,
         submenu: item.submenu.filter((subItem: any) => 
@@ -276,36 +276,6 @@ export default function Sidebar({
     setUserRole(role)
   }, [])
   
-  // NEW: Get user's allowed brands and detect market
-  const getUserMarketFromBrands = (): string | null => {
-    if (userRole !== 'squad_lead') return null // Only for Squad Lead
-    
-    try {
-      const userStr = localStorage.getItem('nexmax_user')
-      if (!userStr) return null
-      
-      const user = JSON.parse(userStr)
-      const allowedBrands = user.allowed_brands
-      
-      if (!allowedBrands || allowedBrands.length === 0) return null
-      
-      // Detect market from brand suffix (last 2 chars)
-      const firstBrand = allowedBrands[0]
-      const suffix = firstBrand.slice(-2).toUpperCase()
-      
-      // KH = USC (Khmer/Cambodia brands use USC)
-      if (suffix === 'KH' || firstBrand.includes('KH') || firstBrand.includes('CAM')) return 'usc'
-      // MY = MYR
-      if (suffix === 'MY') return 'myr'
-      // SG = SGD
-      if (suffix === 'SG') return 'sgd'
-      
-      return null
-    } catch (error) {
-      console.error('Error detecting market from brands:', error)
-      return null
-    }
-  }
   
   // Get menu items based on user role
   const getMenuItems = () => {
@@ -403,18 +373,7 @@ export default function Sidebar({
       finalFilteredItems = filterMenuItemsByRole(filteredItems, userRole)
     }
     
-    // ✅ NEW: For Squad Lead, filter to show only their market
-    if (userRole === 'squad_lead') {
-      const userMarket = getUserMarketFromBrands()
-      if (userMarket) {
-        finalFilteredItems = finalFilteredItems.filter(item => {
-          const itemMarket = item.title.toLowerCase()
-          // Keep Dashboard and their specific market only
-          return item.title === 'Dashboard' || itemMarket === userMarket
-        })
-        logger.log('🔐 [Sidebar] Squad Lead - Filtered to market:', userMarket)
-      }
-    }
+    // ✅ Squad Lead roles already have specific market permissions - no additional filtering needed
     
     logger.log('✅ [Sidebar] Filtered menu items:', finalFilteredItems)
     return finalFilteredItems

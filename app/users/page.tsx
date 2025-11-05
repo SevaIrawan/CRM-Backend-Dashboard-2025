@@ -272,7 +272,7 @@ export default function UsersPage() {
     }
 
     // Validation for Squad Lead: must select at least 1 brand
-    if (formData.role === 'squad_lead' && formData.allowed_brands.length === 0) {
+    if (formData.role.startsWith('squad_lead_') && formData.allowed_brands.length === 0) {
       alert('Squad Lead must have at least 1 allowed brand')
       return
     }
@@ -281,7 +281,7 @@ export default function UsersPage() {
       console.log('➕ Adding new user:', {
         username: formData.username,
         role: formData.role,
-        allowed_brands: formData.role === 'squad_lead' ? formData.allowed_brands : null,
+        allowed_brands: formData.role.startsWith('squad_lead_') ? formData.allowed_brands : null,
         password: 'hidden for security'
       })
       
@@ -291,7 +291,7 @@ export default function UsersPage() {
           username: formData.username.trim(),
           password: formData.password.trim(),
           role: formData.role,
-          allowed_brands: formData.role === 'squad_lead' ? formData.allowed_brands : null
+          allowed_brands: formData.role.startsWith('squad_lead_') ? formData.allowed_brands : null
         }])
         .select()
 
@@ -323,9 +323,12 @@ export default function UsersPage() {
     setShowEditModal(true)
     
     // Fetch brands if editing Squad Lead
-    if (userToEdit.role === 'squad_lead') {
-      // Detect market from existing allowed_brands
+    if (userToEdit.role.startsWith('squad_lead_')) {
+      // Detect market from role suffix
       let detectedMarket = 'USC' // Default
+      if (userToEdit.role === 'squad_lead_myr') detectedMarket = 'MYR'
+      else if (userToEdit.role === 'squad_lead_sgd') detectedMarket = 'SGD'
+      else if (userToEdit.role === 'squad_lead_usc') detectedMarket = 'USC'
       if (userToEdit.allowed_brands && userToEdit.allowed_brands.length > 0) {
         const firstBrand = userToEdit.allowed_brands[0]
         const suffix = firstBrand.slice(-2).toUpperCase()
@@ -352,7 +355,7 @@ export default function UsersPage() {
       return
     }
     // Validation for Squad Lead: must select at least 1 brand
-    if (editingUser.role === 'squad_lead' && (!editingUser.allowed_brands || editingUser.allowed_brands.length === 0)) {
+    if (editingUser.role.startsWith('squad_lead_') && (!editingUser.allowed_brands || editingUser.allowed_brands.length === 0)) {
       alert('Squad Lead must have at least 1 allowed brand')
       return
     }
@@ -362,14 +365,14 @@ export default function UsersPage() {
         id: editingUser.id,
         username: editingUser.username,
         role: editingUser.role,
-        allowed_brands: editingUser.role === 'squad_lead' ? editingUser.allowed_brands : null,
+        allowed_brands: editingUser.role.startsWith('squad_lead_') ? editingUser.allowed_brands : null,
         password: editingUser.password ? 'updating' : 'keeping current'
       })
       
       const updateData: any = {
         username: editingUser.username.trim(),
         role: editingUser.role,
-        allowed_brands: editingUser.role === 'squad_lead' ? editingUser.allowed_brands : null
+        allowed_brands: editingUser.role.startsWith('squad_lead_') ? editingUser.allowed_brands : null
       }
       
       // Only update password if provided
@@ -560,8 +563,12 @@ export default function UsersPage() {
         return 'EXECUTIVE'
       case 'usc_dep':
         return 'USC_DEP'
-      case 'squad_lead':
-        return 'SQUAD LEAD'
+      case 'squad_lead_myr':
+        return 'SQUAD LEAD MYR'
+      case 'squad_lead_sgd':
+        return 'SQUAD LEAD SGD'
+      case 'squad_lead_usc':
+        return 'SQUAD LEAD USC'
       default:
         return role.toUpperCase()
     }
@@ -689,7 +696,7 @@ export default function UsersPage() {
                          </span>
                       </td>
                       <td className="brands-cell" style={{fontSize: '12px', minWidth: '250px', whiteSpace: 'normal'}}>
-                        {user.role === 'squad_lead' && user.allowed_brands && user.allowed_brands.length > 0 ? (
+                        {user.role.startsWith('squad_lead_') && user.allowed_brands && user.allowed_brands.length > 0 ? (
                           <div style={{
                             display: 'flex',
                             flexWrap: 'wrap',
@@ -858,9 +865,11 @@ export default function UsersPage() {
                   onChange={(e) => {
                     const newRole = e.target.value
                     setFormData({...formData, role: newRole, allowed_brands: [], market: 'USC'})
-                    // Fetch brands if role is squad_lead
-                    if (newRole === 'squad_lead') {
-                      fetchAvailableBrands('USC') // Default to USC
+                    // Fetch brands if role is squad_lead_*
+                    if (newRole.startsWith('squad_lead_')) {
+                      const market = newRole === 'squad_lead_myr' ? 'MYR' : 
+                                   newRole === 'squad_lead_sgd' ? 'SGD' : 'USC'
+                      fetchAvailableBrands(market)
                     }
                   }}
                 >
@@ -873,7 +882,7 @@ export default function UsersPage() {
               </div>
 
               {/* Show Market Selection for Squad Lead */}
-              {formData.role === 'squad_lead' && (
+              {formData.role.startsWith('squad_lead_') && (
                 <div className="form-group">
                   <label>Market</label>
                   <select
@@ -892,7 +901,7 @@ export default function UsersPage() {
               )}
 
               {/* Show Brand Selection for Squad Lead */}
-              {formData.role === 'squad_lead' && (
+              {formData.role.startsWith('squad_lead_') && (
                 <div className="form-group">
                   <label>Allowed Brands ({formData.market} Market)</label>
                   {brandsLoading ? (
@@ -994,11 +1003,13 @@ export default function UsersPage() {
                   value={editingUser.role}
                   onChange={(e) => {
                     const newRole = e.target.value
-                    setEditingUser({...editingUser, role: newRole, allowed_brands: newRole === 'squad_lead' ? (editingUser.allowed_brands || []) : null})
-                    // Fetch brands if role is squad_lead
-                    if (newRole === 'squad_lead') {
-                      setEditMarket('USC') // Default to USC
-                      fetchAvailableBrands('USC')
+                    setEditingUser({...editingUser, role: newRole, allowed_brands: newRole.startsWith('squad_lead_') ? (editingUser.allowed_brands || []) : null})
+                    // Fetch brands if role is squad_lead_*
+                    if (newRole.startsWith('squad_lead_')) {
+                      const market = newRole === 'squad_lead_myr' ? 'MYR' : 
+                                   newRole === 'squad_lead_sgd' ? 'SGD' : 'USC'
+                      setEditMarket(market)
+                      fetchAvailableBrands(market)
                     }
                   }}
                 >
@@ -1011,7 +1022,7 @@ export default function UsersPage() {
               </div>
 
               {/* Show Market Selection for Squad Lead */}
-              {editingUser.role === 'squad_lead' && (
+              {editingUser.role.startsWith('squad_lead_') && (
                 <div className="form-group">
                   <label>Market</label>
                   <select
@@ -1031,7 +1042,7 @@ export default function UsersPage() {
               )}
 
               {/* Show Brand Selection for Squad Lead */}
-              {editingUser.role === 'squad_lead' && (
+              {editingUser.role.startsWith('squad_lead_') && (
                 <div className="form-group">
                   <label>Allowed Brands ({editMarket} Market)</label>
                   {brandsLoading ? (

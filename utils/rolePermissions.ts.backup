@@ -7,9 +7,7 @@
 // 5. Analyst = Full Dashboard Access (Dashboard, MYR, SGD, USC) + Read Only + No Admin Features
 // 6. Ops = Full Dashboard Access (Dashboard, MYR, SGD, USC) + Read Only + No Admin Features
 // 7. Demo = Full Dashboard Access (Dashboard, MYR, SGD, USC) + Can Edit ALL Targets (Testing) + For Presentation & Feedback
-// 8. Squad Lead MYR = Limited Access: Specific Brands within MYR Market + Read Only
-// 9. Squad Lead SGD = Limited Access: Specific Brands within SGD Market + Read Only
-// 10. Squad Lead USC = Limited Access: Specific Brands within USC Market + Read Only
+// 8. Squad Lead = Limited Access: Specific Brands within Currency (MYR/SGD/USC) + Read Only
 
 export interface UserRole {
   id: string
@@ -163,41 +161,58 @@ export const USER_ROLES: { [key: string]: UserRole } = {
     isReadOnly: true,  // Read-only for most features, but can edit targets for testing purposes
     allowedBrands: null
   },
-  // Squad Lead MYR = Limited Access > Specific Brands within MYR Market + Read Only
-  'squad_lead_myr': {
-    id: 'squad_lead_myr',
-    name: 'squad_lead_myr',
-    displayName: 'Squad Lead MYR',
-    permissions: ['myr'], // MYR market only
-    canAccessUserManagement: false,
-    isReadOnly: true,
-    allowedBrands: null // Will be populated from database per user
-  },
-  // Squad Lead SGD = Limited Access > Specific Brands within SGD Market + Read Only
-  'squad_lead_sgd': {
-    id: 'squad_lead_sgd',
-    name: 'squad_lead_sgd',
-    displayName: 'Squad Lead SGD',
-    permissions: ['sgd'], // SGD market only
-    canAccessUserManagement: false,
-    isReadOnly: true,
-    allowedBrands: null // Will be populated from database per user
-  },
-  // Squad Lead USC = Limited Access > Specific Brands within USC Market + Read Only
-  'squad_lead_usc': {
-    id: 'squad_lead_usc',
-    name: 'squad_lead_usc',
-    displayName: 'Squad Lead USC',
-    permissions: ['usc'], // USC market only
+  // Squad Lead = Limited Access > Specific Brands Only (Market auto-detected from brands) + Read Only
+  'squad_lead': {
+    id: 'squad_lead',
+    name: 'squad_lead',
+    displayName: 'Squad Lead',
+    permissions: ['myr', 'sgd', 'usc'], // Base permissions - will be filtered by Sidebar based on allowed_brands
     canAccessUserManagement: false,
     isReadOnly: true,
     allowedBrands: null // Will be populated from database per user
   }
 }
 
+// NEW: Detect market from allowed brands
+export const getMarketFromBrands = (allowedBrands: string[] | null): string | null => {
+  if (!allowedBrands || allowedBrands.length === 0) return null
+  
+  const firstBrand = allowedBrands[0]
+  const suffix = firstBrand.slice(-2).toUpperCase()
+  
+  // KH = USC (Khmer/Cambodia brands)
+  if (suffix === 'KH' || firstBrand.includes('KH') || firstBrand.includes('CAM') || firstBrand.includes('WIN')) return 'usc'
+  // MY = MYR
+  if (suffix === 'MY') return 'myr'
+  // SG = SGD
+  if (suffix === 'SG') return 'sgd'
+  
+  return null
+}
+
 // Helper functions for role management
 export const getRoleInfo = (roleName: string): UserRole | null => {
   const role = USER_ROLES[roleName.toLowerCase()]
+  
+  // ✅ NEW: For Squad Lead, dynamically add market permission based on brands
+  if (roleName.toLowerCase() === 'squad_lead' && typeof window !== 'undefined') {
+    const userStr = localStorage.getItem('nexmax_user')
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr)
+        const market = getMarketFromBrands(user.allowed_brands)
+        if (market && role) {
+          return {
+            ...role,
+            permissions: [market] // Dynamic permission based on brands
+          }
+        }
+      } catch (error) {
+        console.error('Error detecting market for Squad Lead:', error)
+      }
+    }
+  }
+  
   return role || null
 }
 
@@ -296,16 +311,15 @@ export const getDefaultPageByRole = (userRole: string): string => {
     case 'executive':
     case 'manager_myr':
     case 'sq_myr':
-    case 'squad_lead_myr':  // Squad Lead MYR → MYR Overview
       return '/myr/overview'
     case 'manager_sgd':
     case 'sq_sgd':
-    case 'squad_lead_sgd':  // Squad Lead SGD → SGD Overview
       return '/sgd/overview'
     case 'manager_usc':
     case 'sq_usc':
-    case 'squad_lead_usc':  // Squad Lead USC → USC Overview
       return '/usc/overview'
+    case 'squad_lead':  // Squad Lead default: based on first allowed brand's market
+      return '/usc/overview' // Default to USC, will be dynamic based on allowed_brands
     case 'admin':
     case 'analyst':
     case 'demo':
@@ -338,7 +352,7 @@ export const canAccessBrand = (brandName: string): boolean => {
   return allowedBrands.includes(brandName)
 }
 
-// NEW: Check if user is Squad Lead (any market)
+// NEW: Check if user is Squad Lead
 export const isSquadLead = (userRole: string): boolean => {
-  return userRole.startsWith('squad_lead_')
+  return userRole === 'squad_lead'
 } 
