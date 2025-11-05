@@ -19,8 +19,16 @@ export async function GET(request: NextRequest) {
       periodBEnd,
     })
 
+    // ✅ Pass user's allowed brands to data API
+    const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
+
     // Reuse existing data logic to ensure exact same rows as table
-    const dataRes = await fetch(`${origin}/api/myr-brand-performance-trends/data?${params.toString()}`, { cache: 'no-store' })
+    const dataRes = await fetch(`${origin}/api/myr-brand-performance-trends/data?${params.toString()}`, { 
+      cache: 'no-store',
+      headers: {
+        'x-user-allowed-brands': userAllowedBrandsHeader || 'null'
+      }
+    })
     const dataJson = await dataRes.json()
     if (!dataJson?.success) {
       return new Response('Failed to build export data', { status: 500 })

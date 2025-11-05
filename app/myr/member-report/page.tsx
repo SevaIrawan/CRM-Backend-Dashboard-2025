@@ -25,7 +25,7 @@ interface Pagination {
 }
 
 export default function MYRMemberReportPage() {
-  const [line, setLine] = useState('ALL')
+  const [line, setLine] = useState('')
   const [year, setYear] = useState('ALL')
   const [month, setMonth] = useState('ALL')
   const [dateRange, setDateRange] = useState({ start: '', end: '' })
@@ -177,11 +177,27 @@ export default function MYRMemberReportPage() {
     try {
       setSlicerLoading(true)
       
-      const response = await fetch('/api/myr-member-report/slicer-options')
+      // Get user's allowed brands from localStorage
+      const userStr = localStorage.getItem('nexmax_user')
+      const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
+      
+      const response = await fetch('/api/myr-member-report/slicer-options', {
+        headers: {
+          'x-user-allowed-brands': JSON.stringify(allowedBrands)
+        },
+        cache: 'no-store'
+      })
       const result = await response.json()
       
       if (result.success) {
         setSlicerOptions(result.data)
+        
+        // ✅ Auto-set line to first option from API (ALL for Admin, first brand for Squad Lead)
+        if (result.data.lines.length > 0) {
+          const firstOption = result.data.lines[0]
+          setLine(firstOption)
+          console.log('✅ [MYR Member Report] Auto-set line to first option:', firstOption)
+        }
       }
     } catch (error) {
       console.error('Error fetching myr-member-report slicer options:', error)
@@ -204,7 +220,15 @@ export default function MYRMemberReportPage() {
         limit: pagination.recordsPerPage.toString()
       })
 
-      const response = await fetch(`/api/myr-member-report/data?${params}`)
+      // Get user's allowed brands from localStorage
+      const userStr = localStorage.getItem('nexmax_user')
+      const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
+
+      const response = await fetch(`/api/myr-member-report/data?${params}`, {
+        headers: {
+          'x-user-allowed-brands': JSON.stringify(allowedBrands)
+        }
+      })
       const result = await response.json()
       
       if (result.success) {
@@ -277,10 +301,15 @@ export default function MYRMemberReportPage() {
       // Show progress message for large exports
       console.log('📤 Starting export for large dataset...')
       
+      // Get user's allowed brands from localStorage
+      const userStr = localStorage.getItem('nexmax_user')
+      const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
+
       const response = await fetch('/api/myr-member-report/export', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-allowed-brands': JSON.stringify(allowedBrands)
         },
         body: JSON.stringify({
           line,

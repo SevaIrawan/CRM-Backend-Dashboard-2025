@@ -14,9 +14,15 @@ export async function GET(request: NextRequest) {
   const page = parseInt(searchParams.get('page') || '1')
   const limit = parseInt(searchParams.get('limit') || '1000')
 
+  // ✅ Get user's allowed brands from request header
+  const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
+  const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
+
   try {
     console.log('📊 Fetching blue_whale_myr data with filters:', { 
-      currency, line, year, month, startDate, endDate, filterMode, page, limit 
+      currency, line, year, month, startDate, endDate, filterMode, page, limit,
+      user_allowed_brands: userAllowedBrands,
+      is_squad_lead: userAllowedBrands !== null && userAllowedBrands.length > 0
     })
 
     // ✅ Check if date range mode (aggregate per user)
@@ -33,8 +39,20 @@ export async function GET(request: NextRequest) {
         .gte('date', startDate)
         .lte('date', endDate)
       
+      // ✅ Apply brand filter with user permission check
       if (line && line !== 'ALL') {
+        // Validate Squad Lead access
+        if (userAllowedBrands && userAllowedBrands.length > 0 && !userAllowedBrands.includes(line)) {
+          return NextResponse.json({
+            success: false,
+            error: 'Unauthorized',
+            message: `You do not have access to brand "${line}"`
+          }, { status: 403 })
+        }
         query = query.eq('line', line)
+      } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
+        // Squad Lead selected 'ALL' (though they shouldn't have this option) - filter to their brands
+        query = query.in('line', userAllowedBrands)
       }
       if (year && year !== 'ALL') {
         query = query.eq('year', parseInt(year))
@@ -163,8 +181,20 @@ export async function GET(request: NextRequest) {
 
     // No currency filter needed since table is blue_whale_myr
 
+    // ✅ Apply brand filter with user permission check
     if (line && line !== 'ALL') {
+      // Validate Squad Lead access
+      if (userAllowedBrands && userAllowedBrands.length > 0 && !userAllowedBrands.includes(line)) {
+        return NextResponse.json({
+          success: false,
+          error: 'Unauthorized',
+          message: `You do not have access to brand "${line}"`
+        }, { status: 403 })
+      }
       baseQuery = baseQuery.filter('line', 'eq', line)
+    } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
+      // Squad Lead selected 'ALL' (though they shouldn't have this option) - filter to their brands
+      baseQuery = baseQuery.in('line', userAllowedBrands)
     }
 
     if (year && year !== 'ALL') {

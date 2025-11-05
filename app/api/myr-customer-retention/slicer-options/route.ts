@@ -5,6 +5,10 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔍 Fetching unique values from blue_whale_myr for slicers...')
 
+    // ✅ Get user's allowed brands from request header
+    const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
+    const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
+
     // Get unique lines (no currency filter needed since table is blue_whale_myr)
     const { data: lineData, error: lineError } = await supabase
       .from('blue_whale_myr')
@@ -79,6 +83,22 @@ export async function GET(request: NextRequest) {
 
     // Process data
     const lines = Array.from(new Set(lineData?.map(row => row.line).filter(Boolean) || [])) as string[]
+    
+    console.log('🔍 [MYR Customer Retention API] RAW brands from database:', lines)
+    console.log('🔍 [MYR Customer Retention API] User allowed_brands:', userAllowedBrands)
+    
+    // ✅ LOGIC: Squad Lead = filtered brands only | Admin = ALL + all brands
+    let finalLines: string[]
+    if (userAllowedBrands && userAllowedBrands.length > 0) {
+      // Squad Lead: Filter to only their brands (NO 'ALL')
+      finalLines = lines.filter(brand => userAllowedBrands.includes(brand)).sort()
+      console.log('🔐 [MYR Customer Retention API] Squad Lead - filtered brands:', finalLines)
+    } else {
+      // Admin/Manager/SQ: Add 'ALL' + all brands
+      finalLines = ['ALL', ...lines.sort()]
+      console.log('✅ [MYR Customer Retention API] Admin/Manager - ALL + brands:', finalLines)
+    }
+    
     const years = Array.from(new Set(yearData?.map(row => row.year?.toString()).filter(Boolean) || [])) as string[]
     
     const monthNames = [
@@ -104,7 +124,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        lines,
+        lines: finalLines,
         years,
         months,
         dateRange: {

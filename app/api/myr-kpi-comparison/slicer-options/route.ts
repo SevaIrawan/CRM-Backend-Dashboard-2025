@@ -5,6 +5,10 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔍 [MYR KPI Comparison API] Fetching slicer options for MYR currency')
 
+    // ✅ Get user's allowed brands from request header
+    const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
+    const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
+
     // Get DISTINCT lines from MV
     const { data: allLines, error: linesError } = await supabase
       .from('blue_whale_myr_summary')
@@ -21,9 +25,22 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    const uniqueLines = Array.from(new Set(allLines?.map(row => row.line).filter(Boolean) || []))
+    const uniqueLines = Array.from(new Set(allLines?.map(row => row.line).filter(Boolean) || [])) as string[]
     const cleanLines = uniqueLines.filter(line => line !== 'ALL' && line !== 'All')
-    const linesWithAll = ['ALL', ...cleanLines.sort()]
+    
+    // ✅ LOGIC: Squad Lead = filtered brands only | Admin = ALL + all brands
+    let finalLines: string[]
+    if (userAllowedBrands && userAllowedBrands.length > 0) {
+      // Squad Lead: Filter to only their brands (NO 'ALL')
+      finalLines = cleanLines.filter(brand => userAllowedBrands.includes(brand)).sort()
+      console.log('🔐 [MYR KPI Comparison API] Squad Lead - filtered brands:', finalLines)
+    } else {
+      // Admin/Manager/SQ: Add 'ALL' + all brands
+      finalLines = ['ALL', ...cleanLines.sort()]
+      console.log('✅ [MYR KPI Comparison API] Admin/Manager - ALL + brands:', finalLines)
+    }
+    
+    const linesWithAll = finalLines
 
     // Get latest record for date range defaults from master table (real-time data)
     const { data: latestRecord } = await supabase

@@ -7,6 +7,10 @@ export async function GET(request: NextRequest) {
     const line = searchParams.get('line') || 'ALL'
     const year = searchParams.get('year')
 
+    // ✅ Get user's allowed brands from request header
+    const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
+    const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
+
     if (!year) {
       return NextResponse.json({
         success: false,
@@ -14,7 +18,18 @@ export async function GET(request: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log('🔄 [SGD Overview Chart API] Fetching chart data for:', { year, line })
+    console.log('🔄 [SGD Overview Chart API] Fetching chart data for:', { year, line, user_allowed_brands: userAllowedBrands })
+
+    // ✅ Validate brand access for Squad Lead
+    if (line && line !== 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
+      if (!userAllowedBrands.includes(line)) {
+        return NextResponse.json({
+          success: false,
+          error: 'Unauthorized',
+          message: `You do not have access to brand "${line}"`
+        }, { status: 403 })
+      }
+    }
 
     // Query monthly data for entire year from MV
     let query = supabase

@@ -10,12 +10,17 @@ export async function GET(request: NextRequest) {
     const periodBStart = searchParams.get('periodBStart');
     const periodBEnd = searchParams.get('periodBEnd');
 
+    // ✅ Get user's allowed brands from request header
+    const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
+    const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
+
     console.log('📊 [MYR KPI Comparison] Request params:', {
       line,
       periodAStart,
       periodAEnd,
       periodBStart,
-      periodBEnd
+      periodBEnd,
+      user_allowed_brands: userAllowedBrands
     });
 
     // Validate required parameters
@@ -24,6 +29,17 @@ export async function GET(request: NextRequest) {
         { error: 'Missing required parameters: periodAStart, periodAEnd, periodBStart, periodBEnd' },
         { status: 400 }
       );
+    }
+
+    // ✅ Validate brand access for Squad Lead
+    if (line && line !== 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
+      if (!userAllowedBrands.includes(line)) {
+        return NextResponse.json({
+          success: false,
+          error: 'Unauthorized',
+          message: `You do not have access to brand "${line}"`
+        }, { status: 403 })
+      }
     }
 
     // Helper function to calculate KPIs for a given period - SIMPLIFIED
@@ -38,8 +54,11 @@ export async function GET(request: NextRequest) {
         .gte('date', startDate)
         .lte('date', endDate);
 
+      // ✅ Apply brand filter
       if (selectedLine && selectedLine !== 'ALL') {
         mvQuery = mvQuery.eq('line', selectedLine);
+      } else if (selectedLine === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
+        mvQuery = mvQuery.in('line', userAllowedBrands);
       }
 
       const { data: mvData, error: mvError } = await mvQuery;

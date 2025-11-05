@@ -9,6 +9,10 @@ export async function GET(request: NextRequest) {
     const periodBStart = searchParams.get('periodBStart')
     const periodBEnd = searchParams.get('periodBEnd')
 
+    // ✅ Get user's allowed brands from request header
+    const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
+    const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
+
     if (!periodAStart || !periodAEnd || !periodBStart || !periodBEnd) {
       return NextResponse.json({ 
         success: false, 
@@ -18,7 +22,9 @@ export async function GET(request: NextRequest) {
 
     console.log('🔄 [Brand Performance API] Fetching data for periods:', {
       periodA: { start: periodAStart, end: periodAEnd },
-      periodB: { start: periodBStart, end: periodBEnd }
+      periodB: { start: periodBStart, end: periodBEnd },
+      user_allowed_brands: userAllowedBrands,
+      is_squad_lead: userAllowedBrands !== null && userAllowedBrands?.length > 0
     })
 
     // ✅ FETCH ALL BRANDS FROM DATABASE (NOT HARDCODE)
@@ -28,8 +34,19 @@ export async function GET(request: NextRequest) {
       .eq('currency', 'SGD')
       .not('line', 'is', null)
     
-    const allBrands: string[] = Array.from(new Set(allBrandsData?.map((row: any) => row.line).filter(Boolean) || []))
-    console.log('📊 [Brand Comparison SGD] All brands from database:', allBrands)
+    const allBrandsFromDB: string[] = Array.from(new Set(allBrandsData?.map((row: any) => row.line).filter(Boolean) || []))
+    
+    // ✅ Filter brands: Admin = ALL brands, Squad Lead = their brands only
+    const allBrands: string[] = userAllowedBrands && userAllowedBrands.length > 0
+      ? allBrandsFromDB.filter(brand => userAllowedBrands.includes(brand))
+      : allBrandsFromDB
+    
+    console.log('📊 [Brand Comparison SGD] Brands for this user:', {
+      total_available: allBrandsFromDB.length,
+      user_access: allBrands.length,
+      brands: allBrands,
+      filtered: userAllowedBrands !== null
+    })
     
     // Calculate overall KPIs for both periods
     const calculateOverallKPIs = async (startDate: string, endDate: string) => {

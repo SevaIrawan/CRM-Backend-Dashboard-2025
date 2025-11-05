@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { filterBrandsByUser, removeAllOptionForSquadLead, getDefaultBrandForSquadLead } from '@/utils/brandAccessHelper'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -7,6 +8,10 @@ export async function GET(request: NextRequest) {
 
   try {
     console.log('🔍 [SGD Overview API] Fetching slicer options for SGD currency lock')
+
+    // ✅ Get user's allowed brands from request header
+    const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
+    const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
 
     // Currency is LOCKED to SGD for this page
     const currencies = ['SGD']
@@ -35,9 +40,15 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    const uniqueLines = Array.from(new Set(allLines?.map(row => row.line).filter(Boolean) || []))
+    const uniqueLines = Array.from(new Set(allLines?.map(row => row.line).filter(Boolean) || [])) as string[]
     const cleanLines = uniqueLines.filter(line => line !== 'ALL' && line !== 'All')
-    const linesWithAll = ['ALL', ...cleanLines.sort()]
+    
+    // ✅ Filter brands based on user permission
+    const filteredBrands = filterBrandsByUser(cleanLines, userAllowedBrands)
+    let linesWithAll = ['ALL', ...filteredBrands.sort()]
+    
+    // ✅ Remove 'ALL' option for Squad Lead users
+    linesWithAll = removeAllOptionForSquadLead(linesWithAll, userAllowedBrands)
 
     // Get years from MV - NO LIMIT
     const { data: allYears, error: yearsError } = await supabase
@@ -131,6 +142,11 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 [SGD Slicer] Month-year mapping:', monthYearMap)
 
+    // ✅ Set default line for Squad Lead to first brand, others to 'ALL'
+    const defaultLine = userAllowedBrands && userAllowedBrands.length > 0 
+      ? getDefaultBrandForSquadLead(userAllowedBrands) || filteredBrands[0] 
+      : 'ALL'
+    
     const slicerOptions = {
       currencies, // Locked to SGD
       lines: linesWithAll,
@@ -142,7 +158,7 @@ export async function GET(request: NextRequest) {
       },
       defaults: {
         currency: 'SGD',
-        line: 'ALL',
+        line: defaultLine, // ✅ Auto-select first brand for Squad Lead
         year: defaultYear,
         month: defaultMonth
       }

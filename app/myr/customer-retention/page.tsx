@@ -25,7 +25,7 @@ interface Pagination {
 }
 
 export default function MYRCustomerRetentionPage() {
-  const [line, setLine] = useState('ALL')
+  const [line, setLine] = useState('')
   const [year, setYear] = useState('ALL')
   const [month, setMonth] = useState('ALL')
   const [dateRange, setDateRange] = useState({ start: '', end: '' })
@@ -133,11 +133,27 @@ export default function MYRCustomerRetentionPage() {
     try {
       setSlicerLoading(true)
       
-      const response = await fetch('/api/myr-customer-retention/slicer-options')
+      // Get user's allowed brands from localStorage
+      const userStr = localStorage.getItem('nexmax_user')
+      const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
+      
+      const response = await fetch('/api/myr-customer-retention/slicer-options', {
+        headers: {
+          'x-user-allowed-brands': JSON.stringify(allowedBrands)
+        },
+        cache: 'no-store'
+      })
       const result = await response.json()
       
       if (result.success) {
         setSlicerOptions(result.data)
+        
+        // ✅ Auto-set line to first option from API (ALL for Admin, first brand for Squad Lead)
+        if (result.data.lines.length > 0) {
+          const firstOption = result.data.lines[0]
+          setLine(firstOption)
+          console.log('✅ [MYR Customer Retention] Auto-set line to first option:', firstOption)
+        }
       }
     } catch (error) {
       console.error('Error fetching myr-customer-retention slicer options:', error)
@@ -160,7 +176,15 @@ export default function MYRCustomerRetentionPage() {
         limit: pagination.recordsPerPage.toString()
       })
 
-      const response = await fetch(`/api/myr-customer-retention/data?${params}`)
+      // Get user's allowed brands from localStorage
+      const userStr = localStorage.getItem('nexmax_user')
+      const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
+
+      const response = await fetch(`/api/myr-customer-retention/data?${params}`, {
+        headers: {
+          'x-user-allowed-brands': JSON.stringify(allowedBrands)
+        }
+      })
       const result = await response.json()
       
       if (result.success) {
@@ -233,10 +257,15 @@ export default function MYRCustomerRetentionPage() {
       // Show progress message for large exports
       console.log('📤 Starting export for customer retention data...')
       
+      // Get user's allowed brands from localStorage
+      const userStr = localStorage.getItem('nexmax_user')
+      const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
+
       const response = await fetch('/api/myr-customer-retention/export', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-allowed-brands': JSON.stringify(allowedBrands)
         },
         body: JSON.stringify({
           line,
