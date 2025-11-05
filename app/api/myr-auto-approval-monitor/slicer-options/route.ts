@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     }
 
           // Extract unique lines from all records
-          const uniqueLines = Array.from(new Set(allLines?.map(row => row.line).filter(Boolean) || []))
+          const uniqueLines = Array.from(new Set(allLines?.map(row => row.line).filter(Boolean) || [])) as string[]
           console.log('📊 [DEBUG] Unique lines extracted:', uniqueLines)
           
           const cleanLines = uniqueLines.filter(line => line !== 'ALL' && line !== 'All')
