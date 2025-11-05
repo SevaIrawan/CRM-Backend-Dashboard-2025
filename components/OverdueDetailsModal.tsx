@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { formatCurrencyKPI, formatIntegerKPI } from '@/lib/formatHelpers'
+import { getAllowedBrandsFromStorage } from '@/utils/brandAccessHelper'
 
 interface OverdueTransaction {
   date: string
@@ -85,7 +86,14 @@ export default function OverdueDetailsModal({
         ? '/api/myr-auto-approval-withdraw/overdue-details'
         : '/api/myr-auto-approval-monitor/overdue-details'
       
-      const response = await fetch(`${apiEndpoint}?${params}`)
+      // ✅ Get user's allowed brands for Squad Lead filtering
+      const allowedBrands = getAllowedBrandsFromStorage()
+      const headers: HeadersInit = {}
+      if (allowedBrands && allowedBrands.length > 0) {
+        headers['x-user-allowed-brands'] = JSON.stringify(allowedBrands)
+      }
+      
+      const response = await fetch(`${apiEndpoint}?${params}`, { headers })
       const data = await response.json()
       
       if (data.success) {
@@ -136,7 +144,14 @@ export default function OverdueDetailsModal({
           params.append('endDate', endDate)
         }
         
-        const res = await fetch(`${apiEndpoint}?${params}`)
+        // ✅ Get user's allowed brands for Squad Lead filtering
+        const allowedBrands = getAllowedBrandsFromStorage()
+        const headers: HeadersInit = {}
+        if (allowedBrands && allowedBrands.length > 0) {
+          headers['x-user-allowed-brands'] = JSON.stringify(allowedBrands)
+        }
+        
+        const res = await fetch(`${apiEndpoint}?${params}`, { headers })
         const json = await res.json()
         const rows: OverdueTransaction[] = json?.data?.overdueTransactions || []
         if (!rows.length) break

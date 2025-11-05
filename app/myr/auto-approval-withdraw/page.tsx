@@ -12,6 +12,7 @@ import ChartZoomModal from '@/components/ChartZoomModal'
 import QuickDateFilter from '@/components/QuickDateFilter'
 import { getChartIcon } from '@/lib/CentralIcon'
 import { formatCurrencyKPI, formatIntegerKPI, formatMoMChange, formatNumericKPI, formatPercentageKPI } from '@/lib/formatHelpers'
+import { getAllowedBrandsFromStorage } from '@/utils/brandAccessHelper'
 
 // Types for slicer options API
 interface SlicerOptions {
@@ -320,7 +321,15 @@ export default function MYRAutoApprovalWithdrawPage() {
         setLoadError(null)
 
         console.log('🔍 [DEBUG] Loading slicer options...')
-        const response = await fetch('/api/myr-auto-approval-withdraw/slicer-options')
+        
+        // ✅ Get user's allowed brands for Squad Lead filtering
+        const allowedBrands = getAllowedBrandsFromStorage()
+        const headers: HeadersInit = {}
+        if (allowedBrands && allowedBrands.length > 0) {
+          headers['x-user-allowed-brands'] = JSON.stringify(allowedBrands)
+        }
+        
+        const response = await fetch('/api/myr-auto-approval-withdraw/slicer-options', { headers })
         console.log('🔍 [DEBUG] Slicer options response status:', response.status)
         
         if (!response.ok) {
@@ -409,7 +418,14 @@ export default function MYRAutoApprovalWithdrawPage() {
         console.log('🔍 [DEBUG] Full URL:', `/api/myr-auto-approval-withdraw/data?${params}`)
         console.log('🔍 [DEBUG] Timestamp:', new Date().toISOString())
         
-        const response = await fetch(`/api/myr-auto-approval-withdraw/data?${params}`)
+        // ✅ Get user's allowed brands for Squad Lead filtering
+        const allowedBrands = getAllowedBrandsFromStorage()
+        const headers: HeadersInit = {}
+        if (allowedBrands && allowedBrands.length > 0) {
+          headers['x-user-allowed-brands'] = JSON.stringify(allowedBrands)
+        }
+        
+        const response = await fetch(`/api/myr-auto-approval-withdraw/data?${params}`, { headers })
         console.log('🔍 [DEBUG] Response status:', response.status, response.statusText)
         console.log('🔍 [DEBUG] Response timestamp:', new Date().toISOString())
         

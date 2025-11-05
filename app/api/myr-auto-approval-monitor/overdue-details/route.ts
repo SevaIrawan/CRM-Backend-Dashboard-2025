@@ -19,7 +19,22 @@ export async function GET(request: NextRequest) {
     const page = Math.max(1, parseInt(pageParam || '1'))
     const limit = Math.max(1, Math.min(1000, parseInt(limitParam || '100'))) // default 100, max 1000
     
-    console.log('🔍 [DEBUG] Query parameters:', { line, year, month, isDateRange, startDate, endDate, page, limit })
+    // ✅ Get user's allowed brands from request header
+    const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
+    const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
+    
+    console.log('🔍 [DEBUG] Query parameters:', { 
+      line, 
+      year, 
+      month, 
+      isDateRange, 
+      startDate, 
+      endDate, 
+      page, 
+      limit,
+      userAllowedBrands,
+      isSquadLead: userAllowedBrands !== null && userAllowedBrands?.length > 0
+    })
     
     // Simple query first - just get some data
     // -------------------------
@@ -33,8 +48,20 @@ export async function GET(request: NextRequest) {
       .gt('proc_sec', threshold)
       .in('operator_group', ['Automation', 'BOT'])  // Only automation transactions
     
+    // ✅ Line filter with Squad Lead brand access validation
     if (line && line !== 'ALL') {
+      // Validate Squad Lead access
+      if (userAllowedBrands && userAllowedBrands.length > 0 && !userAllowedBrands.includes(line)) {
+        return NextResponse.json({
+          success: false,
+          error: 'Unauthorized',
+          message: `You do not have access to brand "${line}"`
+        }, { status: 403 })
+      }
       countQuery = countQuery.eq('line', line)
+    } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
+      // Squad Lead selected 'ALL' - filter to their brands
+      countQuery = countQuery.in('line', userAllowedBrands)
     }
     
     // Date filtering logic
@@ -71,8 +98,20 @@ export async function GET(request: NextRequest) {
       .gt('proc_sec', threshold)
       .in('operator_group', ['Automation', 'BOT'])  // Only automation transactions
     
+    // ✅ Line filter with Squad Lead brand access validation (same as count query)
     if (line && line !== 'ALL') {
+      // Validate Squad Lead access
+      if (userAllowedBrands && userAllowedBrands.length > 0 && !userAllowedBrands.includes(line)) {
+        return NextResponse.json({
+          success: false,
+          error: 'Unauthorized',
+          message: `You do not have access to brand "${line}"`
+        }, { status: 403 })
+      }
       query = query.eq('line', line)
+    } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
+      // Squad Lead selected 'ALL' - filter to their brands
+      query = query.in('line', userAllowedBrands)
     }
     
     // Date filtering logic

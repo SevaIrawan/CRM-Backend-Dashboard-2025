@@ -34,13 +34,19 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
     
+    // ✅ Get user's allowed brands from request header
+    const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
+    const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
+    
     console.log('🔍 [DEBUG] Query parameters:', {
       line,
       year,
       month,
       isDateRange,
       startDate,
-      endDate
+      endDate,
+      userAllowedBrands,
+      isSquadLead: userAllowedBrands !== null && userAllowedBrands?.length > 0
     })
     
     // Build query filters
@@ -55,10 +61,22 @@ export async function GET(request: NextRequest) {
       proc_sec: 'not null'
     })
     
-    // Line filter: Skip if "ALL" to fetch all lines
+    // ✅ Line filter with Squad Lead brand access validation
     if (line && line !== 'ALL') {
+      // Validate Squad Lead access
+      if (userAllowedBrands && userAllowedBrands.length > 0 && !userAllowedBrands.includes(line)) {
+        return NextResponse.json({
+          success: false,
+          error: 'Unauthorized',
+          message: `You do not have access to brand "${line}"`
+        }, { status: 403 })
+      }
       depositQuery = depositQuery.eq('line', line)
       console.log('🔍 [DEBUG] Added line filter:', line)
+    } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
+      // Squad Lead selected 'ALL' (shouldn't happen) - filter to their brands
+      depositQuery = depositQuery.in('line', userAllowedBrands)
+      console.log('🔍 [DEBUG] Squad Lead ALL filter - restricted to brands:', userAllowedBrands)
     } else {
       console.log('🔍 [DEBUG] Line filter: ALL (no filter applied, fetching all lines)')
     }

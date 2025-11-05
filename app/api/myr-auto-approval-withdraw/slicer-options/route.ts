@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { filterBrandsByUser, removeAllOptionForSquadLead } from '@/utils/brandAccessHelper'
 
 export async function GET(request: NextRequest) {
   try {
     console.log('🔍 [MYR Auto Approval Withdraw API] Fetching slicer options for MYR currency - FORCE MAX DATE')
+    
+    // ✅ Get user's allowed brands from request header
+    const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
+    const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
+    
+    console.log('👤 [Squad Lead Filter] User allowed brands:', userAllowedBrands)
     
     // Get DISTINCT lines from withdraw table for MYR currency
     const { data: allLines, error: linesError } = await supabase
@@ -29,7 +36,15 @@ export async function GET(request: NextRequest) {
 
           const uniqueLines = Array.from(new Set(allLines?.map(row => row.line).filter(Boolean) || []))
           const cleanLines = uniqueLines.filter(line => line !== 'ALL' && line !== 'All')
-          const linesWithAll = ['ALL', ...cleanLines.sort()]
+          
+          // ✅ Filter brands based on user's allowed brands (Squad Lead filtering)
+          const filteredBrands = filterBrandsByUser(cleanLines, userAllowedBrands)
+          console.log('📊 [Squad Lead Filter] Filtered brands:', filteredBrands)
+          
+          // ✅ Add 'ALL' option but remove it for Squad Lead users
+          const linesWithAll = ['ALL', ...filteredBrands.sort()]
+          const finalLines = removeAllOptionForSquadLead(linesWithAll, userAllowedBrands)
+          console.log('📊 [Squad Lead Filter] Final lines:', finalLines)
 
           // Get DISTINCT years from withdraw table for MYR currency
           const { data: yearData, error: yearsError } = await supabase
@@ -102,7 +117,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Get latest record for defaults - FORCE MAX DATE DATA
-    const { data: latestRecord } = await supabase
+    // ✅ Filter by allowed brands for Squad Lead
+    let latestRecordQuery = supabase
       .from('withdraw')
       .select('line, year, month, date')
       .eq('currency', 'MYR')
@@ -110,6 +126,13 @@ export async function GET(request: NextRequest) {
       .not('year', 'is', null)
       .not('month', 'is', null)
       .not('date', 'is', null)
+    
+    // ✅ Squad Lead: restrict to allowed brands only
+    if (userAllowedBrands && userAllowedBrands.length > 0) {
+      latestRecordQuery = latestRecordQuery.in('line', userAllowedBrands)
+    }
+    
+    const { data: latestRecord } = await latestRecordQuery
       .order('date', { ascending: false })
       .order('year', { ascending: false })
       .order('month', { ascending: false })
@@ -118,7 +141,7 @@ export async function GET(request: NextRequest) {
     console.log('🔍 [FORCE MAX DATE] Latest record:', latestRecord?.[0])
 
     // Force defaults to use MAX DATE data
-    const defaultLine = latestRecord?.[0]?.line || linesWithAll[0] || 'ALL'
+    const defaultLine = latestRecord?.[0]?.line || finalLines[0] || 'ALL'
     const defaultYear = latestRecord?.[0]?.year?.toString() || (uniqueYears.length > 0 ? uniqueYears[uniqueYears.length - 1] : '')
     const defaultMonth = latestRecord?.[0]?.month || (uniqueMonths.length > 0 ? uniqueMonths[uniqueMonths.length - 1] : '')
     
@@ -129,7 +152,7 @@ export async function GET(request: NextRequest) {
     console.log('🔍 [FORCE MAX DATE] Forced defaults:', { defaultLine, defaultYear, defaultMonth, defaultMonthRange })
 
           const slicerOptions = {
-            lines: linesWithAll,
+            lines: finalLines, // ✅ Use filtered lines (Squad Lead safe)
             years: uniqueYears,
             months: uniqueMonths,
             monthDateRanges,
@@ -143,12 +166,13 @@ export async function GET(request: NextRequest) {
           }
 
           console.log('✅ [MYR Auto Approval Withdraw API] Simple slicer options:', {
-            lines: linesWithAll.length,
+            lines: finalLines.length, // ✅ Updated
             years: uniqueYears.length,
             months: uniqueMonths.length,
             availableYears: uniqueYears,
             availableMonths: uniqueMonths.slice(0, 5), // Show first 5 months
-            defaults: { defaultLine, defaultYear, defaultMonth }
+            defaults: { defaultLine, defaultYear, defaultMonth },
+            isSquadLead: userAllowedBrands !== null && userAllowedBrands?.length > 0
           })
 
     const response = NextResponse.json({

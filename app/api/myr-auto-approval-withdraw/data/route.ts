@@ -33,7 +33,20 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
     
-    console.log('🔍 [DEBUG] Query parameters:', { line, year, month, isDateRange, startDate, endDate })
+    // ✅ Get user's allowed brands from request header
+    const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
+    const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
+    
+    console.log('🔍 [DEBUG] Query parameters:', { 
+      line, 
+      year, 
+      month, 
+      isDateRange, 
+      startDate, 
+      endDate,
+      userAllowedBrands,
+      isSquadLead: userAllowedBrands !== null && userAllowedBrands?.length > 0
+    })
     
     // Build query filters
     let withdrawQuery = supabase
@@ -41,10 +54,22 @@ export async function GET(request: NextRequest) {
       .select('*')
       .eq('currency', 'MYR')
     
-    // Line filter: Skip if "ALL" to fetch all lines
+    // ✅ Line filter with Squad Lead brand access validation
     if (line && line !== 'ALL') {
+      // Validate Squad Lead access
+      if (userAllowedBrands && userAllowedBrands.length > 0 && !userAllowedBrands.includes(line)) {
+        return NextResponse.json({
+          success: false,
+          error: 'Unauthorized',
+          message: `You do not have access to brand "${line}"`
+        }, { status: 403 })
+      }
       withdrawQuery = withdrawQuery.eq('line', line)
       console.log('🔍 [DEBUG] Added line filter:', line)
+    } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
+      // Squad Lead selected 'ALL' (shouldn't happen) - filter to their brands
+      withdrawQuery = withdrawQuery.in('line', userAllowedBrands)
+      console.log('🔍 [DEBUG] Squad Lead ALL filter - restricted to brands:', userAllowedBrands)
     } else {
       console.log('🔍 [DEBUG] Line filter: ALL (no filter applied, fetching all lines)')
     }
