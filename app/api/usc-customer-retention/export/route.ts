@@ -155,7 +155,7 @@ async function fetchUserMinDates(rawData: any[], line: string | null, userAllowe
       .filter(row => !row.first_deposit_date || row.first_deposit_date === null || row.first_deposit_date === '')
       .map(row => row.userkey)
     
-    const uniqueUsers = [...new Set(usersWithNullFirstDeposit)]
+    const uniqueUsers = Array.from(new Set(usersWithNullFirstDeposit))
     
     if (uniqueUsers.length === 0) {
       console.log('✅ [Export] All users have valid first_deposit_date, no MIN date fetch needed')
