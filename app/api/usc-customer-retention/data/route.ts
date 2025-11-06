@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
 }
 
 // ✅ Fetch MIN transaction dates untuk users (regardless of month filter)
-async function fetchUserMinDates(rawData: any[], line: string, userAllowedBrands: string[] | null): Promise<Map<string, string>> {
+async function fetchUserMinDates(rawData: any[], line: string | null, userAllowedBrands: string[] | null): Promise<Map<string, string>> {
   try {
     // Find users dengan first_deposit_date NULL
     const usersWithNullFirstDeposit = rawData
@@ -184,7 +184,7 @@ async function fetchUserMinDates(rawData: any[], line: string, userAllowedBrands
 }
 
 // ✅ Fetch previous month data for status classification
-async function fetchPreviousMonthData(line: string, year: string, month: string, userAllowedBrands: string[] | null) {
+async function fetchPreviousMonthData(line: string | null, year: string | null, month: string | null, userAllowedBrands: string[] | null) {
   if (!month || month === 'ALL') return new Set()
   
   try {
@@ -244,7 +244,7 @@ async function fetchPreviousMonthData(line: string, year: string, month: string,
   }
 }
 
-function processCustomerRetentionData(rawData: any[], previousMonthUsers: Set<string>, selectedMonth: string, selectedYear: string, userMinDates: Map<string, string>) {
+function processCustomerRetentionData(rawData: any[], previousMonthUsers: Set<string>, selectedMonth: string | null, selectedYear: string | null, userMinDates: Map<string, string>) {
   console.log(`🔍 Processing ${rawData.length} raw records for customer retention`)
   
   // Check data structure
@@ -321,7 +321,7 @@ function processCustomerRetentionData(rawData: any[], previousMonthUsers: Set<st
   // ✅ Calculate month-year string for NEW DEPOSITOR check
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                      'July', 'August', 'September', 'October', 'November', 'December']
-  const selectedMonthIndex = monthNames.indexOf(selectedMonth)
+  const selectedMonthIndex = selectedMonth ? monthNames.indexOf(selectedMonth) : -1
   
   // ✅ VALIDATION: Only calculate status if specific month is selected
   const canCalculateStatus = selectedMonthIndex !== -1 && selectedYear && selectedYear !== 'ALL'
