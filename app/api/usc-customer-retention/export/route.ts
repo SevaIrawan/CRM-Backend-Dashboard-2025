@@ -204,8 +204,8 @@ async function fetchUserMinDates(rawData: any[], line: string | null, userAllowe
 }
 
 // ✅ Fetch previous month data for status classification
-async function fetchPreviousMonthData(line: string | null, year: string | null, month: string | null, userAllowedBrands: string[] | null) {
-  if (!month || month === 'ALL') return new Set()
+async function fetchPreviousMonthData(line: string | null, year: string | null, month: string | null, userAllowedBrands: string[] | null): Promise<Set<string>> {
+  if (!month || month === 'ALL') return new Set<string>()
   
   try {
     // Calculate previous month
@@ -213,7 +213,7 @@ async function fetchPreviousMonthData(line: string | null, year: string | null, 
                        'July', 'August', 'September', 'October', 'November', 'December']
     const currentMonthIndex = monthNames.indexOf(month)
     
-    if (currentMonthIndex === -1) return new Set()
+    if (currentMonthIndex === -1) return new Set<string>()
     
     let prevMonthIndex = currentMonthIndex - 1
     let prevYear = year
@@ -250,17 +250,17 @@ async function fetchPreviousMonthData(line: string | null, year: string | null, 
     
     if (prevError) {
       console.error('❌ [Export] Error fetching previous month data:', prevError)
-      return new Set()
+      return new Set<string>()
     }
     
     // Extract unique userkeys yang main bulan lalu
-    const prevMonthUsers = new Set(prevData?.map(row => row.userkey) || [])
+    const prevMonthUsers = new Set<string>(prevData?.map(row => row.userkey) || [])
     console.log(`📊 [Export] Previous month (${prevMonth} ${prevYear}) active users:`, prevMonthUsers.size)
     
     return prevMonthUsers
   } catch (error) {
     console.error('❌ [Export] Error in fetchPreviousMonthData:', error)
-    return new Set()
+    return new Set<string>()
   }
 }
 
