@@ -95,8 +95,9 @@ export async function GET(request: NextRequest) {
       finalLines = lines.filter(brand => userAllowedBrands.includes(brand)).sort()
       console.log('🔐 [USC Customer Retention API] Squad Lead - filtered brands:', finalLines)
     } else {
-      // Admin/Manager/SQ: Add 'ALL' + all brands
-      finalLines = ['ALL', ...lines.sort()]
+      // Admin/Manager/SQ: Remove 'ALL'/'All' from database, then add 'ALL' manually
+      const cleanedLines = lines.filter(brand => brand.toUpperCase() !== 'ALL').sort()
+      finalLines = ['ALL', ...cleanedLines]
       console.log('✅ [USC Customer Retention API] Admin/Manager - ALL + brands:', finalLines)
     }
     
@@ -115,11 +116,30 @@ export async function GET(request: NextRequest) {
     const minDate = dateRangeData?.[0]?.date || ''
     const maxDate = maxDateData?.[0]?.date || ''
 
+    // ✅ NEW: Get default year and month from MAX date in database
+    let defaultYear = years.length > 0 ? years[0] : '' // Latest year (already sorted DESC)
+    let defaultMonth = ''
+    
+    if (maxDate && typeof maxDate === 'string' && maxDate.length > 0) {
+      // Extract year and month from max date
+      const maxDateObj = new Date(maxDate)
+      if (!isNaN(maxDateObj.getTime())) {
+        defaultYear = maxDateObj.getFullYear().toString()
+        
+        const monthNames = [
+          'January', 'February', 'March', 'April', 'May', 'June',
+          'July', 'August', 'September', 'October', 'November', 'December'
+        ]
+        defaultMonth = monthNames[maxDateObj.getMonth()]
+      }
+    }
+
     console.log('✅ Blue_whale_usc slicer options processed:', {
       lines_count: finalLines.length,
       years: years.length,
       months: months.length,
-      dateRange: { min: minDate, max: maxDate }
+      dateRange: { min: minDate, max: maxDate },
+      defaults: { year: defaultYear, month: defaultMonth }
     })
 
     return NextResponse.json({
@@ -131,6 +151,11 @@ export async function GET(request: NextRequest) {
         dateRange: {
           min: minDate,
           max: maxDate
+        },
+        defaults: {
+          line: 'ALL',
+          year: defaultYear,
+          month: defaultMonth
         }
       }
     })
