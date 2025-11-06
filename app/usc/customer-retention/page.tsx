@@ -164,14 +164,14 @@ export default function USCCustomerRetentionPage() {
     }
   }, [line, year, month, initialLoadDone])
 
-  // Only reload on pagination change, NOT on slicer change
+  // ✅ Reload on pagination OR status filter change
   useEffect(() => {
     // Skip initial render (handled by first useEffect)
     const isInitialMount = pagination.currentPage === 1 && pagination.totalPages === 1 && pagination.totalRecords === 0
-    if (!isInitialMount) {
+    if (!isInitialMount && line && year && month) {
       fetchCustomerRetentionData()
     }
-  }, [pagination.currentPage])
+  }, [pagination.currentPage, statusFilter])
 
   const fetchSlicerOptions = async () => {
     try {
@@ -239,6 +239,7 @@ export default function USCCustomerRetentionPage() {
         startDate: dateRange.start,
         endDate: dateRange.end,
         filterMode,
+        statusFilter,
         page: pagination.currentPage.toString(),
         limit: pagination.recordsPerPage.toString()
       })
@@ -393,6 +394,12 @@ export default function USCCustomerRetentionPage() {
     resetPagination()
     fetchCustomerRetentionData()
   }
+  
+  // ✅ Handle status filter change
+  const handleStatusFilterChange = (newStatus: string) => {
+    setStatusFilter(newStatus)
+    resetPagination() // Reset to page 1 when filter changes
+  }
 
   const handlePageChange = (newPage: number) => {
     setPagination(prev => ({ ...prev, currentPage: newPage }))
@@ -427,7 +434,8 @@ export default function USCCustomerRetentionPage() {
           month,
           startDate: dateRange.start,
           endDate: dateRange.end,
-          filterMode
+          filterMode,
+          statusFilter
         }),
         // Increase timeout for large datasets
         signal: AbortSignal.timeout(300000) // 5 minutes timeout
@@ -562,7 +570,7 @@ export default function USCCustomerRetentionPage() {
                     }}>STATUS:</label>
                     <select 
                       value={statusFilter} 
-                      onChange={(e) => setStatusFilter(e.target.value)}
+                      onChange={(e) => handleStatusFilterChange(e.target.value)}
                       style={{
                         padding: '6px 12px',
                         border: '1px solid #d1d5db',
@@ -631,12 +639,8 @@ export default function USCCustomerRetentionPage() {
                 </div>
                 
                 {(() => {
-                  // ✅ Filter data based on status
-                  const filteredData = statusFilter === 'ALL' 
-                    ? customerRetentionData 
-                    : customerRetentionData.filter(row => row.status === statusFilter)
-                  
-                  if (filteredData.length === 0) {
+                  // ✅ Data already filtered by server, no need for client-side filter
+                  if (customerRetentionData.length === 0) {
                     return (
                       <div className="empty-container" style={{ marginTop: '40px' }}>
                         <div className="empty-icon">🔍</div>
@@ -655,7 +659,7 @@ export default function USCCustomerRetentionPage() {
                       }}>
                         <thead>
                           <tr>
-                            {filteredData.length > 0 && getSortedColumns(Object.keys(filteredData[0]))
+                            {customerRetentionData.length > 0 && getSortedColumns(Object.keys(customerRetentionData[0]))
                               .map((column) => (
                             <th key={column} style={{ 
                               textAlign: 'left',
@@ -670,7 +674,7 @@ export default function USCCustomerRetentionPage() {
                               </tr>
                           </thead>
                           <tbody>
-                            {filteredData.map((row, index) => (
+                            {customerRetentionData.map((row, index) => (
                               <tr key={index}>
                                 {getSortedColumns(Object.keys(row))
                             .map((column) => {
@@ -812,9 +816,9 @@ export default function USCCustomerRetentionPage() {
                 <div className="table-footer">
                   <div className="records-info">
                     {statusFilter === 'ALL' ? (
-                      <>Showing {Math.min(customerRetentionData.length, 1000)} of {pagination.totalRecords.toLocaleString()} records</>
+                      <>Showing {customerRetentionData.length} of {pagination.totalRecords.toLocaleString()} records</>
                     ) : (
-                      <>Showing {customerRetentionData.filter(row => row.status === statusFilter).length} of {pagination.totalRecords.toLocaleString()} records (filtered by {statusFilter})</>
+                      <>Showing {customerRetentionData.length} of {pagination.totalRecords.toLocaleString()} {statusFilter} records</>
                     )}
                   </div>
                   

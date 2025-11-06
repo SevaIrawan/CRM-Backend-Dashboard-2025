@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculate GGR for each transaction
-    const processedData = (data || []).map(row => ({
+    const processedData = (data || []).map((row: any) => ({
       ...row,
       ggr: row.deposit_amount - row.withdraw_amount
     }))

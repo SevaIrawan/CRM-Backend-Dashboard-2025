@@ -4,13 +4,13 @@ import { supabase } from '@/lib/supabase'
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   
-  const currency = searchParams.get('currency')
   const line = searchParams.get('line')
   const year = searchParams.get('year')
   const month = searchParams.get('month')
   const startDate = searchParams.get('startDate')
   const endDate = searchParams.get('endDate')
   const filterMode = searchParams.get('filterMode')
+  const statusFilter = searchParams.get('statusFilter') || 'ALL'
   const page = parseInt(searchParams.get('page') || '1')
   const limit = parseInt(searchParams.get('limit') || '1000')
 
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
   try {
     console.log('📊 Fetching blue_whale_usc data for customer retention with filters:', { 
-      currency, line, year, month, startDate, endDate, filterMode, page, limit,
+      line, year, month, startDate, endDate, filterMode, statusFilter, page, limit,
       user_allowed_brands: userAllowedBrands
     })
 
@@ -88,11 +88,18 @@ export async function GET(request: NextRequest) {
     const processedData = processCustomerRetentionData(rawData, previousMonthData, month, year, userMinDates)
     console.log(`📊 Processed customer retention data: ${processedData.length} users`)
     
-    // Apply pagination to processed data
-    const totalRecords = processedData.length
+    // ✅ Apply status filter if specified
+    const filteredData = statusFilter === 'ALL' 
+      ? processedData 
+      : processedData.filter(user => user.status === statusFilter)
+    
+    console.log(`📊 After status filter (${statusFilter}): ${filteredData.length} users`)
+    
+    // Apply pagination to filtered data
+    const totalRecords = filteredData.length
     const totalPages = Math.ceil(totalRecords / limit)
     const offset = (page - 1) * limit
-    const paginatedData = processedData.slice(offset, offset + limit)
+    const paginatedData = filteredData.slice(offset, offset + limit)
 
     console.log(`✅ Processed ${paginatedData.length} customer retention records (Page ${page} of ${totalPages})`)
 
@@ -108,13 +115,13 @@ export async function GET(request: NextRequest) {
         hasPrevPage: page > 1
       },
       filters: {
-        currency,
         line,
         year,
         month,
         startDate,
         endDate,
-        filterMode
+        filterMode,
+        statusFilter
       }
     })
 
@@ -132,8 +139,8 @@ async function fetchUserMinDates(rawData: any[], line: string | null, userAllowe
   try {
     // Find users dengan first_deposit_date NULL
     const usersWithNullFirstDeposit = rawData
-      .filter(row => !row.first_deposit_date || row.first_deposit_date === null || row.first_deposit_date === '')
-      .map(row => row.userkey)
+      .filter((row: any) => !row.first_deposit_date || row.first_deposit_date === null || row.first_deposit_date === '')
+      .map((row: any) => row.userkey)
     
     const uniqueUsers = Array.from(new Set(usersWithNullFirstDeposit))
     
@@ -168,7 +175,7 @@ async function fetchUserMinDates(rawData: any[], line: string | null, userAllowe
     
     // Build Map: userkey -> MIN date
     const userMinDateMap = new Map<string, string>()
-    minDateData?.forEach(row => {
+    minDateData?.forEach((row: any) => {
       if (!userMinDateMap.has(row.userkey)) {
         userMinDateMap.set(row.userkey, row.date)
       }
@@ -201,7 +208,7 @@ async function fetchPreviousMonthData(line: string | null, year: string | null, 
     if (prevMonthIndex < 0) {
       // Previous month is in previous year
       prevMonthIndex = 11 // December
-      prevYear = year !== 'ALL' ? (parseInt(year) - 1).toString() : year
+      prevYear = year && year !== 'ALL' ? (parseInt(year) - 1).toString() : year
     }
     
     const prevMonth = monthNames[prevMonthIndex]
@@ -234,7 +241,7 @@ async function fetchPreviousMonthData(line: string | null, year: string | null, 
     }
     
     // Extract unique userkeys yang main bulan lalu
-    const prevMonthUsers = new Set<string>(prevData?.map(row => row.userkey) || [])
+    const prevMonthUsers = new Set<string>(prevData?.map((row: any) => row.userkey) || [])
     console.log(`📊 Previous month (${prevMonth} ${prevYear}) active users:`, prevMonthUsers.size)
     
     return prevMonthUsers

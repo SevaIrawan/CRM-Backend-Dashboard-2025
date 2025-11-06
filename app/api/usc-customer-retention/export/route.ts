@@ -3,14 +3,14 @@ import { supabase } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
-    const { line, year, month, startDate, endDate, filterMode } = await request.json()
+    const { line, year, month, startDate, endDate, filterMode, statusFilter } = await request.json()
 
     // ✅ NEW: Get user's allowed brands from request header
     const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
     const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
 
     console.log('📥 Exporting blue_whale_usc customer retention data with filters:', {
-      line, year, month, startDate, endDate, filterMode,
+      line, year, month, startDate, endDate, filterMode, statusFilter,
       user_allowed_brands: userAllowedBrands
     })
 
@@ -68,7 +68,14 @@ export async function POST(request: NextRequest) {
     const processedData = processCustomerRetentionData(rawData, previousMonthData, month, year, userMinDates)
     console.log(`📊 Processed customer retention data: ${processedData.length} users`)
 
-    if (processedData.length === 0) {
+    // ✅ Apply status filter if specified
+    const filteredData = statusFilter && statusFilter !== 'ALL'
+      ? processedData.filter(user => user.status === statusFilter)
+      : processedData
+    
+    console.log(`📊 After status filter (${statusFilter || 'ALL'}): ${filteredData.length} users`)
+
+    if (filteredData.length === 0) {
       return NextResponse.json({ 
         error: 'No customer retention data found for the selected filters' 
       }, { status: 404 })
@@ -99,7 +106,7 @@ export async function POST(request: NextRequest) {
     const csvHeader = retentionColumns.map(col => col.toUpperCase().replace(/_/g, ' ')).join(',')
     
     // Create CSV rows
-    const csvRows = processedData.map(row => {
+    const csvRows = filteredData.map(row => {
       return retentionColumns.map(col => {
         const value = row[col]
         // Format numbers and handle null values
@@ -152,8 +159,8 @@ async function fetchUserMinDates(rawData: any[], line: string | null, userAllowe
   try {
     // Find users dengan first_deposit_date NULL
     const usersWithNullFirstDeposit = rawData
-      .filter(row => !row.first_deposit_date || row.first_deposit_date === null || row.first_deposit_date === '')
-      .map(row => row.userkey)
+      .filter((row: any) => !row.first_deposit_date || row.first_deposit_date === null || row.first_deposit_date === '')
+      .map((row: any) => row.userkey)
     
     const uniqueUsers = Array.from(new Set(usersWithNullFirstDeposit))
     
@@ -188,7 +195,7 @@ async function fetchUserMinDates(rawData: any[], line: string | null, userAllowe
     
     // Build Map: userkey -> MIN date
     const userMinDateMap = new Map<string, string>()
-    minDateData?.forEach(row => {
+    minDateData?.forEach((row: any) => {
       if (!userMinDateMap.has(row.userkey)) {
         userMinDateMap.set(row.userkey, row.date)
       }
@@ -221,7 +228,7 @@ async function fetchPreviousMonthData(line: string | null, year: string | null, 
     if (prevMonthIndex < 0) {
       // Previous month is in previous year
       prevMonthIndex = 11 // December
-      prevYear = year !== 'ALL' ? (parseInt(year) - 1).toString() : year
+      prevYear = year && year !== 'ALL' ? (parseInt(year) - 1).toString() : year
     }
     
     const prevMonth = monthNames[prevMonthIndex]
@@ -254,7 +261,7 @@ async function fetchPreviousMonthData(line: string | null, year: string | null, 
     }
     
     // Extract unique userkeys yang main bulan lalu
-    const prevMonthUsers = new Set<string>(prevData?.map(row => row.userkey) || [])
+    const prevMonthUsers = new Set<string>(prevData?.map((row: any) => row.userkey) || [])
     console.log(`📊 [Export] Previous month (${prevMonth} ${prevYear}) active users:`, prevMonthUsers.size)
     
     return prevMonthUsers
