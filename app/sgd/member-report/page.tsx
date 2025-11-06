@@ -57,6 +57,8 @@ export default function SGDMemberReportPage() {
   // Custom column order for better organization - based on actual column names from database
   const columnOrder = [
     'date',
+    'date_range',
+    'days_active',
     'line', 
     'user_name',
     'unique_code',

@@ -455,15 +455,27 @@ export default function SGDCustomerRetentionPage() {
                       {customerRetentionData.map((row, index) => (
                         <tr key={index}>
                           {getSortedColumns(Object.keys(row))
-                            .map((column) => (
-                              <td key={column} style={{ 
-                                textAlign: getColumnAlignment(column, row[column]) as 'left' | 'right' | 'center',
-                                border: '1px solid #e0e0e0',
-                                padding: '8px 12px'
-                              }}>
-                                {formatTableCell(row[column])}
-                              </td>
-                            ))}
+                            .map((column) => {
+                              const cellValue = row[column]
+                              // ✅ Conditional coloring for net_profit column
+                              const isNetProfit = column === 'net_profit'
+                              const numericValue = typeof cellValue === 'number' ? cellValue : parseFloat(String(cellValue).replace(/,/g, ''))
+                              const isNegative = !isNaN(numericValue) && numericValue < 0
+                              const isPositive = !isNaN(numericValue) && numericValue > 0
+                              
+                              return (
+                                <td key={column} style={{ 
+                                  textAlign: getColumnAlignment(column, cellValue) as 'left' | 'right' | 'center',
+                                  border: '1px solid #e0e0e0',
+                                  padding: '8px 12px',
+                                  // ✅ Apply color for net_profit: negative = red, positive = green
+                                  color: isNetProfit ? (isNegative ? '#dc2626' : isPositive ? '#059669' : '#374151') : '#374151',
+                                  fontWeight: isNetProfit ? 600 : 'normal'
+                                }}>
+                                  {formatTableCell(cellValue)}
+                                </td>
+                              )
+                            })}
                         </tr>
                       ))}
                     </tbody>

@@ -25,19 +25,28 @@ export async function GET(request: NextRequest) {
       is_squad_lead: userAllowedBrands !== null && userAllowedBrands.length > 0
     })
 
-    // ✅ Check if date range mode (aggregate per user)
+    // ✅ ALWAYS AGGREGATE MODE: GROUP BY user, SUM all metrics (for both month and date range)
+    console.log('📊 [AGGREGATED MODE] Grouping by user...')
+    
+    // ✅ Check if using date range or month mode
     const isDateRangeMode = filterMode === 'daterange' && startDate && endDate
+    const isMonthMode = filterMode === 'month' && month && month !== 'ALL'
 
-    if (isDateRangeMode) {
+    if (isDateRangeMode || isMonthMode) {
       // ✅ AGGREGATED MODE: GROUP BY user, SUM all metrics
-      console.log('📊 [AGGREGATED MODE] Date range detected, grouping by user...')
+      console.log('📊 [AGGREGATED MODE] Filter mode:', filterMode, isDateRangeMode ? 'date range' : 'monthly')
       
       // Build filter for raw data fetch
       let query = supabase
         .from('blue_whale_myr')
         .select('*')
-        .gte('date', startDate)
-        .lte('date', endDate)
+      
+      // ✅ Apply date/month filter based on mode
+      if (isDateRangeMode) {
+        query = query.gte('date', startDate).lte('date', endDate)
+      } else if (isMonthMode) {
+        query = query.eq('month', month)
+      }
       
       // ✅ Apply brand filter with user permission check
       if (line && line !== 'ALL') {
@@ -80,8 +89,13 @@ export async function GET(request: NextRequest) {
         
         if (!userMap.has(key)) {
           // Initialize user record
+          // ✅ Set date_range based on mode
+          const dateRangeValue = isDateRangeMode 
+            ? `${startDate} to ${endDate}`
+            : `Month: ${month} ${year !== 'ALL' ? year : ''}`.trim()
+          
           userMap.set(key, {
-            date_range: `${startDate} to ${endDate}`,
+            date_range: dateRangeValue,
             line: row.line,
             user_name: row.user_name,
             unique_code: row.unique_code,
