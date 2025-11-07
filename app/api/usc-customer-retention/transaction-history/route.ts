@@ -77,11 +77,26 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    // Calculate GGR for each transaction
-    const processedData = (data || []).map((row: any) => ({
-      ...row,
-      ggr: row.deposit_amount - row.withdraw_amount
-    }))
+    // ✅ Fetch MIN date untuk user ini (fallback untuk first_deposit_date NULL)
+    const userMinDate = await fetchUserMinDate(userkey, line, userAllowedBrands)
+
+    // Calculate GGR for each transaction + apply first_deposit_date fallback
+    const processedData = (data || []).map((row: any) => {
+      // ✅ FALLBACK: Bila first_deposit_date NULL/kosong, gunakan MIN date
+      let firstDepositDate = row.first_deposit_date
+      if (!firstDepositDate || firstDepositDate === null || firstDepositDate === '') {
+        firstDepositDate = userMinDate || null
+        if (userMinDate) {
+          console.log(`🔄 Transaction ${row.date}: first_deposit_date NULL → fallback to MIN date (${userMinDate})`)
+        }
+      }
+      
+      return {
+        ...row,
+        first_deposit_date: firstDepositDate,
+        ggr: row.deposit_amount - row.withdraw_amount
+      }
+    })
 
     console.log(`📊 Transaction history found: ${processedData.length} transactions`)
 
@@ -107,3 +122,44 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// ✅ Fetch MIN transaction date untuk specific user (fallback untuk first_deposit_date NULL)
+async function fetchUserMinDate(userkey: string, line: string | null, userAllowedBrands: string[] | null): Promise<string | null> {
+  try {
+    console.log(`🔍 Fetching MIN date for user: ${userkey}`)
+    
+    // Fetch MIN date untuk user ini dari ALL transactions (no month filter)
+    let minDateQuery = supabase
+      .from('blue_whale_usc')
+      .select('date')
+      .eq('userkey', userkey)
+      .gt('deposit_cases', 0)
+      .order('date', { ascending: true })
+      .limit(1)
+    
+    // Apply brand filter
+    if (line && line !== 'ALL') {
+      minDateQuery = minDateQuery.eq('line', line)
+    } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
+      minDateQuery = minDateQuery.in('line', userAllowedBrands)
+    }
+    
+    const { data: minDateData, error: minDateError } = await minDateQuery
+    
+    if (minDateError) {
+      console.error('❌ Error fetching MIN date:', minDateError)
+      return null
+    }
+    
+    if (minDateData && minDateData.length > 0) {
+      const minDate = minDateData[0].date
+      console.log(`📊 MIN date found for user ${userkey}: ${minDate}`)
+      return minDate
+    }
+    
+    console.log(`⚠️ No MIN date found for user ${userkey}`)
+    return null
+  } catch (error) {
+    console.error('❌ Error in fetchUserMinDate:', error)
+    return null
+  }
+}
