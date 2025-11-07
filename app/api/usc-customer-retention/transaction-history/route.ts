@@ -151,7 +151,7 @@ async function fetchUserMinDate(userkey: string, line: string | null, userAllowe
     }
     
     if (minDateData && minDateData.length > 0) {
-      const minDate = minDateData[0].date
+      const minDate = minDateData[0].date as string
       console.log(`📊 MIN date found for user ${userkey}: ${minDate}`)
       return minDate
     }
