@@ -367,7 +367,6 @@ export default function MYRMemberReportPage() {
             className={`slicer-select ${slicerLoading ? 'disabled' : ''}`}
             disabled={slicerLoading}
           >
-            <option value="ALL">All</option>
             {slicerOptions.lines.map((lineOption) => (
               <option key={lineOption} value={lineOption}>{lineOption}</option>
             ))}
