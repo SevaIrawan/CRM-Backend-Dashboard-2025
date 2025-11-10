@@ -8,6 +8,7 @@ import StatCard from '@/components/StatCard'
 import LineChart from '@/components/LineChart'
 import BarChart from '@/components/BarChart'
 import OverdueDetailsModal from '@/components/OverdueDetailsModal'
+import AutomationTransactionsModal from '@/components/AutomationTransactionsModal'
 import ChartZoomModal from '@/components/ChartZoomModal'
 import QuickDateFilter from '@/components/QuickDateFilter'
 import { getChartIcon } from '@/lib/CentralIcon'
@@ -213,6 +214,7 @@ export default function MYRAutoApprovalMonitorPage() {
   const [selectedYear, setSelectedYear] = useState('')
   const [selectedMonth, setSelectedMonth] = useState('')
   const [showOverdueModal, setShowOverdueModal] = useState(false)
+  const [showAutomationModal, setShowAutomationModal] = useState(false)
   
   // State for chart zoom modal
   const [isZoomOpen, setIsZoomOpen] = useState(false)
@@ -669,19 +671,21 @@ export default function MYRAutoApprovalMonitorPage() {
                        isPositive: (data?.momComparison?.totalTransactions || 0) >= 0
                      }}
                    />
-                  <StatCard
-                    title="TOTAL TRANS AUTOMATION"
-                    value={formatIntegerKPI(data?.automation?.automationTransactions || 0)}
-                    icon="TOTAL TRANS AUTOMATION"
-                     additionalKpi={{
-                       label: "DAILY AVERAGE",
-                       value: formatIntegerKPI(Math.round((data?.automation?.automationTransactions || 0) / calculateActiveDays()))
-                     }}
-                     comparison={{
-                       percentage: formatMoMComparison(data?.momComparison?.automationTransactions || 0),
-                       isPositive: (data?.momComparison?.automationTransactions || 0) >= 0
-                     }}
-                   />
+                 <StatCard
+                   title="TOTAL TRANS AUTOMATION"
+                   value={formatIntegerKPI(data?.automation?.automationTransactions || 0)}
+                   icon="TOTAL TRANS AUTOMATION"
+                    additionalKpi={{
+                      label: "DAILY AVERAGE",
+                      value: formatIntegerKPI(Math.round((data?.automation?.automationTransactions || 0) / calculateActiveDays()))
+                    }}
+                    comparison={{
+                      percentage: formatMoMComparison(data?.momComparison?.automationTransactions || 0),
+                      isPositive: (data?.momComparison?.automationTransactions || 0) >= 0
+                    }}
+                    onClick={() => setShowAutomationModal(true)}
+                    clickable={true}
+                  />
                   <StatCard
                     title="AVG PROC TIME AUTOMATION"
                     value={`${(data?.processingTime?.avgAutomation || 0).toFixed(1)} sec`}
@@ -1042,6 +1046,19 @@ export default function MYRAutoApprovalMonitorPage() {
         isOpen={showOverdueModal}
         onClose={() => setShowOverdueModal(false)}
         overdueCount={data?.performance?.automationOverdue || 0}
+        line={selectedLine}
+        year={selectedYear}
+        month={selectedMonth}
+        isDateRange={isDateRangeMode}
+        startDate={startDate}
+        endDate={endDate}
+      />
+      
+      {/* Automation Transactions Modal */}
+      <AutomationTransactionsModal
+        isOpen={showAutomationModal}
+        onClose={() => setShowAutomationModal(false)}
+        totalCount={data?.automation?.automationTransactions || 0}
         line={selectedLine}
         year={selectedYear}
         month={selectedMonth}

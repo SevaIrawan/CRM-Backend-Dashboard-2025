@@ -832,9 +832,20 @@ export async function GET(request: NextRequest) {
             // Match by date format - handle different period formats
             try {
               let dateStr
-              if (periodDate.includes('Oct') || periodDate.includes('Sep')) {
-                // Handle "Oct 1", "Oct 2" format - fix the parsing logic
-                const month = periodDate.includes('Oct') ? '10' : '09'
+              
+              // Check if periodDate is in "MMM D" format (e.g., "Nov 1", "Oct 12", "Sep 5")
+              const monthAbbreviations: Record<string, string> = {
+                'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+                'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
+                'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+              }
+              
+              // Check if period contains any month abbreviation
+              const foundMonth = Object.keys(monthAbbreviations).find(abbr => periodDate.includes(abbr))
+              
+              if (foundMonth) {
+                // Handle "MMM D" format (e.g., "Nov 1", "Oct 12")
+                const month = monthAbbreviations[foundMonth]
                 const day = periodDate.split(' ')[1]
                 dateStr = `2025-${month}-${day.padStart(2, '0')}`
                 console.log(`🔍 [DEBUG] Parsed date for ${periodDate}: ${dateStr}`)
@@ -842,7 +853,7 @@ export async function GET(request: NextRequest) {
                 // Handle "Week 1", "Week 2" format - skip for now
                 return false
               } else {
-                // Handle direct date format
+                // Handle direct date format (YYYY-MM-DD)
                 dateStr = periodDate
               }
               

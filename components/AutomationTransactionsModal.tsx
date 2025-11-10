@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { formatCurrencyKPI, formatIntegerKPI } from '@/lib/formatHelpers'
 import { getAllowedBrandsFromStorage } from '@/utils/brandAccessHelper'
 
-interface OverdueTransaction {
+interface AutomationTransaction {
   date: string
   time?: string
   type?: string
@@ -18,10 +18,10 @@ interface OverdueTransaction {
   procSec: number
 }
 
-interface OverdueDetailsModalProps {
+interface AutomationTransactionsModalProps {
   isOpen: boolean
   onClose: () => void
-  overdueCount: number
+  totalCount: number
   line: string
   year: string
   month: string
@@ -31,19 +31,19 @@ interface OverdueDetailsModalProps {
   type?: 'deposit' | 'withdraw' // Type to determine which API endpoint to use
 }
 
-export default function OverdueDetailsModal({
+export default function AutomationTransactionsModal({
   isOpen,
   onClose,
-  overdueCount,
+  totalCount,
   line,
   year,
   month,
   isDateRange = false,
   startDate,
   endDate,
-  type = 'deposit' // Default to deposit for backward compatibility
-}: OverdueDetailsModalProps) {
-  const [transactions, setTransactions] = useState<OverdueTransaction[]>([])
+  type = 'deposit' // Default to deposit
+}: AutomationTransactionsModalProps) {
+  const [transactions, setTransactions] = useState<AutomationTransaction[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(1)
@@ -51,17 +51,34 @@ export default function OverdueDetailsModal({
   const [sliceVisible, setSliceVisible] = useState(20)
   const [totalPages, setTotalPages] = useState(1)
   const [totalRecords, setTotalRecords] = useState(0)
-  const [thresholdSec, setThresholdSec] = useState<number>(30)
   const [exporting, setExporting] = useState(false)
+
+  // Helper function to get processing time color
+  const getProcTimeColor = (procSec: number) => {
+    if (procSec <= 10) return '#059669' // Green - Fast
+    if (procSec <= 30) return '#f59e0b' // Yellow - Normal
+    return '#dc2626' // Red - Slow/Overdue
+  }
+
+  // Helper function to get processing time badge style
+  const getProcTimeBadge = (procSec: number) => {
+    if (procSec <= 10) {
+      return { bg: '#D1FAE5', text: '#059669', label: 'Fast' }
+    }
+    if (procSec <= 30) {
+      return { bg: '#FEF3C7', text: '#f59e0b', label: 'Normal' }
+    }
+    return { bg: '#FEE2E2', text: '#dc2626', label: 'Slow' }
+  }
 
   // Fetch data when modal opens
   useEffect(() => {
     if (isOpen) {
-      fetchOverdueDetails()
+      fetchAutomationDetails()
     }
   }, [isOpen, line, year, month, isDateRange, startDate, endDate, page, limit])
 
-  const fetchOverdueDetails = async () => {
+  const fetchAutomationDetails = async () => {
     setLoading(true)
     setError(null)
     
@@ -83,8 +100,8 @@ export default function OverdueDetailsModal({
       
       // Determine API endpoint based on type
       const apiEndpoint = type === 'withdraw' 
-        ? '/api/myr-auto-approval-withdraw/overdue-details'
-        : '/api/myr-auto-approval-monitor/overdue-details'
+        ? '/api/myr-auto-approval-withdraw/automation-details'
+        : '/api/myr-auto-approval-monitor/automation-details'
       
       // ✅ Get user's allowed brands for Squad Lead filtering
       const allowedBrands = getAllowedBrandsFromStorage()
@@ -97,16 +114,15 @@ export default function OverdueDetailsModal({
       const data = await response.json()
       
       if (data.success) {
-        setTransactions(data.data.overdueTransactions)
+        setTransactions(data.data.automationTransactions)
         setTotalPages(data.data.pagination?.totalPages || 1)
         setTotalRecords(data.data.pagination?.totalRecords || 0)
-        if (typeof data.data.thresholdSec === 'number') setThresholdSec(data.data.thresholdSec)
       } else {
-        setError(data.error || 'Failed to fetch overdue details')
+        setError(data.error || 'Failed to fetch automation transaction details')
       }
     } catch (err) {
       setError('Network error occurred')
-      console.error('❌ Error fetching overdue details:', err)
+      console.error('❌ Error fetching automation details:', err)
     } finally {
       setLoading(false)
     }
@@ -116,14 +132,14 @@ export default function OverdueDetailsModal({
     try {
       setExporting(true)
       const typeLabel = type === 'withdraw' ? 'Approval' : 'Type'
-      const headers = ['Date Time', typeLabel, 'Brand', 'Unique Code', 'User Name', 'Amount', 'Operator', 'Process Time', 'Processing Time (s)']
+      const headers = ['Date Time', typeLabel, 'Brand', 'Unique Code', 'User Name', 'Amount', 'Operator', 'Process Time', 'Processing Time (s)', 'Status']
       const allRows: string[] = []
       allRows.push(headers.join(','))
 
       // Determine API endpoint based on type
       const apiEndpoint = type === 'withdraw' 
-        ? '/api/myr-auto-approval-withdraw/overdue-details'
-        : '/api/myr-auto-approval-monitor/overdue-details'
+        ? '/api/myr-auto-approval-withdraw/automation-details'
+        : '/api/myr-auto-approval-monitor/automation-details'
 
       // Fetch all pages in batches of 1000 rows
       const exportLimit = 1000
@@ -153,11 +169,12 @@ export default function OverdueDetailsModal({
         
         const res = await fetch(`${apiEndpoint}?${params}`, { headers })
         const json = await res.json()
-        const rows: OverdueTransaction[] = json?.data?.overdueTransactions || []
+        const rows: AutomationTransaction[] = json?.data?.automationTransactions || []
         if (!rows.length) break
         rows.forEach(t => {
           const dateTime = t.time ? `${t.date} ${t.time}` : t.date
           const typeOrApproval = type === 'withdraw' ? (t.approval || 'N/A') : (t.type || 'N/A')
+          const status = t.procSec <= 10 ? 'Fast' : t.procSec <= 30 ? 'Normal' : 'Slow'
           allRows.push([
             dateTime,
             typeOrApproval,
@@ -167,7 +184,8 @@ export default function OverdueDetailsModal({
             String(t.amount),
             t.operator,
             t.processTime,
-            String(t.procSec)
+            String(t.procSec),
+            status
           ].join(','))
         })
       }
@@ -178,7 +196,7 @@ export default function OverdueDetailsModal({
       const a = document.createElement('a')
       a.href = url
       const transactionType = type === 'withdraw' ? 'withdraw' : 'deposit'
-      a.download = `overdue-${transactionType}-transactions-${line}-${year}-${month}-ALL-${new Date().toISOString().split('T')[0]}.csv`
+      a.download = `automation-${transactionType}-transactions-${line}-${year}-${month}-ALL-${new Date().toISOString().split('T')[0]}.csv`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -203,10 +221,10 @@ export default function OverdueDetailsModal({
         <div className="flex justify-between items-center p-6 border-b">
           <div>
             <h2 className="text-xl font-bold text-gray-900">
-              Overdue Transactions Details
+              Automation Transactions Details
             </h2>
             <p className="text-sm text-gray-600 mt-1">
-              {overdueCount} cases • {line} • {year} • {month}
+              {totalCount.toLocaleString()} cases • {line} • {year} • {month}
             </p>
           </div>
           <div className="flex gap-2">
@@ -231,14 +249,14 @@ export default function OverdueDetailsModal({
           {loading ? (
             <div className="flex items-center justify-center h-32">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="ml-2 text-gray-600">Loading overdue transactions...</span>
+              <span className="ml-2 text-gray-600">Loading automation transactions...</span>
             </div>
           ) : error ? (
             <div className="text-center py-8">
               <div className="text-red-600 mb-2">❌ Error</div>
               <p className="text-gray-600">{error}</p>
               <button
-                onClick={fetchOverdueDetails}
+                onClick={fetchAutomationDetails}
                 className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
                 Retry
@@ -247,7 +265,7 @@ export default function OverdueDetailsModal({
           ) : transactions.length === 0 ? (
             <div className="text-center py-8">
               <div className="text-gray-500 mb-2">📭 No Data</div>
-              <p className="text-gray-600">No overdue transactions found for the selected filters</p>
+              <p className="text-gray-600">No automation transactions found for the selected filters</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -280,44 +298,53 @@ export default function OverdueDetailsModal({
                       Process Time
                     </th>
                     <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
-                      {`Threshold >${thresholdSec}s`}
+                      Status
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                   {transactions.slice(0, sliceVisible).map((transaction, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
-                        {transaction.time ? `${transaction.date} ${transaction.time}` : transaction.date}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
-                        {type === 'withdraw' ? transaction.approval : transaction.type}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
-                        {transaction.line}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
-                        {transaction.uniqueCode}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
-                        {transaction.userName}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
-                        {formatCurrencyKPI(transaction.amount, 'MYR')}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
-                        {transaction.operator}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
-                        {transaction.processTime}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center" style={{ border: '1px solid #e5e7eb' }}>
-                        <span className="px-2 py-1 rounded-full text-xs bg-red-100 text-red-800 inline-block">
-                          {transaction.procSec}s
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                   {transactions.slice(0, sliceVisible).map((transaction, index) => {
+                    const badge = getProcTimeBadge(transaction.procSec)
+                    return (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
+                          {transaction.time ? `${transaction.date} ${transaction.time}` : transaction.date}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
+                          {type === 'withdraw' ? transaction.approval : transaction.type}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
+                          {transaction.line}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
+                          {transaction.uniqueCode}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
+                          {transaction.userName}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
+                          {formatCurrencyKPI(transaction.amount, 'MYR')}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
+                          {transaction.operator}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
+                          {transaction.processTime}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center" style={{ border: '1px solid #e5e7eb' }}>
+                          <span 
+                            className="px-3 py-1 rounded-full text-xs font-semibold inline-block"
+                            style={{ 
+                              backgroundColor: badge.bg,
+                              color: badge.text
+                            }}
+                          >
+                            {transaction.procSec.toFixed(1)}s • {badge.label}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
               </div>
@@ -329,7 +356,7 @@ export default function OverdueDetailsModal({
         {transactions.length > 0 && (
           <div className="border-t px-6 py-3 bg-gray-50 flex items-center justify-between">
             <p className="text-sm text-gray-600">
-              Showing {transactions.length} of {totalRecords} overdue transactions
+              Showing {transactions.length} of {totalRecords.toLocaleString()} automation transactions
             </p>
             <div className="flex items-center gap-2">
               <label className="text-sm text-gray-600">Rows</label>
@@ -369,3 +396,4 @@ export default function OverdueDetailsModal({
     </div>
   )
 }
+
