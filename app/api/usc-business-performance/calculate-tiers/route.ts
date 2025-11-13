@@ -74,12 +74,12 @@ export async function POST(request: NextRequest) {
     
     const withScores = records.map(record => {
       const score = calculateCustomerScore({
-        depositAmount: record.total_deposit_amount || 0,
-        ggr: record.total_ggr || 0,
-        depositCases: record.total_deposit_cases || 0,
-        purchaseFrequency: record.purchase_frequency || 0,
-        avgTransactionValue: record.avg_transaction_value || 0,
-        winRate: record.win_rate || 0
+        depositAmount: Number(record.total_deposit_amount) || 0,
+        ggr: Number(record.total_ggr) || 0,
+        depositCases: Number(record.total_deposit_cases) || 0,
+        purchaseFrequency: Number(record.purchase_frequency) || 0,
+        avgTransactionValue: Number(record.avg_transaction_value) || 0,
+        winRate: Number(record.win_rate) || 0
       })
       
       return { ...record, calculated_score: score }

@@ -152,12 +152,12 @@ export async function GET(request: NextRequest) {
         : 0
       
       const score = calculateCustomerScore({
-        depositAmount: customer.total_deposit_amount,
-        ggr: customer.total_ggr,
-        depositCases: customer.total_deposit_cases,
-        purchaseFrequency: pf,
-        avgTransactionValue: atv,
-        winRate
+        depositAmount: Number(customer.total_deposit_amount) || 0,
+        ggr: Number(customer.total_ggr) || 0,
+        depositCases: Number(customer.total_deposit_cases) || 0,
+        purchaseFrequency: Number(pf) || 0,
+        avgTransactionValue: Number(atv) || 0,
+        winRate: Number(winRate) || 0
       })
       
       return { ...customer, score, avg_transaction_value: atv, purchase_frequency: pf, win_rate: winRate }
