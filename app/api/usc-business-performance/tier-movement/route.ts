@@ -58,8 +58,25 @@ export async function GET(request: NextRequest) {
     const { data: previousData, error: previousError } = await previousQuery
     if (previousError) throw previousError
     
+    // Map database fields to function expected format (snake_case → camelCase)
+    const currentMapped = (currentData || []).map(d => ({
+      userkey: String(d.userkey),
+      uniqueCode: String(d.unique_code),
+      line: String(d.line),
+      tier: Number(d.tier),
+      score: Number(d.score)
+    }))
+    
+    const previousMapped = (previousData || []).map(d => ({
+      userkey: String(d.userkey),
+      uniqueCode: String(d.unique_code),
+      line: String(d.line),
+      tier: Number(d.tier),
+      score: Number(d.score)
+    }))
+    
     // Calculate movements
-    const movements = calculateTierMovement(currentData || [], previousData || [])
+    const movements = calculateTierMovement(currentMapped, previousMapped)
     const summary = getTierMovementSummary(movements)
     
     // Top movers
