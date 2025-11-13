@@ -72,7 +72,9 @@ export async function POST(request: NextRequest) {
     // STEP 2: CALCULATE K-MEANS SCORE
     // ============================================================================
     
-    const withScores = records.map(record => {
+    type RecordWithScore = typeof records[number] & { calculated_score: number }
+    
+    const withScores: RecordWithScore[] = records.map(record => {
       const score = calculateCustomerScore({
         depositAmount: Number(record.total_deposit_amount) || 0,
         ggr: Number(record.total_ggr) || 0,
@@ -82,7 +84,7 @@ export async function POST(request: NextRequest) {
         winRate: Number(record.win_rate) || 0
       })
       
-      return { ...record, calculated_score: score }
+      return { ...record, calculated_score: score } as RecordWithScore
     })
     
     // ============================================================================
@@ -90,7 +92,7 @@ export async function POST(request: NextRequest) {
     // ============================================================================
     
     // Group by year-month for period-specific tier assignment
-    const periodGroups: Record<string, typeof withScores> = {}
+    const periodGroups: Record<string, RecordWithScore[]> = {}
     
     withScores.forEach(record => {
       const key = `${record.year}-${record.month}`
