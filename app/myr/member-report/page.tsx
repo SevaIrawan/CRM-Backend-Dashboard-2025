@@ -436,7 +436,7 @@ export default function MYRMemberReportPage() {
             <>
               <div className="simple-table-container">
                 {/* Date Range Controls Only - No Title */}
-                <div className="table-header-controls">
+                <div className="table-header-controls" style={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <div className="date-range-controls">
                     <div className="date-range-toggle">
                       <label className="toggle-label">

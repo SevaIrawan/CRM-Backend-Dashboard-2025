@@ -257,6 +257,8 @@ export function getKpiIcon(kpiName: string): string {
     'User Value Metrics': KPI_ICONS.userValueMetrics,
     'transactionMetrics': KPI_ICONS.transactionMetrics,
     'userValueMetrics': KPI_ICONS.userValueMetrics,
+    'Gross Gaming Revenue': KPI_ICONS.grossGamingRevenueTrend,
+    'Retention Rate': KPI_ICONS.retentionChurnChart,
     
     // Auto-Approval Page KPI mappings
     'TOTAL TRANSACTIONS': KPI_ICONS.totalTransactions,
