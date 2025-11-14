@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Layout from '@/components/Layout'
 import Frame from '@/components/Frame'
+import StandardLoadingSpinner from '@/components/StandardLoadingSpinner'
 import StatCard from '@/components/StatCard'
 import ProgressBarStatCard from '@/components/ProgressBarStatCard'
 import DualKPICard from '@/components/DualKPICard'
@@ -376,10 +377,7 @@ export default function BusinessPerformancePage() {
     return { series, categories }
   }
 
-  return (
-    <Layout 
-        pageTitle="Business Performance"
-        customSubHeader={
+  const customSubHeader = (
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -492,16 +490,27 @@ export default function BusinessPerformancePage() {
             )}
           </div>
         </div>
-      }
-    >
+  )
+  
+  return (
+    <Layout pageTitle="Business Performance" customSubHeader={customSubHeader}>
       <Frame variant="standard">
         {/* Content Container with proper spacing and scroll */}
         <div style={{
           display: 'flex',
           flexDirection: 'column',
           gap: '18px',
-          marginTop: '20px'
+          marginTop: '20px',
+          height: 'calc(100vh - 200px)',
+          overflowY: 'auto',
+          paddingRight: '8px'
         }}>
+          {/* Loading State - Standard Spinner */}
+          {(loadingSlicers || loadingData) && <StandardLoadingSpinner message="Loading MYR Business Performance" />}
+
+          {/* Content - Only show when NOT loading */}
+          {!loadingSlicers && !loadingData && (
+          <>
           {/* ROW 1: KPI Cards (6 cards) */}
           <div className="kpi-row" style={{ 
             display: 'grid', 
@@ -996,14 +1005,15 @@ export default function BusinessPerformancePage() {
           {/* Slicer Info */}
           <div className="slicer-info">
             <p>
-              {loadingData 
-                ? 'Loading data...'
-                : isDateRangeMode 
-                  ? `Showing data for: ${selectedYear} | Date Range: ${startDate} to ${endDate} | Real Data from Database`
-                  : `Showing data for: ${selectedYear} | ${selectedQuarter} | Real Data from Database`
+              {isDateRangeMode 
+                ? `Showing data for: ${selectedYear} | Date Range: ${startDate} to ${endDate} | Real Data from Database`
+                : `Showing data for: ${selectedYear} | ${selectedQuarter} | Real Data from Database`
               }
             </p>
           </div>
+          </>
+          )}
+
         </div>
       </Frame>
       

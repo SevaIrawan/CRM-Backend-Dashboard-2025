@@ -7,6 +7,7 @@ import Frame from '@/components/Frame';
 import SubheaderNotice from '@/components/SubheaderNotice';
 import { LineSlicer } from '@/components/slicers';
 import StatCard from '@/components/StatCard';
+import StandardLoadingSpinner from '@/components/StandardLoadingSpinner';
 import { getChartIcon } from '@/lib/CentralIcon';
 import { formatCurrencyKPI, formatIntegerKPI, formatMoMChange, formatNumericKPI, formatPercentageKPI } from '@/lib/formatHelpers';
 import { getAllUSCKPIsWithMoM } from '@/lib/USCDailyAverageAndMoM';
@@ -45,18 +46,23 @@ interface SlicerOptions {
 }
 
 export default function USCOverviewPage() {
-  // Hydration fix
-  const [isMounted, setIsMounted] = useState(false);
-  
   const [kpiData, setKpiData] = useState<any>(null);
   const [momData, setMomData] = useState<any>(null);
-  const [slicerOptions, setSlicerOptions] = useState<SlicerOptions | null>(null);
+  const [slicerOptions, setSlicerOptions] = useState<SlicerOptions>({
+    years: [],
+    months: [],
+    currencies: [],
+    lines: [],
+    defaults: { year: '', month: '', line: '' }
+  });
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('');
   const [selectedCurrency] = useState('USC'); // Locked to USC
   const [selectedLine, setSelectedLine] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [kpiLoaded, setKpiLoaded] = useState(false);
+  const [chartsLoaded, setChartsLoaded] = useState(false);
 
   // Chart data states
   const [chartData, setChartData] = useState<any>(null);
@@ -71,11 +77,6 @@ export default function USCOverviewPage() {
     purchaseFrequency: 0,
     avgTransactionValue: 0
   });
-
-  // Hydration fix
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
   
   // Load slicer options on component mount
   useEffect(() => {
@@ -107,13 +108,14 @@ export default function USCOverviewPage() {
           setSelectedYear(result.data.defaults.year);
           setSelectedMonth(result.data.defaults.month);
           setSelectedLine(result.data.defaults.line);
+          // ✅ DON'T set isLoading false here - let KPI/Chart load complete first!
         } else {
           setLoadError('Failed to load slicer options');
+          setIsLoading(false);
         }
       } catch (error) {
         console.error('Error loading slicer options:', error);
         setLoadError('Failed to load slicer options');
-      } finally {
         setIsLoading(false);
       }
     };
@@ -128,6 +130,8 @@ export default function USCOverviewPage() {
     const loadKPIData = async () => {
       try {
         setIsLoading(true);
+        setKpiLoaded(false);
+        setChartsLoaded(false);
         setLoadError(null);
         
         logger.log('🔄 [USC Overview] Loading KPI data using STANDARD LOGIC...');
@@ -138,13 +142,13 @@ export default function USCOverviewPage() {
         setKpiData(result.current);
         setMomData(result.mom);
         setDailyAverages(result.dailyAverage);
+        setKpiLoaded(true);
 
         logger.log('✅ [USC Overview] KPI data loaded using STANDARD LOGIC');
 
       } catch (error) {
         console.error('Error loading KPI data:', error);
         setLoadError('Failed to load KPI data. Please try again.');
-      } finally {
         setIsLoading(false);
       }
     };
@@ -291,6 +295,9 @@ export default function USCOverviewPage() {
           };
           
           setChartData(preparedChartData);
+          setChartsLoaded(true);
+        } else {
+          setChartsLoaded(true); // Even if no data, mark as loaded
         }
         
         console.log('✅ [USC Overview] Chart data loaded successfully (MONTHLY)');
@@ -298,12 +305,20 @@ export default function USCOverviewPage() {
       } catch (error) {
         console.error('Error loading chart data:', error);
         setChartError('Failed to load chart data.');
+        setChartsLoaded(true); // Mark as loaded even on error
       }
     };
 
     const timeoutId = setTimeout(loadChartData, 100);
     return () => clearTimeout(timeoutId);
   }, [selectedYear, selectedLine]);
+  
+  // ✅ ONLY set isLoading false when BOTH KPI and Charts are ready!
+  useEffect(() => {
+    if (kpiLoaded && chartsLoaded) {
+      setIsLoading(false);
+    }
+  }, [kpiLoaded, chartsLoaded]);
 
 
   const customSubHeader = (
@@ -337,7 +352,7 @@ export default function USCOverviewPage() {
               boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
             }}
           >
-            {slicerOptions?.years?.map((year: string) => (
+            {slicerOptions.years.map((year: string) => (
               <option key={year} value={year}>
                 {year}
               </option>
@@ -365,13 +380,13 @@ export default function USCOverviewPage() {
               boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
             }}
           >
-            {slicerOptions?.months
-              ?.filter((month: any) => {
+            {slicerOptions.months
+              .filter((month: any) => {
                 if (month.value === 'ALL') return true;
                 if (!selectedYear) return true;
                 return month.years && month.years.includes(selectedYear);
               })
-              ?.map((month: any) => (
+              .map((month: any) => (
                 <option key={month.value} value={month.value}>
                   {month.label}
                 </option>
@@ -382,7 +397,7 @@ export default function USCOverviewPage() {
         <div className="slicer-group">
           <label className="slicer-label">LINE:</label>
           <LineSlicer 
-            lines={slicerOptions?.lines || []}
+            lines={slicerOptions.lines}
             selectedLine={selectedLine}
             onLineChange={setSelectedLine}
           />
@@ -390,54 +405,6 @@ export default function USCOverviewPage() {
       </div>
     </div>
   );
-
-  // Hydration fix
-  if (!isMounted) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto mb-6"></div>
-            <div className="space-y-2">
-              <p className="text-lg font-semibold text-gray-800">Initializing Dashboard</p>
-              <p className="text-sm text-gray-500">Preparing client-side components...</p>
-            </div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto mb-6"></div>
-            <div className="space-y-2">
-              <p className="text-lg font-semibold text-gray-800">Loading USC Overview</p>
-              <p className="text-sm text-gray-500">Fetching real-time data from database...</p>
-              <div className="flex items-center justify-center space-x-1 mt-4">
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (loadError) {
-    return (
-      <Layout>
-        <div className="error-container">
-          <p>Error: {loadError}</p>
-        </div>
-      </Layout>
-    );
-  }
 
   return (
     <Layout customSubHeader={customSubHeader}>
@@ -453,6 +420,19 @@ export default function USCOverviewPage() {
           overflowY: 'auto',
           paddingRight: '8px'
         }}>
+          {/* Loading State - Standard Spinner */}
+          {isLoading && <StandardLoadingSpinner message="Loading USC Overview" />}
+
+          {/* Error State */}
+          {loadError && !isLoading && (
+            <div className="error-container">
+              <p>Error: {loadError}</p>
+            </div>
+          )}
+
+          {/* Content - Only show when NOT loading and NO error */}
+          {!isLoading && !loadError && (
+          <>
           {/* ROW 1: KPI CARDS (6 cards) */}
           <div className="kpi-row">
             <StatCard
@@ -711,6 +691,9 @@ export default function USCOverviewPage() {
           <div className="slicer-info">
             <p>Showing data for: {selectedYear} | {selectedMonth} | {selectedCurrency} | {selectedLine}</p>
           </div>
+          </>
+          )}
+
         </div>
       </Frame>
 

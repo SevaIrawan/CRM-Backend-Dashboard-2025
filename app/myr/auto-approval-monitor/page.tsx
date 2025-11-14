@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import Layout from '@/components/Layout'
 import Frame from '@/components/Frame'
 import { LineSlicer } from '@/components/slicers'
+import StandardLoadingSpinner from '@/components/StandardLoadingSpinner'
 import StatCard from '@/components/StatCard'
 import LineChart from '@/components/LineChart'
 import BarChart from '@/components/BarChart'
@@ -158,9 +159,6 @@ interface AutoApprovalData {
 }
 
 export default function MYRAutoApprovalMonitorPage() {
-  // Client-side only state
-  const [isMounted, setIsMounted] = useState(false)
-  
   const [data, setData] = useState<AutoApprovalData | null>(null)
   
   // Date Range States (for Daily Mode)
@@ -329,11 +327,6 @@ export default function MYRAutoApprovalMonitorPage() {
     }
   }
 
-  // Ensure client-side only rendering
-  useEffect(() => {
-    setIsMounted(true)
-  }, [])
-  
   // Load slicer options on component mount
   useEffect(() => {
     const loadSlicerOptions = async () => {
@@ -599,49 +592,6 @@ export default function MYRAutoApprovalMonitorPage() {
     </div>
   )
 
-  // Prevent hydration mismatch
-  if (!isMounted) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto mb-6"></div>
-            <div className="space-y-2">
-              <p className="text-lg font-semibold text-gray-800">Initializing Dashboard</p>
-              <p className="text-sm text-gray-500">Preparing client-side components...</p>
-            </div>
-          </div>
-        </div>
-      </Layout>
-    )
-  }
-
-  if (isLoading) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto mb-6"></div>
-            <div className="space-y-2">
-              <p className="text-lg font-semibold text-gray-800">Loading Auto Approval Deposit Monitoring MYR</p>
-              <p className="text-sm text-gray-500">Fetching real-time data from database...</p>
-            </div>
-          </div>
-        </div>
-      </Layout>
-    )
-  }
-
-  if (loadError) {
-    return (
-      <Layout>
-        <div className="error-container">
-          <p>Error: {loadError}</p>
-        </div>
-      </Layout>
-    )
-  }
-
   return (
     <Layout customSubHeader={customSubHeader}>
       <Frame variant="standard">
@@ -656,6 +606,19 @@ export default function MYRAutoApprovalMonitorPage() {
           overflowY: 'auto',
           paddingRight: '8px'
         }}>
+          {/* Loading State - Standard Spinner */}
+          {isLoading && <StandardLoadingSpinner message="Loading Auto Approval Deposit Monitoring MYR" />}
+
+          {/* Error State */}
+          {loadError && !isLoading && (
+            <div className="error-container">
+              <p>Error: {loadError}</p>
+            </div>
+          )}
+
+          {/* Content - Only show when NOT loading and NO error */}
+          {!isLoading && !loadError && (
+          <>
                  {/* BARIS 1: KPI CARDS (6 CARDS ROW) */}
                  <div className="kpi-row">
                   <StatCard
@@ -963,6 +926,9 @@ export default function MYRAutoApprovalMonitorPage() {
                 : `${selectedMonth} (Monthly Mode)`
             }</p>
           </div>
+          </>
+          )}
+
         </div>
       </Frame>
 

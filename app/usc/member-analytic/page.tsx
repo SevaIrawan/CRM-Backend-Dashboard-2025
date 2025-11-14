@@ -6,6 +6,7 @@ import Layout from '@/components/Layout';
 import Frame from '@/components/Frame';
 import { LineSlicer } from '@/components/slicers';
 import StatCard from '@/components/StatCard';
+import StandardLoadingSpinner from '@/components/StandardLoadingSpinner';
 import { getChartIcon } from '@/lib/CentralIcon';
 import { formatCurrencyKPI, formatIntegerKPI, formatMoMChange, formatNumericKPI, formatPercentageKPI } from '@/lib/formatHelpers';
 import { getAllUSCKPIsWithMoM } from '@/lib/USCDailyAverageAndMoM';
@@ -66,9 +67,6 @@ interface SlicerOptions {
 }
 
 export default function USCMemberAnalyticPage() {
-  // ✅ FIX HYDRATION: Client-side only state
-  const [isMounted, setIsMounted] = useState(false);
-  
   const [kpiData, setKpiData] = useState<USCKPIData | null>(null);
   const [momData, setMomData] = useState<USCKPIData | null>(null);
   const [slicerOptions, setSlicerOptions] = useState<SlicerOptions | null>(null);
@@ -78,11 +76,6 @@ export default function USCMemberAnalyticPage() {
   const [selectedLine, setSelectedLine] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-
-  // ✅ FIX HYDRATION: Ensure client-side only rendering
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
   
   // Chart data states
   const [lineChartData, setLineChartData] = useState<any>(null);
@@ -194,7 +187,7 @@ export default function USCMemberAnalyticPage() {
     const timeoutId = setTimeout(loadData, 100);
     return () => clearTimeout(timeoutId);
   }, [selectedYear, selectedMonth, selectedLine]);
-
+  
   const customSubHeader = (
     <div className="dashboard-subheader">
       <div className="subheader-title">
@@ -283,54 +276,6 @@ export default function USCMemberAnalyticPage() {
     </div>
   );
 
-  // ✅ FIX HYDRATION: Prevent hydration mismatch
-  if (!isMounted) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto mb-6"></div>
-            <div className="space-y-2">
-              <p className="text-lg font-semibold text-gray-800">Initializing DASHBOARD</p>
-              <p className="text-sm text-gray-500">Preparing client-side components...</p>
-            </div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto mb-6"></div>
-            <div className="space-y-2">
-              <p className="text-lg font-semibold text-gray-800">Loading USC Member Analytic</p>
-              <p className="text-sm text-gray-500">Fetching real-time data from database...</p>
-              <div className="flex items-center justify-center space-x-1 mt-4">
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (loadError) {
-    return (
-      <Layout>
-        <div className="error-container">
-          <p>Error: {loadError}</p>
-        </div>
-      </Layout>
-    );
-  }
-
   return (
     <Layout customSubHeader={customSubHeader}>
       <Frame variant="standard">
@@ -345,6 +290,19 @@ export default function USCMemberAnalyticPage() {
           overflowY: 'auto',
           paddingRight: '8px'
         }}>
+          {/* Loading State - Standard Spinner */}
+          {isLoading && <StandardLoadingSpinner message="Loading USC Member Analytic" />}
+
+          {/* Error State */}
+          {loadError && !isLoading && (
+            <div className="error-container">
+              <p>Error: {loadError}</p>
+            </div>
+          )}
+
+          {/* Content - Only show when NOT loading and NO error */}
+          {!isLoading && !loadError && (
+          <>
           {/* BARIS 1: KPI CARDS (STANDARD ROW) */}
           <div className="kpi-row">
             <StatCard
@@ -733,6 +691,11 @@ export default function USCMemberAnalyticPage() {
           }
         }
       `}</style>
+          </>
+          )}
+
+        </div>
+      </Frame>
     </Layout>
   );
 }

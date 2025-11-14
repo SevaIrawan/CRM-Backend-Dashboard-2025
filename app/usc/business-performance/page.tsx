@@ -5,6 +5,7 @@ import Layout from '@/components/Layout'
 import Frame from '@/components/Frame'
 import StatCard from '@/components/StatCard'
 import DualKPICard from '@/components/DualKPICard'
+import StandardLoadingSpinner from '@/components/StandardLoadingSpinner'
 import { LineSlicer } from '@/components/slicers'
 import { getChartIcon } from '@/lib/CentralIcon'
 import { formatCurrencyKPI, formatIntegerKPI, formatMoMChange, formatNumericKPI, formatPercentageKPI } from '@/lib/formatHelpers'
@@ -49,7 +50,7 @@ export default function USCBusinessPerformancePage() {
   const [kpiData, setKpiData] = useState<USCBPKPIData | null>(null)
   const [momData, setMomData] = useState<any>(null)
   const [loadingSlicers, setLoadingSlicers] = useState(true)
-  const [loadingData, setLoadingData] = useState(false)
+  const [loadingData, setLoadingData] = useState(true)  // ✅ Start with true to prevent flicker
   const [loadError, setLoadError] = useState<string | null>(null)
   
   // Hydration fix
@@ -251,63 +252,6 @@ export default function USCBusinessPerformancePage() {
     </div>
   )
   
-  // Render nothing until mounted (hydration fix)
-  if (!isMounted) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto mb-6"></div>
-            <div className="space-y-2">
-              <p className="text-lg font-semibold text-gray-800">Loading USC Business Performance</p>
-              <p className="text-sm text-gray-500">Fetching real-time data from database...</p>
-              <div className="flex items-center justify-center space-x-1 mt-4">
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-  
-  // Loading slicers and initial data - show smooth spinner
-  if (loadingSlicers || (loadingData && !kpiData)) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto mb-6"></div>
-            <div className="space-y-2">
-              <p className="text-lg font-semibold text-gray-800">Loading USC Business Performance</p>
-              <p className="text-sm text-gray-500">Fetching real-time data from database...</p>
-              <div className="flex items-center justify-center space-x-1 mt-4">
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-  
-  // Error state
-  if (loadError) {
-    return (
-      <Layout customSubHeader={customSubHeader}>
-        <Frame variant="standard">
-          <div style={{ padding: '40px', textAlign: 'center', color: '#ef4444' }}>
-            <p>Error: {loadError}</p>
-          </div>
-        </Frame>
-      </Layout>
-    )
-  }
-  
   return (
     <Layout customSubHeader={customSubHeader}>
       <Frame variant="standard">
@@ -315,8 +259,24 @@ export default function USCBusinessPerformancePage() {
           display: 'flex',
           flexDirection: 'column',
           gap: '20px',
-          marginTop: '20px'
+          marginTop: '20px',
+          height: 'calc(100vh - 200px)',
+          overflowY: 'auto',
+          paddingRight: '8px'
         }}>
+          {/* Loading State - Standard Spinner */}
+          {(loadingSlicers || (loadingData && !kpiData)) && <StandardLoadingSpinner message="Loading USC Business Performance" />}
+
+          {/* Error State */}
+          {loadError && !loadingSlicers && !loadingData && (
+            <div style={{ padding: '40px', textAlign: 'center', color: '#ef4444' }}>
+              <p>Error: {loadError}</p>
+            </div>
+          )}
+
+          {/* Content - Only show when NOT loading and NO error */}
+          {!loadingSlicers && !loadingData && !loadError && kpiData && (
+          <>
           {/* ROW 1: ALL 6 KPI CARDS (STANDARD PROJECT - 1 ROW!) */}
           <div style={{ 
             display: 'grid', 
@@ -424,13 +384,11 @@ export default function USCBusinessPerformancePage() {
           
           {/* Slicer Info */}
           <div className="slicer-info">
-            <p>
-              {loadingData 
-                ? 'Loading data...'
-                : `Showing data for: ${selectedYear} | ${selectedMonth} | ${selectedLine} | Real Data from Database`
-              }
-            </p>
+            <p>Showing data for: {selectedYear} | {selectedMonth} | {selectedLine} | Real Data from Database</p>
           </div>
+          </>
+          )}
+
         </div>
       </Frame>
     </Layout>

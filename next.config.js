@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
+  reactStrictMode: false,  // ✅ DISABLE to prevent double render flicker
   swcMinify: true,
   
   // PERFORMANCE OPTIMIZATIONS for smooth navigation - Simplified for Vercel compatibility
