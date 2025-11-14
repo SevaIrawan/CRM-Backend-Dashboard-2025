@@ -131,6 +131,13 @@ export async function GET(request: NextRequest) {
 
     // Apply brand filter with user permission check
     if (line && line !== 'ALL') {
+      if (userAllowedBrands && userAllowedBrands.length > 0 && !userAllowedBrands.includes(line)) {
+        return NextResponse.json({
+          success: false,
+          error: 'Unauthorized',
+          message: `You do not have access to brand "${line}"`
+        }, { status: 403 })
+      }
       currentQuery = currentQuery.eq('line', line)
     } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
       currentQuery = currentQuery.in('line', userAllowedBrands)
@@ -188,8 +195,15 @@ export async function GET(request: NextRequest) {
       .eq('month', prevMonth)
       .gt('deposit_cases', 0) // ✅ Only users yang active (deposit_cases > 0)
 
-    // Apply brand filter
+    // Apply brand filter with user permission check
     if (line && line !== 'ALL') {
+      if (userAllowedBrands && userAllowedBrands.length > 0 && !userAllowedBrands.includes(line)) {
+        return NextResponse.json({
+          success: false,
+          error: 'Unauthorized',
+          message: `You do not have access to brand "${line}"`
+        }, { status: 403 })
+      }
       detailQuery = detailQuery.eq('line', line)
     } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
       detailQuery = detailQuery.in('line', userAllowedBrands)
