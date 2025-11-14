@@ -187,7 +187,7 @@ export default function USCMemberAnalyticPage() {
     const timeoutId = setTimeout(loadData, 100);
     return () => clearTimeout(timeoutId);
   }, [selectedYear, selectedMonth, selectedLine]);
-  
+
   const customSubHeader = (
     <div className="dashboard-subheader">
       <div className="subheader-title">
