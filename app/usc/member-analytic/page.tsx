@@ -99,8 +99,8 @@ export default function USCMemberAnalyticPage() {
         setLoadError(null);
 
         // Get user's allowed brands from localStorage
-        const userStr = localStorage.getItem('nexmax_user')
-        const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
+        const userStr = localStorage.getItem('nexmax_user');
+        const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null;
 
         const response = await fetch('/api/usc-member-analytic/slicer-options', {
           headers: {
@@ -159,8 +159,8 @@ export default function USCMemberAnalyticPage() {
         console.log('✅ [USC Member Analytic] KPI data loaded successfully');
         
         // Get user's allowed brands from localStorage
-        const userStr = localStorage.getItem('nexmax_user')
-        const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
+        const userStr = localStorage.getItem('nexmax_user');
+        const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null;
         
         // Get chart data from USC Member Analytic Chart API endpoint
         const chartResponse = await fetch(`/api/usc-member-analytic/chart-data?line=${selectedLine}&year=${selectedYear}`, {
