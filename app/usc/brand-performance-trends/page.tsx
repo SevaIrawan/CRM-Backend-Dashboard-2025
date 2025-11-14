@@ -635,7 +635,7 @@ export default function BrandPerformanceTrendsPage() {
                   boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                   padding: '16px'
                 }}>
-                  <div className="overflow-x-auto" style={{ maxHeight: 'calc(100vh - 300px)' }}>
+                  <div className="overflow-x-auto">
                   <table className="w-full" style={{
                     borderCollapse: 'collapse',
                     border: '1px solid #e0e0e0'

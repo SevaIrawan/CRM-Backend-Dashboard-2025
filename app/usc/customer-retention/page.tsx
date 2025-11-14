@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Layout from '@/components/Layout'
 import Frame from '@/components/Frame'
+import StandardLoadingSpinner from '@/components/StandardLoadingSpinner'
 
 interface CustomerRetentionData {
   [key: string]: any
@@ -539,10 +540,7 @@ export default function USCCustomerRetentionPage() {
       <Frame variant="compact">
         <div className="deposit-container">
           {loading ? (
-            <div className="loading-container">
-              <div className="loading-spinner"></div>
-              <p>Loading USC customer retention data...</p>
-            </div>
+            <StandardLoadingSpinner message="Loading USC Customer Retention" />
           ) : customerRetentionData.length === 0 ? (
             <div className="empty-container">
               <div className="empty-icon">📭</div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Layout from '@/components/Layout'
 import Frame from '@/components/Frame'
+import StandardLoadingSpinner from '@/components/StandardLoadingSpinner'
 
 interface CustomerRetentionData {
   [key: string]: any
@@ -377,10 +378,7 @@ export default function MYRCustomerRetentionPage() {
       <Frame variant="compact">
         <div className="deposit-container">
           {loading ? (
-            <div className="loading-container">
-              <div className="loading-spinner"></div>
-              <p>Loading MYR customer retention data...</p>
-            </div>
+            <StandardLoadingSpinner message="Loading MYR Customer Retention" />
           ) : customerRetentionData.length === 0 ? (
             <div className="empty-container">
               <div className="empty-icon">📭</div>

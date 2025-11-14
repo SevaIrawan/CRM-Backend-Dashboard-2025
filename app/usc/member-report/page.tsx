@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Layout from '@/components/Layout'
 import Frame from '@/components/Frame'
+import StandardLoadingSpinner from '@/components/StandardLoadingSpinner'
 
 interface MemberReportData {
   [key: string]: any
@@ -420,10 +421,7 @@ export default function USCMemberReportPage() {
       <Frame variant="compact">
         <div className="deposit-container">
           {loading ? (
-            <div className="loading-container">
-              <div className="loading-spinner"></div>
-              <p>Loading USC member report data...</p>
-            </div>
+            <StandardLoadingSpinner message="Loading USC Member Report" />
           ) : memberReportData.length === 0 ? (
             <div className="empty-container">
               <div className="empty-icon">📭</div>
