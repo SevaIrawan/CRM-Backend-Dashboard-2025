@@ -5,6 +5,7 @@ import Layout from '@/components/Layout'
 import Frame from '@/components/Frame'
 import SubheaderNotice from '@/components/SubheaderNotice'
 import SubHeader from '@/components/SubHeader'
+import StandardLoadingSpinner from '@/components/StandardLoadingSpinner'
 
 interface SlicerOptions {
   lines: string[];
@@ -57,9 +58,10 @@ export default function KPIComparisonPage() {
 
   // Data states
   const [comparisonData, setComparisonData] = useState<ComparisonData | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [autoLoaded, setAutoLoaded] = useState<boolean>(false);
+  const [slicerLoaded, setSlicerLoaded] = useState(false);
 
   // Fetch slicer options
   useEffect(() => {
@@ -102,10 +104,12 @@ export default function KPIComparisonPage() {
         setPeriodBStart(periodBStartDate.toISOString().split('T')[0]);
         setPeriodAEnd(periodAEndDate.toISOString().split('T')[0]);
         setPeriodAStart(periodAStartDate.toISOString().split('T')[0]);
+        setSlicerLoaded(true);
         
       } catch (err) {
         console.error('Error fetching slicer options:', err);
         setError('Failed to load slicer options');
+        setLoading(false);
       }
     };
 
@@ -115,7 +119,7 @@ export default function KPIComparisonPage() {
   // Manual Search trigger (no auto-reload on slicer change)
   const handleSearch = async () => {
     if (!periodAStart || !periodAEnd || !periodBStart || !periodBEnd) return;
-    setLoading(true);
+    if (!slicerLoaded) setLoading(true); // Only set loading if slicers not loaded yet
     setError(null);
     try {
       const params = new URLSearchParams({
@@ -436,20 +440,7 @@ export default function KPIComparisonPage() {
     <Layout customSubHeader={customSubHeader}>
       <Frame>
         <div>
-          {loading && (
-            <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              flexDirection: 'column',
-              padding: '24px'
-            }}>
-              <div className="kpi-spinner" />
-              <div style={{ marginTop: '8px', color: '#111827', fontWeight: 600 }}>
-                Loading KPI Comparison
-              </div>
-            </div>
-          )}
+          {loading && <StandardLoadingSpinner message="Loading KPI Comparison USC" />}
 
           {error && (
             <div className="text-center py-8">

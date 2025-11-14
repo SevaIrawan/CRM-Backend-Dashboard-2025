@@ -202,6 +202,7 @@ export default function MYRAutoApprovalWithdrawPage() {
   
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [dataLoaded, setDataLoaded] = useState(false)
 
   // Helper function to format MoM comparison
   const formatMoMComparison = (value: number) => {
@@ -362,7 +363,6 @@ export default function MYRAutoApprovalWithdrawPage() {
       } catch (error) {
         console.error('Error loading slicer options:', error)
         setLoadError('Failed to load slicer options')
-      } finally {
         setIsLoading(false)
       }
     }
@@ -386,6 +386,7 @@ export default function MYRAutoApprovalWithdrawPage() {
       
       try {
         setIsLoading(true)
+        setDataLoaded(false)
         setLoadError(null)
         
         // Use year and month parameters directly from slicers
@@ -437,15 +438,16 @@ export default function MYRAutoApprovalWithdrawPage() {
           console.log('✅ [DEBUG] Automation data:', result.data.automation)
           console.log('✅ [DEBUG] Processing time data:', result.data.processingTime)
           setData(result.data)
+          setDataLoaded(true)
           console.log('✅ [DEBUG] Data set successfully')
         } else {
           console.log('❌ [DEBUG] API returned error:', result)
           setLoadError('Failed to load KPI data')
+          setIsLoading(false)
         }
       } catch (error) {
         console.error('Error loading KPI data:', error)
         setLoadError('Failed to load KPI data')
-      } finally {
         setIsLoading(false)
       }
     }
@@ -454,6 +456,12 @@ export default function MYRAutoApprovalWithdrawPage() {
     return () => clearTimeout(timeoutId)
   }, [selectedLine, selectedYear, selectedMonth, isDateRangeMode, startDate, endDate])
 
+  // ✅ ONLY set isLoading false when data is ready!
+  useEffect(() => {
+    if (dataLoaded) {
+      setIsLoading(false)
+    }
+  }, [dataLoaded])
 
   const customSubHeader = (
     <div className="dashboard-subheader">
