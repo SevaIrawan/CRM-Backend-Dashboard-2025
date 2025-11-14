@@ -175,7 +175,7 @@ function getPageTitle(path: string): string {
     '/myr/kpi-comparison': 'MYR KPI Comparison',
     '/myr/member-report': 'MYR Member Report',
     '/myr/customer-retention': 'MYR Customer Retention',
-    '/myr/churn-member': 'MYR Churn Member',
+    '/myr/churn-member': 'MYR Churned Members',
     '/myr/brand-performance-trends': 'MYR Brand Performance Trends',
     '/myr/auto-approval-monitor': 'MYR Auto-Approval Monitor',
     '/myr/auto-approval-withdraw': 'MYR Auto-Approval Withdraw',
@@ -187,7 +187,7 @@ function getPageTitle(path: string): string {
     '/sgd/kpi-comparison': 'SGD KPI Comparison',
     '/sgd/member-report': 'SGD Member Report',
     '/sgd/customer-retention': 'SGD Customer Retention',
-    '/sgd/churn-member': 'SGD Churn Member',
+    '/sgd/churn-member': 'SGD Churned Members',
     '/sgd/brand-performance-trends': 'SGD Brand Performance Trends',
     
     // USC Pages
@@ -197,7 +197,7 @@ function getPageTitle(path: string): string {
     '/usc/kpi-comparison': 'USC KPI Comparison',
     '/usc/member-report': 'USC Member Report',
     '/usc/customer-retention': 'USC Customer Retention',
-    '/usc/churn-member': 'USC Churn Member',
+    '/usc/churn-member': 'USC Churned Members',
     '/usc/brand-performance-trends': 'USC Brand Performance Trends',
     
     // Supabase

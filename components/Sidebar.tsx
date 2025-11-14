@@ -306,7 +306,7 @@ export default function Sidebar({
           { title: 'Withdrawal Auto‑Approval', path: '/myr/auto-approval-withdraw' },
           { title: 'Member Analytic', path: '/myr/member-analytic' },
           { title: 'Customer Retention', path: '/myr/customer-retention' },
-          { title: 'Churn Member', path: '/myr/churn-member' },
+          { title: 'Churned Members', path: '/myr/churn-member' },
           { title: 'Member Report', path: '/myr/member-report' }
         ]
       },
@@ -323,7 +323,7 @@ export default function Sidebar({
         { title: 'Auto-Approval Monitor', path: '/sgd/auto-approval-monitor' },
         { title: 'Member Analytic', path: '/sgd/member-analytic' },
         { title: 'Customer Retention', path: '/sgd/customer-retention' },
-          { title: 'Churn Member', path: '/sgd/churn-member' },
+          { title: 'Churned Members', path: '/sgd/churn-member' },
           { title: 'Member Report', path: '/sgd/member-report' }
         ]
       },
@@ -339,7 +339,7 @@ export default function Sidebar({
         { title: 'Auto-Approval Monitor', path: '/usc/auto-approval-monitor' },
         { title: 'Member Analytic', path: '/usc/member-analytic' },
         { title: 'Customer Retention', path: '/usc/customer-retention' },
-          { title: 'Churn Member', path: '/usc/churn-member' },
+          { title: 'Churned Members', path: '/usc/churn-member' },
           { title: 'Member Report', path: '/usc/member-report' }
         ]
       },

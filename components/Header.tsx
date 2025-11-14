@@ -82,7 +82,7 @@ export default function Header({
         'aia-candy-tracking': 'AIA Candy Mechanism',
         'customer-retention': 'Customer Retention',
         'member-report': 'Member Report',
-        'churn-member': 'Churn Member',
+        'churn-member': 'Churned Members',
         'auto-approval-monitor': 'Deposit Auto‑Approval',
         'auto-approval-withdraw': 'Withdrawal Auto‑Approval',
         'retention-day': 'Retention Day'

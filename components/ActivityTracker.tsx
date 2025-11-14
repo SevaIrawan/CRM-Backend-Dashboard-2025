@@ -193,7 +193,7 @@ function generatePageTitle(pathname: string): string {
       'overview': 'Overview',
       'member-analytic': 'Member Analytic',
       'brand-performance-trends': 'Brand Comparison Trends',
-      'churn-member': 'Churn Member',
+      'churn-member': 'Churned Members',
       'customer-retention': 'Customer Retention',
       'kpi-comparison': 'KPI Comparison',
       'member-report': 'Member Report',

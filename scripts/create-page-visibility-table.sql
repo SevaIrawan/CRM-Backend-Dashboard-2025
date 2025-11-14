@@ -69,7 +69,7 @@ INSERT INTO page_visibility_config (page_path, page_name, page_section, visible_
 -- MYR - Hidden from non-admin roles (Building status)
 INSERT INTO page_visibility_config (page_path, page_name, page_section, visible_for_roles) VALUES
 ('/myr/member-analytic', 'Member Analytic', 'MYR', '["admin"]'),
-('/myr/churn-member', 'Churn Member', 'MYR', '["admin"]');
+('/myr/churn-member', 'Churned Members', 'MYR', '["admin"]');
 
 -- ============================================================
 -- SGD PAGES (8 pages)
@@ -87,7 +87,7 @@ INSERT INTO page_visibility_config (page_path, page_name, page_section, visible_
 -- SGD - Hidden from non-admin roles (Building status)
 INSERT INTO page_visibility_config (page_path, page_name, page_section, visible_for_roles) VALUES
 ('/sgd/member-analytic', 'Member Analytic', 'SGD', '["admin"]'),
-('/sgd/churn-member', 'Churn Member', 'SGD', '["admin"]');
+('/sgd/churn-member', 'Churned Members', 'SGD', '["admin"]');
 
 -- ============================================================
 -- USC PAGES (8 pages)
@@ -105,7 +105,7 @@ INSERT INTO page_visibility_config (page_path, page_name, page_section, visible_
 -- USC - Hidden from non-admin roles (Building status)
 INSERT INTO page_visibility_config (page_path, page_name, page_section, visible_for_roles) VALUES
 ('/usc/member-analytic', 'Member Analytic', 'USC', '["admin"]'),
-('/usc/churn-member', 'Churn Member', 'USC', '["admin"]');
+('/usc/churn-member', 'Churned Members', 'USC', '["admin"]');
 
 -- ============================================================
 -- ADMIN & OTHER PAGES
