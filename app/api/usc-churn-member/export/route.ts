@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
-    const { line, year, month } = await request.json()
+    const { line, year, month, statusFilter } = await request.json()
 
     // ✅ VALIDATION: Month and Year are REQUIRED
     if (!month || month === 'ALL') {
@@ -280,7 +280,12 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    console.log(`📊 Export completed: ${aggregatedData.length} USC churn member records`)
+    // ✅ STEP 6.5: Apply Status Filter (if provided)
+    const filteredData = statusFilter && statusFilter !== 'ALL'
+      ? aggregatedData.filter(user => user.status === statusFilter)
+      : aggregatedData
+    
+    console.log(`📊 Export completed: ${filteredData.length} USC churn member records${statusFilter && statusFilter !== 'ALL' ? ` (filtered by: ${statusFilter})` : ''}`)
 
     // ✅ STEP 7: Convert to CSV
     const columnOrder = [
@@ -313,7 +318,7 @@ export async function POST(request: NextRequest) {
     const csvRows = [headers.join(',')]
 
     // Build CSV rows
-    aggregatedData.forEach((row: any) => {
+    filteredData.forEach((row: any) => {
       const values = columnOrder.map(col => {
         const value = row[col]
         if (value === null || value === undefined || value === '') {
