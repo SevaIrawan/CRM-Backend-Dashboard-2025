@@ -8,6 +8,7 @@ import ComparisonStatCard from '@/components/ComparisonStatCard'
 import BarChart from '@/components/BarChart'
 import LineChart from '@/components/LineChart'
 import CustomerDetailModal from '@/components/CustomerDetailModal'
+import StandardLoadingSpinner from '@/components/StandardLoadingSpinner'
 import { formatKPIValue } from '@/lib/brandPerformanceTrendsLogic'
 import { getChartIcon } from '@/lib/CentralIcon'
 
@@ -390,17 +391,7 @@ export default function BrandPerformanceTrendsPage() {
           overflowY: 'auto',
           paddingRight: '8px'
         }}>
-          {loading && (
-            <div className="flex items-center justify-center min-h-screen">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto mb-6"></div>
-                <div className="space-y-2">
-                  <p className="text-lg font-semibold text-gray-800">Loading Brand Performance Trends</p>
-                  <p className="text-sm text-gray-500">Fetching real-time data from database...</p>
-                </div>
-              </div>
-            </div>
-          )}
+          {loading && <StandardLoadingSpinner message="Loading Brand Performance Trends SGD" />}
 
           {error && (
             <div className="error-container">
@@ -1075,7 +1066,17 @@ export default function BrandPerformanceTrendsPage() {
                     <tbody>
                       {tableData.map((row: any, index: number) => (
                         <tr key={row.brand} style={{ 
-                          backgroundColor: index % 2 === 0 ? '#f9fafb' : 'white' 
+                          backgroundColor: index % 2 === 0 ? '#f9fafb' : 'white',
+                          transition: 'all 0.3s ease-in-out',
+                          cursor: 'default'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#eff6ff'
+                          e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#f9fafb' : 'white'
+                          e.currentTarget.style.boxShadow = 'none'
                         }}>
                           <td style={{ 
                             padding: '8px 12px',

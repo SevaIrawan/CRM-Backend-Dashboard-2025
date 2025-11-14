@@ -5,6 +5,7 @@ import Layout from '@/components/Layout'
 import Frame from '@/components/Frame'
 import StatCard from '@/components/StatCard'
 import BarChart from '@/components/BarChart'
+import StandardLoadingSpinner from '@/components/StandardLoadingSpinner'
 import { formatIntegerKPI } from '@/lib/formatHelpers'
 import { getChartIcon } from '@/lib/CentralIcon'
 
@@ -426,10 +427,7 @@ export default function MYROverallLabelPage() {
       <Frame variant="compact">
         <div className="deposit-container">
           {loading ? (
-            <div className="loading-container">
-              <div className="loading-spinner"></div>
-              <p>Loading Overall Label data...</p>
-            </div>
+            <StandardLoadingSpinner message="Loading Overall Label MYR" />
           ) : (
             <>
               {/* ROW 1: 6 KPI Cards */}
