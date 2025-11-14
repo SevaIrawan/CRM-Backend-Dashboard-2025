@@ -300,8 +300,8 @@ export default function USCMemberAnalyticPage() {
             </div>
           )}
 
-          {/* Content - Only show when NOT loading and NO error */}
-          {!isLoading && !loadError && (
+          {/* Content - Show when data ready */}
+          {!isLoading && !loadError && kpiData && (
           <>
           {/* BARIS 1: KPI CARDS (STANDARD ROW) */}
           <div className="kpi-row">
@@ -520,10 +520,10 @@ export default function USCMemberAnalyticPage() {
           <div className="slicer-info">
             <p>Showing data for: {selectedYear} | {selectedMonth} | {selectedCurrency} | {selectedLine}</p>
           </div>
-        </div>
-      </Frame>
+          </>
+          )}
 
-      <style jsx>{`
+          <style jsx>{`
         .loading-container {
           display: flex;
           flex-direction: column;
@@ -691,9 +691,6 @@ export default function USCMemberAnalyticPage() {
           }
         }
       `}</style>
-          </>
-          )}
-
         </div>
       </Frame>
     </Layout>
