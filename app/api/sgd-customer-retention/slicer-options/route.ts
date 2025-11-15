@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { filterBrandsByUser, removeAllOptionForSquadLead } from '@/utils/brandAccessHelper'
 
 export async function GET(request: NextRequest) {
   try {
     console.log('🔍 Fetching unique values from blue_whale_sgd for slicers...')
 
-    // ✅ Get user's allowed brands from request header
+    // ✅ NEW: Get user's allowed brands from request header
     const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
     const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
 
@@ -81,7 +82,7 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    // Process data
+    // Process data - ORIGINAL LOGIC (WORKING)
     const lines = Array.from(new Set(lineData?.map(row => row.line).filter(Boolean) || [])) as string[]
     
     console.log('🔍 [SGD Customer Retention API] RAW brands from database:', lines)
@@ -94,8 +95,9 @@ export async function GET(request: NextRequest) {
       finalLines = lines.filter(brand => userAllowedBrands.includes(brand)).sort()
       console.log('🔐 [SGD Customer Retention API] Squad Lead - filtered brands:', finalLines)
     } else {
-      // Admin/Manager/SQ: Add 'ALL' + all brands
-      finalLines = ['ALL', ...lines.sort()]
+      // Admin/Manager/SQ: Remove 'ALL'/'All' from database, then add 'ALL' manually
+      const cleanedLines = lines.filter(brand => brand.toUpperCase() !== 'ALL').sort()
+      finalLines = ['ALL', ...cleanedLines]
       console.log('✅ [SGD Customer Retention API] Admin/Manager - ALL + brands:', finalLines)
     }
     
@@ -114,11 +116,30 @@ export async function GET(request: NextRequest) {
     const minDate = dateRangeData?.[0]?.date || ''
     const maxDate = maxDateData?.[0]?.date || ''
 
+    // ✅ NEW: Get default year and month from MAX date in database
+    let defaultYear = years.length > 0 ? years[0] : '' // Latest year (already sorted DESC)
+    let defaultMonth = ''
+    
+    if (maxDate && typeof maxDate === 'string' && maxDate.length > 0) {
+      // Extract year and month from max date
+      const maxDateObj = new Date(maxDate)
+      if (!isNaN(maxDateObj.getTime())) {
+        defaultYear = maxDateObj.getFullYear().toString()
+        
+        const monthNames = [
+          'January', 'February', 'March', 'April', 'May', 'June',
+          'July', 'August', 'September', 'October', 'November', 'December'
+        ]
+        defaultMonth = monthNames[maxDateObj.getMonth()]
+      }
+    }
+
     console.log('✅ Blue_whale_sgd slicer options processed:', {
-      lines: lines.length,
+      lines_count: finalLines.length,
       years: years.length,
       months: months.length,
-      dateRange: { min: minDate, max: maxDate }
+      dateRange: { min: minDate, max: maxDate },
+      defaults: { year: defaultYear, month: defaultMonth }
     })
 
     return NextResponse.json({
@@ -130,6 +151,11 @@ export async function GET(request: NextRequest) {
         dateRange: {
           min: minDate,
           max: maxDate
+        },
+        defaults: {
+          line: 'ALL',
+          year: defaultYear,
+          month: defaultMonth
         }
       }
     })
