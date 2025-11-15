@@ -63,6 +63,7 @@ export default function USCOverviewPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [kpiLoaded, setKpiLoaded] = useState(false);
   const [chartsLoaded, setChartsLoaded] = useState(false);
+  const [initialLoadDone, setInitialLoadDone] = useState(false); // ✅ Track initial load
 
   // Chart data states
   const [chartData, setChartData] = useState<any>(null);
@@ -123,85 +124,92 @@ export default function USCOverviewPage() {
     loadSlicerOptions();
   }, []);
 
-  // Load KPI data when month changes (for StatCard display)
-  useEffect(() => {
+  // ✅ Function to load KPI data (can be called manually or automatically)
+  const loadKPIData = async () => {
     if (!selectedYear || !selectedMonth || !selectedLine) return;
 
-    const loadKPIData = async () => {
-      try {
-        setIsLoading(true);
-        setKpiLoaded(false);
-        setChartsLoaded(false);
-        setLoadError(null);
-        
-        logger.log('🔄 [USC Overview] Loading KPI data using STANDARD LOGIC...');
+    try {
+      setIsLoading(true);
+      setKpiLoaded(false);
+      setChartsLoaded(false);
+      setLoadError(null);
+      
+      logger.log('🔄 [USC Overview] Loading KPI data using STANDARD LOGIC...');
 
-        // Use STANDARD LOGIC FILE - getAllUSCKPIsWithMoM
-        const result = await getAllUSCKPIsWithMoM(selectedYear, selectedMonth, selectedLine);
+      // Use STANDARD LOGIC FILE - getAllUSCKPIsWithMoM
+      const result = await getAllUSCKPIsWithMoM(selectedYear, selectedMonth, selectedLine);
 
-        setKpiData(result.current);
-        setMomData(result.mom);
-        setDailyAverages(result.dailyAverage);
-        setKpiLoaded(true);
+      setKpiData(result.current);
+      setMomData(result.mom);
+      setDailyAverages(result.dailyAverage);
+      setKpiLoaded(true);
 
-        logger.log('✅ [USC Overview] KPI data loaded using STANDARD LOGIC');
+      logger.log('✅ [USC Overview] KPI data loaded using STANDARD LOGIC');
 
-      } catch (error) {
-        console.error('Error loading KPI data:', error);
-        setLoadError('Failed to load KPI data. Please try again.');
-        setIsLoading(false);
-      }
-    };
+    } catch (error) {
+      console.error('Error loading KPI data:', error);
+      setLoadError('Failed to load KPI data. Please try again.');
+      setIsLoading(false);
+    }
+  };
 
-    const timeoutId = setTimeout(loadKPIData, 100);
-    return () => clearTimeout(timeoutId);
-  }, [selectedYear, selectedMonth, selectedLine]);
+  // ✅ Auto-load KPI data ONCE when defaults are set (initial load only)
+  useEffect(() => {
+    if (!initialLoadDone && selectedYear && selectedMonth && selectedLine) {
+      console.log('✅ [USC Overview] Initial load with defaults:', { selectedYear, selectedMonth, selectedLine });
+      setTimeout(() => {
+        loadKPIData();
+        loadChartData();
+        setInitialLoadDone(true);
+      }, 100);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedYear, selectedMonth, selectedLine, initialLoadDone]);
 
   // Helper functions removed - now using STANDARD LOGIC FILE
 
-  // Load Chart data when year or line changes (MONTHLY data for entire year)
-  useEffect(() => {
+  // ✅ Function to load Chart data (can be called manually or automatically)
+  const loadChartData = async () => {
     if (!selectedYear || !selectedLine) return;
 
-    const loadChartData = async () => {
-      try {
-        setChartError(null);
-        
-        console.log('🔄 [USC Overview] Loading Chart data (MONTHLY for entire year)...');
-        
-        // Get user's allowed brands from localStorage
-        const userStr = localStorage.getItem('nexmax_user');
-        const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null;
-        
-        // Get chart data from MV table (pre-aggregated)
-        const chartResponse = await fetch(`/api/usc-overview/chart-data?line=${selectedLine}&year=${selectedYear}`, {
-          headers: {
-            'x-user-allowed-brands': JSON.stringify(allowedBrands)
-          }
-        });
-        const chartResult = await chartResponse.json();
-        
-        console.log('📊 [USC Overview] Chart API Response:', chartResult);
-        
-        if (!chartResult.success) {
-          throw new Error('Failed to fetch chart data');
+    try {
+      setChartError(null);
+      
+      console.log('🔄 [USC Overview] Loading Chart data (MONTHLY for entire year)...');
+      
+      // Get user's allowed brands from localStorage
+      const userStr = localStorage.getItem('nexmax_user');
+      const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null;
+      
+      // Get chart data from MV table (pre-aggregated)
+      const chartResponse = await fetch(`/api/usc-overview/chart-data?line=${selectedLine}&year=${selectedYear}`, {
+        headers: {
+          'x-user-allowed-brands': JSON.stringify(allowedBrands)
         }
-        
-        const monthlyData = chartResult.monthlyData;
-        
-        console.log('📊 [USC Overview] Monthly data from MV:', monthlyData);
-        
-        // Debug hold_percentage values
-        const holdPercentageDebug = Object.keys(monthlyData).map(month => ({
-          month,
-          hold_percentage: monthlyData[month].hold_percentage,
-          conversion_rate: monthlyData[month].conversion_rate,
-          net_profit: monthlyData[month].net_profit,
-          valid_amount: monthlyData[month].valid_amount
-        }));
-        console.log('🔍 [USC Overview] Hold Percentage Debug:', holdPercentageDebug);
-        
-        if (Object.keys(monthlyData).length > 0) {
+      });
+      const chartResult = await chartResponse.json();
+      
+      console.log('📊 [USC Overview] Chart API Response:', chartResult);
+      
+      if (!chartResult.success) {
+        throw new Error('Failed to fetch chart data');
+      }
+      
+      const monthlyData = chartResult.monthlyData;
+      
+      console.log('📊 [USC Overview] Monthly data from MV:', monthlyData);
+      
+      // Debug hold_percentage values
+      const holdPercentageDebug = Object.keys(monthlyData).map(month => ({
+        month,
+        hold_percentage: monthlyData[month].hold_percentage,
+        conversion_rate: monthlyData[month].conversion_rate,
+        net_profit: monthlyData[month].net_profit,
+        valid_amount: monthlyData[month].valid_amount
+      }));
+      console.log('🔍 [USC Overview] Hold Percentage Debug:', holdPercentageDebug);
+      
+      if (Object.keys(monthlyData).length > 0) {
           // Sort months chronologically
           const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 
                              'July', 'August', 'September', 'October', 'November', 'December'];
@@ -294,24 +302,28 @@ export default function USCOverviewPage() {
             }
           };
           
-          setChartData(preparedChartData);
-          setChartsLoaded(true);
-        } else {
-          setChartsLoaded(true); // Even if no data, mark as loaded
-        }
-        
-        console.log('✅ [USC Overview] Chart data loaded successfully (MONTHLY)');
-
-      } catch (error) {
-        console.error('Error loading chart data:', error);
-        setChartError('Failed to load chart data.');
-        setChartsLoaded(true); // Mark as loaded even on error
+        setChartData(preparedChartData);
+        setChartsLoaded(true);
+      } else {
+        setChartsLoaded(true); // Even if no data, mark as loaded
       }
-    };
+      
+      console.log('✅ [USC Overview] Chart data loaded successfully (MONTHLY)');
 
-    const timeoutId = setTimeout(loadChartData, 100);
-    return () => clearTimeout(timeoutId);
-  }, [selectedYear, selectedLine]);
+    } catch (error) {
+      console.error('Error loading chart data:', error);
+      setChartError('Failed to load chart data.');
+      setChartsLoaded(true); // Mark as loaded even on error
+    }
+  };
+
+  // ✅ Manual reload function (triggered by Search button)
+  const handleApplyFilters = () => {
+    setKpiLoaded(false);
+    setChartsLoaded(false);
+    loadKPIData();
+    loadChartData();
+  };
   
   // ✅ ONLY set isLoading false when BOTH KPI and Charts are ready!
   useEffect(() => {
@@ -402,6 +414,26 @@ export default function USCOverviewPage() {
             onLineChange={setSelectedLine}
           />
         </div>
+
+        {/* ✅ SEARCH BUTTON */}
+        <button 
+          onClick={handleApplyFilters}
+          disabled={isLoading}
+          className={`export-button ${isLoading ? 'disabled' : ''}`}
+          style={{ 
+            backgroundColor: '#10b981',
+            padding: '8px 16px',
+            border: 'none',
+            borderRadius: '8px',
+            color: 'white',
+            fontSize: '14px',
+            fontWeight: 500,
+            cursor: isLoading ? 'not-allowed' : 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          {isLoading ? 'Loading...' : 'Search'}
+        </button>
       </div>
     </div>
   );

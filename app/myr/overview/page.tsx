@@ -63,6 +63,7 @@ export default function MYROverviewPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [kpiLoaded, setKpiLoaded] = useState(false);
   const [chartsLoaded, setChartsLoaded] = useState(false);
+  const [initialLoadDone, setInitialLoadDone] = useState(false); // ✅ Track initial load
 
   // Chart data states
   const [chartData, setChartData] = useState<any>(null);
@@ -109,6 +110,7 @@ export default function MYROverviewPage() {
           setSelectedMonth(result.data.defaults.month);
           setSelectedLine(result.data.defaults.line);
           // ✅ DON'T set isLoading false here - let KPI/Chart load complete first!
+          // ✅ Initial load will be triggered by useEffect below once defaults are set
         } else {
           setLoadError('Failed to load slicer options');
           setIsLoading(false);
@@ -123,195 +125,207 @@ export default function MYROverviewPage() {
     loadSlicerOptions();
   }, []);
 
-  // Load KPI data when month changes (for StatCard display)
-  useEffect(() => {
+  // ✅ Function to load KPI data (can be called manually or automatically)
+  const loadKPIData = async () => {
     if (!selectedYear || !selectedMonth || !selectedLine) return;
 
-    const loadKPIData = async () => {
-      try {
-        setIsLoading(true);
-        setKpiLoaded(false);
-        setChartsLoaded(false);
-        setLoadError(null);
-        
-        logger.log('🔄 [MYR Overview] Loading KPI data using STANDARD LOGIC...');
+    try {
+      setIsLoading(true);
+      setKpiLoaded(false);
+      setChartsLoaded(false);
+      setLoadError(null);
+      
+      logger.log('🔄 [MYR Overview] Loading KPI data using STANDARD LOGIC...');
 
-        // Use STANDARD LOGIC FILE - getAllMYRKPIsWithMoM
-        const result = await getAllMYRKPIsWithMoM(selectedYear, selectedMonth, selectedLine);
+      // Use STANDARD LOGIC FILE - getAllMYRKPIsWithMoM
+      const result = await getAllMYRKPIsWithMoM(selectedYear, selectedMonth, selectedLine);
 
-        setKpiData(result.current);
-        setMomData(result.mom);
-        setDailyAverages(result.dailyAverage);
-        setKpiLoaded(true);
+      setKpiData(result.current);
+      setMomData(result.mom);
+      setDailyAverages(result.dailyAverage);
+      setKpiLoaded(true);
 
-        logger.log('✅ [MYR Overview] KPI data loaded using STANDARD LOGIC');
+      logger.log('✅ [MYR Overview] KPI data loaded using STANDARD LOGIC');
 
-      } catch (error) {
-        console.error('Error loading KPI data:', error);
-        setLoadError('Failed to load KPI data. Please try again.');
-        setIsLoading(false);
-      }
-    };
+    } catch (error) {
+      console.error('Error loading KPI data:', error);
+      setLoadError('Failed to load KPI data. Please try again.');
+      setIsLoading(false);
+    }
+  };
 
-    const timeoutId = setTimeout(loadKPIData, 100);
-    return () => clearTimeout(timeoutId);
-  }, [selectedYear, selectedMonth, selectedLine]);
+  // ✅ Auto-load KPI data ONCE when defaults are set (initial load only)
+  useEffect(() => {
+    if (!initialLoadDone && selectedYear && selectedMonth && selectedLine) {
+      console.log('✅ [MYR Overview] Initial load with defaults:', { selectedYear, selectedMonth, selectedLine });
+      setTimeout(() => {
+        loadKPIData();
+        loadChartData();
+        setInitialLoadDone(true);
+      }, 100);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedYear, selectedMonth, selectedLine, initialLoadDone]);
 
   // Helper functions removed - now using STANDARD LOGIC FILE
 
-  // Load Chart data when year or line changes (MONTHLY data for entire year)
-  useEffect(() => {
+  // ✅ Function to load Chart data (can be called manually or automatically)
+  const loadChartData = async () => {
     if (!selectedYear || !selectedLine) return;
 
-    const loadChartData = async () => {
-      try {
-        setChartError(null);
-        
-        console.log('🔄 [MYR Overview] Loading Chart data (MONTHLY for entire year)...');
-        
-        // Get user's allowed brands from localStorage
-        const userStr = localStorage.getItem('nexmax_user');
-        const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null;
-        
-        // Get chart data from MV table (pre-aggregated)
-        const chartResponse = await fetch(`/api/myr-overview/chart-data?line=${selectedLine}&year=${selectedYear}`, {
-          headers: {
-            'x-user-allowed-brands': JSON.stringify(allowedBrands)
-          }
-        });
-        const chartResult = await chartResponse.json();
-        
-        console.log('📊 [MYR Overview] Chart API Response:', chartResult);
-        
-        if (!chartResult.success) {
-          throw new Error('Failed to fetch chart data');
+    try {
+      setChartError(null);
+      
+      console.log('🔄 [MYR Overview] Loading Chart data (MONTHLY for entire year)...');
+      
+      // Get user's allowed brands from localStorage
+      const userStr = localStorage.getItem('nexmax_user');
+      const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null;
+      
+      // Get chart data from MV table (pre-aggregated)
+      const chartResponse = await fetch(`/api/myr-overview/chart-data?line=${selectedLine}&year=${selectedYear}`, {
+        headers: {
+          'x-user-allowed-brands': JSON.stringify(allowedBrands)
         }
-        
-        const monthlyData = chartResult.monthlyData;
-        
-        console.log('📊 [MYR Overview] Monthly data from MV:', monthlyData);
-        
-        // Debug hold_percentage values
-        const holdPercentageDebug = Object.keys(monthlyData).map(month => ({
-          month,
-          hold_percentage: monthlyData[month].hold_percentage,
-          conversion_rate: monthlyData[month].conversion_rate,
-          net_profit: monthlyData[month].net_profit,
-          valid_amount: monthlyData[month].valid_amount
-        }));
-        console.log('🔍 [MYR Overview] Hold Percentage Debug:', holdPercentageDebug);
-        
-        if (Object.keys(monthlyData).length > 0) {
-          // Sort months chronologically
-          const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 
-                             'July', 'August', 'September', 'October', 'November', 'December'];
-          const sortedMonths = Object.keys(monthlyData).sort((a, b) => 
-            monthOrder.indexOf(a) - monthOrder.indexOf(b)
-          );
-
-          // Create chart data from aggregated monthly data
-          const preparedChartData = {
-            // ROW 2: Single Line Charts
-            daUserTrend: {
-              series: [{ name: 'DA User', data: sortedMonths.map(month => monthlyData[month].da_user) }],
-              categories: sortedMonths.map(month => month.substring(0, 3))
-            },
-            ggrUserTrend: {
-              series: [{ name: 'GGR User', data: sortedMonths.map(month => monthlyData[month].ggr_user) }],
-              categories: sortedMonths.map(month => month.substring(0, 3))
-            },
-            
-            // ROW 3: Double Bar Charts
-            activePureMemberTrend: {
-              series: [
-                { name: 'Active Member', data: sortedMonths.map(month => monthlyData[month].active_member), color: '#3B82F6' },
-                { name: 'Pure Member', data: sortedMonths.map(month => monthlyData[month].pure_member), color: '#F97316' }
-              ],
-              categories: sortedMonths.map(month => month.substring(0, 3))
-            },
-            registerDepositorTrend: {
-              series: [
-                { name: 'New Register', data: sortedMonths.map(month => monthlyData[month].new_register), color: '#3B82F6' },
-                { name: 'New Depositor', data: sortedMonths.map(month => monthlyData[month].new_depositor), color: '#F97316' }
-              ],
-              categories: sortedMonths.map(month => month.substring(0, 3))
-            },
-            
-            // ROW 4: Double Line Charts
-            depositWithdrawTrend: {
-              series: [
-                { name: 'Deposit Amount', data: sortedMonths.map(month => monthlyData[month].deposit_amount) },
-                { name: 'Withdraw Amount', data: sortedMonths.map(month => monthlyData[month].withdraw_amount) }
-              ],
-              categories: sortedMonths.map(month => month.substring(0, 3))
-            },
-            ggrNetProfitTrend: {
-              series: [
-                { name: 'Gross Gaming Revenue', data: sortedMonths.map(month => monthlyData[month].ggr) },
-                { name: 'Net Profit', data: sortedMonths.map(month => monthlyData[month].net_profit) }
-              ],
-              categories: sortedMonths.map(month => month.substring(0, 3))
-            },
-            
-            // ROW 5: Single Line Charts
-            atvTrend: {
-              series: [{ name: 'Average Transaction Value', data: sortedMonths.map(month => monthlyData[month].atv) }],
-              categories: sortedMonths.map(month => month.substring(0, 3))
-            },
-            purchaseFrequencyTrend: {
-              series: [{ name: 'Purchase Frequency', data: sortedMonths.map(month => monthlyData[month].purchase_frequency) }],
-              categories: sortedMonths.map(month => month.substring(0, 3))
-            },
-            
-            // ROW 6: Single Bar Charts
-            depositCasesTrend: {
-              series: [{ name: 'Deposit Cases', data: sortedMonths.map(month => monthlyData[month].deposit_cases) }],
-              categories: sortedMonths.map(month => month.substring(0, 3))
-            },
-            withdrawCasesTrend: {
-              series: [{ name: 'Withdraw Cases', data: sortedMonths.map(month => monthlyData[month].withdraw_cases) }],
-              categories: sortedMonths.map(month => month.substring(0, 3))
-            },
-            
-            // ROW 7: Single Line Charts
-            winrateTrend: {
-              series: [{ name: 'Winrate', data: sortedMonths.map(month => monthlyData[month].winrate) }],
-              categories: sortedMonths.map(month => month.substring(0, 3))
-            },
-            withdrawalRateTrend: {
-              series: [{ name: 'Withdrawal Rate', data: sortedMonths.map(month => monthlyData[month].withdrawal_rate) }],
-              categories: sortedMonths.map(month => month.substring(0, 3))
-            },
-            
-            // ROW 8: Single Line Charts
-            conversionRateTrend: {
-              series: [{ name: 'Conversion Rate', data: sortedMonths.map(month => monthlyData[month].conversion_rate) }],
-              categories: sortedMonths.map(month => month.substring(0, 3))
-            },
-            holdPercentageTrend: {
-              series: [{ name: 'Hold Percentage', data: sortedMonths.map(month => monthlyData[month].hold_percentage) }],
-              categories: sortedMonths.map(month => month.substring(0, 3))
-            }
-          };
-          
-          setChartData(preparedChartData);
-          setChartsLoaded(true);
-        } else {
-          setChartsLoaded(true); // Even if no data, mark as loaded
-        }
-        
-        console.log('✅ [MYR Overview] Chart data loaded successfully (MONTHLY)');
-
-      } catch (error) {
-        console.error('Error loading chart data:', error);
-        setChartError('Failed to load chart data.');
-        setChartsLoaded(true); // Mark as loaded even on error
+      });
+      const chartResult = await chartResponse.json();
+      
+      console.log('📊 [MYR Overview] Chart API Response:', chartResult);
+      
+      if (!chartResult.success) {
+        throw new Error('Failed to fetch chart data');
       }
-    };
+      
+      const monthlyData = chartResult.monthlyData;
+      
+      console.log('📊 [MYR Overview] Monthly data from MV:', monthlyData);
+      
+      // Debug hold_percentage values
+      const holdPercentageDebug = Object.keys(monthlyData).map(month => ({
+        month,
+        hold_percentage: monthlyData[month].hold_percentage,
+        conversion_rate: monthlyData[month].conversion_rate,
+        net_profit: monthlyData[month].net_profit,
+        valid_amount: monthlyData[month].valid_amount
+      }));
+      console.log('🔍 [MYR Overview] Hold Percentage Debug:', holdPercentageDebug);
+      
+      if (Object.keys(monthlyData).length > 0) {
+        // Sort months chronologically
+        const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 
+                           'July', 'August', 'September', 'October', 'November', 'December'];
+        const sortedMonths = Object.keys(monthlyData).sort((a, b) => 
+          monthOrder.indexOf(a) - monthOrder.indexOf(b)
+        );
 
-    const timeoutId = setTimeout(loadChartData, 100);
-    return () => clearTimeout(timeoutId);
-  }, [selectedYear, selectedLine]);
+        // Create chart data from aggregated monthly data
+        const preparedChartData = {
+          // ROW 2: Single Line Charts
+          daUserTrend: {
+            series: [{ name: 'DA User', data: sortedMonths.map(month => monthlyData[month].da_user) }],
+            categories: sortedMonths.map(month => month.substring(0, 3))
+          },
+          ggrUserTrend: {
+            series: [{ name: 'GGR User', data: sortedMonths.map(month => monthlyData[month].ggr_user) }],
+            categories: sortedMonths.map(month => month.substring(0, 3))
+          },
+          
+          // ROW 3: Double Bar Charts
+          activePureMemberTrend: {
+            series: [
+              { name: 'Active Member', data: sortedMonths.map(month => monthlyData[month].active_member), color: '#3B82F6' },
+              { name: 'Pure Member', data: sortedMonths.map(month => monthlyData[month].pure_member), color: '#F97316' }
+            ],
+            categories: sortedMonths.map(month => month.substring(0, 3))
+          },
+          registerDepositorTrend: {
+            series: [
+              { name: 'New Register', data: sortedMonths.map(month => monthlyData[month].new_register), color: '#3B82F6' },
+              { name: 'New Depositor', data: sortedMonths.map(month => monthlyData[month].new_depositor), color: '#F97316' }
+            ],
+            categories: sortedMonths.map(month => month.substring(0, 3))
+          },
+          
+          // ROW 4: Double Line Charts
+          depositWithdrawTrend: {
+            series: [
+              { name: 'Deposit Amount', data: sortedMonths.map(month => monthlyData[month].deposit_amount) },
+              { name: 'Withdraw Amount', data: sortedMonths.map(month => monthlyData[month].withdraw_amount) }
+            ],
+            categories: sortedMonths.map(month => month.substring(0, 3))
+          },
+          ggrNetProfitTrend: {
+            series: [
+              { name: 'Gross Gaming Revenue', data: sortedMonths.map(month => monthlyData[month].ggr) },
+              { name: 'Net Profit', data: sortedMonths.map(month => monthlyData[month].net_profit) }
+            ],
+            categories: sortedMonths.map(month => month.substring(0, 3))
+          },
+          
+          // ROW 5: Single Line Charts
+          atvTrend: {
+            series: [{ name: 'Average Transaction Value', data: sortedMonths.map(month => monthlyData[month].atv) }],
+            categories: sortedMonths.map(month => month.substring(0, 3))
+          },
+          purchaseFrequencyTrend: {
+            series: [{ name: 'Purchase Frequency', data: sortedMonths.map(month => monthlyData[month].purchase_frequency) }],
+            categories: sortedMonths.map(month => month.substring(0, 3))
+          },
+          
+          // ROW 6: Single Bar Charts
+          depositCasesTrend: {
+            series: [{ name: 'Deposit Cases', data: sortedMonths.map(month => monthlyData[month].deposit_cases) }],
+            categories: sortedMonths.map(month => month.substring(0, 3))
+          },
+          withdrawCasesTrend: {
+            series: [{ name: 'Withdraw Cases', data: sortedMonths.map(month => monthlyData[month].withdraw_cases) }],
+            categories: sortedMonths.map(month => month.substring(0, 3))
+          },
+          
+          // ROW 7: Single Line Charts
+          winrateTrend: {
+            series: [{ name: 'Winrate', data: sortedMonths.map(month => monthlyData[month].winrate) }],
+            categories: sortedMonths.map(month => month.substring(0, 3))
+          },
+          withdrawalRateTrend: {
+            series: [{ name: 'Withdrawal Rate', data: sortedMonths.map(month => monthlyData[month].withdrawal_rate) }],
+            categories: sortedMonths.map(month => month.substring(0, 3))
+          },
+          
+          // ROW 8: Single Line Charts
+          conversionRateTrend: {
+            series: [{ name: 'Conversion Rate', data: sortedMonths.map(month => monthlyData[month].conversion_rate) }],
+            categories: sortedMonths.map(month => month.substring(0, 3))
+          },
+          holdPercentageTrend: {
+            series: [{ name: 'Hold Percentage', data: sortedMonths.map(month => monthlyData[month].hold_percentage) }],
+            categories: sortedMonths.map(month => month.substring(0, 3))
+          }
+        };
+        
+        setChartData(preparedChartData);
+        setChartsLoaded(true);
+      } else {
+        setChartsLoaded(true); // Even if no data, mark as loaded
+      }
+      
+      console.log('✅ [MYR Overview] Chart data loaded successfully (MONTHLY)');
+
+    } catch (error) {
+      console.error('Error loading chart data:', error);
+      setChartError('Failed to load chart data.');
+      setChartsLoaded(true); // Mark as loaded even on error
+    }
+  };
+
+
+  // ✅ Manual reload function (triggered by Search button)
+  const handleApplyFilters = () => {
+    setKpiLoaded(false);
+    setChartsLoaded(false);
+    loadKPIData();
+    loadChartData();
+  };
   
   // ✅ ONLY set isLoading false when BOTH KPI and Charts are ready!
   useEffect(() => {
@@ -402,6 +416,26 @@ export default function MYROverviewPage() {
             onLineChange={setSelectedLine}
           />
         </div>
+
+        {/* ✅ SEARCH BUTTON */}
+        <button 
+          onClick={handleApplyFilters}
+          disabled={isLoading}
+          className={`export-button ${isLoading ? 'disabled' : ''}`}
+          style={{ 
+            backgroundColor: '#10b981',
+            padding: '8px 16px',
+            border: 'none',
+            borderRadius: '8px',
+            color: 'white',
+            fontSize: '14px',
+            fontWeight: 500,
+            cursor: isLoading ? 'not-allowed' : 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          {isLoading ? 'Loading...' : 'Search'}
+        </button>
       </div>
     </div>
   );
