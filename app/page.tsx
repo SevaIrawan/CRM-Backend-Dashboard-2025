@@ -14,28 +14,86 @@ export default function HomePage() {
       return
     }
     
+    // Check maintenance mode first
+    checkMaintenanceMode()
+  }, [router])
+
+  const checkMaintenanceMode = async () => {
     try {
-      const session = localStorage.getItem('nexmax_session')
-      if (session) {
-        // User is logged in, get role and redirect to appropriate default page
-        const sessionData = JSON.parse(session)
-        const userRole = sessionData?.role || 'executive'
-        const defaultPage = getDefaultPageByRole(userRole)
-        
-        console.log('🔍 [HomePage] User role:', userRole, 'Default page:', defaultPage)
-        router.push(defaultPage)
-      } else {
-        // User is not logged in, redirect to login
+      // Check maintenance mode from API
+      const response = await fetch('/api/maintenance/status')
+      const result = await response.json()
+
+      if (result.success && result.data.is_maintenance_mode) {
+        // Maintenance mode is ON
+        // Check if user is admin (admin can bypass)
+        const session = localStorage.getItem('nexmax_session')
+        if (session) {
+          try {
+            const sessionData = JSON.parse(session)
+            if (sessionData?.role === 'admin') {
+              // Admin can bypass maintenance mode, redirect to default page
+              const userRole = sessionData?.role || 'admin'
+              const defaultPage = getDefaultPageByRole(userRole)
+              console.log('✅ [HomePage] Admin bypassing maintenance mode, redirecting to:', defaultPage)
+              router.push(defaultPage)
+              setIsLoading(false)
+              return
+            }
+          } catch (error) {
+            console.error('Error parsing session:', error)
+          }
+        }
+
+        // Non-admin user, redirect to maintenance page
+        console.log('🔧 [HomePage] Maintenance mode ON, redirecting to maintenance page')
+        router.push('/maintenance')
+        setIsLoading(false)
+        return
+      }
+
+      // Maintenance mode is OFF, proceed with normal flow
+      try {
+        const session = localStorage.getItem('nexmax_session')
+        if (session) {
+          // User is logged in, get role and redirect to appropriate default page
+          const sessionData = JSON.parse(session)
+          const userRole = sessionData?.role || 'executive'
+          const defaultPage = getDefaultPageByRole(userRole)
+          
+          console.log('🔍 [HomePage] User role:', userRole, 'Default page:', defaultPage)
+          router.push(defaultPage)
+        } else {
+          // User is not logged in, redirect to login
+          router.push('/login')
+        }
+      } catch (error) {
+        console.error('Error checking session:', error)
+        // Fallback to login page
         router.push('/login')
+      } finally {
+        setIsLoading(false)
       }
     } catch (error) {
-      console.error('Error checking session:', error)
-      // Fallback to login page
-      router.push('/login')
-    } finally {
-      setIsLoading(false)
+      console.error('Error checking maintenance mode:', error)
+      // If error, proceed with normal flow (fail-open)
+      try {
+        const session = localStorage.getItem('nexmax_session')
+        if (session) {
+          const sessionData = JSON.parse(session)
+          const userRole = sessionData?.role || 'executive'
+          const defaultPage = getDefaultPageByRole(userRole)
+          router.push(defaultPage)
+        } else {
+          router.push('/login')
+        }
+      } catch (err) {
+        router.push('/login')
+      } finally {
+        setIsLoading(false)
+      }
     }
-  }, [router])
+  }
 
   // Show loading while checking session
   if (isLoading) {

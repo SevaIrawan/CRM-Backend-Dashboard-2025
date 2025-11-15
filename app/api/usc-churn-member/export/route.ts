@@ -273,10 +273,20 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // ✅ Calculate ATV (Average Transaction Value) = deposit_amount / deposit_cases
+      // Churned members PASTI punya deposit_cases > 0 (karena aktif di previous month)
+      const atv = user.deposit_cases > 0 ? user.deposit_amount / user.deposit_cases : 0
+
+      // ✅ Calculate PF (Play Frequency) = deposit_cases / days_active
+      // Churned members PASTI punya days_active > 0 (karena aktif di previous month)
+      const pf = user.days_active > 0 ? user.deposit_cases / user.days_active : 0
+
       return {
         ...user,
         days_inactive: daysInactive,
-        status: status
+        status: status,
+        atv: atv,
+        pf: pf
       }
     })
 
@@ -297,6 +307,8 @@ export async function POST(request: NextRequest) {
       'last_deposit_date',
       'days_inactive',
       'days_active',
+      'atv',
+      'pf',
       'deposit_cases',
       'deposit_amount',
       'withdraw_cases',
@@ -312,7 +324,9 @@ export async function POST(request: NextRequest) {
       'withdraw_cases': 'WC',
       'withdraw_amount': 'WA',
       'first_deposit_date': 'FDD',
-      'last_deposit_date': 'LDD'
+      'last_deposit_date': 'LDD',
+      'atv': 'ATV',
+      'pf': 'PF'
     }
     const headers = columnOrder.map(col => headerMap[col] || col.toUpperCase().replace(/_/g, ' '))
     const csvRows = [headers.join(',')]
@@ -325,6 +339,10 @@ export async function POST(request: NextRequest) {
           return '-'
         }
         if (typeof value === 'number') {
+          // ✅ ATV dan PF: Always 2 decimal format
+          if (col === 'atv' || col === 'pf') {
+            return value.toFixed(2)
+          }
           if (Number.isInteger(value)) {
             return value.toString()
           } else {

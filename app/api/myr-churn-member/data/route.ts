@@ -332,10 +332,20 @@ export async function GET(request: NextRequest) {
         }
       }
 
+      // ✅ Calculate ATV (Average Transaction Value) = deposit_amount / deposit_cases
+      // Churned members PASTI punya deposit_cases > 0 (karena aktif di previous month)
+      const atv = user.deposit_cases > 0 ? user.deposit_amount / user.deposit_cases : 0
+
+      // ✅ Calculate PF (Play Frequency) = deposit_cases / days_active
+      // Churned members PASTI punya days_active > 0 (karena aktif di previous month)
+      const pf = user.days_active > 0 ? user.deposit_cases / user.days_active : 0
+
       return {
         ...user,
         days_inactive: daysInactive,
-        status: status
+        status: status,
+        atv: atv,
+        pf: pf
       }
     })
 

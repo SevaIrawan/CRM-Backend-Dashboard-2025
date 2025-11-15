@@ -353,6 +353,7 @@ export default function Sidebar({
           { title: 'Activity Logs', path: '/admin/activity-logs' },
           { title: 'Feedback & Support', path: '/admin/feedback' },
           { title: 'Page Status Management', path: '/admin/page-status' },
+          { title: 'Maintenance Mode', path: '/admin/maintenance' },
           { title: 'Target Audit Log', path: '/admin/target-audit-log' }
         ]
       }

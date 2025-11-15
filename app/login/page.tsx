@@ -138,12 +138,44 @@ export default function LoginPage() {
         console.log('ℹ️ [LOGIN] Admin login - no tracking')
       }
 
-      // Redirect based on user role using centralized function
-      setTimeout(() => {
+      // Check maintenance mode after login
+      try {
+        const maintenanceResponse = await fetch('/api/maintenance/status')
+        const maintenanceResult = await maintenanceResponse.json()
+
+        if (maintenanceResult.success && maintenanceResult.data.is_maintenance_mode) {
+          // Maintenance mode is ON
+          if (users.role === 'admin') {
+            // Admin can bypass maintenance mode, redirect to default page
+            const defaultPage = getDefaultPageByRole(users.role)
+            console.log('✅ [LOGIN] Admin bypassing maintenance mode, redirecting to:', defaultPage)
+            router.push(defaultPage)
+            setLoading(false)
+            return
+          } else {
+            // Non-admin user, redirect to maintenance page
+            console.log('🔧 [LOGIN] Maintenance mode ON, redirecting to maintenance page')
+            router.push('/maintenance')
+            setLoading(false)
+            return
+          }
+        } else {
+          // Maintenance mode is OFF, proceed with normal flow
+          const defaultPage = getDefaultPageByRole(users.role)
+          console.log('✅ [LOGIN] Maintenance mode OFF, redirecting to:', defaultPage)
+          router.push(defaultPage)
+          setLoading(false)
+          return
+        }
+      } catch (error) {
+        console.error('Error checking maintenance mode:', error)
+        // If error, proceed with normal flow (fail-open)
         const defaultPage = getDefaultPageByRole(users.role)
-        console.log('🔍 [LOGIN] Successful login, redirecting to:', defaultPage)
+        console.log('✅ [LOGIN] Error checking maintenance, redirecting to:', defaultPage)
         router.push(defaultPage)
-      }, 100)
+        setLoading(false)
+        return
+      }
 
     } catch (err) {
       console.error('Login error:', err)

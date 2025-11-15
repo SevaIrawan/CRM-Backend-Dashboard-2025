@@ -58,6 +58,15 @@ export default function SGDChurnMemberPage() {
   const [slicerLoading, setSlicerLoading] = useState(false)
   const [exporting, setExporting] = useState(false)
 
+  // ✅ Sorting state
+  const [sortConfig, setSortConfig] = useState<{
+    column: string | null
+    direction: 'asc' | 'desc'
+  }>({
+    column: 'days_active', // Default sort by Days Active
+    direction: 'desc' // Default descending (highest first)
+  })
+
   // Custom column order for churn member table
   const columnOrder = [
     'line',
@@ -68,6 +77,8 @@ export default function SGDChurnMemberPage() {
     'last_deposit_date', // LDD
     'days_inactive',
     'days_active',
+    'atv', // ATV = Average Transaction Value
+    'pf', // PF = Play Frequency
     'deposit_cases', // DC
     'deposit_amount', // DA
     'withdraw_cases', // WC
@@ -92,7 +103,9 @@ export default function SGDChurnMemberPage() {
       'withdraw_cases': 'WC',
       'withdraw_amount': 'WA',
       'first_deposit_date': 'FDD',
-      'last_deposit_date': 'LDD'
+      'last_deposit_date': 'LDD',
+      'atv': 'ATV',
+      'pf': 'PF'
     }
     return headerMap[column] || column.toUpperCase().replace(/_/g, ' ')
   }
@@ -112,13 +125,72 @@ export default function SGDChurnMemberPage() {
     return 'left'
   }
 
+  // ✅ Function to handle column header click for sorting
+  const handleSort = (column: string) => {
+    setSortConfig(prevConfig => {
+      // If clicking the same column, toggle direction
+      if (prevConfig.column === column) {
+        return {
+          column,
+          direction: prevConfig.direction === 'asc' ? 'desc' : 'asc'
+        }
+      }
+      // If clicking different column, sort descending by default
+      return {
+        column,
+        direction: 'desc'
+      }
+    })
+  }
+
+  // ✅ Function to sort data based on sortConfig
+  const getSortedData = (data: ChurnMemberData[]): ChurnMemberData[] => {
+    if (!sortConfig.column) return data
+
+    const sorted = [...data].sort((a, b) => {
+      const aValue = a[sortConfig.column!]
+      const bValue = b[sortConfig.column!]
+
+      // Handle null/undefined values
+      if (aValue === null || aValue === undefined) return 1
+      if (bValue === null || bValue === undefined) return -1
+
+      // Handle numeric values
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortConfig.direction === 'asc' 
+          ? aValue - bValue 
+          : bValue - aValue
+      }
+
+      // Handle string values
+      const aStr = String(aValue).toLowerCase()
+      const bStr = String(bValue).toLowerCase()
+      
+      if (sortConfig.direction === 'asc') {
+        return aStr.localeCompare(bStr)
+      } else {
+        return bStr.localeCompare(aStr)
+      }
+    })
+
+    return sorted
+  }
+
   // Format table cell function
-  const formatTableCell = (value: any) => {
+  const formatTableCell = (value: any, column?: string) => {
     if (value === null || value === undefined || value === '') {
       return '-'
     }
     
     if (typeof value === 'number') {
+      // ✅ ATV dan PF: Always 2 decimal format
+      if (column === 'atv' || column === 'pf') {
+        return value.toLocaleString('en-US', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        })
+      }
+      
       if (Number.isInteger(value)) {
         return value.toLocaleString()
       } else {
@@ -468,20 +540,42 @@ export default function SGDChurnMemberPage() {
                     <thead>
                       <tr>
                         {churnMemberData.length > 0 && getSortedColumns(Object.keys(churnMemberData[0]))
-                          .map((column) => (
-                            <th key={column} style={{ 
-                              textAlign: 'left',
-                              border: '1px solid #e0e0e0',
-                              borderBottom: '2px solid #d0d0d0',
-                              padding: '8px 12px'
-                            }}>
-                              {getColumnHeader(column)}
-                            </th>
-                          ))}
+                          .map((column) => {
+                            const isSortable = column === 'days_active'
+                            const isCurrentlySorted = sortConfig.column === column
+                            const sortIndicator = isCurrentlySorted 
+                              ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓')
+                              : ''
+                            
+                            return (
+                              <th 
+                                key={column} 
+                                onClick={() => isSortable && handleSort(column)}
+                                style={{ 
+                                  cursor: isSortable ? 'pointer' : 'default',
+                                  userSelect: 'none',
+                                  opacity: isSortable && isCurrentlySorted ? 1 : undefined
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (isSortable) {
+                                    e.currentTarget.style.opacity = '0.9'
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (isSortable) {
+                                    e.currentTarget.style.opacity = isCurrentlySorted ? '1' : ''
+                                  }
+                                }}
+                                title={isSortable ? 'Click to sort by Days Active' : ''}
+                              >
+                                {getColumnHeader(column)}{sortIndicator}
+                              </th>
+                            )
+                          })}
                       </tr>
                     </thead>
                     <tbody>
-                      {churnMemberData.map((row, index) => (
+                      {getSortedData(churnMemberData).map((row, index) => (
                         <tr key={index} style={{
                           backgroundColor: index % 2 === 0 ? '#f9fafb' : 'white'
                         }}>
@@ -527,6 +621,10 @@ export default function SGDChurnMemberPage() {
                                 )
                               }
                               
+                              // ✅ Special rendering for ATV and PF columns (right align, 2 decimals)
+                              const isATV = column === 'atv'
+                              const isPF = column === 'pf'
+                              
                               // ✅ Special rendering for status column
                               const isStatus = column === 'status'
                               
@@ -567,9 +665,9 @@ export default function SGDChurnMemberPage() {
                                   border: '1px solid #e0e0e0',
                                   padding: '8px 12px',
                                   color: isNetProfit ? (isNegative ? '#dc2626' : isPositive ? '#059669' : '#374151') : '#374151',
-                                  fontWeight: isNetProfit ? 600 : 'normal'
+                                  fontWeight: isNetProfit ? 600 : (isATV || isPF ? 500 : 'normal')
                                 }}>
-                                  {formatTableCell(cellValue)}
+                                  {formatTableCell(cellValue, column)}
                                 </td>
                               )
                             })}
