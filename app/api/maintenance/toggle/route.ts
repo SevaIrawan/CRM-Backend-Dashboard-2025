@@ -42,12 +42,12 @@ export async function POST(request: NextRequest) {
     }
     
     let result
-    if (existingData) {
+    if (existingData && existingData.id) {
       // Update existing config
       const { data, error } = await supabase
         .from('maintenance_config')
         .update(updateData)
-        .eq('id', existingData.id)
+        .eq('id', existingData.id as string | number)
         .select()
         .single()
       
