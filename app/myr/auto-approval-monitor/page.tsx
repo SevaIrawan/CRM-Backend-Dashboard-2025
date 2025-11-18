@@ -10,6 +10,8 @@ import LineChart from '@/components/LineChart'
 import BarChart from '@/components/BarChart'
 import OverdueDetailsModal from '@/components/OverdueDetailsModal'
 import AutomationTransactionsModal from '@/components/AutomationTransactionsModal'
+import TotalTransactionsDetailsModal from '@/components/TotalTransactionsDetailsModal'
+import UploadTransactionsDetailsModal from '@/components/UploadTransactionsDetailsModal'
 import ChartZoomModal from '@/components/ChartZoomModal'
 import QuickDateFilter from '@/components/QuickDateFilter'
 import { getChartIcon } from '@/lib/CentralIcon'
@@ -44,6 +46,7 @@ interface AutoApprovalData {
   // Comprehensive KPI Data
   automation?: {
     automationTransactions: number
+    uploadTransactions: number
     manualTransactions: number
     automationRate: number
     manualProcessingRate: number
@@ -115,6 +118,14 @@ interface AutoApprovalData {
     date: string
     overdueCount: number
   }>
+  dailyOverdueCount2mTo5m: Array<{
+    date: string
+    overdueCount: number
+  }>
+  dailyOverdueCount5mTo30m: Array<{
+    date: string
+    overdueCount: number
+  }>
   dailyProcessingDistribution: Array<{
     date: string
     min: number
@@ -141,6 +152,7 @@ interface AutoApprovalData {
   momComparison?: {
     totalTransactions: number
     automationTransactions: number
+    uploadTransactions: number
     avgAutomationProcessingTime: number
     automationOverdue: number
     coverageRate: number
@@ -211,8 +223,14 @@ export default function MYRAutoApprovalMonitorPage() {
   const [selectedLine, setSelectedLine] = useState('')
   const [selectedYear, setSelectedYear] = useState('')
   const [selectedMonth, setSelectedMonth] = useState('')
+  const [selectedCompareLine, setSelectedCompareLine] = useState('Select')
+  const [compareData, setCompareData] = useState<AutoApprovalData | null>(null)
   const [showOverdueModal, setShowOverdueModal] = useState(false)
+  const [showOverdue2mTo5mModal, setShowOverdue2mTo5mModal] = useState(false)
+  const [showOverdue5mTo30mModal, setShowOverdue5mTo30mModal] = useState(false)
   const [showAutomationModal, setShowAutomationModal] = useState(false)
+  const [showTotalTransactionsModal, setShowTotalTransactionsModal] = useState(false)
+  const [showUploadTransactionsModal, setShowUploadTransactionsModal] = useState(false)
   
   // State for chart zoom modal
   const [isZoomOpen, setIsZoomOpen] = useState(false)
@@ -475,6 +493,81 @@ export default function MYRAutoApprovalMonitorPage() {
     }
   }, [dataLoaded])
 
+  // Load Compare Data when compare line changes
+  useEffect(() => {
+    console.log('🔄 [DEBUG] Compare useEffect triggered with:', { selectedCompareLine, selectedLine, selectedYear, selectedMonth, isDateRangeMode })
+    
+    // Don't fetch if "Select" or same as main line
+    if (!selectedCompareLine || selectedCompareLine === 'Select' || selectedCompareLine === selectedLine) {
+      setCompareData(null)
+      return
+    }
+    
+    if (!selectedYear || !selectedMonth) {
+      console.log('❌ [DEBUG] Missing required slicer values for compare, skipping data load')
+      return
+    }
+    
+    // Don't fetch if daily mode is ON but dates are empty
+    if (isDateRangeMode && (!startDate || !endDate)) {
+      console.warn('⚠️ [DEBUG] Daily mode active but dates not set yet for compare, skipping fetch')
+      return
+    }
+
+    const loadCompareData = async () => {
+      const callId = Math.random().toString(36).substr(2, 9)
+      console.log(`🚀 [DEBUG] Starting Compare API call ${callId}`)
+      
+      try {
+        const params = new URLSearchParams({
+          line: selectedCompareLine,
+          year: selectedYear,
+          month: selectedMonth,
+          isDateRange: isDateRangeMode.toString()
+        })
+        
+        // Add date range params if in daily mode
+        if (isDateRangeMode && startDate && endDate) {
+          params.append('startDate', startDate)
+          params.append('endDate', endDate)
+        }
+        
+        console.log('🔍 [DEBUG] Loading Compare KPI data with params:', params.toString())
+        
+        // ✅ Get user's allowed brands for Squad Lead filtering
+        const allowedBrands = getAllowedBrandsFromStorage()
+        const headers: HeadersInit = {}
+        if (allowedBrands && allowedBrands.length > 0) {
+          headers['x-user-allowed-brands'] = JSON.stringify(allowedBrands)
+        }
+        
+        const response = await fetch(`/api/myr-auto-approval-monitor/data?${params}`, { headers })
+        console.log('🔍 [DEBUG] Compare Response status:', response.status, response.statusText)
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        
+        const result = await response.json()
+        console.log('📊 [DEBUG] Compare API Response:', result.success ? 'SUCCESS' : 'FAILED')
+        
+        if (result.success) {
+          console.log('✅ [DEBUG] Setting compare data:', result.data)
+          setCompareData(result.data)
+        } else {
+          console.log('❌ [DEBUG] Compare API returned error:', result)
+          setCompareData(null)
+        }
+      } catch (error) {
+        console.error('Error loading compare KPI data:', error)
+        setCompareData(null)
+      }
+    }
+
+    const timeoutId = setTimeout(loadCompareData, 100)
+    return () => clearTimeout(timeoutId)
+  }, [selectedCompareLine, selectedLine, selectedYear, selectedMonth, isDateRangeMode, startDate, endDate])
+
   const customSubHeader = (
     <div className="dashboard-subheader">
       <div className="subheader-title">
@@ -490,6 +583,36 @@ export default function MYRAutoApprovalMonitorPage() {
             selectedLine={selectedLine}
             onLineChange={setSelectedLine}
           />
+        </div>
+
+        {/* Compare With Slicer */}
+        <div className="slicer-group">
+          <label className="slicer-label">COMPARE WITH:</label>
+          <select
+            value={selectedCompareLine}
+            onChange={(e) => setSelectedCompareLine(e.target.value)}
+            className="subheader-select"
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              backgroundColor: 'white',
+              fontSize: '14px',
+              color: '#374151',
+              cursor: 'pointer',
+              outline: 'none',
+              transition: 'all 0.2s ease',
+              minWidth: '120px',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+            }}
+          >
+            <option value="Select">Select</option>
+            {slicerOptions?.lines?.filter(line => line !== selectedLine).map((line) => (
+              <option key={line} value={line}>
+                {line}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Year Slicer */}
@@ -641,6 +764,8 @@ export default function MYRAutoApprovalMonitorPage() {
                        percentage: formatMoMComparison(data?.momComparison?.totalTransactions || 0),
                        isPositive: (data?.momComparison?.totalTransactions || 0) >= 0
                      }}
+                     onClick={() => setShowTotalTransactionsModal(true)}
+                     clickable={true}
                    />
                  <StatCard
                    title="TOTAL TRANS AUTOMATION"
@@ -699,72 +824,124 @@ export default function MYRAutoApprovalMonitorPage() {
                      }}
                    />
                   <StatCard
-                    title="MANUAL TIME SAVED"
-                    value={`${(data?.manualTimeSaved || 0).toFixed(1)} hrs`}
-                    icon="MANUAL TIME SAVED"
+                    title="TOTAL TRANS UPLOAD"
+                    value={formatIntegerKPI(data?.automation?.uploadTransactions || 0)}
+                    icon="TOTAL TRANS UPLOAD"
                      additionalKpi={{
                        label: "DAILY AVERAGE",
-                       value: `${((data?.manualTimeSaved || 0) / calculateActiveDays()).toFixed(1)} hrs`
+                       value: formatIntegerKPI(Math.round((data?.automation?.uploadTransactions || 0) / calculateActiveDays()))
                      }}
                      comparison={{
-                       percentage: formatMoMComparison(data?.momComparison?.manualTimeSaved || 0),
-                       isPositive: (data?.momComparison?.manualTimeSaved || 0) >= 0
+                       percentage: formatMoMComparison(data?.momComparison?.uploadTransactions || 0),
+                       isPositive: (data?.momComparison?.uploadTransactions || 0) >= 0
                      }}
+                     onClick={() => setShowUploadTransactionsModal(true)}
+                     clickable={true}
                    />
           </div>
 
           {/* Row 2: Processing Time & Coverage Rate Charts */}
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                    <LineChart
-                     series={data?.weeklyProcessingTime ? [{
-                       name: 'Auto Approval Processing Time',
-                       data: data.weeklyProcessingTime.map(item => item.avgProcessingTime)
-                     }] : []}
+                     series={(() => {
+                       const series = []
+                       if (data?.weeklyProcessingTime) {
+                         series.push({
+                           name: selectedLine,
+                           data: data.weeklyProcessingTime.map(item => item.avgProcessingTime)
+                         })
+                       }
+                       if (selectedCompareLine !== 'Select' && compareData?.weeklyProcessingTime) {
+                         series.push({
+                           name: selectedCompareLine,
+                           data: compareData.weeklyProcessingTime.map(item => item.avgProcessingTime)
+                         })
+                       }
+                       return series
+                     })()}
                      categories={data?.weeklyProcessingTime ? data.weeklyProcessingTime.map(item => item.week) : []}
                      title={isDateRangeMode ? "AVERAGE PROCESSING TIME AUTOMATION (DAILY)" : "AVERAGE PROCESSING TIME AUTOMATION (MONTHLY)"}
                      currency="MYR"
-                     hideLegend={true}
+                     hideLegend={selectedCompareLine === 'Select'}
                      showDataLabels={true}
                      chartIcon={getChartIcon('Processing Time')}
+                     forceSingleYAxis={true}
                      clickable={true}
                      onDoubleClick={() => handleChartZoom(
                        {
-                         series: data?.weeklyProcessingTime ? [{
-                           name: 'Auto Approval Processing Time',
-                           data: data.weeklyProcessingTime.map(item => item.avgProcessingTime)
-                         }] : [],
+                         series: (() => {
+                           const series = []
+                           if (data?.weeklyProcessingTime) {
+                             series.push({
+                               name: selectedLine,
+                               data: data.weeklyProcessingTime.map(item => item.avgProcessingTime)
+                             })
+                           }
+                           if (selectedCompareLine !== 'Select' && compareData?.weeklyProcessingTime) {
+                             series.push({
+                               name: selectedCompareLine,
+                               data: compareData.weeklyProcessingTime.map(item => item.avgProcessingTime)
+                             })
+                           }
+                           return series
+                         })(),
                          categories: data?.weeklyProcessingTime ? data.weeklyProcessingTime.map(item => item.week) : [],
-                         hideLegend: true,
+                         hideLegend: selectedCompareLine === 'Select',
                          showDataLabels: true,
-                         color: '#3B82F6'
+                         forceSingleYAxis: true
                        },
                        'line',
                        isDateRangeMode ? "AVERAGE PROCESSING TIME AUTOMATION (DAILY)" : "AVERAGE PROCESSING TIME AUTOMATION (MONTHLY)"
                      )}
                    />
                    <LineChart
-                     series={data?.weeklyCoverageRate ? [{
-                       name: 'Coverage Rate',
-                       data: data.weeklyCoverageRate.map(item => item.coverageRate)
-                     }] : []}
+                     series={(() => {
+                       const series = []
+                       if (data?.weeklyCoverageRate) {
+                         series.push({
+                           name: selectedLine,
+                           data: data.weeklyCoverageRate.map(item => item.coverageRate)
+                         })
+                       }
+                       if (selectedCompareLine !== 'Select' && compareData?.weeklyCoverageRate) {
+                         series.push({
+                           name: selectedCompareLine,
+                           data: compareData.weeklyCoverageRate.map(item => item.coverageRate)
+                         })
+                       }
+                       return series
+                     })()}
                      categories={data?.weeklyCoverageRate ? data.weeklyCoverageRate.map(item => item.week) : []}
                      title={isDateRangeMode ? "COVERAGE RATE (DAILY TREND)" : "COVERAGE RATE (MONTHLY TREND)"}
                      currency="MYR"
-                     hideLegend={true}
+                     hideLegend={selectedCompareLine === 'Select'}
                      showDataLabels={true}
                      color="#FF8C00"
                      chartIcon={getChartIcon('Coverage Rate')}
+                     forceSingleYAxis={true}
                      clickable={true}
                      onDoubleClick={() => handleChartZoom(
                        {
-                         series: data?.weeklyCoverageRate ? [{
-                           name: 'Coverage Rate',
-                           data: data.weeklyCoverageRate.map(item => item.coverageRate)
-                         }] : [],
+                         series: (() => {
+                           const series = []
+                           if (data?.weeklyCoverageRate) {
+                             series.push({
+                               name: selectedLine,
+                               data: data.weeklyCoverageRate.map(item => item.coverageRate)
+                             })
+                           }
+                           if (selectedCompareLine !== 'Select' && compareData?.weeklyCoverageRate) {
+                             series.push({
+                               name: selectedCompareLine,
+                               data: compareData.weeklyCoverageRate.map(item => item.coverageRate)
+                             })
+                           }
+                           return series
+                         })(),
                          categories: data?.weeklyCoverageRate ? data.weeklyCoverageRate.map(item => item.week) : [],
-                         hideLegend: true,
+                         hideLegend: selectedCompareLine === 'Select',
                          showDataLabels: true,
-                         color: '#FF8C00'
+                         forceSingleYAxis: true
                        },
                        'line',
                        isDateRangeMode ? "COVERAGE RATE (DAILY TREND)" : "COVERAGE RATE (MONTHLY TREND)"
@@ -823,28 +1000,54 @@ export default function MYRAutoApprovalMonitorPage() {
                      )}
                    />
                    <LineChart
-                     series={data?.dailyOverdueCount ? [{
-                       name: 'Automation Overdue Count',
-                       data: data.dailyOverdueCount.map(item => item.overdueCount)
-                     }] : []}
+                     series={(() => {
+                       const series = []
+                       if (data?.dailyOverdueCount) {
+                         series.push({
+                           name: selectedLine,
+                           data: data.dailyOverdueCount.map(item => item.overdueCount)
+                         })
+                       }
+                       if (selectedCompareLine !== 'Select' && compareData?.dailyOverdueCount) {
+                         series.push({
+                           name: selectedCompareLine,
+                           data: compareData.dailyOverdueCount.map(item => item.overdueCount)
+                         })
+                       }
+                       return series
+                     })()}
                      categories={data?.dailyOverdueCount ? data.dailyOverdueCount.map(item => item.date) : []}
                      title={isDateRangeMode ? "OVERDUE TRANS AUTOMATION (DAILY)" : "OVERDUE TRANS AUTOMATION (MONTHLY)"}
                      currency="MYR"
-                     hideLegend={true}
+                     hideLegend={selectedCompareLine === 'Select'}
                      showDataLabels={true}
                      color="#3B82F6"
                      chartIcon={getChartIcon('Daily Overdue Count')}
+                     forceSingleYAxis={true}
                      clickable={true}
+                     onClick={() => setShowOverdueModal(true)}
                      onDoubleClick={() => handleChartZoom(
                        {
-                         series: data?.dailyOverdueCount ? [{
-                           name: 'Automation Overdue Count',
-                           data: data.dailyOverdueCount.map(item => item.overdueCount)
-                         }] : [],
+                         series: (() => {
+                           const series = []
+                           if (data?.dailyOverdueCount) {
+                             series.push({
+                               name: selectedLine,
+                               data: data.dailyOverdueCount.map(item => item.overdueCount)
+                             })
+                           }
+                           if (selectedCompareLine !== 'Select' && compareData?.dailyOverdueCount) {
+                             series.push({
+                               name: selectedCompareLine,
+                               data: compareData.dailyOverdueCount.map(item => item.overdueCount)
+                             })
+                           }
+                           return series
+                         })(),
                          categories: data?.dailyOverdueCount ? data.dailyOverdueCount.map(item => item.date) : [],
-                         hideLegend: true,
+                         hideLegend: selectedCompareLine === 'Select',
                          showDataLabels: true,
-                         color: '#3B82F6'
+                         forceSingleYAxis: true
                        },
                        'line',
                        isDateRangeMode ? "OVERDUE TRANS AUTOMATION (DAILY)" : "OVERDUE TRANS AUTOMATION (MONTHLY)"
@@ -852,31 +1055,165 @@ export default function MYRAutoApprovalMonitorPage() {
                    />
                  </div>
 
-                 {/* Row 4: Processing Distribution & Peak Hour Charts */}
+                 {/* Row 4: OVERDUE 2m-5m & 5m-30m Charts */}
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                    <LineChart
-                     series={data?.dailyAutomationProcessingDistribution ? [{
-                       name: 'Automation Median Time',
-                       data: data.dailyAutomationProcessingDistribution.map(item => item.median)
-                     }] : []}
+                     series={(() => {
+                       const series = []
+                       if (data?.dailyOverdueCount2mTo5m) {
+                         series.push({
+                           name: selectedLine,
+                           data: data.dailyOverdueCount2mTo5m.map(item => item.overdueCount)
+                         })
+                       }
+                       if (selectedCompareLine !== 'Select' && compareData?.dailyOverdueCount2mTo5m) {
+                         series.push({
+                           name: selectedCompareLine,
+                           data: compareData.dailyOverdueCount2mTo5m.map(item => item.overdueCount)
+                         })
+                       }
+                       return series
+                     })()}
+                     categories={data?.dailyOverdueCount2mTo5m ? data.dailyOverdueCount2mTo5m.map(item => item.date) : []}
+                     title={isDateRangeMode ? "OVERDUE 2m-5m TRANS AUTOMATION (DAILY)" : "OVERDUE 2m-5m TRANS AUTOMATION (MONTHLY)"}
+                     currency="MYR"
+                     hideLegend={selectedCompareLine === 'Select'}
+                     showDataLabels={true}
+                     chartIcon={getChartIcon('Overdue 2m-5m')}
+                     forceSingleYAxis={true}
+                     clickable={true}
+                     onClick={() => setShowOverdue2mTo5mModal(true)}
+                     onDoubleClick={() => handleChartZoom(
+                       {
+                         series: (() => {
+                           const series = []
+                           if (data?.dailyOverdueCount2mTo5m) {
+                             series.push({
+                               name: selectedLine,
+                               data: data.dailyOverdueCount2mTo5m.map(item => item.overdueCount)
+                             })
+                           }
+                           if (selectedCompareLine !== 'Select' && compareData?.dailyOverdueCount2mTo5m) {
+                             series.push({
+                               name: selectedCompareLine,
+                               data: compareData.dailyOverdueCount2mTo5m.map(item => item.overdueCount)
+                             })
+                           }
+                           return series
+                         })(),
+                         categories: data?.dailyOverdueCount2mTo5m ? data.dailyOverdueCount2mTo5m.map(item => item.date) : [],
+                         hideLegend: selectedCompareLine === 'Select',
+                         showDataLabels: true,
+                         forceSingleYAxis: true
+                       },
+                       'line',
+                       isDateRangeMode ? "OVERDUE 2m-5m TRANS AUTOMATION (DAILY)" : "OVERDUE 2m-5m TRANS AUTOMATION (MONTHLY)"
+                     )}
+                   />
+                   <LineChart
+                     series={(() => {
+                       const series = []
+                       if (data?.dailyOverdueCount5mTo30m) {
+                         series.push({
+                           name: selectedLine,
+                           data: data.dailyOverdueCount5mTo30m.map(item => item.overdueCount)
+                         })
+                       }
+                       if (selectedCompareLine !== 'Select' && compareData?.dailyOverdueCount5mTo30m) {
+                         series.push({
+                           name: selectedCompareLine,
+                           data: compareData.dailyOverdueCount5mTo30m.map(item => item.overdueCount)
+                         })
+                       }
+                       return series
+                     })()}
+                     categories={data?.dailyOverdueCount5mTo30m ? data.dailyOverdueCount5mTo30m.map(item => item.date) : []}
+                     title={isDateRangeMode ? "OVERDUE 5m-30m TRANS AUTOMATION (DAILY)" : "OVERDUE 5m-30m TRANS AUTOMATION (MONTHLY)"}
+                     currency="MYR"
+                     hideLegend={selectedCompareLine === 'Select'}
+                     showDataLabels={true}
+                     chartIcon={getChartIcon('Overdue 5m-30m')}
+                     forceSingleYAxis={true}
+                     clickable={true}
+                     onClick={() => setShowOverdue5mTo30mModal(true)}
+                     onDoubleClick={() => handleChartZoom(
+                       {
+                         series: (() => {
+                           const series = []
+                           if (data?.dailyOverdueCount5mTo30m) {
+                             series.push({
+                               name: selectedLine,
+                               data: data.dailyOverdueCount5mTo30m.map(item => item.overdueCount)
+                             })
+                           }
+                           if (selectedCompareLine !== 'Select' && compareData?.dailyOverdueCount5mTo30m) {
+                             series.push({
+                               name: selectedCompareLine,
+                               data: compareData.dailyOverdueCount5mTo30m.map(item => item.overdueCount)
+                             })
+                           }
+                           return series
+                         })(),
+                         categories: data?.dailyOverdueCount5mTo30m ? data.dailyOverdueCount5mTo30m.map(item => item.date) : [],
+                         hideLegend: selectedCompareLine === 'Select',
+                         showDataLabels: true,
+                         forceSingleYAxis: true
+                       },
+                       'line',
+                       isDateRangeMode ? "OVERDUE 5m-30m TRANS AUTOMATION (DAILY)" : "OVERDUE 5m-30m TRANS AUTOMATION (MONTHLY)"
+                     )}
+                   />
+                 </div>
+
+                 {/* Row 5: Processing Distribution & Peak Hour Charts */}
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                   <LineChart
+                     series={(() => {
+                       const series = []
+                       if (data?.dailyAutomationProcessingDistribution) {
+                         series.push({
+                           name: selectedLine,
+                           data: data.dailyAutomationProcessingDistribution.map(item => item.median)
+                         })
+                       }
+                       if (selectedCompareLine !== 'Select' && compareData?.dailyAutomationProcessingDistribution) {
+                         series.push({
+                           name: selectedCompareLine,
+                           data: compareData.dailyAutomationProcessingDistribution.map(item => item.median)
+                         })
+                       }
+                       return series
+                     })()}
                      categories={data?.dailyAutomationProcessingDistribution ? data.dailyAutomationProcessingDistribution.map(item => item.date) : []}
                      title={isDateRangeMode ? "PROCESSING TIME DISTRIBUTION AUTOMATION (DAILY)" : "PROCESSING TIME DISTRIBUTION AUTOMATION (MONTHLY)"}
                      currency="MYR"
-                     hideLegend={true}
+                     hideLegend={selectedCompareLine === 'Select'}
                      showDataLabels={true}
-                     color="#F97316"
                      chartIcon={getChartIcon('Processing Time Distribution')}
+                     forceSingleYAxis={true}
                      clickable={true}
                      onDoubleClick={() => handleChartZoom(
                        {
-                         series: data?.dailyAutomationProcessingDistribution ? [{
-                           name: 'Automation Median Time',
-                           data: data.dailyAutomationProcessingDistribution.map(item => item.median)
-                         }] : [],
+                         series: (() => {
+                           const series = []
+                           if (data?.dailyAutomationProcessingDistribution) {
+                             series.push({
+                               name: selectedLine,
+                               data: data.dailyAutomationProcessingDistribution.map(item => item.median)
+                             })
+                           }
+                           if (selectedCompareLine !== 'Select' && compareData?.dailyAutomationProcessingDistribution) {
+                             series.push({
+                               name: selectedCompareLine,
+                               data: compareData.dailyAutomationProcessingDistribution.map(item => item.median)
+                             })
+                           }
+                           return series
+                         })(),
                          categories: data?.dailyAutomationProcessingDistribution ? data.dailyAutomationProcessingDistribution.map(item => item.date) : [],
-                         hideLegend: true,
+                         hideLegend: selectedCompareLine === 'Select',
                          showDataLabels: true,
-                         color: '#F97316'
+                         forceSingleYAxis: true
                        },
                        'line',
                        isDateRangeMode ? "PROCESSING TIME DISTRIBUTION AUTOMATION (DAILY)" : "PROCESSING TIME DISTRIBUTION AUTOMATION (MONTHLY)"
@@ -898,6 +1235,7 @@ export default function MYRAutoApprovalMonitorPage() {
                      currency="MYR"
                      hideLegend={false}
                      showDataLabels={true}
+                     alwaysShowLabels={true}
                      color="#3B82F6"
                      chartIcon={getChartIcon('Peak Hour Processing Time')}
                      peakHourData={data?.peakHourProcessingTime}
@@ -917,6 +1255,7 @@ export default function MYRAutoApprovalMonitorPage() {
                          categories: data?.peakHourProcessingTime ? data.peakHourProcessingTime.map(item => item.period) : [],
                          hideLegend: false,
                          showDataLabels: true,
+                         alwaysShowLabels: true,
                          color: '#3B82F6',
                          peakHourData: data?.peakHourProcessingTime
                        },
@@ -1015,7 +1354,7 @@ export default function MYRAutoApprovalMonitorPage() {
         )}
       </ChartZoomModal>
       
-      {/* Overdue Details Modal */}
+      {/* Overdue Details Modal - 30s+ */}
       <OverdueDetailsModal
         isOpen={showOverdueModal}
         onClose={() => setShowOverdueModal(false)}
@@ -1026,6 +1365,47 @@ export default function MYRAutoApprovalMonitorPage() {
         isDateRange={isDateRangeMode}
         startDate={startDate}
         endDate={endDate}
+        timeRange="30s+"
+      />
+      
+      {/* Overdue Details Modal - 2m-5m */}
+      <OverdueDetailsModal
+        isOpen={showOverdue2mTo5mModal}
+        onClose={() => setShowOverdue2mTo5mModal(false)}
+        overdueCount={(() => {
+          // Calculate count from dailyOverdueCount2mTo5m data
+          if (data?.dailyOverdueCount2mTo5m) {
+            return data.dailyOverdueCount2mTo5m.reduce((sum, item) => sum + item.overdueCount, 0)
+          }
+          return 0
+        })()}
+        line={selectedLine}
+        year={selectedYear}
+        month={selectedMonth}
+        isDateRange={isDateRangeMode}
+        startDate={startDate}
+        endDate={endDate}
+        timeRange="2m-5m"
+      />
+      
+      {/* Overdue Details Modal - 5m-30m */}
+      <OverdueDetailsModal
+        isOpen={showOverdue5mTo30mModal}
+        onClose={() => setShowOverdue5mTo30mModal(false)}
+        overdueCount={(() => {
+          // Calculate count from dailyOverdueCount5mTo30m data
+          if (data?.dailyOverdueCount5mTo30m) {
+            return data.dailyOverdueCount5mTo30m.reduce((sum, item) => sum + item.overdueCount, 0)
+          }
+          return 0
+        })()}
+        line={selectedLine}
+        year={selectedYear}
+        month={selectedMonth}
+        isDateRange={isDateRangeMode}
+        startDate={startDate}
+        endDate={endDate}
+        timeRange="5m-30m"
       />
       
       {/* Automation Transactions Modal */}
@@ -1033,6 +1413,32 @@ export default function MYRAutoApprovalMonitorPage() {
         isOpen={showAutomationModal}
         onClose={() => setShowAutomationModal(false)}
         totalCount={data?.automation?.automationTransactions || 0}
+        line={selectedLine}
+        year={selectedYear}
+        month={selectedMonth}
+        isDateRange={isDateRangeMode}
+        startDate={startDate}
+        endDate={endDate}
+      />
+      
+      {/* Total Transactions Details Modal */}
+      <TotalTransactionsDetailsModal
+        isOpen={showTotalTransactionsModal}
+        onClose={() => setShowTotalTransactionsModal(false)}
+        totalCount={data?.depositCases || 0}
+        line={selectedLine}
+        year={selectedYear}
+        month={selectedMonth}
+        isDateRange={isDateRangeMode}
+        startDate={startDate}
+        endDate={endDate}
+      />
+      
+      {/* Upload Transactions Details Modal */}
+      <UploadTransactionsDetailsModal
+        isOpen={showUploadTransactionsModal}
+        onClose={() => setShowUploadTransactionsModal(false)}
+        uploadCount={data?.automation?.uploadTransactions || 0}
         line={selectedLine}
         year={selectedYear}
         month={selectedMonth}

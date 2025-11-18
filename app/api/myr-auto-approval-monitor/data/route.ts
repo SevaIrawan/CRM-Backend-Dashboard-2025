@@ -136,18 +136,6 @@ export async function GET(request: NextRequest) {
       totalAmount: depositData?.reduce((sum: number, d: any) => sum + (d.amount || 0), 0)
     })
     
-    // Check if we're missing some data
-    console.log('🔍 [DEBUG] Expected vs Actual:', {
-      expectedAmount: 1931897.94,
-      expectedCases: 22102,
-      actualAmount: depositData?.reduce((sum: number, d: any) => sum + (d.amount || 0), 0),
-      actualCases: depositData?.length,
-      difference: {
-        amount: 1931897.94 - (depositData?.reduce((sum: number, d: any) => sum + (d.amount || 0), 0) || 0),
-        cases: 22102 - (depositData?.length || 0)
-      }
-    })
-    
     if (!depositData || depositData.length === 0) {
       return NextResponse.json({
         success: true,
@@ -172,6 +160,9 @@ export async function GET(request: NextRequest) {
     const totalTransactions = depositData.length
     const automationTransactions = depositData.filter((d: any) => 
       d.operator_group === 'Automation' || d.operator_group === 'BOT'
+    )
+    const uploadTransactions = depositData.filter((d: any) => 
+      d.type === 'Upload' || d.type === 'API Upload'
     )
     const manualTransactions = depositData.filter((d: any) => 
       d.operator_group === 'Staff' || d.operator_group === 'User' || d.operator_group === 'Manual'
@@ -563,6 +554,15 @@ export async function GET(request: NextRequest) {
         automationRate: totalTransactions > 0 ? (automationTransactions.length / totalTransactions) * 100 : 0,
         overdueTransactions: periodData.filter(d => (d.proc_sec || 0) > 30).length,
         automationOverdueTransactions: automationTransactions.filter(d => (d.proc_sec || 0) > 30).length,
+        // Overdue categories: 2m-5m (120-300 seconds), 5m-30m (300-1800 seconds)
+        automationOverdue2mTo5m: automationTransactions.filter(d => {
+          const procSec = d.proc_sec || 0
+          return procSec >= 120 && procSec < 300
+        }).length,
+        automationOverdue5mTo30m: automationTransactions.filter(d => {
+          const procSec = d.proc_sec || 0
+          return procSec >= 300 && procSec < 1800
+        }).length,
         fastProcessingRate: totalTransactions > 0 ? 
           (periodData.filter(d => (d.proc_sec || 0) <= 10).length / totalTransactions) * 100 : 0,
         // Add processing time distribution stats (ALL transactions)
@@ -726,6 +726,7 @@ export async function GET(request: NextRequest) {
         // Automation KPIs
         automation: {
           automationTransactions: automationTransactions.length,
+          uploadTransactions: uploadTransactions.length,
           automationRate: Math.round(automationRate * 100) / 100
         },
         
@@ -796,6 +797,15 @@ export async function GET(request: NextRequest) {
         dailyOverdueCount: timeSeriesData.map(d => ({
           date: d.period,
           overdueCount: d.automationOverdueTransactions // Changed to automation overdue
+        })),
+        // Daily Overdue Count by Time Ranges
+        dailyOverdueCount2mTo5m: timeSeriesData.map(d => ({
+          date: d.period,
+          overdueCount: d.automationOverdue2mTo5m || 0
+        })),
+        dailyOverdueCount5mTo30m: timeSeriesData.map(d => ({
+          date: d.period,
+          overdueCount: d.automationOverdue5mTo30m || 0
         })),
         
         // Additional chart data for missing charts
@@ -934,6 +944,7 @@ export async function GET(request: NextRequest) {
               return {
                 totalTransactions: 0,
                 automationTransactions: 0,
+                uploadTransactions: 0,
                 avgAutomationProcessingTime: 0,
                 automationOverdue: 0,
                 coverageRate: 0,
@@ -971,6 +982,7 @@ export async function GET(request: NextRequest) {
               return {
                 totalTransactions: 0,
                 automationTransactions: 0,
+                uploadTransactions: 0,
                 avgAutomationProcessingTime: 0,
                 automationOverdue: 0,
                 coverageRate: 0,
@@ -984,6 +996,9 @@ export async function GET(request: NextRequest) {
             const prevTotalTransactions = prevMonthData.length
             const prevAutomationTransactions = prevMonthData.filter((d: any) => 
               d.operator_group === 'Automation' || d.operator_group === 'BOT'
+            )
+            const prevUploadTransactions = prevMonthData.filter((d: any) => 
+              d.type === 'Upload' || d.type === 'API Upload'
             )
             const prevAutomationProcessingTimes = prevAutomationTransactions
               .filter((d: any) => d.proc_sec && d.proc_sec > 0)
@@ -1012,6 +1027,7 @@ export async function GET(request: NextRequest) {
             const momResult = {
               totalTransactions: calculateMoM(totalTransactions, prevTotalTransactions),
               automationTransactions: calculateMoM(automationTransactions.length, prevAutomationTransactions.length),
+              uploadTransactions: calculateMoM(uploadTransactions.length, prevUploadTransactions.length),
               avgAutomationProcessingTime: calculateMoM(avgProcessingTimeAutomation, prevAvgAutomationProcessingTime),
               automationOverdue: calculateMoM(automationOverdue, prevAutomationOverdue.length),
               coverageRate: calculateMoM(automationRate, prevCoverageRate),

@@ -29,6 +29,7 @@ interface OverdueDetailsModalProps {
   startDate?: string
   endDate?: string
   type?: 'deposit' | 'withdraw' // Type to determine which API endpoint to use
+  timeRange?: '30s+' | '2m-5m' | '5m-30m' // Time range for overdue filter
 }
 
 export default function OverdueDetailsModal({
@@ -41,14 +42,15 @@ export default function OverdueDetailsModal({
   isDateRange = false,
   startDate,
   endDate,
-  type = 'deposit' // Default to deposit for backward compatibility
+  type = 'deposit', // Default to deposit for backward compatibility
+  timeRange = '30s+' // Default to 30s+ for backward compatibility
 }: OverdueDetailsModalProps) {
   const [transactions, setTransactions] = useState<OverdueTransaction[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(100)
-  const [sliceVisible, setSliceVisible] = useState(20)
+  const [sliceVisible, setSliceVisible] = useState(10)
   const [totalPages, setTotalPages] = useState(1)
   const [totalRecords, setTotalRecords] = useState(0)
   const [thresholdSec, setThresholdSec] = useState<number>(30)
@@ -59,7 +61,7 @@ export default function OverdueDetailsModal({
     if (isOpen) {
       fetchOverdueDetails()
     }
-  }, [isOpen, line, year, month, isDateRange, startDate, endDate, page, limit])
+  }, [isOpen, line, year, month, isDateRange, startDate, endDate, page, limit, timeRange])
 
   const fetchOverdueDetails = async () => {
     setLoading(true)
@@ -81,6 +83,9 @@ export default function OverdueDetailsModal({
         params.append('endDate', endDate)
       }
       
+      // Add timeRange param
+      params.append('timeRange', timeRange)
+      
       // Determine API endpoint based on type
       const apiEndpoint = type === 'withdraw' 
         ? '/api/myr-auto-approval-withdraw/overdue-details'
@@ -94,18 +99,25 @@ export default function OverdueDetailsModal({
       }
       
       const response = await fetch(`${apiEndpoint}?${params}`, { headers })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.details || errorData.error || `HTTP ${response.status}: ${response.statusText}`)
+      }
+      
       const data = await response.json()
       
       if (data.success) {
-        setTransactions(data.data.overdueTransactions)
+        setTransactions(data.data.overdueTransactions || [])
         setTotalPages(data.data.pagination?.totalPages || 1)
         setTotalRecords(data.data.pagination?.totalRecords || 0)
         if (typeof data.data.thresholdSec === 'number') setThresholdSec(data.data.thresholdSec)
       } else {
-        setError(data.error || 'Failed to fetch overdue details')
+        setError(data.details || data.error || 'Failed to fetch overdue details')
       }
     } catch (err) {
-      setError('Network error occurred')
+      const errorMessage = err instanceof Error ? err.message : 'Network error occurred'
+      setError(errorMessage)
       console.error('❌ Error fetching overdue details:', err)
     } finally {
       setLoading(false)
@@ -194,10 +206,12 @@ export default function OverdueDetailsModal({
     <div 
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
       onClick={onClose}
+      style={{ padding: 0, margin: 0 }}
     >
       <div 
-        className="bg-white rounded-lg shadow-xl max-w-[95vw] w-full mx-4 max-h-[90vh] flex flex-col"
+        className="bg-white rounded-lg shadow-xl max-w-[95vw] w-full max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
+        style={{ margin: 'auto' }}
       >
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b">
@@ -251,7 +265,7 @@ export default function OverdueDetailsModal({
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <div className="max-h-[600px] overflow-y-auto">
+              <div className="max-h-[400px] overflow-y-auto" style={{ maxHeight: '400px' }}>
               <table className="min-w-full" style={{ borderCollapse: 'collapse', border: '1px solid #e5e7eb' }}>
                 <thead className="sticky top-0" style={{ zIndex: 10 }}>
                   <tr>

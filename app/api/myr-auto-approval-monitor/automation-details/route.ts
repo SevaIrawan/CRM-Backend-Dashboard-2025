@@ -61,19 +61,25 @@ export async function GET(request: NextRequest) {
       countQuery = countQuery.in('line', userAllowedBrands)
     }
     
-    // Date filtering logic
+    // Date filtering logic - OPTIMIZED: Use date range for monthly mode instead of year/month columns
     if (isDateRange && startDate && endDate) {
       // Daily Mode: Use date range filter
       countQuery = countQuery
         .gte('date', startDate)
         .lte('date', endDate)
-    } else {
-      // Monthly Mode: Use year and month filter
-      if (year) {
-        countQuery = countQuery.eq('year', parseInt(year))
-      }
-      if (month) {
-        countQuery = countQuery.eq('month', month)
+    } else if (year && month) {
+      // Monthly Mode: Convert month name to number and use date range (OPTIMIZED)
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                         'July', 'August', 'September', 'October', 'November', 'December']
+      const monthNumber = monthNames.indexOf(month) + 1
+      if (monthNumber > 0) {
+        const yearNum = parseInt(year)
+        const monthStart = `${yearNum}-${String(monthNumber).padStart(2, '0')}-01`
+        const nextMonth = monthNumber === 12 ? 1 : monthNumber + 1
+        const nextYear = monthNumber === 12 ? yearNum + 1 : yearNum
+        const monthEnd = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`
+        
+        countQuery = countQuery.gte('date', monthStart).lt('date', monthEnd)
       }
     }
 
@@ -81,15 +87,19 @@ export async function GET(request: NextRequest) {
     const totalRecords = countRes.count || 0
     const totalPages = Math.max(1, Math.ceil(totalRecords / limit))
     const currentPage = Math.min(page, totalPages)
-    const from = (currentPage - 1) * limit
-    const to = from + limit - 1
+    const offset = (currentPage - 1) * limit
+    const from = offset
+    const to = offset + limit - 1
+
+    console.log('📊 [DEBUG] Pagination:', { totalRecords, totalPages, currentPage, offset, limit, from, to })
 
     // -------------------------
     // Data Query (paged) - ALL automation transactions (no proc_sec threshold)
+    // OPTIMIZED: Select specific columns instead of * for better performance
     // -------------------------
     let query = supabase
       .from('deposit')
-      .select('*')
+      .select('date, time, type, line, unique_code, userkey, user_name, amount, operator_group, process_time, proc_sec')
       .eq('currency', 'MYR')
       .not('proc_sec', 'is', null)
       .in('operator_group', ['Automation', 'BOT'])  // Only automation transactions
@@ -110,19 +120,25 @@ export async function GET(request: NextRequest) {
       query = query.in('line', userAllowedBrands)
     }
     
-    // Date filtering logic
+    // Date filtering logic - OPTIMIZED: Use date range for monthly mode instead of year/month columns
     if (isDateRange && startDate && endDate) {
       // Daily Mode: Use date range filter
       query = query
         .gte('date', startDate)
         .lte('date', endDate)
-    } else {
-      // Monthly Mode: Use year and month filter
-      if (year) {
-        query = query.eq('year', parseInt(year))
-      }
-      if (month) {
-        query = query.eq('month', month)
+    } else if (year && month) {
+      // Monthly Mode: Convert month name to number and use date range (OPTIMIZED)
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                         'July', 'August', 'September', 'October', 'November', 'December']
+      const monthNumber = monthNames.indexOf(month) + 1
+      if (monthNumber > 0) {
+        const yearNum = parseInt(year)
+        const monthStart = `${yearNum}-${String(monthNumber).padStart(2, '0')}-01`
+        const nextMonth = monthNumber === 12 ? 1 : monthNumber + 1
+        const nextYear = monthNumber === 12 ? yearNum + 1 : yearNum
+        const monthEnd = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`
+        
+        query = query.gte('date', monthStart).lt('date', monthEnd)
       }
     }
     

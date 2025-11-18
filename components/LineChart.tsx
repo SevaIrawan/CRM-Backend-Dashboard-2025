@@ -52,6 +52,7 @@ interface LineChartProps {
     avgProcessingTimeAutomation: number;
   }>; // Add peak hour data for detailed tooltip
   onDoubleClick?: () => void; // For zoom functionality
+  onClick?: () => void; // For view details (icon folder button)
   clickable?: boolean; // Enable hover effects
 }
 
@@ -69,6 +70,7 @@ export default function LineChart({
   forceSingleYAxis = false, // Default false - set to true for forecast chart
   peakHourData, // Peak hour data for detailed tooltip
   onDoubleClick,
+  onClick, // For view details (icon folder button)
   clickable = false
 }: LineChartProps) {
   
@@ -860,47 +862,100 @@ export default function LineChart({
             </h3>
           </div>
           
-          {/* Legend */}
-          {!hideLegend && series.length > 0 && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
-            }}>
-              {(customLegend || series).map((item, index) => {
-                const isCustomLegend = !!customLegend;
-                const label = isCustomLegend ? (customLegend![index] as any).label : (item as any).name;
-                const seriesItem = series[index];
-                const legendColor = isCustomLegend 
-                  ? (customLegend![index] as any).color 
-                  : (seriesItem?.color || (index === 0 ? '#3B82F6' : '#F97316'));
-                
-                return (
-                  <div key={index} style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}>
-                    <div style={{
-                      width: '12px',
-                      height: '3px',
-                      backgroundColor: legendColor,
-                      borderRadius: '2px'
-                    }} />
-                    <span style={{
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      color: '#6B7280',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
+          {/* Legend and View Data Icon */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px'
+          }}>
+            {/* Legend */}
+            {!hideLegend && series.length > 0 && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                {(customLegend || series).map((item, index) => {
+                  const isCustomLegend = !!customLegend;
+                  const label = isCustomLegend ? (customLegend![index] as any).label : (item as any).name;
+                  const seriesItem = series[index];
+                  const legendColor = isCustomLegend 
+                    ? (customLegend![index] as any).color 
+                    : (seriesItem?.color || (index === 0 ? '#3B82F6' : '#F97316'));
+                  
+                  return (
+                    <div key={index} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
                     }}>
-                      {label}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                      <div style={{
+                        width: '12px',
+                        height: '3px',
+                        backgroundColor: legendColor,
+                        borderRadius: '2px'
+                      }} />
+                      <span style={{
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        color: '#6B7280',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>
+                        {label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            
+            {/* View Data Icon - Only show if onClick handler is provided */}
+            {onClick && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onClick()
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '28px',
+                  height: '28px',
+                  backgroundColor: '#3B82F6',
+                  borderRadius: '6px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#2563EB'
+                  e.currentTarget.style.transform = 'scale(1.05)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#3B82F6'
+                  e.currentTarget.style.transform = 'scale(1)'
+                }}
+                title="View detailed data"
+              >
+                <svg 
+                  width="16" 
+                  height="16" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                  style={{ color: '#FFFFFF' }}
+                >
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
       )}
       
