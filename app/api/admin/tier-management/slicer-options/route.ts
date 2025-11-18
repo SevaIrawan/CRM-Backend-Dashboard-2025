@@ -55,14 +55,14 @@ export async function GET(request: NextRequest) {
     }
     
     // Get unique lines and filter out unique_code patterns
-    const uniqueLines = Array.from(new Set(lineData?.map(row => row.line).filter(Boolean) || []))
+    const uniqueLines = Array.from(new Set(lineData?.map((row: any) => row.line as string).filter(Boolean) || [])) as string[]
     
     // Filter out unique_code patterns
     // Unique codes typically:
     // - Start with "USR" followed by letter and numbers (e.g., "USRH470771", "USRJ369536")
     // - Are longer than typical brand names
     // Brand/line names are typically short codes like "UWKH", "SBKH", "CAM68", "HENG68KH", etc.
-    const validBrands = uniqueLines.filter(line => {
+    const validBrands = uniqueLines.filter((line: string) => {
       const trimmedLine = line.trim()
       
       // Exclude lines that look like unique_code:
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
     
-    const uniqueYears = Array.from(new Set(yearData?.map(row => row.year?.toString()).filter(Boolean) || []))
+    const uniqueYears = Array.from(new Set(yearData?.map((row: any) => row.year?.toString()).filter(Boolean) || [])) as string[]
     const sortedYears = uniqueYears.sort((a, b) => parseInt(b || '0') - parseInt(a || '0'))
     
     // Get unique months from tier table based on currency
@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
     
-    const uniqueMonths = Array.from(new Set(monthData?.map(row => row.month).filter(Boolean) || []))
+    const uniqueMonths = Array.from(new Set(monthData?.map((row: any) => row.month as string).filter(Boolean) || [])) as string[]
     const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 
                        'July', 'August', 'September', 'October', 'November', 'December']
     const sortedMonths = uniqueMonths.sort((a, b) => monthOrder.indexOf(a) - monthOrder.indexOf(b))
