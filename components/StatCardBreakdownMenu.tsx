@@ -299,6 +299,7 @@ export default function StatCardBreakdownMenu({
           ))}
         </div>
       </div>
+      </div>
     </>,
     document.body
   )
