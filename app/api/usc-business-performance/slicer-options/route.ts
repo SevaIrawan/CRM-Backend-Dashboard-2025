@@ -84,8 +84,9 @@ export async function GET(request: NextRequest) {
       .order('date', { ascending: false })
       .limit(1)
     
-    const defaultYear = latestRecord?.[0]?.year?.toString() || sortedYears[0] || '2025'
-    const defaultMonth = latestRecord?.[0]?.month || 'November'
+    // Use real data from database - no hardcoded fallback
+    const defaultYear = latestRecord?.[0]?.year?.toString() || sortedYears[0] || null
+    const defaultMonth = latestRecord?.[0]?.month || null
     
     // Get months WITH year mapping from MASTER TABLE
     const { data: allMonthsData, error: monthsError } = await supabase

@@ -155,8 +155,10 @@ export async function GET(request: NextRequest) {
       if (record.tier !== null && record.tier !== undefined) {
         const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 
                            'July', 'August', 'September', 'October', 'November', 'December']
-        const currentMonthIndex = monthOrder.indexOf(record.month)
-        const latestMonthIndex = monthOrder.indexOf(agg.latest_month)
+        const recordMonth = record.month as string
+        const latestMonth = agg.latest_month as string
+        const currentMonthIndex = monthOrder.indexOf(recordMonth)
+        const latestMonthIndex = monthOrder.indexOf(latestMonth)
         
         if (currentMonthIndex > latestMonthIndex || agg.tier === null) {
           agg.tier = record.tier

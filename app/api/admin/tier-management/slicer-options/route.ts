@@ -132,8 +132,9 @@ export async function GET(request: NextRequest) {
       .order('month', { ascending: false })
       .limit(1)
     
-    const defaultYear = latestRecord?.[0]?.year?.toString() || sortedYears[0] || '2025'
-    const defaultMonth = latestRecord?.[0]?.month || 'ALL'
+    // Use real data from database - no hardcoded fallback
+    const defaultYear = latestRecord?.[0]?.year?.toString() || sortedYears[0] || null
+    const defaultMonth = latestRecord?.[0]?.month || 'ALL' // 'ALL' is valid default for filter
     
     const slicerOptions = {
       lines: linesWithAll,
