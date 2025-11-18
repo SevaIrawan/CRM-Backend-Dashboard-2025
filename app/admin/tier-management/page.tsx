@@ -294,7 +294,7 @@ export default function TierManagementPage() {
       setProgressPercent(10)
       setProgressMessage(`Fetching data from tier_${activeTab.toLowerCase()}_v1...`)
       
-      const response = await fetch(`/api/${activeTab.toLowerCase()}-business-performance/calculate-tiers`, {
+      const response = await fetch(`/api/admin/tier-management/calculate-tiers?currency=${activeTab}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -450,7 +450,7 @@ export default function TierManagementPage() {
       setProgressPercent(20)
       setProgressMessage(`Syncing tier from tier_${activeTab.toLowerCase()}_v1 to blue_whale_${activeTab.toLowerCase()}...`)
       
-      const response = await fetch(`/api/${activeTab.toLowerCase()}-business-performance/sync-tier`, {
+      const response = await fetch(`/api/admin/tier-management/sync-tier?currency=${activeTab}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

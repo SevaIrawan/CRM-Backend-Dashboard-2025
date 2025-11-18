@@ -10,19 +10,20 @@ import {
 
 /**
  * ============================================================================
- * USC BUSINESS PERFORMANCE - CALCULATE TIERS API
+ * ADMIN TIER MANAGEMENT - CALCULATE TIERS API
  * ============================================================================
  * 
- * Purpose: Calculate K-Means tier and UPDATE tier_usc_v1 table
+ * Purpose: Calculate K-Means tier and UPDATE tier table
  * Method: POST
  * 
  * Process:
- * 1. Fetch aggregated data from tier_usc_v1 table
+ * 1. Fetch aggregated data from tier table (tier_usc_v1, tier_sgd_v1, tier_myr_v1)
  * 2. Calculate K-Means score for each customer
  * 3. Assign tier 1-7 using calibrated boundaries
- * 4. UPDATE tier_usc_v1 table with tier, tier_name, tier_group, score
+ * 4. UPDATE tier table with tier, tier_name, tier_group, score
  * 
  * Params:
+ * - currency: Required (e.g., "USC", "SGD", "MYR")
  * - year: Optional (e.g., 2025)
  * - month: Optional (e.g., "November")
  * - line: Optional (e.g., "LVMY")
@@ -32,20 +33,39 @@ import {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🔄 [USC Calculate Tiers] Starting...')
-    
     const { searchParams } = new URL(request.url)
+    const currency = searchParams.get('currency') || 'USC'
     const year = searchParams.get('year')
     const month = searchParams.get('month')
     const line = searchParams.get('line')
     
-    console.log('📅 [USC Calculate Tiers] Params:', { year, month, line })
+    console.log('🔄 [Admin Calculate Tiers] Starting...', { currency, year, month, line })
+    
+    // Validate currency
+    if (!['USC', 'SGD', 'MYR'].includes(currency)) {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid currency. Must be USC, SGD, or MYR'
+      }, { status: 400 })
+    }
+    
+    // Determine table name based on currency
+    const tableName = `tier_${currency.toLowerCase()}_v1`
+    
+    // For now, only USC is implemented
+    if (currency !== 'USC') {
+      return NextResponse.json({
+        success: false,
+        error: `${currency} tier calculation is not yet implemented. Please use USC for now.`,
+        message: 'Coming soon'
+      }, { status: 501 })
+    }
     
     // ============================================================================
-    // STEP 1: FETCH DATA FROM tier_usc_v1
+    // STEP 1: FETCH DATA FROM tier table
     // ============================================================================
     
-    let query = supabase.from('tier_usc_v1').select('*')
+    let query = supabase.from(tableName).select('*')
     
     if (year) query = query.eq('year', parseInt(year))
     if (month && month !== 'ALL') query = query.eq('month', month)
@@ -54,7 +74,7 @@ export async function POST(request: NextRequest) {
     const { data: records, error: fetchError } = await query
     
     if (fetchError) {
-      console.error('❌ [USC Calculate Tiers] Fetch error:', fetchError)
+      console.error('❌ [Admin Calculate Tiers] Fetch error:', fetchError)
       throw fetchError
     }
     
@@ -66,7 +86,7 @@ export async function POST(request: NextRequest) {
       })
     }
     
-    console.log(`📊 [USC Calculate Tiers] Processing ${records.length} records`)
+    console.log(`📊 [Admin Calculate Tiers] Processing ${records.length} records`)
     
     // ============================================================================
     // STEP 2: CALCULATE K-MEANS SCORE
@@ -100,7 +120,7 @@ export async function POST(request: NextRequest) {
       periodGroups[key].push(record)
     })
     
-    console.log(`🎯 [USC Calculate Tiers] Processing ${Object.keys(periodGroups).length} periods`)
+    console.log(`🎯 [Admin Calculate Tiers] Processing ${Object.keys(periodGroups).length} periods`)
     
     // ============================================================================
     // STEP 4: ASSIGN TIERS PER PERIOD & UPDATE DATABASE
@@ -110,7 +130,7 @@ export async function POST(request: NextRequest) {
     const allDistributions: Record<string, any> = {}
     
     for (const [periodKey, periodRecords] of Object.entries(periodGroups)) {
-      console.log(`📅 [USC Calculate Tiers] Period: ${periodKey} (${periodRecords.length} records)`)
+      console.log(`📅 [Admin Calculate Tiers] Period: ${periodKey} (${periodRecords.length} records)`)
       
       // Calibrate boundaries for this period
       const scores = periodRecords.map(r => r.calculated_score)
@@ -121,10 +141,11 @@ export async function POST(request: NextRequest) {
         const tier = assignTierWithBoundaries(record.calculated_score, boundaries)
         // Extract line from userkey (format: prefix-unique_code-line)
         // Example: "neang90-USRI485687-L0Y66" -> line = "L0Y66"
-        const line = record.line || (record.userkey ? record.userkey.split('-')[2] || null : null)
+        const userkeyStr = record.userkey as string
+        const line = record.line || (userkeyStr ? userkeyStr.split('-')[2] || null : null)
         
         if (!line) {
-          console.warn(`⚠️ [USC Calculate Tiers] Missing line for userkey: ${record.userkey}`)
+          console.warn(`⚠️ [Admin Calculate Tiers] Missing line for userkey: ${record.userkey}`)
         }
         
         return {
@@ -143,7 +164,7 @@ export async function POST(request: NextRequest) {
       const validUpdates = updates.filter(u => u.line && u.line.trim() !== '')
       
       if (validUpdates.length !== updates.length) {
-        console.warn(`⚠️ [USC Calculate Tiers] Filtered out ${updates.length - validUpdates.length} records without line`)
+        console.warn(`⚠️ [Admin Calculate Tiers] Filtered out ${updates.length - validUpdates.length} records without line`)
       }
       
       // Update database using UPSERT (much faster and more stable!)
@@ -166,7 +187,7 @@ export async function POST(request: NextRequest) {
         
         // UPSERT batch (conflict on primary key will UPDATE)
         const { error, count } = await supabase
-          .from('tier_usc_v1')
+          .from(tableName)
           .upsert(upsertData, {
             onConflict: 'userkey,year,month',
             ignoreDuplicates: false
@@ -206,7 +227,7 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    console.log(`✅ [USC Calculate Tiers] Complete! ${totalUpdated} records updated`)
+    console.log(`✅ [Admin Calculate Tiers] Complete! ${totalUpdated} records updated`)
     
     return NextResponse.json({
       success: true,
@@ -220,7 +241,7 @@ export async function POST(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('❌ [USC Calculate Tiers] Error:', error)
+    console.error('❌ [Admin Calculate Tiers] Error:', error)
     return NextResponse.json({
       success: false,
       error: 'Internal server error',

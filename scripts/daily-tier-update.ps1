@@ -67,7 +67,7 @@ try {
     
     # Call calculate tiers API
     $TodayDate = Get-Date -Format "yyyy-MM-dd"
-    $CalcUrl = "http://localhost:3000/api/usc-business-performance/calculate-tiers?mode=incremental&date=$TodayDate"
+    $CalcUrl = "http://localhost:3000/api/admin/tier-management/calculate-tiers?currency=USC&mode=incremental&date=$TodayDate"
     
     $CalcResult = Invoke-RestMethod -Uri $CalcUrl -Method POST -TimeoutSec 1800
     
