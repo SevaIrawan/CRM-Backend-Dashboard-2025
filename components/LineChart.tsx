@@ -370,8 +370,17 @@ export default function LineChart({
   const data = {
     labels: categories,
     datasets: series.map((item, index) => {
-      // Use series-specific color if provided, otherwise use default colors
-      const lineColor = item.color || (index === 0 ? color : '#F97316'); // Use series color, or fallback to defaults
+      // When multiple series (comparison mode), always use contrasting colors
+      // Series 0: Blue (#3B82F6), Series 1: Orange (#F97316)
+      // When single series, use series color or color prop
+      let lineColor: string
+      if (series.length > 1) {
+        // Multiple series: always use contrasting colors
+        lineColor = index === 0 ? '#3B82F6' : '#F97316' // Blue for first, Orange for second
+      } else {
+        // Single series: use series-specific color if provided, otherwise use color prop
+        lineColor = item.color || color
+      }
       
       // ✅ STANDARD: Semi-transparent background with gradient effect for all charts
       const bgColor = `${lineColor}20`; // Add transparency to line color (hex with alpha)
@@ -780,7 +789,15 @@ export default function LineChart({
     })),
     needsDualYAxis,
     seriesColors: series.map((item, index) => {
-      const lineColor = item.color || (index === 0 ? color : '#F97316');
+      // When multiple series (comparison mode), always use contrasting colors
+      let lineColor: string
+      if (series.length > 1) {
+        // Multiple series: always use contrasting colors
+        lineColor = index === 0 ? '#3B82F6' : '#F97316' // Blue for first, Orange for second
+      } else {
+        // Single series: use series-specific color if provided, otherwise use color prop
+        lineColor = item.color || color
+      }
       return {
         name: item.name,
         index,
@@ -881,9 +898,16 @@ export default function LineChart({
                   const isCustomLegend = !!customLegend;
                   const label = isCustomLegend ? (customLegend![index] as any).label : (item as any).name;
                   const seriesItem = series[index];
-                  const legendColor = isCustomLegend 
-                    ? (customLegend![index] as any).color 
-                    : (seriesItem?.color || (index === 0 ? '#3B82F6' : '#F97316'));
+                  let legendColor: string
+                  if (isCustomLegend) {
+                    legendColor = (customLegend![index] as any).color
+                  } else if (series.length > 1) {
+                    // Multiple series: always use contrasting colors
+                    legendColor = index === 0 ? '#3B82F6' : '#F97316' // Blue for first, Orange for second
+                  } else {
+                    // Single series: use series-specific color if provided, otherwise use color prop
+                    legendColor = seriesItem?.color || color
+                  }
                   
                   return (
                     <div key={index} style={{
