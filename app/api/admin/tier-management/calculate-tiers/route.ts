@@ -161,7 +161,10 @@ export async function POST(request: NextRequest) {
       })
       
       // Filter out records without line (should not happen, but safety check)
-      const validUpdates = updates.filter(u => u.line && u.line.trim() !== '')
+      const validUpdates = updates.filter(u => {
+        const lineStr = u.line as string
+        return lineStr && lineStr.trim() !== ''
+      })
       
       if (validUpdates.length !== updates.length) {
         console.warn(`⚠️ [Admin Calculate Tiers] Filtered out ${updates.length - validUpdates.length} records without line`)
