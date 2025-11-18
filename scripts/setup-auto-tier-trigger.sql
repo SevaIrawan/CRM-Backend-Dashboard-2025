@@ -47,7 +47,7 @@ BEGIN
       CASE WHEN SUM(deposit_cases) > 0 THEN SUM(deposit_amount) / SUM(deposit_cases) ELSE 0 END,
       SUM(deposit_cases),
       CASE WHEN SUM(deposit_amount) > 0 THEN (SUM(ggr) / SUM(deposit_amount)) * 100 ELSE 0 END,
-      COUNT(DISTINCT date),
+      COUNT(DISTINCT CASE WHEN deposit_cases > 0 THEN date END),
       NULL, NULL, NULL, NULL  -- Tier will be calculated by API
     FROM blue_whale_usc
     WHERE userkey = NEW.userkey

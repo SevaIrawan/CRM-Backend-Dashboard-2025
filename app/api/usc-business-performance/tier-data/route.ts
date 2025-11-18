@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { 
-  calculateCustomerScore,
-  calibrateTierBoundaries,
-  assignTierWithBoundaries,
   TIER_NAMES,
   TIER_GROUPS
 } from '@/lib/uscTierClassification'
@@ -13,8 +10,11 @@ import {
  * USC BUSINESS PERFORMANCE - TIER DATA API
  * ============================================================================
  * 
- * Purpose: Get tier classification data with dynamic aggregation
+ * Purpose: Get tier classification data from tier_usc_v1 (READ ONLY)
  * Returns: Tier distribution, customer breakdown by tier
+ * 
+ * IMPORTANT: This API ONLY READS from tier_usc_v1 table.
+ * NO TIER CALCULATION - Tiers must be calculated via Admin Tier Management first.
  * 
  * Params:
  * - year: Required (e.g., "2025")
@@ -24,8 +24,9 @@ import {
  * - tierGroup: Optional (e.g., "High Value" or "ALL")
  * 
  * Logic:
- * - If month = specific → Direct query monthly data
- * - If month = "ALL" → Aggregate all months in year/quarter
+ * - If month = specific → Direct query monthly data from tier_usc_v1
+ * - If month = "ALL" → Aggregate metrics but USE EXISTING TIERS from database
+ * - NO on-the-fly tier calculation to prevent lag
  * 
  * ============================================================================
  */
@@ -82,8 +83,11 @@ export async function GET(request: NextRequest) {
     }
     
     // ============================================================================
-    // CASE 2: MONTH = "ALL" (Dynamic Aggregation)
+    // CASE 2: MONTH = "ALL" (Aggregate metrics, USE EXISTING TIERS from DB)
     // ============================================================================
+    // IMPORTANT: We aggregate metrics but use existing tier from database.
+    // NO on-the-fly tier calculation to prevent lag.
+    // If tiers are NULL, they will remain NULL (user must calculate via Admin first).
     
     let query = supabase
       .from('tier_usc_v1')
@@ -109,6 +113,7 @@ export async function GET(request: NextRequest) {
     if (error) throw error
     
     // Aggregate by userkey + line
+    // Use existing tier from database (most recent month's tier, or majority tier)
     const aggregatedMap = new Map()
     
     monthlyRecords?.forEach(record => {
@@ -126,7 +131,16 @@ export async function GET(request: NextRequest) {
           total_deposit_cases: 0,
           total_withdraw_amount: 0,
           total_net_profit: 0,
-          active_months: new Set()
+          avg_transaction_value: 0,
+          purchase_frequency: 0,
+          win_rate: 0,
+          active_days: 0,
+          // Tier fields - use from most recent month with tier
+          tier: record.tier,
+          tier_name: record.tier_name,
+          tier_group: record.tier_group,
+          score: record.score,
+          latest_month: record.month
         })
       }
       
@@ -136,13 +150,28 @@ export async function GET(request: NextRequest) {
       agg.total_deposit_cases += record.total_deposit_cases || 0
       agg.total_withdraw_amount += record.total_withdraw_amount || 0
       agg.total_net_profit += record.total_net_profit || 0
-      agg.active_months.add(record.month)
+      
+      // Use tier from most recent month (if current record has tier and is more recent)
+      if (record.tier !== null && record.tier !== undefined) {
+        const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 
+                           'July', 'August', 'September', 'October', 'November', 'December']
+        const currentMonthIndex = monthOrder.indexOf(record.month)
+        const latestMonthIndex = monthOrder.indexOf(agg.latest_month)
+        
+        if (currentMonthIndex > latestMonthIndex || agg.tier === null) {
+          agg.tier = record.tier
+          agg.tier_name = record.tier_name
+          agg.tier_group = record.tier_group
+          agg.score = record.score
+          agg.latest_month = record.month
+        }
+      }
     })
     
     const aggregated = Array.from(aggregatedMap.values())
     
-    // Calculate scores and assign tiers for aggregated data
-    const withScoresAndTiers = aggregated.map(customer => {
+    // Calculate derived metrics (ATV, PF, WinRate) from aggregated data
+    const withDerivedMetrics = aggregated.map(customer => {
       const atv = customer.total_deposit_cases > 0 
         ? customer.total_deposit_amount / customer.total_deposit_cases 
         : 0
@@ -151,37 +180,18 @@ export async function GET(request: NextRequest) {
         ? (customer.total_ggr / customer.total_deposit_amount) * 100 
         : 0
       
-      const score = calculateCustomerScore({
-        depositAmount: Number(customer.total_deposit_amount) || 0,
-        ggr: Number(customer.total_ggr) || 0,
-        depositCases: Number(customer.total_deposit_cases) || 0,
-        purchaseFrequency: Number(pf) || 0,
-        avgTransactionValue: Number(atv) || 0,
-        winRate: Number(winRate) || 0
-      })
-      
-      return { ...customer, score, avg_transaction_value: atv, purchase_frequency: pf, win_rate: winRate }
-    })
-    
-    // Auto-calibrate boundaries
-    const scores = withScoresAndTiers.map(c => c.score)
-    const boundaries = calibrateTierBoundaries(scores)
-    
-    // Assign tiers
-    const withTiers = withScoresAndTiers.map(customer => {
-      const tier = assignTierWithBoundaries(customer.score, boundaries)
       return {
         ...customer,
-        tier,
-        tier_name: TIER_NAMES[tier],
-        tier_group: TIER_GROUPS[tier]
+        avg_transaction_value: atv,
+        purchase_frequency: pf,
+        win_rate: winRate
       }
     })
     
     // Filter by tier group if specified
     const filtered = tierGroup && tierGroup !== 'ALL'
-      ? withTiers.filter(c => c.tier_group === tierGroup)
-      : withTiers
+      ? withDerivedMetrics.filter(c => c.tier_group === tierGroup)
+      : withDerivedMetrics
     
     const tierDistribution = calculateDistribution(filtered)
     
@@ -192,7 +202,8 @@ export async function GET(request: NextRequest) {
         totalRecords: filtered.length,
         tierDistribution,
         aggregationMode: quarter ? 'QUARTERLY' : 'YEARLY',
-        period: quarter ? `${quarter} ${year}` : `${year} (All Months)`
+        period: quarter ? `${quarter} ${year}` : `${year} (All Months)`,
+        note: 'Tiers are from database (calculated via Admin Tier Management). No on-the-fly calculation.'
       }
     })
     

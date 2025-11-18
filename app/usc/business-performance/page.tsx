@@ -5,10 +5,51 @@ import Layout from '@/components/Layout'
 import Frame from '@/components/Frame'
 import StatCard from '@/components/StatCard'
 import DualKPICard from '@/components/DualKPICard'
+import LineChart from '@/components/LineChart'
+import BarChart from '@/components/BarChart'
 import StandardLoadingSpinner from '@/components/StandardLoadingSpinner'
+import GGrBreakdownModal from '@/components/GGrBreakdownModal'
 import { LineSlicer } from '@/components/slicers'
 import { getChartIcon } from '@/lib/CentralIcon'
 import { formatCurrencyKPI, formatIntegerKPI, formatMoMChange, formatNumericKPI, formatPercentageKPI } from '@/lib/formatHelpers'
+
+// Helper function untuk format currency dengan denomination 1000 (K)
+const formatCurrencyWithK = (value: number | null | undefined, currency: string): string => {
+  if (value === null || value === undefined || isNaN(value)) return '0.00'
+  
+  let symbol: string
+  switch (currency) {
+    case 'MYR':
+      symbol = 'RM'
+      break
+    case 'SGD':
+      symbol = 'SGD'
+      break
+    case 'USC':
+      symbol = 'USD'
+      break
+    case 'ALL':
+      symbol = 'RM'
+      break
+    default:
+      symbol = 'RM'
+  }
+  
+  const absValue = Math.abs(value)
+  const sign = value < 0 ? '-' : ''
+  
+  if (absValue >= 1000000) {
+    return `${symbol} ${sign}${(absValue / 1000000).toFixed(1)}M`
+  } else if (absValue >= 1000) {
+    return `${symbol} ${sign}${(absValue / 1000).toFixed(1)}K`
+  } else {
+    const formattedValue = new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(absValue)
+    return `${symbol} ${sign}${formattedValue}`
+  }
+}
 
 // Types for slicer options
 interface SlicerOptions {
@@ -49,9 +90,14 @@ export default function USCBusinessPerformancePage() {
   // Data states
   const [kpiData, setKpiData] = useState<USCBPKPIData | null>(null)
   const [momData, setMomData] = useState<any>(null)
+  const [chartData, setChartData] = useState<any>(null)
   const [loadingSlicers, setLoadingSlicers] = useState(true)
   const [loadingData, setLoadingData] = useState(true)  // ✅ Start with true to prevent flicker
+  const [loadingCharts, setLoadingCharts] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
+  
+  // GGR Breakdown Modal states
+  const [showGGrModal, setShowGGrModal] = useState(false)
   
   // Hydration fix
   useEffect(() => {
@@ -106,6 +152,72 @@ export default function USCBusinessPerformancePage() {
     loadSlicerOptions()
   }, [])
   
+  // Function to load chart data - Filter by Month, show per Brand
+  const loadChartData = async (year: string, month: string, allowedBrands: any) => {
+    try {
+      setLoadingCharts(true)
+      
+      console.log('🔄 [USC BP] Loading chart data by month and brand...')
+      
+      const params = new URLSearchParams({
+        year,
+        month
+      })
+      
+      const response = await fetch(`/api/usc-business-performance/chart-data?${params}`, {
+        headers: {
+          'x-user-allowed-brands': JSON.stringify(allowedBrands)
+        }
+      })
+      
+      const result = await response.json()
+      
+      if (result.success && result.brandData) {
+        // Sort brands alphabetically
+        const sortedBrands = Object.keys(result.brandData).sort()
+        
+        // Prepare chart data - per brand
+        const preparedChartData = {
+          // ROW 2: Bar Chart (Active Member vs Pure Member)
+          activePureMemberTrend: {
+            series: [
+              { name: 'Active Member', data: sortedBrands.map(brand => result.brandData[brand].active_member), color: '#3B82F6' },
+              { name: 'Pure Member', data: sortedBrands.map(brand => result.brandData[brand].pure_member), color: '#F97316' }
+            ],
+            categories: sortedBrands
+          },
+          // ROW 2: Line Chart Dual (Winrate vs Withdraw Rate)
+          winrateWithdrawRateTrend: {
+            series: [
+              { name: 'Winrate', data: sortedBrands.map(brand => result.brandData[brand].winrate), color: '#3B82F6' },
+              { name: 'Withdraw Rate', data: sortedBrands.map(brand => result.brandData[brand].withdrawal_rate), color: '#F97316' }
+            ],
+            categories: sortedBrands
+          },
+          // ROW 3: Line Chart Single (ATV)
+          atvTrend: {
+            series: [{ name: 'Average Transaction Value', data: sortedBrands.map(brand => result.brandData[brand].atv), color: '#3B82F6' }],
+            categories: sortedBrands
+          },
+          // ROW 3: Line Chart Single (PF)
+          purchaseFrequencyTrend: {
+            series: [{ name: 'Purchase Frequency', data: sortedBrands.map(brand => result.brandData[brand].purchase_frequency), color: '#3B82F6' }],
+            categories: sortedBrands
+          }
+        }
+        
+        setChartData(preparedChartData)
+        console.log('✅ [USC BP] Chart data loaded successfully')
+      } else {
+        console.warn('⚠️ [USC BP] No chart data available')
+      }
+    } catch (error) {
+      console.error('❌ [USC BP] Error loading chart data:', error)
+    } finally {
+      setLoadingCharts(false)
+    }
+  }
+  
   // Helper function to load data with specific values
   const loadKPIDataWithDefaults = async (year: string, month: string, line: string, allowedBrands: any) => {
     try {
@@ -132,6 +244,9 @@ export default function USCBusinessPerformancePage() {
         setKpiData(result.data.kpis)
         setMomData(result.data.mom)
         console.log('✅ [USC BP] Default data loaded')
+        
+        // Load chart data after KPI data loaded - filter by month, show per brand
+        await loadChartData(year, month, allowedBrands)
       } else {
         setLoadError(result.error || 'Failed to load KPI data')
       }
@@ -178,6 +293,9 @@ export default function USCBusinessPerformancePage() {
         setKpiData(result.data.kpis)
         setMomData(result.data.mom)
         console.log('✅ [USC BP] KPI data loaded successfully')
+        
+        // Load chart data after KPI data loaded - filter by month, show per brand
+        await loadChartData(selectedYear, selectedMonth, allowedBrands)
       } else {
         setLoadError(result.error || 'Failed to load KPI data')
       }
@@ -229,15 +347,7 @@ export default function USCBusinessPerformancePage() {
           </select>
         </div>
         
-        {/* LINE SLICER */}
-        <div className="slicer-group">
-          <label className="slicer-label">LINE:</label>
-          <LineSlicer 
-            lines={slicerOptions?.lines || []}
-            selectedLine={selectedLine}
-            onLineChange={setSelectedLine}
-          />
-        </div>
+        {/* LINE SLICER - HIDDEN */}
         
         {/* SEARCH BUTTON */}
         <button 
@@ -292,6 +402,8 @@ export default function USCBusinessPerformancePage() {
                 percentage: formatMoMChange(momData?.grossGamingRevenue || 0),
                 isPositive: (momData?.grossGamingRevenue || 0) >= 0
               }}
+              clickable={true}
+              onDoubleClick={() => setShowGGrModal(true)}
             />
             
             {/* Active Member Rate */}
@@ -365,7 +477,7 @@ export default function USCBusinessPerformancePage() {
               icon="Deposit Amount"
               kpi1={{
                 label: 'DEPOSIT',
-                value: formatCurrencyKPI(kpiData?.depositAmount || 0, selectedCurrency),
+                value: formatCurrencyWithK(kpiData?.depositAmount || 0, selectedCurrency),
                 comparison: {
                   percentage: formatMoMChange(momData?.depositAmount || 0),
                   isPositive: (momData?.depositAmount || 0) >= 0
@@ -373,7 +485,7 @@ export default function USCBusinessPerformancePage() {
               }}
               kpi2={{
                 label: 'WITHDRAW',
-                value: formatCurrencyKPI(kpiData?.withdrawAmount || 0, selectedCurrency),
+                value: formatCurrencyWithK(kpiData?.withdrawAmount || 0, selectedCurrency),
                 comparison: {
                   percentage: formatMoMChange(momData?.withdrawAmount || 0),
                   isPositive: (momData?.withdrawAmount || 0) >= 0
@@ -382,15 +494,77 @@ export default function USCBusinessPerformancePage() {
             />
           </div>
           
-          {/* Slicer Info */}
+          {/* ROW 2: Bar Chart + Line Chart Dual */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <BarChart
+              series={chartData?.activePureMemberTrend?.series || []}
+              categories={chartData?.activePureMemberTrend?.categories || []}
+              title="ACTIVE MEMBER VS PURE MEMBER TRENDS"
+              currency="MEMBER"
+              chartIcon={getChartIcon('Active Member')}
+              customLegend={[
+                { label: 'Active Member', color: '#3B82F6' },
+                { label: 'Pure Member', color: '#F97316' }
+              ]}
+            />
+            <LineChart
+              series={chartData?.winrateWithdrawRateTrend?.series || []}
+              categories={chartData?.winrateWithdrawRateTrend?.categories || []}
+              title="WINRATE VS WITHDRAW RATE TRENDS"
+              currency="PERCENTAGE"
+              hideLegend={false}
+              showDataLabels={true}
+              chartIcon={getChartIcon('Winrate')}
+              customLegend={[
+                { label: 'Winrate', color: '#3B82F6' },
+                { label: 'Withdraw Rate', color: '#F97316' }
+              ]}
+            />
+          </div>
+          
+          {/* ROW 3: Line Chart Single (ATV) + Line Chart Single (PF) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <LineChart
+              series={chartData?.atvTrend?.series || []}
+              categories={chartData?.atvTrend?.categories || []}
+              title="AVERAGE TRANSACTION VALUE TRENDS"
+              currency={selectedCurrency}
+              hideLegend={true}
+              showDataLabels={true}
+              useDenominationLabels={true}
+              color="#3B82F6"
+              chartIcon={getChartIcon('Average Transaction Value')}
+            />
+            <LineChart
+              series={chartData?.purchaseFrequencyTrend?.series || []}
+              categories={chartData?.purchaseFrequencyTrend?.categories || []}
+              title="PURCHASE FREQUENCY TRENDS"
+              currency="FREQUENCY"
+              hideLegend={true}
+              showDataLabels={true}
+              color="#3B82F6"
+              chartIcon={getChartIcon('Purchase Frequency')}
+            />
+          </div>
+          
+          {/* Slicer Info - Di bawah semua charts */}
           <div className="slicer-info">
-            <p>Showing data for: {selectedYear} | {selectedMonth} | {selectedLine} | Real Data from Database</p>
+            <p>Showing data for: {selectedYear} | {selectedMonth} | Real Data from Database</p>
           </div>
           </>
           )}
 
         </div>
       </Frame>
+      
+      {/* GGR Breakdown Modal */}
+      <GGrBreakdownModal
+        isOpen={showGGrModal}
+        onClose={() => setShowGGrModal(false)}
+        year={selectedYear}
+        month={selectedMonth}
+        currency={selectedCurrency}
+      />
     </Layout>
   )
 }

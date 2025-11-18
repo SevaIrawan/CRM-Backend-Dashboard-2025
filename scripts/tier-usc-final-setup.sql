@@ -15,14 +15,19 @@
 -- STEP 1: DROP EVERYTHING OLD (TABLE, MV, VIEW, FUNCTIONS)
 -- ============================================================================
 
--- Drop old materialized view if exists
-DROP MATERIALIZED VIEW IF EXISTS tier_usc_v1 CASCADE;
+-- Drop old table if exists (tier_usc_v1 is a TABLE, not MV)
+DROP TABLE IF EXISTS tier_usc_v1 CASCADE;
+
+-- Drop old materialized view if exists (in case it was created as MV before)
+DO $$ 
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_matviews WHERE matviewname = 'tier_usc_v1') THEN
+    DROP MATERIALIZED VIEW tier_usc_v1 CASCADE;
+  END IF;
+END $$;
 
 -- Drop old view if exists
 DROP VIEW IF EXISTS tier_usc_v1 CASCADE;
-
--- Drop old table if exists
-DROP TABLE IF EXISTS tier_usc_v1 CASCADE;
 
 -- Drop old functions if exist (ALL POSSIBLE SIGNATURES!)
 DROP FUNCTION IF EXISTS refresh_tier_usc_v1_data() CASCADE;
@@ -115,18 +120,9 @@ RETURNS INTEGER AS $$
 DECLARE
   v_inserted_count INTEGER := 0;
 BEGIN
-  -- Delete existing data for the specified period
-  IF p_year IS NOT NULL AND p_month IS NOT NULL THEN
-    DELETE FROM tier_usc_v1 
-    WHERE year = p_year AND month = p_month;
-  ELSIF p_year IS NOT NULL THEN
-    DELETE FROM tier_usc_v1 
-    WHERE year = p_year;
-  ELSE
-    TRUNCATE TABLE tier_usc_v1;
-  END IF;
+  -- Use UPSERT to preserve existing tier data
+  -- This will UPDATE metrics but PRESERVE tier if it already exists
   
-  -- Insert aggregated data from blue_whale_usc
   INSERT INTO tier_usc_v1 (
     userkey,
     unique_code,
@@ -184,9 +180,9 @@ BEGIN
       ELSE 0 
     END as win_rate,
     
-    COUNT(DISTINCT date) as active_days,
+    COUNT(DISTINCT CASE WHEN deposit_cases > 0 THEN date END) as active_days,
     
-    -- Tier columns = NULL (WILL BE CALCULATED BY API!)
+    -- Tier columns = NULL (will be preserved on conflict if exists)
     NULL as tier,
     NULL as tier_name,
     NULL as tier_group,
@@ -197,7 +193,31 @@ BEGIN
     AND (p_year IS NULL OR year = p_year)
     AND (p_month IS NULL OR month = p_month)
   GROUP BY userkey, year, month
-  HAVING SUM(deposit_cases) > 0;
+  HAVING SUM(deposit_cases) > 0
+  
+  ON CONFLICT (userkey, year, month) 
+  DO UPDATE SET
+    unique_code = EXCLUDED.unique_code,
+    user_name = EXCLUDED.user_name,
+    line = EXCLUDED.line,
+    total_deposit_amount = EXCLUDED.total_deposit_amount,
+    total_ggr = EXCLUDED.total_ggr,
+    total_deposit_cases = EXCLUDED.total_deposit_cases,
+    total_withdraw_amount = EXCLUDED.total_withdraw_amount,
+    total_withdraw_cases = EXCLUDED.total_withdraw_cases,
+    total_net_profit = EXCLUDED.total_net_profit,
+    total_valid_amount = EXCLUDED.total_valid_amount,
+    total_bonus = EXCLUDED.total_bonus,
+    avg_transaction_value = EXCLUDED.avg_transaction_value,
+    purchase_frequency = EXCLUDED.purchase_frequency,
+    win_rate = EXCLUDED.win_rate,
+    active_days = EXCLUDED.active_days,
+    -- PRESERVE tier if it exists (don't overwrite with NULL)
+    tier = COALESCE(tier_usc_v1.tier, EXCLUDED.tier),
+    tier_name = COALESCE(tier_usc_v1.tier_name, EXCLUDED.tier_name),
+    tier_group = COALESCE(tier_usc_v1.tier_group, EXCLUDED.tier_group),
+    score = COALESCE(tier_usc_v1.score, EXCLUDED.score),
+    updated_at = NOW();
   
   GET DIAGNOSTICS v_inserted_count = ROW_COUNT;
   

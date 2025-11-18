@@ -119,10 +119,19 @@ export async function POST(request: NextRequest) {
       // Assign tiers
       const updates = periodRecords.map(record => {
         const tier = assignTierWithBoundaries(record.calculated_score, boundaries)
+        // Extract line from userkey (format: prefix-unique_code-line)
+        // Example: "neang90-USRI485687-L0Y66" -> line = "L0Y66"
+        const line = record.line || (record.userkey ? record.userkey.split('-')[2] || null : null)
+        
+        if (!line) {
+          console.warn(`⚠️ [USC Calculate Tiers] Missing line for userkey: ${record.userkey}`)
+        }
+        
         return {
           userkey: record.userkey,
           year: record.year,
           month: record.month,
+          line: line || record.line || '', // Fallback to record.line or empty string
           tier,
           tier_name: TIER_NAMES[tier],
           tier_group: TIER_GROUPS[tier],
@@ -130,16 +139,24 @@ export async function POST(request: NextRequest) {
         }
       })
       
+      // Filter out records without line (should not happen, but safety check)
+      const validUpdates = updates.filter(u => u.line && u.line.trim() !== '')
+      
+      if (validUpdates.length !== updates.length) {
+        console.warn(`⚠️ [USC Calculate Tiers] Filtered out ${updates.length - validUpdates.length} records without line`)
+      }
+      
       // Update database using UPSERT (much faster and more stable!)
       const batchSize = 50
-      for (let i = 0; i < updates.length; i += batchSize) {
-        const batch = updates.slice(i, i + batchSize)
+      for (let i = 0; i < validUpdates.length; i += batchSize) {
+        const batch = validUpdates.slice(i, i + batchSize)
         
-        // Map to database format
+        // Map to database format - MUST include line for NOT NULL constraint
         const upsertData = batch.map(update => ({
           userkey: update.userkey,
           year: update.year,
           month: update.month,
+          line: update.line, // ✅ CRITICAL: Include line to satisfy NOT NULL constraint
           tier: update.tier,
           tier_name: update.tier_name,
           tier_group: update.tier_group,
