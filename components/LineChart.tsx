@@ -41,6 +41,7 @@ interface LineChartProps {
   hideLegend?: boolean;
   color?: string; // Add color prop for customizable line and area color (used for single series)
   showDataLabels?: boolean; // Add prop for showing data labels
+  alwaysShowLabels?: boolean; // Always show data labels regardless of comparison mode
   customLegend?: Array<{ label: string; color: string }>; // Add custom legend support
   useDenominationLabels?: boolean; // Use K, M denomination for data labels (for Brand Performance Trends only)
   forceSingleYAxis?: boolean; // Force single Y-axis even with multiple series (for forecast chart)
@@ -65,6 +66,7 @@ export default function LineChart({
   hideLegend = false,
   color = '#3B82F6', // Default blue color
   showDataLabels = false, // Default false
+  alwaysShowLabels = false, // Default false - always show labels regardless of comparison mode
   customLegend,
   useDenominationLabels = false, // Default false - only true for Brand Performance Trends
   forceSingleYAxis = false, // Default false - set to true for forecast chart
@@ -413,7 +415,7 @@ export default function LineChart({
          display: false, // ALWAYS disable Chart.js legend - only use custom JSX legend
        },
        datalabels: {
-         display: showDataLabels,
+         display: alwaysShowLabels ? true : (showDataLabels && series.length === 1),
          color: '#374151',
          font: {
            weight: 'bold' as const,
