@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
       // GGR = deposit_amount - withdraw_amount (calculated field in MV)
       let brandQuery = supabase
         .from('blue_whale_usc_monthly_summary')
-        .select('line, deposit_amount, withdraw_amount')
+        .select('line, deposit_amount, withdraw_amount, deposit_cases, active_member')
         .eq('year', parseInt(year))
         .eq('month', monthNumber) // Use month number, not month name
         .eq('currency', 'USC')
@@ -78,24 +78,59 @@ export async function GET(request: NextRequest) {
         throw brandError
       }
       
-      // Calculate GGR = deposit_amount - withdraw_amount and aggregate by brand
-      const brandMap = new Map<string, number>()
+      // Aggregate by brand with all metrics
+      const brandMap = new Map<string, {
+        ggr: number
+        count: number
+        depositCases: number
+        depositAmount: number
+        atv: number
+      }>()
+      
       brandData?.forEach((row: any) => {
         const deposit = parseFloat(row.deposit_amount) || 0
         const withdraw = parseFloat(row.withdraw_amount) || 0
         const ggr = deposit - withdraw
-        const current = brandMap.get(row.line) || 0
-        brandMap.set(row.line, current + ggr)
+        const count = parseFloat(row.active_member) || 0
+        const depositCases = parseFloat(row.deposit_cases) || 0
+        const depositAmount = deposit
+        
+        const current = brandMap.get(row.line) || {
+          ggr: 0,
+          count: 0,
+          depositCases: 0,
+          depositAmount: 0,
+          atv: 0
+        }
+        
+        brandMap.set(row.line, {
+          ggr: current.ggr + ggr,
+          count: current.count + count,
+          depositCases: current.depositCases + depositCases,
+          depositAmount: current.depositAmount + depositAmount,
+          atv: 0 // Will calculate after aggregation
+        })
       })
       
-      // Sort by GGR descending
+      // Calculate ATV and sort by GGR descending
       const sortedBrands = Array.from(brandMap.entries())
-        .sort((a, b) => b[1] - a[1])
-        .map(([line, ggr]) => ({ line, ggr }))
+        .map(([line, data]) => ({
+          line,
+          ggr: data.ggr,
+          count: data.count,
+          depositCases: data.depositCases,
+          depositAmount: data.depositAmount,
+          atv: data.depositCases > 0 ? data.depositAmount / data.depositCases : 0
+        }))
+        .sort((a, b) => b.ggr - a.ggr)
       
       result.byBrand = {
         labels: sortedBrands.map(b => b.line),
-        values: sortedBrands.map(b => b.ggr)
+        values: sortedBrands.map(b => b.ggr),
+        counts: sortedBrands.map(b => b.count),
+        atvs: sortedBrands.map(b => b.atv),
+        depositCases: sortedBrands.map(b => b.depositCases),
+        depositAmounts: sortedBrands.map(b => b.depositAmount)
       }
     }
     
@@ -105,7 +140,7 @@ export async function GET(request: NextRequest) {
     if (type === 'tier' || type === 'full') {
       let tierQuery = supabase
         .from('tier_usc_v1')
-        .select('tier, tier_name, total_ggr')
+        .select('tier, tier_name, total_ggr, total_deposit_amount, total_deposit_cases, avg_transaction_value, userkey')
         .eq('year', parseInt(year))
         .eq('month', month) // tier_usc_v1 uses month name (VARCHAR)
         .not('tier', 'is', null)
@@ -123,25 +158,65 @@ export async function GET(request: NextRequest) {
         throw tierError
       }
       
-      // Aggregate by tier
-      const tierMap = new Map<number, { name: string; ggr: number }>()
+      // Aggregate by tier with all metrics
+      const tierMap = new Map<number, {
+        name: string
+        ggr: number
+        count: number
+        depositCases: number
+        depositAmount: number
+        atv: number
+        userkeys: Set<string>
+      }>()
+      
       tierData?.forEach((row: any) => {
         const tier = row.tier
-        const current = tierMap.get(tier) || { name: row.tier_name || `Tier ${tier}`, ggr: 0 }
+        const current = tierMap.get(tier) || {
+          name: row.tier_name || `Tier ${tier}`,
+          ggr: 0,
+          count: 0,
+          depositCases: 0,
+          depositAmount: 0,
+          atv: 0,
+          userkeys: new Set<string>()
+        }
+        
+        // Add userkey for count
+        if (row.userkey) {
+          current.userkeys.add(row.userkey)
+        }
+        
         tierMap.set(tier, {
           name: current.name,
-          ggr: current.ggr + (parseFloat(row.total_ggr) || 0)
+          ggr: current.ggr + (parseFloat(row.total_ggr) || 0),
+          count: current.userkeys.size, // Will update after all rows processed
+          depositCases: current.depositCases + (parseFloat(row.total_deposit_cases) || 0),
+          depositAmount: current.depositAmount + (parseFloat(row.total_deposit_amount) || 0),
+          atv: 0, // Will calculate after aggregation
+          userkeys: current.userkeys
         })
       })
       
-      // Sort by tier (1-7)
+      // Calculate final count and ATV, then sort by tier (1-7)
       const sortedTiers = Array.from(tierMap.entries())
-        .sort((a, b) => a[0] - b[0])
-        .map(([tier, data]) => ({ tier, ...data }))
+        .map(([tier, data]) => ({
+          tier,
+          name: data.name,
+          ggr: data.ggr,
+          count: data.userkeys.size,
+          depositCases: data.depositCases,
+          depositAmount: data.depositAmount,
+          atv: data.depositCases > 0 ? data.depositAmount / data.depositCases : 0
+        }))
+        .sort((a, b) => a.tier - b.tier)
       
       result.byTier = {
         labels: sortedTiers.map(t => t.name),
-        values: sortedTiers.map(t => t.ggr)
+        values: sortedTiers.map(t => t.ggr),
+        counts: sortedTiers.map(t => t.count),
+        atvs: sortedTiers.map(t => t.atv),
+        depositCases: sortedTiers.map(t => t.depositCases),
+        depositAmounts: sortedTiers.map(t => t.depositAmount)
       }
     }
     

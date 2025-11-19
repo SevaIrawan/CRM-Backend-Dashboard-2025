@@ -62,9 +62,13 @@ async function getActiveMember(filters: USCBPFilters): Promise<number> {
     .from('blue_whale_usc')
     .select('userkey')
     .eq('year', filters.year)
-    .eq('month', filters.month)
     .eq('currency', 'USC')
     .gt('deposit_cases', 0)
+  
+  // Skip month filter if month = 'ALL'
+  if (filters.month && filters.month !== 'ALL') {
+    query = query.eq('month', filters.month)
+  }
   
   if (filters.line && filters.line !== 'ALL') {
     query = query.eq('line', filters.line)
@@ -116,8 +120,12 @@ async function getNewDepositor(filters: USCBPFilters): Promise<number> {
     .from('new_register')
     .select('new_depositor')
     .eq('year', filters.year)
-    .eq('month', filters.month)
     .eq('currency', 'USC')
+  
+  // Skip month filter if month = 'ALL'
+  if (filters.month && filters.month !== 'ALL') {
+    query = query.eq('month', filters.month)
+  }
   
   if (filters.line && filters.line !== 'ALL') {
     query = query.eq('line', filters.line)
@@ -147,8 +155,12 @@ async function getAggregatedAmounts(filters: USCBPFilters): Promise<{
     .from('blue_whale_usc')
     .select('deposit_amount, withdraw_amount, deposit_cases, withdraw_cases')
     .eq('year', filters.year)
-    .eq('month', filters.month)
     .eq('currency', 'USC')
+  
+  // Skip month filter if month = 'ALL'
+  if (filters.month && filters.month !== 'ALL') {
+    query = query.eq('month', filters.month)
+  }
   
   if (filters.line && filters.line !== 'ALL') {
     query = query.eq('line', filters.line)
@@ -174,11 +186,17 @@ async function getAggregatedAmounts(filters: USCBPFilters): Promise<{
 /**
  * Calculate Churn Members
  * Churn = Users active in previous month but NOT active in current month
+ * Note: When month = 'ALL', churn calculation is not applicable (return 0)
  */
 async function getChurnMembers(filters: USCBPFilters): Promise<{
   churnMembers: number
   lastMonthActiveMember: number
 }> {
+  // If month = 'ALL', churn calculation is not applicable
+  if (filters.month === 'ALL') {
+    return { churnMembers: 0, lastMonthActiveMember: 0 }
+  }
+  
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December']
   
@@ -345,7 +363,32 @@ export async function getAllUSCBPKPIsWithMoM(filters: USCBPFilters): Promise<{
     // Get current month data
     const currentData = await calculateUSCBPKPIs(filters)
     
-    // Get previous month data
+    // If month = 'ALL', MoM comparison is not applicable (compare with previous year)
+    if (filters.month === 'ALL') {
+      const prevYear = (parseInt(filters.year) - 1).toString()
+      const previousData = await calculateUSCBPKPIs({
+        ...filters,
+        year: prevYear,
+        month: 'ALL'
+      })
+      
+      // Calculate YoY (Year-over-Year) instead of MoM
+      const mom: USCBPMoMData = {
+        grossGamingRevenue: calculatePercentageChange(currentData.grossGamingRevenue, previousData.grossGamingRevenue),
+        activeMemberRate: calculatePercentageChange(currentData.activeMemberRate, previousData.activeMemberRate),
+        retentionRate: calculatePercentageChange(currentData.retentionRate, previousData.retentionRate),
+        activeMember: calculatePercentageChange(currentData.activeMember, previousData.activeMember),
+        pureMember: calculatePercentageChange(currentData.pureMember, previousData.pureMember),
+        avgTransactionValue: calculatePercentageChange(currentData.avgTransactionValue, previousData.avgTransactionValue),
+        purchaseFrequency: calculatePercentageChange(currentData.purchaseFrequency, previousData.purchaseFrequency),
+        depositAmount: calculatePercentageChange(currentData.depositAmount, previousData.depositAmount),
+        withdrawAmount: calculatePercentageChange(currentData.withdrawAmount, previousData.withdrawAmount)
+      }
+      
+      return { current: currentData, mom }
+    }
+    
+    // Get previous month data (normal MoM comparison)
     const { year: prevYear, month: prevMonth } = getPreviousMonth(filters.year, filters.month)
     const previousData = await calculateUSCBPKPIs({
       ...filters,

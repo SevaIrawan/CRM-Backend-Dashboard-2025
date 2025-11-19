@@ -27,6 +27,10 @@ export default function GGrBreakdownModal({
   const [error, setError] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
   
+  // Pagination state for By Brand tab
+  const [brandCurrentPage, setBrandCurrentPage] = useState(1)
+  const [brandItemsPerPage] = useState(100) // 100 items per page
+  
   // Tier customers breakdown modal
   const [showTierCustomersModal, setShowTierCustomersModal] = useState(false)
   const [selectedTier, setSelectedTier] = useState<number | null>(null)
@@ -61,6 +65,8 @@ export default function GGrBreakdownModal({
 
         if (result.success) {
           setData(result.data)
+          // Reset pagination when data changes
+          setBrandCurrentPage(1)
         } else {
           setError(result.error || 'Failed to load breakdown data')
         }
@@ -73,6 +79,11 @@ export default function GGrBreakdownModal({
 
     fetchBreakdown()
   }, [isOpen, activeTab, year, month])
+  
+  // Reset pagination when tab changes
+  useEffect(() => {
+    setBrandCurrentPage(1)
+  }, [activeTab])
 
   // ESC key to close
   useEffect(() => {
@@ -93,6 +104,7 @@ export default function GGrBreakdownModal({
 
   // Handle tier row double click
   const handleTierRowDoubleClick = async (tierNumber: number) => {
+    console.log('🔵 [GGrBreakdown] Double click on tier:', tierNumber)
     setSelectedTier(tierNumber)
     setShowTierCustomersModal(true)
     setLoadingTierCustomers(true)
@@ -108,6 +120,8 @@ export default function GGrBreakdownModal({
         tier: tierNumber.toString()
       })
       
+      console.log('🔵 [GGrBreakdown] Fetching tier customers:', params.toString())
+      
       const response = await fetch(`/api/usc-business-performance/tier-customers?${params}`, {
         headers: {
           'x-user-allowed-brands': JSON.stringify(allowedBrands)
@@ -116,13 +130,17 @@ export default function GGrBreakdownModal({
       
       const result = await response.json()
       
+      console.log('🔵 [GGrBreakdown] Tier customers response:', result)
+      
       if (result.success) {
         setTierCustomersData(result.data)
       } else {
-        setError(result.error || 'Failed to load tier customers')
+        console.error('❌ [GGrBreakdown] Failed to load tier customers:', result.error)
+        alert(`Failed to load tier customers: ${result.error || 'Unknown error'}`)
       }
     } catch (e: any) {
-      setError(e.message || 'Failed to load tier customers')
+      console.error('❌ [GGrBreakdown] Error loading tier customers:', e)
+      alert(`Error loading tier customers: ${e.message || 'Unknown error'}`)
     } finally {
       setLoadingTierCustomers(false)
     }
@@ -203,25 +221,33 @@ export default function GGrBreakdownModal({
       let filename = ''
 
       if (activeTab === 'brand' && data.byBrand) {
-        const headers = ['Brand', 'GGR', 'Percentage']
+        const headers = ['Brand', 'Count', 'ATV', 'Deposit Cases', 'Deposit Amount', 'GGR', 'Contribution GGR (%)']
         csvContent = headers.join(',') + '\n'
         
         const totalGGR = data.byBrand.values.reduce((sum: number, val: number) => sum + val, 0)
         data.byBrand.labels.forEach((brand: string, index: number) => {
           const ggr = data.byBrand.values[index]
+          const count = data.byBrand.counts?.[index] || 0
+          const atv = data.byBrand.atvs?.[index] || 0
+          const depositCases = data.byBrand.depositCases?.[index] || 0
+          const depositAmount = data.byBrand.depositAmounts?.[index] || 0
           const percentage = totalGGR > 0 ? ((ggr / totalGGR) * 100).toFixed(2) : '0.00'
-          csvContent += `${brand},${ggr.toFixed(2)},${percentage}%\n`
+          csvContent += `${brand},${count},${atv.toFixed(2)},${depositCases},${depositAmount.toFixed(2)},${ggr.toFixed(2)},${percentage}%\n`
         })
         filename = `ggr-breakdown-by-brand-${year}-${month}.csv`
       } else if (activeTab === 'tier' && data.byTier) {
-        const headers = ['Tier', 'Tier Name', 'GGR', 'Percentage']
+        const headers = ['Tier', 'Tier Name', 'Count', 'ATV', 'Deposit Cases', 'Deposit Amount', 'GGR', 'Contribution GGR (%)']
         csvContent = headers.join(',') + '\n'
         
         const totalGGR = data.byTier.values.reduce((sum: number, val: number) => sum + val, 0)
         data.byTier.labels.forEach((tierName: string, index: number) => {
           const ggr = data.byTier.values[index]
+          const count = data.byTier.counts?.[index] || 0
+          const atv = data.byTier.atvs?.[index] || 0
+          const depositCases = data.byTier.depositCases?.[index] || 0
+          const depositAmount = data.byTier.depositAmounts?.[index] || 0
           const percentage = totalGGR > 0 ? ((ggr / totalGGR) * 100).toFixed(2) : '0.00'
-          csvContent += `${index + 1},${tierName},${ggr.toFixed(2)},${percentage}%\n`
+          csvContent += `${index + 1},${tierName},${count},${atv.toFixed(2)},${depositCases},${depositAmount.toFixed(2)},${ggr.toFixed(2)},${percentage}%\n`
         })
         filename = `ggr-breakdown-by-tier-${year}-${month}.csv`
       } else if (activeTab === 'customers' && data.top10Customers) {
@@ -250,41 +276,55 @@ export default function GGrBreakdownModal({
     }
   }
 
-  if (!isOpen || typeof document === 'undefined') return null
+  if (!isOpen || typeof document === 'undefined') {
+    // Still render nested modals even if main modal is closed
+    return (
+      <>
+        {showTierCustomersModal && (
+          <TierCustomersModal
+            isOpen={showTierCustomersModal}
+            onClose={() => {
+              setShowTierCustomersModal(false)
+              setSelectedTier(null)
+              setTierCustomersData(null)
+            }}
+            tier={selectedTier}
+            tierName={tierCustomersData?.tierName || '-'}
+            customers={tierCustomersData?.customers || []}
+            loading={loadingTierCustomers}
+            currency={currency}
+            period={`${month} ${year}`}
+            onExport={handleExportTierCustomers}
+            exporting={exportingTierCustomers}
+          />
+        )}
+      </>
+    )
+  }
 
-  return createPortal(
-    <div
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="ggr-breakdown-title"
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 10000,
-        padding: '20px'
-      }}
-    >
+  return (
+    <>
+      {createPortal(
+        <div
+          onClick={onClose}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ggr-breakdown-title"
+          className="fixed bg-black bg-opacity-50 flex items-center justify-center"
+          style={{ 
+            padding: 0, 
+            margin: 0,
+            zIndex: 10000,
+            top: '150px', // Header (90px) + Subheader (60px)
+            left: '280px', // Sidebar width
+            right: 0,
+            bottom: 0
+          }}
+        >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: '12px',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-          width: '95%',
-          maxWidth: '1400px',
-          maxHeight: '90vh',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden'
-        }}
+        className="bg-white rounded-lg shadow-xl max-w-[95%] w-full max-h-[calc(100vh-180px)] flex flex-col"
+        style={{ margin: 'auto' }}
       >
         {/* Header */}
         <div
@@ -311,25 +351,24 @@ export default function GGrBreakdownModal({
           <button
             onClick={onClose}
             style={{
-              background: 'none',
+              padding: '8px 16px',
+              backgroundColor: '#6B7280',
+              color: '#FFFFFF',
               border: 'none',
-              fontSize: '24px',
-              color: '#6B7280',
+              borderRadius: '6px',
+              fontSize: '14px',
+              fontWeight: 500,
               cursor: 'pointer',
-              padding: '4px 8px',
-              borderRadius: '4px',
               transition: 'all 0.2s ease'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#E5E7EB'
-              e.currentTarget.style.color = '#1F2937'
+              e.currentTarget.style.backgroundColor = '#4B5563'
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent'
-              e.currentTarget.style.color = '#6B7280'
+              e.currentTarget.style.backgroundColor = '#6B7280'
             }}
           >
-            ×
+            Close
           </button>
         </div>
 
@@ -387,8 +426,11 @@ export default function GGrBreakdownModal({
         <div
           style={{
             padding: '20px',
-            overflowY: 'auto',
             flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: 0,
+            overflow: 'hidden',
             backgroundColor: '#FFFFFF'
           }}
         >
@@ -407,59 +449,134 @@ export default function GGrBreakdownModal({
           {!loading && !error && data && (
             <>
               {/* Table Content - By Brand */}
-              {activeTab === 'brand' && data.byBrand && (
-                <>
-                  <div style={{ overflowX: 'auto' }}>
-                    <table
-                      style={{
-                        width: '100%',
-                        borderCollapse: 'collapse',
-                        border: '1px solid #e0e0e0',
-                        fontSize: '14px'
-                      }}
-                    >
-                      <thead>
-                        <tr>
-                          <th style={{ 
-                            padding: '10px 14px', 
-                            textAlign: 'left', 
-                            fontWeight: 600,
-                            backgroundColor: '#374151',
-                            color: 'white',
-                            border: '1px solid #4b5563',
-                            borderBottom: '2px solid #4b5563'
-                          }}>Brand</th>
-                          <th style={{ 
-                            padding: '10px 14px', 
-                            textAlign: 'right', 
-                            fontWeight: 600,
-                            backgroundColor: '#374151',
-                            color: 'white',
-                            border: '1px solid #4b5563',
-                            borderBottom: '2px solid #4b5563'
-                          }}>GGR</th>
-                          <th style={{ 
-                            padding: '10px 14px', 
-                            textAlign: 'right', 
-                            fontWeight: 600,
-                            backgroundColor: '#374151',
-                            color: 'white',
-                            border: '1px solid #4b5563',
-                            borderBottom: '2px solid #4b5563'
-                          }}>Percentage</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(() => {
-                          const totalGGR = data.byBrand.values.reduce((sum: number, val: number) => sum + val, 0)
-                          return data.byBrand.labels.map((brand: string, index: number) => {
-                            const ggr = data.byBrand.values[index]
+              {activeTab === 'brand' && data.byBrand && (() => {
+                const totalGGR = data.byBrand.values.reduce((sum: number, val: number) => sum + val, 0)
+                const totalItems = data.byBrand.labels.length
+                
+                // Logic: 
+                // - If data < 100: show all with scroll (max 10 rows visible), NO pagination
+                // - If data >= 100: use pagination (100 per page), NO scroll
+                let showAllBrands = false
+                let displayBrands = data.byBrand.labels
+                
+                if (totalItems < 100) {
+                  showAllBrands = true
+                  displayBrands = data.byBrand.labels // Show all, use scroll
+                } else {
+                  // Use pagination for >= 100 items (100 per page)
+                  const totalPages = Math.ceil(totalItems / brandItemsPerPage)
+                  const startIndex = (brandCurrentPage - 1) * brandItemsPerPage
+                  const endIndex = startIndex + brandItemsPerPage
+                  displayBrands = data.byBrand.labels.slice(startIndex, endIndex)
+                }
+                
+                const showingFrom = showAllBrands ? 1 : ((brandCurrentPage - 1) * brandItemsPerPage + 1)
+                const showingTo = showAllBrands ? totalItems : Math.min(brandCurrentPage * brandItemsPerPage, totalItems)
+                const totalPages = showAllBrands ? 1 : Math.ceil(totalItems / brandItemsPerPage)
+                
+                return (
+                  <>
+                    <div style={{ 
+                      overflowX: 'auto',
+                      overflowY: totalItems >= 100 ? 'visible' : 'auto',
+                      maxHeight: totalItems >= 100 ? 'none' : '550px', // Header (~50px) + 10 rows (10 * ~50px) = 550px
+                      position: 'relative'
+                    }}>
+                      <table
+                        style={{
+                          width: '100%',
+                          borderCollapse: 'collapse',
+                          border: '1px solid #e0e0e0',
+                          fontSize: '14px'
+                        }}
+                      >
+                        <thead style={{ 
+                          position: 'sticky', 
+                          top: 0, 
+                          zIndex: 10,
+                          backgroundColor: '#374151',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                        }}>
+                          <tr>
+                            <th style={{ 
+                              padding: '10px 14px', 
+                              textAlign: 'left', 
+                              fontWeight: 600,
+                              backgroundColor: '#374151',
+                              color: 'white',
+                              border: '1px solid #4b5563',
+                              borderBottom: '2px solid #4b5563'
+                            }}>Brand</th>
+                            <th style={{ 
+                              padding: '10px 14px', 
+                              textAlign: 'right', 
+                              fontWeight: 600,
+                              backgroundColor: '#374151',
+                              color: 'white',
+                              border: '1px solid #4b5563',
+                              borderBottom: '2px solid #4b5563'
+                            }}>Count</th>
+                            <th style={{ 
+                              padding: '10px 14px', 
+                              textAlign: 'right', 
+                              fontWeight: 600,
+                              backgroundColor: '#374151',
+                              color: 'white',
+                              border: '1px solid #4b5563',
+                              borderBottom: '2px solid #4b5563'
+                            }}>ATV</th>
+                            <th style={{ 
+                              padding: '10px 14px', 
+                              textAlign: 'right', 
+                              fontWeight: 600,
+                              backgroundColor: '#374151',
+                              color: 'white',
+                              border: '1px solid #4b5563',
+                              borderBottom: '2px solid #4b5563'
+                            }}>Deposit Cases</th>
+                            <th style={{ 
+                              padding: '10px 14px', 
+                              textAlign: 'right', 
+                              fontWeight: 600,
+                              backgroundColor: '#374151',
+                              color: 'white',
+                              border: '1px solid #4b5563',
+                              borderBottom: '2px solid #4b5563'
+                            }}>Deposit Amount</th>
+                            <th style={{ 
+                              padding: '10px 14px', 
+                              textAlign: 'right', 
+                              fontWeight: 600,
+                              backgroundColor: '#374151',
+                              color: 'white',
+                              border: '1px solid #4b5563',
+                              borderBottom: '2px solid #4b5563'
+                            }}>GGR</th>
+                            <th style={{ 
+                              padding: '10px 14px', 
+                              textAlign: 'right', 
+                              fontWeight: 600,
+                              backgroundColor: '#374151',
+                              color: 'white',
+                              border: '1px solid #4b5563',
+                              borderBottom: '2px solid #4b5563'
+                            }}>Contribution GGR (%)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {displayBrands.map((brand: string, idx: number) => {
+                            const originalIndex = showAllBrands ? idx : ((brandCurrentPage - 1) * brandItemsPerPage + idx)
+                            const ggr = data.byBrand.values[originalIndex]
+                            const count = data.byBrand.counts?.[originalIndex] || 0
+                            const atv = data.byBrand.atvs?.[originalIndex] || 0
+                            const depositCases = data.byBrand.depositCases?.[originalIndex] || 0
+                            const depositAmount = data.byBrand.depositAmounts?.[originalIndex] || 0
                             const percentage = totalGGR > 0 ? (ggr / totalGGR) * 100 : 0
                             return (
                               <tr
                                 key={brand}
                                 style={{
-                                  backgroundColor: index % 2 === 0 ? '#FFFFFF' : '#FAFAFA'
+                                  backgroundColor: originalIndex % 2 === 0 ? '#FFFFFF' : '#FAFAFA'
                                 }}
                               >
                                 <td style={{ 
@@ -467,6 +584,38 @@ export default function GGrBreakdownModal({
                                   border: '1px solid #e0e0e0',
                                   color: '#374151'
                                 }}>{brand}</td>
+                                <td style={{ 
+                                  padding: '10px 14px', 
+                                  textAlign: 'right',
+                                  border: '1px solid #e0e0e0',
+                                  color: '#374151'
+                                }}>
+                                  {formatIntegerKPI(count)}
+                                </td>
+                                <td style={{ 
+                                  padding: '10px 14px', 
+                                  textAlign: 'right',
+                                  border: '1px solid #e0e0e0',
+                                  color: '#374151'
+                                }}>
+                                  {formatCurrencyKPI(atv, currency)}
+                                </td>
+                                <td style={{ 
+                                  padding: '10px 14px', 
+                                  textAlign: 'right',
+                                  border: '1px solid #e0e0e0',
+                                  color: '#374151'
+                                }}>
+                                  {formatIntegerKPI(depositCases)}
+                                </td>
+                                <td style={{ 
+                                  padding: '10px 14px', 
+                                  textAlign: 'right',
+                                  border: '1px solid #e0e0e0',
+                                  color: '#374151'
+                                }}>
+                                  {formatCurrencyKPI(depositAmount, currency)}
+                                </td>
                                 <td style={{ 
                                   padding: '10px 14px', 
                                   textAlign: 'right',
@@ -486,74 +635,155 @@ export default function GGrBreakdownModal({
                                 </td>
                               </tr>
                             )
-                          })
-                        })()}
-                      </tbody>
-                    </table>
-                  </div>
-                  {/* Buttons - Below Brand Table */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
-                    <button
-                      onClick={onClose}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: '#6B7280',
-                        color: '#FFFFFF',
-                        border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        cursor: 'pointer',
-                        display: 'flex',
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    
+                    {/* Showing Caption and Pagination - Only show if data >= 100 (100 per page) */}
+                    {totalItems >= 100 && (
+                      <div style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
                         alignItems: 'center',
-                        gap: '8px',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#4B5563'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '#6B7280'
-                      }}
-                    >
-                      <span>←</span>
-                      <span>Back</span>
-                    </button>
-                    <button
-                      onClick={handleExport}
-                      disabled={exporting}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: '#10b981',
-                        color: '#FFFFFF',
-                        border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        cursor: exporting ? 'not-allowed' : 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        opacity: exporting ? 0.6 : 1,
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!exporting) {
-                          e.currentTarget.style.backgroundColor = '#059669'
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!exporting) {
-                          e.currentTarget.style.backgroundColor = '#10b981'
-                        }
-                      }}
-                    >
-                      <span>📥</span>
-                      <span>{exporting ? 'Exporting...' : 'Export CSV'}</span>
-                    </button>
-                  </div>
-                </>
-              )}
+                        marginTop: '16px',
+                        paddingTop: '16px',
+                        borderTop: '1px solid #E5E7EB'
+                      }}>
+                        <div style={{ fontSize: '14px', color: '#6B7280' }}>
+                          Showing {showingFrom} to {showingTo} of {totalItems} entries
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <button
+                            onClick={() => setBrandCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={brandCurrentPage === 1}
+                            style={{
+                              padding: '8px 16px',
+                              backgroundColor: brandCurrentPage === 1 ? '#E5E7EB' : '#3B82F6',
+                              color: brandCurrentPage === 1 ? '#9CA3AF' : '#FFFFFF',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontSize: '14px',
+                              fontWeight: 500,
+                              cursor: brandCurrentPage === 1 ? 'not-allowed' : 'pointer',
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (brandCurrentPage !== 1) {
+                                e.currentTarget.style.backgroundColor = '#2563EB'
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (brandCurrentPage !== 1) {
+                                e.currentTarget.style.backgroundColor = '#3B82F6'
+                              }
+                            }}
+                          >
+                            Previous
+                          </button>
+                          <span style={{ 
+                            padding: '8px 16px', 
+                            fontSize: '14px', 
+                            color: '#1F2937',
+                            fontWeight: 500
+                          }}>
+                            Page {brandCurrentPage} of {totalPages}
+                          </span>
+                          <button
+                            onClick={() => setBrandCurrentPage(p => Math.min(totalPages, p + 1))}
+                            disabled={brandCurrentPage === totalPages}
+                            style={{
+                              padding: '8px 16px',
+                              backgroundColor: brandCurrentPage === totalPages ? '#E5E7EB' : '#3B82F6',
+                              color: brandCurrentPage === totalPages ? '#9CA3AF' : '#FFFFFF',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontSize: '14px',
+                              fontWeight: 500,
+                              cursor: brandCurrentPage === totalPages ? 'not-allowed' : 'pointer',
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (brandCurrentPage !== totalPages) {
+                                e.currentTarget.style.backgroundColor = '#2563EB'
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (brandCurrentPage !== totalPages) {
+                                e.currentTarget.style.backgroundColor = '#3B82F6'
+                              }
+                            }}
+                          >
+                            Next
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Buttons - Below Brand Table */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+                      <button
+                        onClick={onClose}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#6B7280',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#4B5563'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = '#6B7280'
+                        }}
+                      >
+                        <span>←</span>
+                        <span>Back</span>
+                      </button>
+                      <button
+                        onClick={handleExport}
+                        disabled={exporting}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#10b981',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          fontWeight: 500,
+                          cursor: exporting ? 'not-allowed' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          opacity: exporting ? 0.6 : 1,
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!exporting) {
+                            e.currentTarget.style.backgroundColor = '#059669'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!exporting) {
+                            e.currentTarget.style.backgroundColor = '#10b981'
+                          }
+                        }}
+                      >
+                        <span>📥</span>
+                        <span>{exporting ? 'Exporting...' : 'Export CSV'}</span>
+                      </button>
+                    </div>
+                  </>
+                )
+              })()}
 
               {/* Table Content - By Tier */}
               {activeTab === 'tier' && data.byTier && (
@@ -586,7 +816,13 @@ export default function GGrBreakdownModal({
                           fontSize: '14px'
                         }}
                       >
-                        <thead>
+                        <thead style={{ 
+                          position: 'sticky', 
+                          top: 0, 
+                          zIndex: 10,
+                          backgroundColor: '#374151',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                        }}>
                           <tr>
                             <th style={{ 
                               padding: '10px 14px', 
@@ -614,6 +850,42 @@ export default function GGrBreakdownModal({
                               color: 'white',
                               border: '1px solid #4b5563',
                               borderBottom: '2px solid #4b5563'
+                            }}>Count</th>
+                            <th style={{ 
+                              padding: '10px 14px', 
+                              textAlign: 'right', 
+                              fontWeight: 600,
+                              backgroundColor: '#374151',
+                              color: 'white',
+                              border: '1px solid #4b5563',
+                              borderBottom: '2px solid #4b5563'
+                            }}>ATV</th>
+                            <th style={{ 
+                              padding: '10px 14px', 
+                              textAlign: 'right', 
+                              fontWeight: 600,
+                              backgroundColor: '#374151',
+                              color: 'white',
+                              border: '1px solid #4b5563',
+                              borderBottom: '2px solid #4b5563'
+                            }}>Deposit Cases</th>
+                            <th style={{ 
+                              padding: '10px 14px', 
+                              textAlign: 'right', 
+                              fontWeight: 600,
+                              backgroundColor: '#374151',
+                              color: 'white',
+                              border: '1px solid #4b5563',
+                              borderBottom: '2px solid #4b5563'
+                            }}>Deposit Amount</th>
+                            <th style={{ 
+                              padding: '10px 14px', 
+                              textAlign: 'right', 
+                              fontWeight: 600,
+                              backgroundColor: '#374151',
+                              color: 'white',
+                              border: '1px solid #4b5563',
+                              borderBottom: '2px solid #4b5563'
                             }}>GGR</th>
                             <th style={{ 
                               padding: '10px 14px', 
@@ -623,7 +895,7 @@ export default function GGrBreakdownModal({
                               color: 'white',
                               border: '1px solid #4b5563',
                               borderBottom: '2px solid #4b5563'
-                            }}>Percentage</th>
+                            }}>Contribution GGR (%)</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -631,6 +903,10 @@ export default function GGrBreakdownModal({
                             const totalGGR = data.byTier.values.reduce((sum: number, val: number) => sum + val, 0)
                             return data.byTier.labels.map((tierName: string, index: number) => {
                               const ggr = data.byTier.values[index]
+                              const count = data.byTier.counts?.[index] || 0
+                              const atv = data.byTier.atvs?.[index] || 0
+                              const depositCases = data.byTier.depositCases?.[index] || 0
+                              const depositAmount = data.byTier.depositAmounts?.[index] || 0
                               const percentage = totalGGR > 0 ? (ggr / totalGGR) * 100 : 0
                             return (
                               <tr
@@ -639,7 +915,17 @@ export default function GGrBreakdownModal({
                                   backgroundColor: index % 2 === 0 ? '#FFFFFF' : '#FAFAFA',
                                   cursor: 'pointer'
                                 }}
-                                onDoubleClick={() => handleTierRowDoubleClick(index + 1)}
+                                onDoubleClick={(e) => {
+                                  e.stopPropagation()
+                                  console.log('🔵 [GGrBreakdown] Row double clicked, tier:', index + 1)
+                                  handleTierRowDoubleClick(index + 1)
+                                }}
+                                onClick={(e) => {
+                                  // Also allow single click as fallback
+                                  if (e.detail === 2) {
+                                    e.stopPropagation()
+                                  }
+                                }}
                                 title="Double click to view customers in this tier"
                               >
                                 <td style={{ 
@@ -652,6 +938,58 @@ export default function GGrBreakdownModal({
                                   border: '1px solid #e0e0e0',
                                   color: '#374151'
                                 }}>{tierName}</td>
+                                <td 
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleTierRowDoubleClick(index + 1)
+                                  }}
+                                  style={{ 
+                                    padding: '10px 14px', 
+                                    textAlign: 'right',
+                                    border: '1px solid #e0e0e0',
+                                    color: '#3B82F6',
+                                    cursor: 'pointer',
+                                    fontWeight: 600,
+                                    textDecoration: 'underline'
+                                  }}
+                                  title="Click to view customers in this tier"
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.color = '#2563EB'
+                                    e.currentTarget.style.textDecoration = 'underline'
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.color = '#3B82F6'
+                                    e.currentTarget.style.textDecoration = 'underline'
+                                  }}
+                                >
+                                  <span style={{ color: '#3B82F6', textDecoration: 'underline' }}>
+                                    {formatIntegerKPI(count)}
+                                  </span>
+                                </td>
+                                <td style={{ 
+                                  padding: '10px 14px', 
+                                  textAlign: 'right',
+                                  border: '1px solid #e0e0e0',
+                                  color: '#374151'
+                                }}>
+                                  {formatCurrencyKPI(atv, currency)}
+                                </td>
+                                <td style={{ 
+                                  padding: '10px 14px', 
+                                  textAlign: 'right',
+                                  border: '1px solid #e0e0e0',
+                                  color: '#374151'
+                                }}>
+                                  {formatIntegerKPI(depositCases)}
+                                </td>
+                                <td style={{ 
+                                  padding: '10px 14px', 
+                                  textAlign: 'right',
+                                  border: '1px solid #e0e0e0',
+                                  color: '#374151'
+                                }}>
+                                  {formatCurrencyKPI(depositAmount, currency)}
+                                </td>
                                 <td style={{ 
                                   padding: '10px 14px', 
                                   textAlign: 'right',
@@ -928,8 +1266,9 @@ export default function GGrBreakdownModal({
           )}
         </div>
       </div>
-      
-      {/* Tier Customers Breakdown Modal */}
+    </div>,
+    document.body
+      )}
       {showTierCustomersModal && (
         <TierCustomersModal
           isOpen={showTierCustomersModal}
@@ -948,8 +1287,7 @@ export default function GGrBreakdownModal({
           exporting={exportingTierCustomers}
         />
       )}
-    </div>,
-    document.body
+    </>
   )
 }
 
@@ -980,7 +1318,8 @@ function TierCustomersModal({
   exporting
 }: TierCustomersModalProps) {
   const [page, setPage] = useState(1)
-  const [limit] = useState(50) // Fixed limit per page
+  const [limit] = useState(100) // 100 items per page
+  const [selectedBrand, setSelectedBrand] = useState<string>('ALL') // Brand filter
   
   // Transaction history modal state
   const [showTransactionModal, setShowTransactionModal] = useState(false)
@@ -999,19 +1338,52 @@ function TierCustomersModal({
     setPage(1)
   }, [customers.length])
   
+  // Get unique brands/lines from customers data
+  const uniqueBrands = Array.from(new Set(customers.map(c => c.line).filter(Boolean))) as string[]
+  const sortedBrands = [...uniqueBrands].sort()
+  const brandOptions = ['ALL', ...sortedBrands]
+  
+  // Filter customers by selected brand
+  const filteredCustomers = selectedBrand === 'ALL' 
+    ? customers 
+    : customers.filter(c => c.line === selectedBrand)
+  
   // Sort customers by brand (line)
-  const sortedCustomers = [...customers].sort((a, b) => {
+  const sortedCustomers = [...filteredCustomers].sort((a, b) => {
     const brandA = (a.line || '').toUpperCase()
     const brandB = (b.line || '').toUpperCase()
     return brandA.localeCompare(brandB)
   })
   
-  // Pagination calculation
+  // Reset page when brand filter changes
+  useEffect(() => {
+    setPage(1)
+  }, [selectedBrand])
+  
+  // Pagination calculation with dynamic logic
   const totalRecords = sortedCustomers.length
-  const totalPages = Math.max(1, Math.ceil(totalRecords / limit))
-  const startIndex = (page - 1) * limit
-  const endIndex = Math.min(startIndex + limit, totalRecords)
+  
+  // Logic: 
+  // - If data < 100: show all with scroll (max 10 rows visible), NO pagination
+  // - If data >= 100: use pagination (100 per page), NO scroll
+  let displayLimit = 100 // 100 items per page
+  let showAll = false
+  
+  if (totalRecords < 100) {
+    showAll = true
+    displayLimit = totalRecords // Show all, use scroll
+  } else {
+    displayLimit = 100 // 100 per page, use pagination
+  }
+  
+  const totalPages = showAll ? 1 : Math.max(1, Math.ceil(totalRecords / displayLimit))
+  const startIndex = showAll ? 0 : (page - 1) * displayLimit
+  const endIndex = showAll ? totalRecords : Math.min(startIndex + displayLimit, totalRecords)
   const paginatedCustomers = sortedCustomers.slice(startIndex, endIndex)
+  
+  // Cell padding (standard size)
+  const cellPadding = '10px 14px'
+  const headerPadding = '10px 14px'
   
   // Handle Active Days click
   const handleActiveDaysClick = async (customer: any) => {
@@ -1160,33 +1532,21 @@ function TierCustomersModal({
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+      className="fixed bg-black bg-opacity-50 flex items-center justify-center"
+      style={{ 
+        padding: 0, 
+        margin: 0,
         zIndex: 10001,
-        padding: '20px'
+        top: '150px', // Header (90px) + Subheader (60px)
+        left: '280px', // Sidebar width
+        right: 0,
+        bottom: 0
       }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: '12px',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-          width: '95%',
-          maxWidth: '1600px',
-          maxHeight: '90vh',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden'
-        }}
+        className="bg-white rounded-lg shadow-xl max-w-[95%] w-full max-h-[calc(100vh-180px)] flex flex-col"
+        style={{ margin: 'auto' }}
       >
         {/* Header */}
         <div
@@ -1215,37 +1575,80 @@ function TierCustomersModal({
               {period} • {totalRecords} customers
             </p>
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              fontSize: '24px',
-              color: '#6B7280',
-              cursor: 'pointer',
-              padding: '4px 8px',
-              borderRadius: '4px',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#E5E7EB'
-              e.currentTarget.style.color = '#1F2937'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent'
-              e.currentTarget.style.color = '#6B7280'
-            }}
-          >
-            ×
-          </button>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '12px' 
+          }}>
+            {/* Brand/Line Slicer */}
+            {!loading && customers.length > 0 && (
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <label style={{ 
+                  fontSize: '14px', 
+                  fontWeight: 500, 
+                  color: '#374151'
+                }}>
+                  Brand/Line:
+                </label>
+                <select
+                  value={selectedBrand}
+                  onChange={(e) => setSelectedBrand(e.target.value)}
+                  style={{
+                    padding: '6px 12px',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    color: '#374151',
+                    backgroundColor: '#FFFFFF',
+                    cursor: 'pointer',
+                    minWidth: '150px'
+                  }}
+                >
+                  {brandOptions.map(brand => (
+                    <option key={brand} value={brand}>
+                      {brand}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <button
+              onClick={onClose}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#6B7280',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#4B5563'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#6B7280'
+              }}
+            >
+              Close
+            </button>
+          </div>
         </div>
 
         {/* Content */}
         <div
           style={{
             padding: '20px',
-            overflowY: 'auto',
             flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
             backgroundColor: '#FFFFFF'
           }}
         >
@@ -1263,23 +1666,14 @@ function TierCustomersModal({
 
           {!loading && customers.length > 0 && (
             <>
-              {/* Showing Caption */}
+              {/* Table Container - Only this scrolls */}
               <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                marginBottom: '12px'
-              }}>
-                <p style={{ fontSize: '12px', color: '#6B7280', margin: 0 }}>
-                  Showing {startIndex + 1} - {endIndex} of {totalRecords} customers
-                </p>
-              </div>
-              
-              <div style={{ 
+                flex: 1,
                 overflowX: 'auto',
-                overflowY: 'auto',
-                maxHeight: 'calc(90vh - 280px)',
-                position: 'relative'
+                overflowY: totalRecords >= 100 ? 'visible' : 'auto',
+                maxHeight: totalRecords >= 100 ? 'none' : '510px', // Header (~42px) + 10 rows (10 * ~46.8px) = 510px - exact fit for 10 complete rows with proper spacing
+                position: 'relative',
+                minHeight: 0
               }}>
                 <table
                   style={{
@@ -1293,7 +1687,8 @@ function TierCustomersModal({
                     position: 'sticky', 
                     top: 0, 
                     zIndex: 10,
-                    backgroundColor: '#374151'
+                    backgroundColor: '#374151',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                   }}>
                     <tr>
                       {[
@@ -1313,7 +1708,7 @@ function TierCustomersModal({
                         <th
                           key={header}
                           style={{
-                            padding: '10px 14px',
+                            padding: headerPadding,
                             textAlign: ['ATV', 'Purchase Freq', 'Deposit Cases', 'Deposit Amount', 'GGR', 'Winrate', 'Withdraw Rate', 'Active Days'].includes(header) ? 'right' : 'left',
                             fontWeight: 600,
                             backgroundColor: '#374151',
@@ -1336,19 +1731,19 @@ function TierCustomersModal({
                           backgroundColor: index % 2 === 0 ? '#FFFFFF' : '#FAFAFA'
                         }}
                       >
-                        <td style={{ padding: '10px 14px', border: '1px solid #e0e0e0', color: '#374151' }}>
+                        <td style={{ padding: cellPadding, border: '1px solid #e0e0e0', color: '#374151' }}>
                           {customer.line}
                         </td>
-                        <td style={{ padding: '10px 14px', border: '1px solid #e0e0e0', color: '#374151' }}>
+                        <td style={{ padding: cellPadding, border: '1px solid #e0e0e0', color: '#374151' }}>
                           {customer.unique_code}
                         </td>
-                        <td style={{ padding: '10px 14px', border: '1px solid #e0e0e0', color: '#374151' }}>
+                        <td style={{ padding: cellPadding, border: '1px solid #e0e0e0', color: '#374151' }}>
                           {customer.user_name}
                         </td>
                         <td 
                           onClick={() => handleActiveDaysClick(customer)}
                           style={{ 
-                            padding: '10px 14px', 
+                            padding: cellPadding, 
                             border: '1px solid #e0e0e0', 
                             color: '#3B82F6', 
                             textAlign: 'right',
@@ -1360,20 +1755,20 @@ function TierCustomersModal({
                         >
                           {formatIntegerKPI(customer.active_days)}
                         </td>
-                        <td style={{ padding: '10px 14px', border: '1px solid #e0e0e0', color: '#374151', textAlign: 'right' }}>
+                        <td style={{ padding: cellPadding, border: '1px solid #e0e0e0', color: '#374151', textAlign: 'right' }}>
                           {formatCurrencyKPI(customer.atv, currency)}
                         </td>
-                        <td style={{ padding: '10px 14px', border: '1px solid #e0e0e0', color: '#374151', textAlign: 'right' }}>
+                        <td style={{ padding: cellPadding, border: '1px solid #e0e0e0', color: '#374151', textAlign: 'right' }}>
                           {customer.purchase_freq.toFixed(2)}
                         </td>
-                        <td style={{ padding: '10px 14px', border: '1px solid #e0e0e0', color: '#374151', textAlign: 'right' }}>
+                        <td style={{ padding: cellPadding, border: '1px solid #e0e0e0', color: '#374151', textAlign: 'right' }}>
                           {formatIntegerKPI(customer.deposit_cases)}
                         </td>
-                        <td style={{ padding: '10px 14px', border: '1px solid #e0e0e0', color: '#374151', textAlign: 'right' }}>
+                        <td style={{ padding: cellPadding, border: '1px solid #e0e0e0', color: '#374151', textAlign: 'right' }}>
                           {formatCurrencyKPI(customer.deposit_amount, currency)}
                         </td>
                         <td style={{ 
-                          padding: '10px 14px', 
+                          padding: cellPadding, 
                           border: '1px solid #e0e0e0', 
                           color: customer.ggr >= 0 ? '#10b981' : '#EF4444', 
                           textAlign: 'right',
@@ -1381,13 +1776,13 @@ function TierCustomersModal({
                         }}>
                           {formatCurrencyKPI(customer.ggr, currency)}
                         </td>
-                        <td style={{ padding: '10px 14px', border: '1px solid #e0e0e0', color: '#374151', textAlign: 'right' }}>
+                        <td style={{ padding: cellPadding, border: '1px solid #e0e0e0', color: '#374151', textAlign: 'right' }}>
                           {formatPercentageKPI(customer.winrate)}
                         </td>
-                        <td style={{ padding: '10px 14px', border: '1px solid #e0e0e0', color: '#374151', textAlign: 'right' }}>
+                        <td style={{ padding: cellPadding, border: '1px solid #e0e0e0', color: '#374151', textAlign: 'right' }}>
                           {formatPercentageKPI(customer.withdraw_rate)}
                         </td>
-                        <td style={{ padding: '10px 14px', border: '1px solid #e0e0e0', color: '#374151' }}>
+                        <td style={{ padding: cellPadding, border: '1px solid #e0e0e0', color: '#374151' }}>
                           {customer.tier_name}
                         </td>
                       </tr>
@@ -1396,19 +1791,21 @@ function TierCustomersModal({
                 </table>
               </div>
               
-              {/* Pagination Controls */}
-              {totalPages > 1 && (
+              {/* Pagination Controls - Only show if data >= 100 (100 per page) */}
+              {totalRecords >= 100 && (
                 <div style={{ 
                   display: 'flex', 
                   justifyContent: 'space-between', 
                   alignItems: 'center',
-                  marginTop: '16px',
-                  paddingTop: '16px',
-                  borderTop: '1px solid #E5E7EB'
+                  marginTop: '12px',
+                  flexShrink: 0
                 }}>
-                  <div style={{ fontSize: '12px', color: '#6B7280' }}>
-                    Page {page} of {totalPages}
-                  </div>
+                  {/* Showing Caption - Left */}
+                  <p style={{ fontSize: '12px', color: '#6B7280', margin: 0 }}>
+                    Showing {startIndex + 1} - {endIndex} of {totalRecords} customers
+                  </p>
+                  
+                  {/* Pagination Buttons - Right */}
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <button
                       onClick={() => setPage(1)}
@@ -1479,7 +1876,7 @@ function TierCustomersModal({
               )}
               
               {/* Buttons */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', flexShrink: 0 }}>
                 <button
                   onClick={onClose}
                   style={{
@@ -1591,6 +1988,10 @@ function TransactionHistoryModal({
   onExport,
   exporting
 }: TransactionHistoryModalProps) {
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 100
+
   // ESC key to close
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -1606,40 +2007,43 @@ function TransactionHistoryModal({
     }
   }, [isOpen, onClose])
 
+  // Reset page when modal opens/closes or transactions change
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentPage(1)
+    }
+  }, [isOpen, transactions.length])
+
   if (!isOpen || typeof document === 'undefined') return null
+
+  // Calculate pagination
+  const totalItems = transactions.length
+  const showAll = totalItems < 100
+  const totalPages = showAll ? 1 : Math.ceil(totalItems / itemsPerPage)
+  const startIndex = showAll ? 0 : (currentPage - 1) * itemsPerPage
+  const endIndex = showAll ? totalItems : Math.min(startIndex + itemsPerPage, totalItems)
+  const displayTransactions = showAll ? transactions : transactions.slice(startIndex, endIndex)
 
   return createPortal(
     <div
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+      className="fixed bg-black bg-opacity-50 flex items-center justify-center"
+      style={{ 
+        padding: 0, 
+        margin: 0,
         zIndex: 10002,
-        padding: '20px'
+        top: '150px', // Header (90px) + Subheader (60px)
+        left: '280px', // Sidebar width
+        right: 0,
+        bottom: 0
       }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: '12px',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-          width: '95%',
-          maxWidth: '1600px',
-          maxHeight: '90vh',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden'
-        }}
+        className="bg-white rounded-lg shadow-xl max-w-[95%] w-full max-h-[calc(100vh-180px)] flex flex-col"
+        style={{ margin: 'auto' }}
       >
         {/* Header */}
         <div
@@ -1671,25 +2075,24 @@ function TransactionHistoryModal({
           <button
             onClick={onClose}
             style={{
-              background: 'none',
+              padding: '8px 16px',
+              backgroundColor: '#6B7280',
+              color: '#FFFFFF',
               border: 'none',
-              fontSize: '24px',
-              color: '#6B7280',
+              borderRadius: '6px',
+              fontSize: '14px',
+              fontWeight: 500,
               cursor: 'pointer',
-              padding: '4px 8px',
-              borderRadius: '4px',
               transition: 'all 0.2s ease'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#E5E7EB'
-              e.currentTarget.style.color = '#1F2937'
+              e.currentTarget.style.backgroundColor = '#4B5563'
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent'
-              e.currentTarget.style.color = '#6B7280'
+              e.currentTarget.style.backgroundColor = '#6B7280'
             }}
           >
-            ×
+            Close
           </button>
         </div>
 
@@ -1697,8 +2100,10 @@ function TransactionHistoryModal({
         <div
           style={{
             padding: '20px',
-            overflowY: 'auto',
             flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
             backgroundColor: '#FFFFFF'
           }}
         >
@@ -1716,11 +2121,31 @@ function TransactionHistoryModal({
 
           {!loading && transactions.length > 0 && (
             <>
+              {/* Showing Caption - Only show if data >= 100 (100 per page) */}
+              {totalItems >= 100 && (
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  marginBottom: '16px',
+                  paddingBottom: '16px',
+                  borderBottom: '1px solid #E5E7EB',
+                  flexShrink: 0
+                }}>
+                  <p style={{ fontSize: '12px', color: '#6B7280', margin: 0 }}>
+                    Showing {startIndex + 1} - {endIndex} of {totalItems} transactions
+                  </p>
+                </div>
+              )}
+
+              {/* Table Container - Only this scrolls */}
               <div style={{ 
+                flex: 1,
                 overflowX: 'auto',
-                overflowY: 'auto',
-                maxHeight: 'calc(90vh - 200px)',
-                position: 'relative'
+                overflowY: totalItems >= 100 ? 'visible' : 'auto',
+                maxHeight: totalItems >= 100 ? 'none' : '550px', // Header (~50px) + 10 rows (10 * ~50px) = 550px
+                position: 'relative',
+                minHeight: 0
               }}>
                 <table
                   style={{
@@ -1734,7 +2159,8 @@ function TransactionHistoryModal({
                     position: 'sticky', 
                     top: 0, 
                     zIndex: 10,
-                    backgroundColor: '#374151'
+                    backgroundColor: '#374151',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                   }}>
                     <tr>
                       {[
@@ -1767,11 +2193,13 @@ function TransactionHistoryModal({
                     </tr>
                   </thead>
                   <tbody>
-                    {transactions.map((tx: any, index: number) => (
+                    {displayTransactions.map((tx: any, index: number) => {
+                      const originalIndex = showAll ? index : (startIndex + index)
+                      return (
                       <tr
-                        key={index}
+                        key={originalIndex}
                         style={{
-                          backgroundColor: index % 2 === 0 ? '#FFFFFF' : '#FAFAFA'
+                          backgroundColor: originalIndex % 2 === 0 ? '#FFFFFF' : '#FAFAFA'
                         }}
                       >
                         <td style={{ padding: '10px 14px', border: '1px solid #e0e0e0', color: '#374151' }}>
@@ -1808,13 +2236,87 @@ function TransactionHistoryModal({
                           {formatCurrencyKPI(tx.ggr, currency)}
                         </td>
                       </tr>
-                    ))}
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
               
+              {/* Pagination - Only show if data >= 100 (100 per page) */}
+              {totalItems >= 100 && (
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  marginTop: '16px',
+                  paddingTop: '16px',
+                  borderTop: '1px solid #E5E7EB',
+                  flexShrink: 0
+                }}>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: currentPage === 1 ? '#E5E7EB' : '#3B82F6',
+                      color: currentPage === 1 ? '#9CA3AF' : 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (currentPage !== 1) {
+                        e.currentTarget.style.backgroundColor = '#2563EB'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (currentPage !== 1) {
+                        e.currentTarget.style.backgroundColor = '#3B82F6'
+                      }
+                    }}
+                  >
+                    Previous
+                  </button>
+                  
+                  <span style={{ fontSize: '14px', color: '#374151', fontWeight: 500 }}>
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: currentPage === totalPages ? '#E5E7EB' : '#3B82F6',
+                      color: currentPage === totalPages ? '#9CA3AF' : 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (currentPage !== totalPages) {
+                        e.currentTarget.style.backgroundColor = '#2563EB'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (currentPage !== totalPages) {
+                        e.currentTarget.style.backgroundColor = '#3B82F6'
+                      }
+                    }}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+              
               {/* Buttons */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px', flexShrink: 0 }}>
                 <button
                   onClick={onClose}
                   style={{

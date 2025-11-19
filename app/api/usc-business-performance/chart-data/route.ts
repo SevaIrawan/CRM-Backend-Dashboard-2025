@@ -34,26 +34,30 @@ export async function GET(request: NextRequest) {
     const userAllowedBrands = userAllowedBrandsHeader ? 
       JSON.parse(userAllowedBrandsHeader) : null
     
-    // Convert month name to month number
-    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                       'July', 'August', 'September', 'October', 'November', 'December']
-    const monthNumber = monthNames.indexOf(month) + 1
-    
-    if (monthNumber === 0) {
-      return NextResponse.json({
-        success: false,
-        error: 'Invalid month name'
-      }, { status: 400 })
-    }
-    
-    // Query data for specific month, grouped by brand (line)
+    // Query data - handle month = 'ALL' by aggregating all months
     let query = supabase
       .from('blue_whale_usc_monthly_summary')
       .select('line, active_member, pure_member, winrate, withdrawal_rate, atv, purchase_frequency')
       .eq('currency', 'USC')
       .eq('year', parseInt(year))
-      .eq('month', monthNumber)
       .neq('line', 'ALL')  // Exclude ALL line
+    
+    // If month = 'ALL', skip month filter (aggregate all months)
+    // Otherwise, filter by specific month
+    if (month && month !== 'ALL') {
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                         'July', 'August', 'September', 'October', 'November', 'December']
+      const monthNumber = monthNames.indexOf(month) + 1
+      
+      if (monthNumber === 0) {
+        return NextResponse.json({
+          success: false,
+          error: 'Invalid month name'
+        }, { status: 400 })
+      }
+      
+      query = query.eq('month', monthNumber)
+    }
     
     // Apply brand filter with user permission check
     try {
@@ -81,22 +85,54 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
     
-    // Build brand data object
+    // Build brand data object - aggregate if month = 'ALL'
     const brandData: Record<string, any> = {}
     
     data?.forEach(row => {
       const brand = row.line as string
       if (brand) {
-        brandData[brand] = {
-          active_member: (row.active_member as number) || 0,
-          pure_member: (row.pure_member as number) || 0,
-          winrate: (row.winrate as number) || 0,
-          withdrawal_rate: (row.withdrawal_rate as number) || 0,
-          atv: (row.atv as number) || 0,
-          purchase_frequency: (row.purchase_frequency as number) || 0
+        if (!brandData[brand]) {
+          // Initialize brand data
+          brandData[brand] = {
+            active_member: 0,
+            pure_member: 0,
+            winrate: 0,
+            withdrawal_rate: 0,
+            atv: 0,
+            purchase_frequency: 0,
+            count: 0  // Track number of months for averaging
+          }
         }
+        
+        // Sum metrics (for month = 'ALL', we aggregate across all months)
+        brandData[brand].active_member += (row.active_member as number) || 0
+        brandData[brand].pure_member += (row.pure_member as number) || 0
+        brandData[brand].winrate += (row.winrate as number) || 0
+        brandData[brand].withdrawal_rate += (row.withdrawal_rate as number) || 0
+        brandData[brand].atv += (row.atv as number) || 0
+        brandData[brand].purchase_frequency += (row.purchase_frequency as number) || 0
+        brandData[brand].count += 1
       }
     })
+    
+    // If month = 'ALL', calculate averages for rate-based metrics
+    if (month === 'ALL') {
+      Object.keys(brandData).forEach(brand => {
+        const count = brandData[brand].count || 1
+        // Average rates (winrate, withdrawal_rate)
+        brandData[brand].winrate = brandData[brand].winrate / count
+        brandData[brand].withdrawal_rate = brandData[brand].withdrawal_rate / count
+        brandData[brand].atv = brandData[brand].atv / count
+        brandData[brand].purchase_frequency = brandData[brand].purchase_frequency / count
+        // Remove count field
+        delete brandData[brand].count
+      })
+    } else {
+      // For single month, remove count field
+      Object.keys(brandData).forEach(brand => {
+        delete brandData[brand].count
+      })
+    }
     
     console.log('✅ [USC BP Chart Data] Brand data prepared from MV:', {
       brandCount: Object.keys(brandData).length,
