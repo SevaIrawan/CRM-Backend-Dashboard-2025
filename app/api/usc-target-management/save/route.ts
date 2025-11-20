@@ -192,11 +192,11 @@ export async function POST(request: NextRequest) {
     // CREATE AUDIT LOG (One log entry for the quarter, not per month)
     // ============================================================================
     // Calculate total from existing targets (sum all months)
-    const oldTotalGGR = existingTargets?.reduce((sum, t) => sum + (parseFloat(t.target_ggr) || 0), 0) || null
-    const oldTotalDepositAmount = existingTargets?.reduce((sum, t) => sum + (parseFloat(t.target_deposit_amount) || 0), 0) || null
-    const oldTotalDepositCases = existingTargets?.reduce((sum, t) => sum + (parseInt(t.target_deposit_cases) || 0), 0) || null
-    const oldTotalActiveMember = existingTargets?.reduce((sum, t) => sum + (parseInt(t.target_active_member) || 0), 0) || null
-    const oldTotalForecastGGR = existingTargets?.reduce((sum, t) => sum + (parseFloat(t.forecast_ggr) || 0), 0) || null
+    const oldTotalGGR = existingTargets?.reduce((sum, t: any) => sum + (parseFloat(String(t.target_ggr || 0)) || 0), 0) || null
+    const oldTotalDepositAmount = existingTargets?.reduce((sum, t: any) => sum + (parseFloat(String(t.target_deposit_amount || 0)) || 0), 0) || null
+    const oldTotalDepositCases = existingTargets?.reduce((sum, t: any) => sum + (parseInt(String(t.target_deposit_cases || 0)) || 0), 0) || null
+    const oldTotalActiveMember = existingTargets?.reduce((sum, t: any) => sum + (parseInt(String(t.target_active_member || 0)) || 0), 0) || null
+    const oldTotalForecastGGR = existingTargets?.reduce((sum, t: any) => sum + (parseFloat(String(t.forecast_ggr || 0)) || 0), 0) || null
     
     const auditData = {
       target_id: savedTargets && savedTargets.length > 0 ? savedTargets[0].id : null,
