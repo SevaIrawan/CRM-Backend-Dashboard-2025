@@ -59,13 +59,13 @@ export const SCALER_SCALE = {
 // ============================================================================
 
 export const TIER_NAMES: Record<number, string> = {
-  1: 'VIP Elite',
-  2: 'VIP Premium',
-  3: 'High Value',
-  4: 'Standard',
-  5: 'Regular',
-  6: 'Low Activity',
-  7: 'Dormant'
+  1: 'Super VIP',    // Tier 1 = Tertinggi (Score >= 2.5)
+  2: 'Tier 5',       // Tier 2 = Score >= 1.8
+  3: 'Tier 4',       // Tier 3 = Score >= 1.0
+  4: 'Tier 3',       // Tier 4 = Score >= 0.3
+  5: 'Tier 2',       // Tier 5 = Score >= -0.3
+  6: 'Tier 1',       // Tier 6 = Score >= -1.0
+  7: 'Regular'       // Tier 7 = Terendah (Score < -1.0)
 }
 
 export const TIER_GROUPS: Record<number, string> = {
@@ -182,13 +182,13 @@ export function calibrateTierBoundaries(scores: number[]): {
   
   // Target distribution (based on business rules)
   const tierDistribution = [
-    { tier: 1, targetPct: 0.05 },  // Top 5% - VIP Elite
-    { tier: 2, targetPct: 0.10 },  // Next 10% - VIP Premium
-    { tier: 3, targetPct: 0.15 },  // Next 15% - High Value
-    { tier: 4, targetPct: 0.25 },  // Next 25% - Standard
-    { tier: 5, targetPct: 0.25 },  // Next 25% - Regular
-    { tier: 6, targetPct: 0.15 },  // Next 15% - Low Activity
-    { tier: 7, targetPct: 0.05 }   // Bottom 5% - Dormant
+    { tier: 1, targetPct: 0.05 },  // Top 5% - Super VIP (Tertinggi)
+    { tier: 2, targetPct: 0.10 },  // Next 10% - Tier 5
+    { tier: 3, targetPct: 0.15 },  // Next 15% - Tier 4
+    { tier: 4, targetPct: 0.25 },  // Next 25% - Tier 3
+    { tier: 5, targetPct: 0.25 },  // Next 25% - Tier 2
+    { tier: 6, targetPct: 0.15 },  // Next 15% - Tier 1
+    { tier: 7, targetPct: 0.05 }   // Bottom 5% - Regular (Terendah)
   ]
   
   const boundaries = []

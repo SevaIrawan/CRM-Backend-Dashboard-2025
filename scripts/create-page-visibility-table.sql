@@ -102,6 +102,10 @@ INSERT INTO page_visibility_config (page_path, page_name, page_section, visible_
 ('/usc/customer-retention', 'Customer Retention', 'USC', '["admin", "executive", "manager_usc", "sq_usc"]'),
 ('/usc/member-report', 'Member Report', 'USC', '["admin", "executive", "manager_usc", "sq_usc"]');
 
+-- USC - Manager, Executive, Admin only
+INSERT INTO page_visibility_config (page_path, page_name, page_section, visible_for_roles) VALUES
+('/usc/target-management', 'Target Management', 'USC', '["admin", "executive", "manager_usc"]');
+
 -- USC - Hidden from non-admin roles (Building status)
 INSERT INTO page_visibility_config (page_path, page_name, page_section, visible_for_roles) VALUES
 ('/usc/member-analytic', 'Member Analytic', 'USC', '["admin"]'),

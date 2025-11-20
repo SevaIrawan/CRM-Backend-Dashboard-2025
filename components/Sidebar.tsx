@@ -334,6 +334,7 @@ export default function Sidebar({
         submenu: [
         { title: 'Overview', path: '/usc/overview' },
         { title: 'Business Performance', path: '/usc/business-performance' },
+        { title: 'Target Management', path: '/usc/target-management' },
         { title: 'Brand Comparison Trends', path: '/usc/brand-performance-trends' },
         { title: 'KPI Comparison', path: '/usc/kpi-comparison' },
         { title: 'Auto-Approval Monitor', path: '/usc/auto-approval-monitor' },

@@ -760,15 +760,6 @@ export default function GGrBreakdownModal({
                               color: 'white',
                               border: '1px solid #4b5563',
                               borderBottom: '2px solid #4b5563'
-                            }}>Tier</th>
-                            <th style={{ 
-                              padding: '10px 14px', 
-                              textAlign: 'left', 
-                              fontWeight: 600,
-                              backgroundColor: '#374151',
-                              color: 'white',
-                              border: '1px solid #4b5563',
-                              borderBottom: '2px solid #4b5563'
                             }}>Tier Name</th>
                             <th style={{ 
                               padding: '10px 14px', 
@@ -856,11 +847,6 @@ export default function GGrBreakdownModal({
                                 }}
                                 title="Double click to view customers in this tier"
                               >
-                                <td style={{ 
-                                  padding: '10px 14px', 
-                                  border: '1px solid #e0e0e0',
-                                  color: '#374151'
-                                }}>{index + 1}</td>
                                 <td style={{ 
                                   padding: '10px 14px', 
                                   border: '1px solid #e0e0e0',
@@ -1409,7 +1395,7 @@ function TierCustomersModal({
                 marginBottom: '4px'
               }}
             >
-              TIER {tier} CUSTOMERS - {tierName}
+              {tierName}
             </h2>
             <p style={{ fontSize: '12px', color: '#6B7280', margin: 0 }}>
               {period} • {totalRecords} customers

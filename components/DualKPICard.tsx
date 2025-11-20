@@ -36,7 +36,9 @@ export default function DualKPICard({
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: '0'
+        gap: '0',
+        height: '120px', // Fixed height to match StatCard
+        minHeight: '120px' // Ensure minimum height
       }}
     >
       {/* Card Title with Icon */}
