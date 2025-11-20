@@ -123,7 +123,7 @@ export default function USCTargetManagementPage() {
         .eq('currency', 'USC')
         .not('year', 'is', null)
       
-      const uniqueYears = Array.from(new Set(yearsData?.map(r => r.year?.toString()).filter(Boolean) || []))
+      const uniqueYears = Array.from(new Set(yearsData?.map((r: any) => r.year?.toString()).filter((y: any): y is string => Boolean(y)) || []))
       const sortedYears = uniqueYears.sort((a, b) => parseInt(b || '0') - parseInt(a || '0'))
       setAvailableYears(sortedYears.length > 0 ? sortedYears : ['2025'])
       
@@ -134,8 +134,8 @@ export default function USCTargetManagementPage() {
         .eq('currency', 'USC')
         .not('line', 'is', null)
       
-      const uniqueLines = Array.from(new Set(linesData?.map(r => r.line).filter(Boolean) || []))
-      const cleanLines = uniqueLines.filter(line => line !== 'ALL' && line !== 'All')
+      const uniqueLines = Array.from(new Set(linesData?.map((r: any) => r.line).filter((l: any): l is string => Boolean(l)) || []))
+      const cleanLines = uniqueLines.filter((line: string) => line !== 'ALL' && line !== 'All')
       const sortedLines = ['ALL', ...cleanLines.sort()]
       setAvailableLines(sortedLines)
     } catch (error) {
