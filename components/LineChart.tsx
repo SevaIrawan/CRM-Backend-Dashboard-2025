@@ -887,17 +887,17 @@ export default function LineChart({
             alignItems: 'center',
             gap: '16px'
           }}>
-            {/* Legend */}
-            {!hideLegend && series.length > 0 && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px'
-              }}>
-                {(customLegend || series).map((item, index) => {
-                  const isCustomLegend = !!customLegend;
-                  const label = isCustomLegend ? (customLegend![index] as any).label : (item as any).name;
-                  const seriesItem = series[index];
+          {/* Legend */}
+          {!hideLegend && series.length > 0 && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              {(customLegend || series).map((item, index) => {
+                const isCustomLegend = !!customLegend;
+                const label = isCustomLegend ? (customLegend![index] as any).label : (item as any).name;
+                const seriesItem = series[index];
                   let legendColor: string
                   if (isCustomLegend) {
                     legendColor = (customLegend![index] as any).color
@@ -908,33 +908,33 @@ export default function LineChart({
                     // Single series: use series-specific color if provided, otherwise use color prop
                     legendColor = seriesItem?.color || color
                   }
-                  
-                  return (
-                    <div key={index} style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
+                
+                return (
+                  <div key={index} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
+                    <div style={{
+                      width: '12px',
+                      height: '3px',
+                      backgroundColor: legendColor,
+                      borderRadius: '2px'
+                    }} />
+                    <span style={{
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      color: '#6B7280',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px'
                     }}>
-                      <div style={{
-                        width: '12px',
-                        height: '3px',
-                        backgroundColor: legendColor,
-                        borderRadius: '2px'
-                      }} />
-                      <span style={{
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        color: '#6B7280',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px'
-                      }}>
-                        {label}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                      {label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
             
             {/* View Data Icon - Only show if onClick handler is provided */}
             {onClick && (

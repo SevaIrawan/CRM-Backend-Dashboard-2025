@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { formatCurrencyKPI, formatIntegerKPI } from '@/lib/formatHelpers'
 
 interface ActiveMemberDetail {
@@ -210,11 +211,29 @@ export default function ActiveMemberDetailsModal({
     }
   }
 
-  if (!isOpen) return null
+  if (!isOpen || typeof document === 'undefined') return null
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-[95vw] w-full mx-4 max-h-[95vh] flex flex-col">
+  return createPortal(
+    <div
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      className="fixed bg-black bg-opacity-50 flex items-center justify-center"
+      style={{ 
+        padding: 0, 
+        margin: 0,
+        zIndex: 10000,
+        top: '150px', // Header (90px) + Subheader (60px)
+        left: '280px', // Sidebar width
+        right: 0,
+        bottom: 0
+      }}
+    >
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-lg shadow-xl max-w-[95%] w-full max-h-[calc(100vh-180px)] flex flex-col"
+        style={{ margin: 'auto' }}
+      >
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b">
           <div>
@@ -265,7 +284,23 @@ export default function ActiveMemberDetailsModal({
             </button>
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors"
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#6B7280',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#4B5563'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#6B7280'
+              }}
             >
               Close
             </button>
@@ -422,7 +457,8 @@ export default function ActiveMemberDetailsModal({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

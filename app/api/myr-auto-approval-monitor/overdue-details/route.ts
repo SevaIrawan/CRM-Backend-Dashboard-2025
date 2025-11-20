@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
       .select('*', { count: 'exact', head: true })
       .eq('currency', 'MYR')
       .not('proc_sec', 'is', null)
-      .gte('proc_sec', minThreshold)
+      .gt('proc_sec', minThreshold)  // Changed from .gte() to .gt() - threshold >30s, not >=30s
       .in('operator_group', ['Automation', 'BOT'])  // Only automation transactions
     
     // Add max threshold if specified
@@ -135,7 +135,7 @@ export async function GET(request: NextRequest) {
       .select('date, time, type, line, unique_code, userkey, user_name, amount, operator_group, process_time, proc_sec')
       .eq('currency', 'MYR')
       .not('proc_sec', 'is', null)
-      .gte('proc_sec', minThreshold)
+      .gt('proc_sec', minThreshold)  // Changed from .gte() to .gt() - threshold >30s, not >=30s
       .in('operator_group', ['Automation', 'BOT'])  // Only automation transactions
     
     // Add max threshold if specified

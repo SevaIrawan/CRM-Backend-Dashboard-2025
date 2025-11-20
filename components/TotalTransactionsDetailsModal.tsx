@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import StandardModal, { StandardPagination, StandardExportButton, MODAL_STYLES, getTableMaxHeight, getTableOverflow } from './StandardModal'
 import { formatCurrencyKPI, formatIntegerKPI } from '@/lib/formatHelpers'
 import { getAllowedBrandsFromStorage } from '@/utils/brandAccessHelper'
 
@@ -48,10 +49,16 @@ export default function TotalTransactionsDetailsModal({
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(100)
-  const [sliceVisible, setSliceVisible] = useState(10)
   const [totalPages, setTotalPages] = useState(1)
   const [totalRecords, setTotalRecords] = useState(0)
   const [exporting, setExporting] = useState(false)
+
+  // Reset page to 1 when limit changes
+  useEffect(() => {
+    if (isOpen) {
+      setPage(1)
+    }
+  }, [limit, isOpen])
 
   // Fetch data when modal opens
   useEffect(() => {
@@ -193,185 +200,188 @@ export default function TotalTransactionsDetailsModal({
     }
   }
 
-  if (!isOpen) return null
+  const showPagination = totalRecords >= 100
+  const startIndex = (page - 1) * limit + 1
+  const endIndex = Math.min(page * limit, totalRecords)
 
   return (
-    <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-      style={{ padding: 0, margin: 0 }}
+    <StandardModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Total Transactions Details"
+      subtitle={`${totalCount.toLocaleString()} cases • ${line} • ${year} • ${month}`}
+      footer={
+        transactions.length > 0 ? (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            width: '100%'
+          }}>
+            <p style={{ fontSize: '12px', color: '#6B7280', margin: 0 }}>
+              Showing {startIndex} - {endIndex} of {formatIntegerKPI(totalRecords)} records
+            </p>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              {showPagination && totalPages > 1 && (
+                <StandardPagination
+                  page={page}
+                  totalPages={totalPages}
+                  onPageChange={setPage}
+                  limit={limit}
+                  onLimitChange={setLimit}
+                  totalRecords={totalRecords}
+                  showLimitDropdown={true}
+                />
+              )}
+              <StandardExportButton
+                onClick={handleExport}
+                exporting={exporting}
+                disabled={transactions.length === 0}
+              />
+            </div>
+          </div>
+        ) : undefined
+      }
     >
-      <div 
-        className="bg-white rounded-lg shadow-xl max-w-[95vw] w-full max-h-[90vh] flex flex-col"
-        style={{ margin: 'auto' }}
-      >
-        {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">
-              Total Transactions Details
-            </h2>
-            <p className="text-sm text-gray-600 mt-1">
-              {totalCount.toLocaleString()} cases • {line} • {year} • {month}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={handleExport}
-              disabled={exporting}
-              className={`px-4 py-2 text-white rounded-md transition-colors ${exporting ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'}`}
-            >
-              {exporting ? 'Exporting…' : 'Export CSV (All)'}
-            </button>
-            <button
-              onClick={onClose}
-              className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors"
-            >
-              Close
-            </button>
-          </div>
-        </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-auto p-4">
-          {loading ? (
-            <div className="flex items-center justify-center h-32">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="ml-2 text-gray-600">Loading total transactions...</span>
-            </div>
-          ) : error ? (
-            <div className="text-center py-8">
-              <div className="text-red-600 mb-2">❌ Error</div>
-              <p className="text-gray-600">{error}</p>
-              <button
-                onClick={fetchTotalTransactionsDetails}
-                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                Retry
-              </button>
-            </div>
-          ) : transactions.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="text-gray-500 mb-2">📭 No Data</div>
-              <p className="text-gray-600">No transactions found for the selected filters</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <div className="max-h-[400px] overflow-y-auto" style={{ maxHeight: '400px' }}>
-              <table className="min-w-full" style={{ borderCollapse: 'collapse', border: '1px solid #e5e7eb' }}>
-                <thead className="sticky top-0" style={{ zIndex: 10 }}>
-                  <tr>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
-                      Date Time
-                    </th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
-                      {type === 'withdraw' ? 'Approval' : 'Type'}
-                    </th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
-                      Brand
-                    </th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
-                      Unique Code
-                    </th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
-                      User Name
-                    </th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
-                      Amount
-                    </th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
-                      Operator
-                    </th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
-                      Process Time
-                    </th>
-                    <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
-                      Threshold
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                   {transactions.slice(0, sliceVisible).map((transaction, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
-                        {transaction.time ? `${transaction.date} ${transaction.time}` : transaction.date}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
-                        {type === 'withdraw' ? transaction.approval : transaction.type}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
-                        {transaction.line}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
-                        {transaction.uniqueCode}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
-                        {transaction.userName}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
-                        {formatCurrencyKPI(transaction.amount, 'MYR')}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
-                        {transaction.operator}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
-                        {transaction.processTime}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center" style={{ border: '1px solid #e5e7eb' }}>
-                        <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 inline-block">
-                          {transaction.procSec}s
-                        </span>
-                      </td>
+      {/* Content */}
+      <div style={{
+        padding: '20px 24px',
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 0,
+        overflow: 'hidden'
+      }}>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '40px' }}>
+            <div style={{ fontSize: '16px', color: '#6B7280' }}>Loading total transactions...</div>
+          </div>
+        ) : error ? (
+          <div style={{ textAlign: 'center', padding: '40px' }}>
+            <div style={{ color: '#EF4444', marginBottom: '8px' }}>❌ Error</div>
+            <p style={{ color: '#6B7280', marginBottom: '16px' }}>{error}</p>
+            <button
+              onClick={fetchTotalTransactionsDetails}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#3B82F6',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              Retry
+            </button>
+          </div>
+        ) : transactions.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#6B7280' }}>
+            <div style={{ marginBottom: '8px' }}>📭 No Data</div>
+            <p>No transactions found for the selected filters</p>
+          </div>
+        ) : (
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            flex: 1, 
+            overflow: 'hidden',
+            minHeight: 0
+          }}>
+            <div style={{
+              overflowX: 'auto',
+              overflowY: totalRecords >= 100 ? 'visible' : 'auto',
+              maxHeight: totalRecords >= 100 ? 'none' : '418px',
+              flex: 1,
+              minHeight: 0,
+              position: 'relative'
+            }}>
+                <table
+                  style={{
+                    width: '100%',
+                    borderCollapse: 'collapse',
+                    border: '1px solid #e0e0e0',
+                    fontSize: '14px'
+                  }}
+                >
+                  <thead style={{
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 10,
+                    backgroundColor: '#374151',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                  }}>
+                    <tr>
+                      <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, border: '1px solid #4b5563', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap', borderBottom: '2px solid #4b5563' }}>
+                        Date Time
+                      </th>
+                      <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, border: '1px solid #4b5563', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap', borderBottom: '2px solid #4b5563' }}>
+                        {type === 'withdraw' ? 'Approval' : 'Type'}
+                      </th>
+                      <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, border: '1px solid #4b5563', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap', borderBottom: '2px solid #4b5563' }}>
+                        Brand
+                      </th>
+                      <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, border: '1px solid #4b5563', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap', borderBottom: '2px solid #4b5563' }}>
+                        Unique Code
+                      </th>
+                      <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, border: '1px solid #4b5563', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap', borderBottom: '2px solid #4b5563' }}>
+                        User Name
+                      </th>
+                      <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, border: '1px solid #4b5563', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap', borderBottom: '2px solid #4b5563' }}>
+                        Amount
+                      </th>
+                      <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, border: '1px solid #4b5563', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap', borderBottom: '2px solid #4b5563' }}>
+                        Operator
+                      </th>
+                      <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, border: '1px solid #4b5563', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap', borderBottom: '2px solid #4b5563' }}>
+                        Process Time
+                      </th>
+                      <th style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 600, border: '1px solid #4b5563', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap', borderBottom: '2px solid #4b5563' }}>
+                        Threshold
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        {transactions.length > 0 && (
-          <div className="border-t px-6 py-3 bg-gray-50 flex items-center justify-between">
-            <p className="text-sm text-gray-600">
-              Showing {transactions.length} of {totalRecords.toLocaleString()} total transactions
-            </p>
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-600">Rows</label>
-              <select
-                className="border rounded px-2 py-1 text-sm"
-                value={sliceVisible}
-                onChange={(e) => {
-                  const v = parseInt(e.target.value || '20')
-                  setSliceVisible(Math.min(100, Math.max(1, v)))
-                }}
-              >
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
-              <button
-                className="px-3 py-1 rounded border text-sm disabled:opacity-50"
-                disabled={page <= 1}
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-              >
-                Prev
-              </button>
-              <span className="text-sm text-gray-700">
-                Page {page} / {totalPages}
-              </span>
-              <button
-                className="px-3 py-1 rounded border text-sm disabled:opacity-50"
-                disabled={page >= totalPages}
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-              >
-                Next
-              </button>
+                  </thead>
+                  <tbody>
+                    {transactions.map((transaction, index) => (
+                      <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
+                        <td style={{ padding: '10px 14px', border: '1px solid #e0e0e0', color: '#374151', whiteSpace: 'nowrap', fontSize: '14px' }}>
+                          {transaction.time ? `${transaction.date} ${transaction.time}` : transaction.date}
+                        </td>
+                        <td style={{ padding: '10px 14px', border: '1px solid #e0e0e0', color: '#374151', whiteSpace: 'nowrap', fontSize: '14px' }}>
+                          {type === 'withdraw' ? transaction.approval : transaction.type}
+                        </td>
+                        <td style={{ padding: '10px 14px', border: '1px solid #e0e0e0', color: '#374151', whiteSpace: 'nowrap', fontSize: '14px' }}>
+                          {transaction.line}
+                        </td>
+                        <td style={{ padding: '10px 14px', border: '1px solid #e0e0e0', color: '#374151', whiteSpace: 'nowrap', fontSize: '14px' }}>
+                          {transaction.uniqueCode}
+                        </td>
+                        <td style={{ padding: '10px 14px', border: '1px solid #e0e0e0', color: '#374151', whiteSpace: 'nowrap', fontSize: '14px' }}>
+                          {transaction.userName}
+                        </td>
+                        <td style={{ padding: '10px 14px', border: '1px solid #e0e0e0', color: '#374151', whiteSpace: 'nowrap', fontSize: '14px' }}>
+                          {formatCurrencyKPI(transaction.amount, 'MYR')}
+                        </td>
+                        <td style={{ padding: '10px 14px', border: '1px solid #e0e0e0', color: '#374151', whiteSpace: 'nowrap', fontSize: '14px' }}>
+                          {transaction.operator}
+                        </td>
+                        <td style={{ padding: '10px 14px', border: '1px solid #e0e0e0', color: '#374151', whiteSpace: 'nowrap', fontSize: '14px' }}>
+                          {transaction.processTime}
+                        </td>
+                        <td style={{ padding: '10px 14px', border: '1px solid #e0e0e0', color: '#374151', textAlign: 'center', fontSize: '14px' }}>
+                          <span style={{ padding: '4px 8px', borderRadius: '9999px', fontSize: '12px', backgroundColor: '#D1FAE5', color: '#059669', display: 'inline-block' }}>
+                            {transaction.procSec}s
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+          </table>
             </div>
           </div>
         )}
       </div>
-    </div>
+    </StandardModal>
   )
 }
 

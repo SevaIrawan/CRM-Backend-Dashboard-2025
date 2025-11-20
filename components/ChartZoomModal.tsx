@@ -64,8 +64,8 @@ export default function ChartZoomModal({
       aria-labelledby="chart-zoom-title"
       style={{
         position: 'fixed',
-        top: 0,
-        left: 0,
+        top: '150px', // Header (90px) + Subheader (60px)
+        left: '280px', // Sidebar width
         right: 0,
         bottom: 0,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -116,23 +116,25 @@ export default function ChartZoomModal({
           <button
             onClick={onClose}
             aria-label="Close chart zoom modal"
-            onFocus={(e) => e.currentTarget.style.outline = '2px solid #3B82F6'}
-            onBlur={(e) => e.currentTarget.style.outline = 'none'}
             style={{
-              background: 'none',
+              padding: '8px 16px',
+              backgroundColor: '#6B7280',
+              color: '#FFFFFF',
               border: 'none',
-              fontSize: '24px',
+              borderRadius: '6px',
+              fontSize: '14px',
+              fontWeight: 500,
               cursor: 'pointer',
-              color: '#6B7280',
-              padding: '0 8px',
-              lineHeight: '1',
-              transition: 'color 0.2s ease',
-              borderRadius: '4px'
+              transition: 'all 0.2s ease'
             }}
-            onMouseEnter={(e) => e.currentTarget.style.color = '#EF4444'}
-            onMouseLeave={(e) => e.currentTarget.style.color = '#6B7280'}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#4B5563'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#6B7280'
+            }}
           >
-            ×
+            Close
           </button>
         </div>
 

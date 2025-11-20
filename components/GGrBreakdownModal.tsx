@@ -310,26 +310,40 @@ export default function GGrBreakdownModal({
           role="dialog"
           aria-modal="true"
           aria-labelledby="ggr-breakdown-title"
-          className="fixed bg-black bg-opacity-50 flex items-center justify-center"
-          style={{ 
-            padding: 0, 
-            margin: 0,
-            zIndex: 10000,
-            top: '150px', // Header (90px) + Subheader (60px)
-            left: '280px', // Sidebar width
+          style={{
+            position: 'fixed',
+            top: '150px',
+            left: '280px',
             right: 0,
-            bottom: 0
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: 0,
+            margin: 0
           }}
         >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-lg shadow-xl max-w-[95%] w-full max-h-[calc(100vh-180px)] flex flex-col"
-        style={{ margin: 'auto' }}
+        style={{
+          backgroundColor: 'white',
+          borderRadius: '8px',
+          width: '100%',
+          maxWidth: '95vw',
+          maxHeight: '75vh',
+          margin: 'auto',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+        }}
       >
         {/* Header */}
         <div
           style={{
-            padding: '16px 20px',
+            padding: '24px',
             borderBottom: '1px solid #E5E7EB',
             backgroundColor: '#F9FAFB',
             display: 'flex',
@@ -337,17 +351,23 @@ export default function GGrBreakdownModal({
             justifyContent: 'space-between'
           }}
         >
-          <h2
-            id="ggr-breakdown-title"
-            style={{
-              fontSize: '18px',
-              fontWeight: 600,
-              color: '#1F2937',
-              margin: 0
-            }}
-          >
-            GROSS GAMING REVENUE BREAKDOWN
-          </h2>
+          <div>
+            <h2
+              id="ggr-breakdown-title"
+              style={{
+                fontSize: '18px',
+                fontWeight: 600,
+                color: '#1F2937',
+                margin: 0,
+                marginBottom: '4px'
+              }}
+            >
+              GROSS GAMING REVENUE BREAKDOWN
+            </h2>
+            <p style={{ fontSize: '12px', color: '#6B7280', margin: 0 }}>
+              {year} • {month}
+            </p>
+          </div>
           <button
             onClick={onClose}
             style={{
@@ -425,7 +445,7 @@ export default function GGrBreakdownModal({
         {/* Content Area */}
         <div
           style={{
-            padding: '20px',
+            padding: '20px 24px',
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
@@ -479,7 +499,7 @@ export default function GGrBreakdownModal({
                     <div style={{ 
                       overflowX: 'auto',
                       overflowY: totalItems >= 100 ? 'visible' : 'auto',
-                      maxHeight: totalItems >= 100 ? 'none' : '550px', // Header (~50px) + 10 rows (10 * ~50px) = 550px
+                      maxHeight: totalItems >= 100 ? 'none' : '418px', // 1 header (38px) + 10 rows (10 * 38px) = 418px - exact calculation: padding 10px top + 10px bottom (20px) + border 1px (1px) + content ~17px = ~38px per row
                       position: 'relative'
                     }}>
                       <table
@@ -509,7 +529,7 @@ export default function GGrBreakdownModal({
                             }}>Brand</th>
                             <th style={{ 
                               padding: '10px 14px', 
-                              textAlign: 'right', 
+                              textAlign: 'left', 
                               fontWeight: 600,
                               backgroundColor: '#374151',
                               color: 'white',
@@ -518,7 +538,7 @@ export default function GGrBreakdownModal({
                             }}>Count</th>
                             <th style={{ 
                               padding: '10px 14px', 
-                              textAlign: 'right', 
+                              textAlign: 'left', 
                               fontWeight: 600,
                               backgroundColor: '#374151',
                               color: 'white',
@@ -527,7 +547,7 @@ export default function GGrBreakdownModal({
                             }}>ATV</th>
                             <th style={{ 
                               padding: '10px 14px', 
-                              textAlign: 'right', 
+                              textAlign: 'left', 
                               fontWeight: 600,
                               backgroundColor: '#374151',
                               color: 'white',
@@ -536,7 +556,7 @@ export default function GGrBreakdownModal({
                             }}>Deposit Cases</th>
                             <th style={{ 
                               padding: '10px 14px', 
-                              textAlign: 'right', 
+                              textAlign: 'left', 
                               fontWeight: 600,
                               backgroundColor: '#374151',
                               color: 'white',
@@ -545,7 +565,7 @@ export default function GGrBreakdownModal({
                             }}>Deposit Amount</th>
                             <th style={{ 
                               padding: '10px 14px', 
-                              textAlign: 'right', 
+                              textAlign: 'left', 
                               fontWeight: 600,
                               backgroundColor: '#374151',
                               color: 'white',
@@ -554,7 +574,7 @@ export default function GGrBreakdownModal({
                             }}>GGR</th>
                             <th style={{ 
                               padding: '10px 14px', 
-                              textAlign: 'right', 
+                              textAlign: 'left', 
                               fontWeight: 600,
                               backgroundColor: '#374151',
                               color: 'white',
@@ -640,147 +660,55 @@ export default function GGrBreakdownModal({
                       </table>
                     </div>
                     
-                    {/* Showing Caption and Pagination - Only show if data >= 100 (100 per page) */}
+                    {/* Pagination and Export - Only show if data >= 100 (100 per page) */}
                     {totalItems >= 100 && (
-                      <div style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        marginTop: '16px',
-                        paddingTop: '16px',
-                        borderTop: '1px solid #E5E7EB'
-                      }}>
-                        <div style={{ fontSize: '14px', color: '#6B7280' }}>
-                          Showing {showingFrom} to {showingTo} of {totalItems} entries
+                      <div className="table-footer" style={{ padding: '12px 24px' }}>
+                        <div className="records-info">
+                          Showing {showingFrom} to {showingTo} of {formatIntegerKPI(totalItems)} entries
                         </div>
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div className="pagination-controls">
+                            <button
+                              onClick={() => setBrandCurrentPage(p => Math.max(1, p - 1))}
+                              disabled={brandCurrentPage === 1}
+                              className="pagination-btn"
+                            >
+                              ← Prev
+                            </button>
+                            <span className="pagination-info">
+                              Page {brandCurrentPage} of {totalPages}
+                            </span>
+                            <button
+                              onClick={() => setBrandCurrentPage(p => Math.min(totalPages, p + 1))}
+                              disabled={brandCurrentPage === totalPages}
+                              className="pagination-btn"
+                            >
+                              Next →
+                            </button>
+                          </div>
                           <button
-                            onClick={() => setBrandCurrentPage(p => Math.max(1, p - 1))}
-                            disabled={brandCurrentPage === 1}
-                            style={{
-                              padding: '8px 16px',
-                              backgroundColor: brandCurrentPage === 1 ? '#E5E7EB' : '#3B82F6',
-                              color: brandCurrentPage === 1 ? '#9CA3AF' : '#FFFFFF',
-                              border: 'none',
-                              borderRadius: '6px',
-                              fontSize: '14px',
-                              fontWeight: 500,
-                              cursor: brandCurrentPage === 1 ? 'not-allowed' : 'pointer',
-                              transition: 'all 0.2s ease'
-                            }}
-                            onMouseEnter={(e) => {
-                              if (brandCurrentPage !== 1) {
-                                e.currentTarget.style.backgroundColor = '#2563EB'
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (brandCurrentPage !== 1) {
-                                e.currentTarget.style.backgroundColor = '#3B82F6'
-                              }
-                            }}
+                            onClick={handleExport}
+                            disabled={exporting}
+                            className={`export-button ${exporting ? 'disabled' : ''}`}
                           >
-                            Previous
-                          </button>
-                          <span style={{ 
-                            padding: '8px 16px', 
-                            fontSize: '14px', 
-                            color: '#1F2937',
-                            fontWeight: 500
-                          }}>
-                            Page {brandCurrentPage} of {totalPages}
-                          </span>
-                          <button
-                            onClick={() => setBrandCurrentPage(p => Math.min(totalPages, p + 1))}
-                            disabled={brandCurrentPage === totalPages}
-                            style={{
-                              padding: '8px 16px',
-                              backgroundColor: brandCurrentPage === totalPages ? '#E5E7EB' : '#3B82F6',
-                              color: brandCurrentPage === totalPages ? '#9CA3AF' : '#FFFFFF',
-                              border: 'none',
-                              borderRadius: '6px',
-                              fontSize: '14px',
-                              fontWeight: 500,
-                              cursor: brandCurrentPage === totalPages ? 'not-allowed' : 'pointer',
-                              transition: 'all 0.2s ease'
-                            }}
-                            onMouseEnter={(e) => {
-                              if (brandCurrentPage !== totalPages) {
-                                e.currentTarget.style.backgroundColor = '#2563EB'
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (brandCurrentPage !== totalPages) {
-                                e.currentTarget.style.backgroundColor = '#3B82F6'
-                              }
-                            }}
-                          >
-                            Next
+                            {exporting ? 'Exporting...' : 'Export'}
                           </button>
                         </div>
                       </div>
                     )}
                     
-                    {/* Buttons - Below Brand Table */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
-                      <button
-                        onClick={onClose}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: '#6B7280',
-                          color: '#FFFFFF',
-                          border: 'none',
-                          borderRadius: '6px',
-                          fontSize: '14px',
-                          fontWeight: 500,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          transition: 'all 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = '#4B5563'
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = '#6B7280'
-                        }}
-                      >
-                        <span>←</span>
-                        <span>Back</span>
-                      </button>
-                      <button
-                        onClick={handleExport}
-                        disabled={exporting}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: '#10b981',
-                          color: '#FFFFFF',
-                          border: 'none',
-                          borderRadius: '6px',
-                          fontSize: '14px',
-                          fontWeight: 500,
-                          cursor: exporting ? 'not-allowed' : 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          opacity: exporting ? 0.6 : 1,
-                          transition: 'all 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!exporting) {
-                            e.currentTarget.style.backgroundColor = '#059669'
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!exporting) {
-                            e.currentTarget.style.backgroundColor = '#10b981'
-                          }
-                        }}
-                      >
-                        <span>📥</span>
-                        <span>{exporting ? 'Exporting...' : 'Export CSV'}</span>
-                      </button>
-                    </div>
+                    {/* Export button for < 100 items */}
+                    {totalItems < 100 && (
+                      <div className="table-footer" style={{ padding: '12px 24px', justifyContent: 'flex-end' }}>
+                        <button
+                          onClick={handleExport}
+                          disabled={exporting}
+                          className={`export-button ${exporting ? 'disabled' : ''}`}
+                        >
+                          {exporting ? 'Exporting...' : 'Export'}
+                        </button>
+                      </div>
+                    )}
                   </>
                 )
               })()}
@@ -844,7 +772,7 @@ export default function GGrBreakdownModal({
                             }}>Tier Name</th>
                             <th style={{ 
                               padding: '10px 14px', 
-                              textAlign: 'right', 
+                              textAlign: 'left', 
                               fontWeight: 600,
                               backgroundColor: '#374151',
                               color: 'white',
@@ -853,7 +781,7 @@ export default function GGrBreakdownModal({
                             }}>Count</th>
                             <th style={{ 
                               padding: '10px 14px', 
-                              textAlign: 'right', 
+                              textAlign: 'left', 
                               fontWeight: 600,
                               backgroundColor: '#374151',
                               color: 'white',
@@ -862,7 +790,7 @@ export default function GGrBreakdownModal({
                             }}>ATV</th>
                             <th style={{ 
                               padding: '10px 14px', 
-                              textAlign: 'right', 
+                              textAlign: 'left', 
                               fontWeight: 600,
                               backgroundColor: '#374151',
                               color: 'white',
@@ -871,7 +799,7 @@ export default function GGrBreakdownModal({
                             }}>Deposit Cases</th>
                             <th style={{ 
                               padding: '10px 14px', 
-                              textAlign: 'right', 
+                              textAlign: 'left', 
                               fontWeight: 600,
                               backgroundColor: '#374151',
                               color: 'white',
@@ -880,7 +808,7 @@ export default function GGrBreakdownModal({
                             }}>Deposit Amount</th>
                             <th style={{ 
                               padding: '10px 14px', 
-                              textAlign: 'right', 
+                              textAlign: 'left', 
                               fontWeight: 600,
                               backgroundColor: '#374151',
                               color: 'white',
@@ -889,7 +817,7 @@ export default function GGrBreakdownModal({
                             }}>GGR</th>
                             <th style={{ 
                               padding: '10px 14px', 
-                              textAlign: 'right', 
+                              textAlign: 'left', 
                               fontWeight: 600,
                               backgroundColor: '#374151',
                               color: 'white',
@@ -1015,67 +943,16 @@ export default function GGrBreakdownModal({
                       </table>
                     </div>
                   )}
-                  {/* Buttons - Below Tier Table */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
-                    <button
-                      onClick={onClose}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: '#6B7280',
-                        color: '#FFFFFF',
-                        border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#4B5563'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '#6B7280'
-                      }}
-                    >
-                      <span>←</span>
-                      <span>Back</span>
-                    </button>
-                    <button
-                      onClick={handleExport}
-                      disabled={exporting}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: '#10b981',
-                        color: '#FFFFFF',
-                        border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        cursor: exporting ? 'not-allowed' : 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        opacity: exporting ? 0.6 : 1,
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!exporting) {
-                          e.currentTarget.style.backgroundColor = '#059669'
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!exporting) {
-                          e.currentTarget.style.backgroundColor = '#10b981'
-                        }
-                      }}
-                    >
-                      <span>📥</span>
-                      <span>{exporting ? 'Exporting...' : 'Export CSV'}</span>
-                    </button>
-                  </div>
+                    {/* Export button */}
+                    <div className="table-footer" style={{ padding: '12px 24px', justifyContent: 'flex-end' }}>
+                      <button
+                        onClick={handleExport}
+                        disabled={exporting}
+                        className={`export-button ${exporting ? 'disabled' : ''}`}
+                      >
+                        {exporting ? 'Exporting...' : 'Export'}
+                      </button>
+                    </div>
                 </>
               )}
 
@@ -1131,7 +1008,7 @@ export default function GGrBreakdownModal({
                           }}>Brand</th>
                           <th style={{ 
                             padding: '10px 14px', 
-                            textAlign: 'right', 
+                            textAlign: 'left', 
                             fontWeight: 600,
                             backgroundColor: '#374151',
                             color: 'white',
@@ -1140,7 +1017,7 @@ export default function GGrBreakdownModal({
                           }}>GGR</th>
                           <th style={{ 
                             padding: '10px 14px', 
-                            textAlign: 'right', 
+                            textAlign: 'left', 
                             fontWeight: 600,
                             backgroundColor: '#374151',
                             color: 'white',
@@ -1199,65 +1076,14 @@ export default function GGrBreakdownModal({
                       </tbody>
                     </table>
                   </div>
-                  {/* Buttons - Below Customers Table */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
-                    <button
-                      onClick={onClose}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: '#6B7280',
-                        color: '#FFFFFF',
-                        border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#4B5563'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '#6B7280'
-                      }}
-                    >
-                      <span>←</span>
-                      <span>Back</span>
-                    </button>
+                  {/* Export button */}
+                  <div className="table-footer" style={{ padding: '12px 24px', justifyContent: 'flex-end' }}>
                     <button
                       onClick={handleExport}
                       disabled={exporting}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: '#10b981',
-                        color: '#FFFFFF',
-                        border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        cursor: exporting ? 'not-allowed' : 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        opacity: exporting ? 0.6 : 1,
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!exporting) {
-                          e.currentTarget.style.backgroundColor = '#059669'
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!exporting) {
-                          e.currentTarget.style.backgroundColor = '#10b981'
-                        }
-                      }}
+                      className={`export-button ${exporting ? 'disabled' : ''}`}
                     >
-                      <span>📥</span>
-                      <span>{exporting ? 'Exporting...' : 'Export CSV'}</span>
+                      {exporting ? 'Exporting...' : 'Export'}
                     </button>
                   </div>
                 </>
@@ -1532,26 +1358,40 @@ function TierCustomersModal({
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      className="fixed bg-black bg-opacity-50 flex items-center justify-center"
-      style={{ 
-        padding: 0, 
-        margin: 0,
-        zIndex: 10001,
-        top: '150px', // Header (90px) + Subheader (60px)
-        left: '280px', // Sidebar width
+      style={{
+        position: 'fixed',
+        top: '150px',
+        left: '280px',
         right: 0,
-        bottom: 0
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 10001,
+        padding: 0,
+        margin: 0
       }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-lg shadow-xl max-w-[95%] w-full max-h-[calc(100vh-180px)] flex flex-col"
-        style={{ margin: 'auto' }}
+        style={{
+          backgroundColor: 'white',
+          borderRadius: '8px',
+          width: '100%',
+          maxWidth: '95vw',
+          maxHeight: '75vh',
+          margin: 'auto',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+        }}
       >
         {/* Header */}
         <div
           style={{
-            padding: '16px 20px',
+            padding: '24px',
             borderBottom: '1px solid #E5E7EB',
             backgroundColor: '#F9FAFB',
             display: 'flex',
@@ -1644,7 +1484,7 @@ function TierCustomersModal({
         {/* Content */}
         <div
           style={{
-            padding: '20px',
+            padding: '20px 24px',
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
@@ -1671,7 +1511,7 @@ function TierCustomersModal({
                 flex: 1,
                 overflowX: 'auto',
                 overflowY: totalRecords >= 100 ? 'visible' : 'auto',
-                maxHeight: totalRecords >= 100 ? 'none' : '510px', // Header (~42px) + 10 rows (10 * ~46.8px) = 510px - exact fit for 10 complete rows with proper spacing
+                maxHeight: totalRecords >= 100 ? 'none' : '418px', // 1 header (38px) + 10 rows (10 * 38px) = 418px - exact calculation: padding 10px top + 10px bottom (20px) + border 1px (1px) + content ~17px = ~38px per row
                 position: 'relative',
                 minHeight: 0
               }}>
@@ -1709,7 +1549,7 @@ function TierCustomersModal({
                           key={header}
                           style={{
                             padding: headerPadding,
-                            textAlign: ['ATV', 'Purchase Freq', 'Deposit Cases', 'Deposit Amount', 'GGR', 'Winrate', 'Withdraw Rate', 'Active Days'].includes(header) ? 'right' : 'left',
+                            textAlign: 'left',
                             fontWeight: 600,
                             backgroundColor: '#374151',
                             color: 'white',
@@ -1791,151 +1631,151 @@ function TierCustomersModal({
                 </table>
               </div>
               
-              {/* Pagination Controls - Only show if data >= 100 (100 per page) */}
+              {/* Pagination and Export - Only show if data >= 100 (100 per page) */}
               {totalRecords >= 100 && (
                 <div style={{ 
                   display: 'flex', 
                   justifyContent: 'space-between', 
                   alignItems: 'center',
-                  marginTop: '12px',
-                  flexShrink: 0
+                  padding: '12px 24px',
+                  borderTop: '1px solid #e5e7eb',
+                  flexShrink: 0,
+                  marginTop: '0'
                 }}>
-                  {/* Showing Caption - Left */}
-                  <p style={{ fontSize: '12px', color: '#6B7280', margin: 0 }}>
-                    Showing {startIndex + 1} - {endIndex} of {totalRecords} customers
+                  <p style={{ fontSize: '13px', color: '#6B7280', margin: 0, fontWeight: 500 }}>
+                    Showing {startIndex + 1} to {endIndex} of {formatIntegerKPI(totalRecords)} customers
                   </p>
-                  
-                  {/* Pagination Buttons - Right */}
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <button
+                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                        disabled={page === 1}
+                        style={{
+                          padding: '6px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          backgroundColor: 'transparent',
+                          color: '#374151',
+                          fontSize: '12px',
+                          fontWeight: 500,
+                          cursor: page === 1 ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (page !== 1) {
+                            e.currentTarget.style.borderColor = '#9ca3af'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = '#d1d5db'
+                        }}
+                      >
+                        ← Prev
+                      </button>
+                      <span style={{ 
+                        fontSize: '12px', 
+                        color: '#6b7280', 
+                        fontWeight: 500,
+                        whiteSpace: 'nowrap'
+                      }}>
+                        Page {page} of {totalPages}
+                      </span>
+                      <button
+                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                        disabled={page >= totalPages}
+                        style={{
+                          padding: '6px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          backgroundColor: 'transparent',
+                          color: '#374151',
+                          fontSize: '12px',
+                          fontWeight: 500,
+                          cursor: page >= totalPages ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (page !== totalPages) {
+                            e.currentTarget.style.borderColor = '#9ca3af'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = '#d1d5db'
+                        }}
+                      >
+                        Next →
+                      </button>
+                    </div>
                     <button
-                      onClick={() => setPage(1)}
-                      disabled={page === 1}
+                      onClick={onExport}
+                      disabled={exporting}
                       style={{
                         padding: '6px 12px',
-                        border: '1px solid #D1D5DB',
+                        backgroundColor: exporting ? '#f3f4f6' : '#10b981',
+                        color: exporting ? '#9ca3af' : '#FFFFFF',
+                        border: 'none',
                         borderRadius: '6px',
-                        backgroundColor: page === 1 ? '#F3F4F6' : '#FFFFFF',
-                        color: page === 1 ? '#9CA3AF' : '#374151',
-                        cursor: page === 1 ? 'not-allowed' : 'pointer',
                         fontSize: '12px',
-                        fontWeight: 500
+                        fontWeight: 500,
+                        cursor: exporting ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!exporting) {
+                          e.currentTarget.style.backgroundColor = '#059669'
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!exporting) {
+                          e.currentTarget.style.backgroundColor = '#10b981'
+                        }
                       }}
                     >
-                      First
-                    </button>
-                    <button
-                      onClick={() => setPage(p => Math.max(1, p - 1))}
-                      disabled={page === 1}
-                      style={{
-                        padding: '6px 12px',
-                        border: '1px solid #D1D5DB',
-                        borderRadius: '6px',
-                        backgroundColor: page === 1 ? '#F3F4F6' : '#FFFFFF',
-                        color: page === 1 ? '#9CA3AF' : '#374151',
-                        cursor: page === 1 ? 'not-allowed' : 'pointer',
-                        fontSize: '12px',
-                        fontWeight: 500
-                      }}
-                    >
-                      Previous
-                    </button>
-                    <button
-                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                      disabled={page >= totalPages}
-                      style={{
-                        padding: '6px 12px',
-                        border: '1px solid #D1D5DB',
-                        borderRadius: '6px',
-                        backgroundColor: page >= totalPages ? '#F3F4F6' : '#FFFFFF',
-                        color: page >= totalPages ? '#9CA3AF' : '#374151',
-                        cursor: page >= totalPages ? 'not-allowed' : 'pointer',
-                        fontSize: '12px',
-                        fontWeight: 500
-                      }}
-                    >
-                      Next
-                    </button>
-                    <button
-                      onClick={() => setPage(totalPages)}
-                      disabled={page >= totalPages}
-                      style={{
-                        padding: '6px 12px',
-                        border: '1px solid #D1D5DB',
-                        borderRadius: '6px',
-                        backgroundColor: page >= totalPages ? '#F3F4F6' : '#FFFFFF',
-                        color: page >= totalPages ? '#9CA3AF' : '#374151',
-                        cursor: page >= totalPages ? 'not-allowed' : 'pointer',
-                        fontSize: '12px',
-                        fontWeight: 500
-                      }}
-                    >
-                      Last
+                      {exporting ? 'Exporting...' : 'Export'}
                     </button>
                   </div>
                 </div>
               )}
               
-              {/* Buttons */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', flexShrink: 0 }}>
-                <button
-                  onClick={onClose}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#6B7280',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#4B5563'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#6B7280'
-                  }}
-                >
-                  <span>←</span>
-                  <span>Back</span>
-                </button>
-                <button
-                  onClick={onExport}
-                  disabled={exporting}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#10b981',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    cursor: exporting ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    opacity: exporting ? 0.6 : 1,
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!exporting) {
-                      e.currentTarget.style.backgroundColor = '#059669'
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!exporting) {
-                      e.currentTarget.style.backgroundColor = '#10b981'
-                    }
-                  }}
-                >
-                  <span>📥</span>
-                  <span>{exporting ? 'Exporting...' : 'Export CSV'}</span>
-                </button>
-              </div>
+              {/* Export button for < 100 items */}
+              {totalRecords < 100 && (
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'flex-end',
+                  padding: '12px 24px',
+                  borderTop: '1px solid #e5e7eb',
+                  flexShrink: 0,
+                  marginTop: '0'
+                }}>
+                  <button
+                    onClick={onExport}
+                    disabled={exporting}
+                    style={{
+                      padding: '6px 12px',
+                      backgroundColor: exporting ? '#f3f4f6' : '#10b981',
+                      color: exporting ? '#9ca3af' : '#FFFFFF',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      cursor: exporting ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!exporting) {
+                        e.currentTarget.style.backgroundColor = '#059669'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!exporting) {
+                        e.currentTarget.style.backgroundColor = '#10b981'
+                      }
+                    }}
+                  >
+                    {exporting ? 'Exporting...' : 'Export'}
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -2029,26 +1869,40 @@ function TransactionHistoryModal({
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      className="fixed bg-black bg-opacity-50 flex items-center justify-center"
-      style={{ 
-        padding: 0, 
-        margin: 0,
-        zIndex: 10002,
-        top: '150px', // Header (90px) + Subheader (60px)
-        left: '280px', // Sidebar width
+      style={{
+        position: 'fixed',
+        top: '150px',
+        left: '280px',
         right: 0,
-        bottom: 0
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 10002,
+        padding: 0,
+        margin: 0
       }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-lg shadow-xl max-w-[95%] w-full max-h-[calc(100vh-180px)] flex flex-col"
-        style={{ margin: 'auto' }}
+        style={{
+          backgroundColor: 'white',
+          borderRadius: '8px',
+          width: '100%',
+          maxWidth: '95vw',
+          maxHeight: '75vh',
+          margin: 'auto',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+        }}
       >
         {/* Header */}
         <div
           style={{
-            padding: '16px 20px',
+            padding: '24px',
             borderBottom: '1px solid #E5E7EB',
             backgroundColor: '#F9FAFB',
             display: 'flex',
@@ -2099,7 +1953,7 @@ function TransactionHistoryModal({
         {/* Content */}
         <div
           style={{
-            padding: '20px',
+            padding: '20px 24px',
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
@@ -2143,7 +1997,7 @@ function TransactionHistoryModal({
                 flex: 1,
                 overflowX: 'auto',
                 overflowY: totalItems >= 100 ? 'visible' : 'auto',
-                maxHeight: totalItems >= 100 ? 'none' : '550px', // Header (~50px) + 10 rows (10 * ~50px) = 550px
+                maxHeight: totalItems >= 100 ? 'none' : '418px', // 1 header (38px) + 10 rows (10 * 38px) = 418px - exact calculation: padding 10px top + 10px bottom (20px) + border 1px (1px) + content ~17px = ~38px per row
                 position: 'relative',
                 minHeight: 0
               }}>
@@ -2178,7 +2032,7 @@ function TransactionHistoryModal({
                           key={header}
                           style={{
                             padding: '10px 14px',
-                            textAlign: ['Deposit Cases', 'Deposit Amount', 'Withdraw Cases', 'Withdraw Amount', 'GGR'].includes(header) ? 'right' : 'left',
+                            textAlign: 'left',
                             fontWeight: 600,
                             backgroundColor: '#374151',
                             color: 'white',
@@ -2242,140 +2096,151 @@ function TransactionHistoryModal({
                 </table>
               </div>
               
-              {/* Pagination - Only show if data >= 100 (100 per page) */}
+              {/* Pagination and Export - Only show if data >= 100 (100 per page) */}
               {totalItems >= 100 && (
                 <div style={{ 
                   display: 'flex', 
                   justifyContent: 'space-between', 
                   alignItems: 'center',
-                  marginTop: '16px',
-                  paddingTop: '16px',
-                  borderTop: '1px solid #E5E7EB',
-                  flexShrink: 0
+                  padding: '12px 24px',
+                  borderTop: '1px solid #e5e7eb',
+                  flexShrink: 0,
+                  marginTop: '0'
                 }}>
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: currentPage === 1 ? '#E5E7EB' : '#3B82F6',
-                      color: currentPage === 1 ? '#9CA3AF' : 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                      fontSize: '14px',
-                      fontWeight: 500,
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (currentPage !== 1) {
-                        e.currentTarget.style.backgroundColor = '#2563EB'
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (currentPage !== 1) {
-                        e.currentTarget.style.backgroundColor = '#3B82F6'
-                      }
-                    }}
-                  >
-                    Previous
-                  </button>
-                  
-                  <span style={{ fontSize: '14px', color: '#374151', fontWeight: 500 }}>
-                    Page {currentPage} of {totalPages}
-                  </span>
-                  
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages}
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: currentPage === totalPages ? '#E5E7EB' : '#3B82F6',
-                      color: currentPage === totalPages ? '#9CA3AF' : 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                      fontSize: '14px',
-                      fontWeight: 500,
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (currentPage !== totalPages) {
-                        e.currentTarget.style.backgroundColor = '#2563EB'
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (currentPage !== totalPages) {
-                        e.currentTarget.style.backgroundColor = '#3B82F6'
-                      }
-                    }}
-                  >
-                    Next
-                  </button>
+                  <p style={{ fontSize: '13px', color: '#6B7280', margin: 0, fontWeight: 500 }}>
+                    Showing {startIndex + 1} to {endIndex} of {formatIntegerKPI(totalItems)} transactions
+                  </p>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                        style={{
+                          padding: '6px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          backgroundColor: 'transparent',
+                          color: '#374151',
+                          fontSize: '12px',
+                          fontWeight: 500,
+                          cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (currentPage !== 1) {
+                            e.currentTarget.style.borderColor = '#9ca3af'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = '#d1d5db'
+                        }}
+                      >
+                        ← Prev
+                      </button>
+                      <span style={{ 
+                        fontSize: '12px', 
+                        color: '#6b7280', 
+                        fontWeight: 500,
+                        whiteSpace: 'nowrap'
+                      }}>
+                        Page {currentPage} of {totalPages}
+                      </span>
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                        style={{
+                          padding: '6px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          backgroundColor: 'transparent',
+                          color: '#374151',
+                          fontSize: '12px',
+                          fontWeight: 500,
+                          cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (currentPage !== totalPages) {
+                            e.currentTarget.style.borderColor = '#9ca3af'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = '#d1d5db'
+                        }}
+                      >
+                        Next →
+                      </button>
+                    </div>
+                    <button
+                      onClick={onExport}
+                      disabled={exporting}
+                      style={{
+                        padding: '6px 12px',
+                        backgroundColor: exporting ? '#f3f4f6' : '#10b981',
+                        color: exporting ? '#9ca3af' : '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        cursor: exporting ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!exporting) {
+                          e.currentTarget.style.backgroundColor = '#059669'
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!exporting) {
+                          e.currentTarget.style.backgroundColor = '#10b981'
+                        }
+                      }}
+                    >
+                      {exporting ? 'Exporting...' : 'Export'}
+                    </button>
+                  </div>
                 </div>
               )}
               
-              {/* Buttons */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px', flexShrink: 0 }}>
-                <button
-                  onClick={onClose}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#6B7280',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#4B5563'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#6B7280'
-                  }}
-                >
-                  <span>←</span>
-                  <span>Back</span>
-                </button>
-                <button
-                  onClick={onExport}
-                  disabled={exporting}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#10b981',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    cursor: exporting ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    opacity: exporting ? 0.6 : 1,
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!exporting) {
-                      e.currentTarget.style.backgroundColor = '#059669'
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!exporting) {
-                      e.currentTarget.style.backgroundColor = '#10b981'
-                    }
-                  }}
-                >
-                  <span>📥</span>
-                  <span>{exporting ? 'Exporting...' : 'Export CSV'}</span>
-                </button>
-              </div>
+              {/* Export button for < 100 items */}
+              {totalItems < 100 && (
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'flex-end',
+                  padding: '12px 24px',
+                  borderTop: '1px solid #e5e7eb',
+                  flexShrink: 0,
+                  marginTop: '0'
+                }}>
+                  <button
+                    onClick={onExport}
+                    disabled={exporting}
+                    style={{
+                      padding: '6px 12px',
+                      backgroundColor: exporting ? '#f3f4f6' : '#10b981',
+                      color: exporting ? '#9ca3af' : '#FFFFFF',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      cursor: exporting ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!exporting) {
+                        e.currentTarget.style.backgroundColor = '#059669'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!exporting) {
+                        e.currentTarget.style.backgroundColor = '#10b981'
+                      }
+                    }}
+                  >
+                    {exporting ? 'Exporting...' : 'Export'}
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>

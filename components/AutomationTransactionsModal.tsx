@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { formatCurrencyKPI, formatIntegerKPI } from '@/lib/formatHelpers'
 import { getAllowedBrandsFromStorage } from '@/utils/brandAccessHelper'
 
@@ -48,10 +49,16 @@ export default function AutomationTransactionsModal({
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(100)
-  const [sliceVisible, setSliceVisible] = useState(10)
   const [totalPages, setTotalPages] = useState(1)
   const [totalRecords, setTotalRecords] = useState(0)
   const [exporting, setExporting] = useState(false)
+
+  // Reset page to 1 when limit changes
+  useEffect(() => {
+    if (isOpen) {
+      setPage(1)
+    }
+  }, [limit, isOpen])
 
   // Helper function to get processing time color
   const getProcTimeColor = (procSec: number) => {
@@ -213,18 +220,32 @@ export default function AutomationTransactionsModal({
     }
   }
 
-  if (!isOpen) return null
+  if (!isOpen || typeof document === 'undefined') return null
 
-  return (
-    <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+  return createPortal(
+    <div
       onClick={onClose}
-      style={{ padding: 0, margin: 0 }}
+      role="dialog"
+      aria-modal="true"
+      className="fixed bg-black bg-opacity-50 flex items-center justify-center"
+      style={{ 
+        padding: 0, 
+        margin: 0,
+        zIndex: 10000,
+        top: '150px', // Header (90px) + Subheader (60px)
+        left: '280px', // Sidebar width
+        right: 0,
+        bottom: 0
+      }}
     >
       <div 
-        className="bg-white rounded-lg shadow-xl max-w-[95vw] w-full max-h-[90vh] flex flex-col"
+        className="bg-white rounded-lg shadow-xl max-w-[95vw] w-full flex flex-col"
         onClick={(e) => e.stopPropagation()}
-        style={{ margin: 'auto' }}
+        style={{ 
+          margin: 'auto',
+          maxHeight: '75vh',
+          overflow: 'hidden'
+        }}
       >
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b">
@@ -238,15 +259,24 @@ export default function AutomationTransactionsModal({
           </div>
           <div className="flex gap-2">
             <button
-              onClick={handleExport}
-              disabled={exporting}
-              className={`px-4 py-2 text-white rounded-md transition-colors ${exporting ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'}`}
-            >
-              {exporting ? 'Exporting…' : 'Export CSV (All)'}
-            </button>
-            <button
               onClick={onClose}
-              className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors"
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#6B7280',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#4B5563'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#6B7280'
+              }}
             >
               Close
             </button>
@@ -254,7 +284,14 @@ export default function AutomationTransactionsModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-auto p-4">
+        <div style={{ 
+          padding: '20px 24px', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          flex: 1, 
+          overflow: 'hidden',
+          minHeight: 0
+        }}>
           {loading ? (
             <div className="flex items-center justify-center h-32">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -277,132 +314,218 @@ export default function AutomationTransactionsModal({
               <p className="text-gray-600">No automation transactions found for the selected filters</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <div className="max-h-[400px] overflow-y-auto" style={{ maxHeight: '400px' }}>
-              <table className="min-w-full" style={{ borderCollapse: 'collapse', border: '1px solid #e5e7eb' }}>
-                <thead className="sticky top-0" style={{ zIndex: 10 }}>
-                  <tr>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
-                      Date Time
-                    </th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
-                      {type === 'withdraw' ? 'Approval' : 'Type'}
-                    </th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
-                      Brand
-                    </th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
-                      Unique Code
-                    </th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
-                      User Name
-                    </th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
-                      Amount
-                    </th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
-                      Operator
-                    </th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
-                      Process Time
-                    </th>
-                    <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                   {transactions.slice(0, sliceVisible).map((transaction, index) => {
-                    const badge = getProcTimeBadge(transaction.procSec)
-                    return (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
-                          {transaction.time ? `${transaction.date} ${transaction.time}` : transaction.date}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
-                          {type === 'withdraw' ? transaction.approval : transaction.type}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
-                          {transaction.line}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
-                          {transaction.uniqueCode}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
-                          {transaction.userName}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
-                          {formatCurrencyKPI(transaction.amount, 'MYR')}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
-                          {transaction.operator}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
-                          {transaction.processTime}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center" style={{ border: '1px solid #e5e7eb' }}>
-                          <span 
-                            className="px-3 py-1 rounded-full text-xs font-semibold inline-block"
-                            style={{ 
-                              backgroundColor: badge.bg,
-                              color: badge.text
-                            }}
-                          >
-                            {transaction.procSec.toFixed(1)}s • {badge.label}
-                          </span>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              flex: 1, 
+              overflow: 'hidden',
+              minHeight: 0
+            }}>
+              <div style={{
+                overflowX: 'auto',
+                overflowY: totalRecords >= 100 ? 'visible' : 'auto',
+                maxHeight: totalRecords >= 100 ? 'none' : '418px', // 1 header (38px) + 10 rows (10 * 38px) = 418px
+                flex: 1,
+                minHeight: 0,
+                position: 'relative'
+              }}>
+                <table className="min-w-full" style={{ borderCollapse: 'collapse', border: '1px solid #e5e7eb' }}>
+                  <thead style={{
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 10,
+                    backgroundColor: '#374151',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                  }}>
+                    <tr>
+                      <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
+                        Date Time
+                      </th>
+                      <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
+                        {type === 'withdraw' ? 'Approval' : 'Type'}
+                      </th>
+                      <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
+                        Brand
+                      </th>
+                      <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
+                        Unique Code
+                      </th>
+                      <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
+                        User Name
+                      </th>
+                      <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
+                        Amount
+                      </th>
+                      <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
+                        Operator
+                      </th>
+                      <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
+                        Process Time
+                      </th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
+                        Status
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {transactions.map((transaction, index) => {
+                      const badge = getProcTimeBadge(transaction.procSec)
+                      return (
+                        <tr key={index} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
+                            {transaction.time ? `${transaction.date} ${transaction.time}` : transaction.date}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
+                            {type === 'withdraw' ? transaction.approval : transaction.type}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
+                            {transaction.line}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
+                            {transaction.uniqueCode}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
+                            {transaction.userName}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
+                            {formatCurrencyKPI(transaction.amount, 'MYR')}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
+                            {transaction.operator}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
+                            {transaction.processTime}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center" style={{ border: '1px solid #e5e7eb' }}>
+                            <span 
+                              className="px-3 py-1 rounded-full text-xs font-semibold inline-block"
+                              style={{ 
+                                backgroundColor: badge.bg,
+                                color: badge.text
+                              }}
+                            >
+                              {transaction.procSec.toFixed(1)}s • {badge.label}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
         </div>
 
-        {/* Footer */}
+        {/* Pagination and Export */}
         {transactions.length > 0 && (
-          <div className="border-t px-6 py-3 bg-gray-50 flex items-center justify-between">
-            <p className="text-sm text-gray-600">
-              Showing {transactions.length} of {totalRecords.toLocaleString()} automation transactions
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            padding: '12px 24px',
+            borderTop: '1px solid #e5e7eb',
+            flexShrink: 0
+          }}>
+            <p style={{ fontSize: '13px', color: '#6B7280', margin: 0, fontWeight: 500 }}>
+              Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, totalRecords)} of {formatIntegerKPI(totalRecords)} automation transactions
             </p>
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-600">Rows</label>
-              <select
-                className="border rounded px-2 py-1 text-sm"
-                value={sliceVisible}
-                onChange={(e) => {
-                  const v = parseInt(e.target.value || '20')
-                  setSliceVisible(Math.min(100, Math.max(1, v)))
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              {totalRecords >= 100 && totalPages > 1 && (
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    style={{
+                      padding: '6px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      backgroundColor: 'transparent',
+                      color: '#374151',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      cursor: page === 1 ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (page !== 1) {
+                        e.currentTarget.style.borderColor = '#9ca3af'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = '#d1d5db'
+                    }}
+                  >
+                    ← Prev
+                  </button>
+                  <span style={{ 
+                    fontSize: '12px', 
+                    color: '#6b7280', 
+                    fontWeight: 500,
+                    whiteSpace: 'nowrap'
+                  }}>
+                    Page {page} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    style={{
+                      padding: '6px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      backgroundColor: 'transparent',
+                      color: '#374151',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      cursor: page === totalPages ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (page !== totalPages) {
+                        e.currentTarget.style.borderColor = '#9ca3af'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = '#d1d5db'
+                    }}
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
+              <button
+                onClick={handleExport}
+                disabled={exporting}
+                style={{
+                  padding: '6px 12px',
+                  backgroundColor: exporting ? '#f3f4f6' : '#10b981',
+                  color: exporting ? '#9ca3af' : '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  cursor: exporting ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  if (!exporting) {
+                    e.currentTarget.style.backgroundColor = '#059669'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!exporting) {
+                    e.currentTarget.style.backgroundColor = '#10b981'
+                  }
                 }}
               >
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
-              <button
-                className="px-3 py-1 rounded border text-sm disabled:opacity-50"
-                disabled={page <= 1}
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-              >
-                Prev
-              </button>
-              <span className="text-sm text-gray-700">
-                Page {page} / {totalPages}
-              </span>
-              <button
-                className="px-3 py-1 rounded border text-sm disabled:opacity-50"
-                disabled={page >= totalPages}
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-              >
-                Next
+                {exporting ? 'Exporting...' : 'Export'}
               </button>
             </div>
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

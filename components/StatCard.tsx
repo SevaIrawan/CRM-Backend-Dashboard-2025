@@ -62,13 +62,13 @@ export default function StatCard({
           <div className="stat-card-icon">
             <div 
               dangerouslySetInnerHTML={{ __html: iconSvg }}
-              style={{ 
-                width: '20px', 
-                height: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
+                             style={{ 
+                 width: '20px', 
+                 height: '20px',
+                 display: 'flex',
+                 alignItems: 'center',
+                 justifyContent: 'center'
+               }}
             />
           </div>
         )}

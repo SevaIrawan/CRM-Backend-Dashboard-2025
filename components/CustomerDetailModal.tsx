@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import './CustomerDetailModal.css'
 
 interface CustomerDetail {
@@ -153,8 +154,23 @@ export default function CustomerDetailModal({
     }
   }
 
-  return (
-    <div className="modal-overlay" onClick={onClose}>
+  if (!isOpen || typeof document === 'undefined') return null
+
+  return createPortal(
+    <div
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      className="modal-overlay"
+      style={{ 
+        position: 'fixed',
+        top: '150px', // Header (90px) + Subheader (60px)
+        left: '280px', // Sidebar width
+        right: 0,
+        bottom: 0,
+        zIndex: 10000
+      }}
+    >
       <div className="modal-container" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>
@@ -187,7 +203,28 @@ export default function CustomerDetailModal({
             >
               {exporting ? 'Exporting...' : 'Export All CSV'}
             </button>
-            <button className="modal-close-btn" onClick={onClose}>×</button>
+            <button
+              onClick={onClose}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#6B7280',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#4B5563'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#6B7280'
+              }}
+            >
+              Close
+            </button>
           </div>
         </div>
 
@@ -303,11 +340,33 @@ export default function CustomerDetailModal({
               Next
             </button>
             
-            <button className="modal-close-footer-btn" onClick={onClose}>Close</button>
+            <button
+              onClick={onClose}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#6B7280',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#4B5563'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#6B7280'
+              }}
+            >
+              Close
+            </button>
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

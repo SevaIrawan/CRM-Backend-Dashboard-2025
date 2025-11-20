@@ -20,6 +20,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 
 interface TargetEditModalProps {
   isOpen: boolean
@@ -294,20 +295,27 @@ export default function TargetEditModal({
   // ============================================================================
   // RENDER
   // ============================================================================
-  return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 9999,
-      padding: '20px'
-    }}>
+  if (!isOpen || typeof document === 'undefined') return null
+
+  return createPortal(
+    <div
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      style={{
+        position: 'fixed',
+        top: '150px', // Header (90px) + Subheader (60px)
+        left: '280px', // Sidebar width
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 10000,
+        padding: '20px'
+      }}
+    >
       <div className="target-modal-content" style={{
         backgroundColor: '#FFFFFF',
         borderRadius: '8px',
@@ -344,16 +352,24 @@ export default function TargetEditModal({
             <button
               onClick={onClose}
               style={{
-                padding: '6px',
-                fontSize: '18px',
-                color: '#9CA3AF',
-                backgroundColor: 'transparent',
+                padding: '8px 16px',
+                backgroundColor: '#6B7280',
+                color: '#FFFFFF',
                 border: 'none',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: 500,
                 cursor: 'pointer',
-                lineHeight: 1
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#4B5563'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#6B7280'
               }}
             >
-              ✕
+              Close
             </button>
           </div>
         </div>
@@ -947,6 +963,7 @@ export default function TargetEditModal({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
