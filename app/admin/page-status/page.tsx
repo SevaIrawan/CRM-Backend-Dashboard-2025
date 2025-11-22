@@ -186,10 +186,15 @@ export default function PageStatusPage() {
         })
       })
       
+      if (!response.ok) {
+        const errorResult = await response.json()
+        throw new Error(errorResult.error || errorResult.details || `HTTP ${response.status}: ${response.statusText}`)
+      }
+      
       const result = await response.json()
       
       if (!result.success) {
-        throw new Error(result.error || 'Failed to toggle access')
+        throw new Error(result.error || result.details || 'Failed to toggle access')
       }
       
       console.log('✅ Toggle successful:', result.message)

@@ -57,6 +57,7 @@ INSERT INTO page_visibility_config (page_path, page_name, page_section, visible_
 -- MYR - Visible to all MYR roles
 INSERT INTO page_visibility_config (page_path, page_name, page_section, visible_for_roles) VALUES
 ('/myr/overview', 'Overview', 'MYR', '["admin", "executive", "manager_myr", "sq_myr"]'),
+('/myr/business-performance', 'Business Performance', 'MYR', '["admin", "executive", "manager_myr", "sq_myr"]'),
 ('/myr/brand-performance-trends', 'Brand Comparison Trends', 'MYR', '["admin", "executive", "manager_myr", "sq_myr"]'),
 ('/myr/kpi-comparison', 'KPI Comparison', 'MYR', '["admin", "executive", "manager_myr", "sq_myr"]'),
 ('/myr/overall-label', 'Overall Label', 'MYR', '["admin", "executive", "manager_myr", "sq_myr"]'),
@@ -78,8 +79,10 @@ INSERT INTO page_visibility_config (page_path, page_name, page_section, visible_
 -- SGD - Visible to all SGD roles
 INSERT INTO page_visibility_config (page_path, page_name, page_section, visible_for_roles) VALUES
 ('/sgd/overview', 'Overview', 'SGD', '["admin", "executive", "manager_sgd", "sq_sgd"]'),
+('/sgd/business-performance', 'Business Performance', 'SGD', '["admin", "executive", "manager_sgd", "sq_sgd"]'),
 ('/sgd/brand-performance-trends', 'Brand Comparison Trends', 'SGD', '["admin", "executive", "manager_sgd", "sq_sgd"]'),
 ('/sgd/kpi-comparison', 'KPI Comparison', 'SGD', '["admin", "executive", "manager_sgd", "sq_sgd"]'),
+('/sgd/aia-candy-tracking', 'AIA Candy Mechanism', 'SGD', '["admin", "executive", "manager_sgd", "sq_sgd"]'),
 ('/sgd/auto-approval-monitor', 'Auto-Approval Monitor', 'SGD', '["admin", "executive", "manager_sgd", "sq_sgd"]'),
 ('/sgd/customer-retention', 'Customer Retention', 'SGD', '["admin", "executive", "manager_sgd", "sq_sgd"]'),
 ('/sgd/member-report', 'Member Report', 'SGD', '["admin", "executive", "manager_sgd", "sq_sgd"]');
@@ -96,6 +99,7 @@ INSERT INTO page_visibility_config (page_path, page_name, page_section, visible_
 -- USC - Visible to all USC roles
 INSERT INTO page_visibility_config (page_path, page_name, page_section, visible_for_roles) VALUES
 ('/usc/overview', 'Overview', 'USC', '["admin", "executive", "manager_usc", "sq_usc"]'),
+('/usc/business-performance', 'Business Performance', 'USC', '["admin", "executive", "manager_usc", "sq_usc"]'),
 ('/usc/brand-performance-trends', 'Brand Comparison Trends', 'USC', '["admin", "executive", "manager_usc", "sq_usc"]'),
 ('/usc/kpi-comparison', 'KPI Comparison', 'USC', '["admin", "executive", "manager_usc", "sq_usc"]'),
 ('/usc/auto-approval-monitor', 'Auto-Approval Monitor', 'USC', '["admin", "executive", "manager_usc", "sq_usc"]'),
@@ -121,6 +125,9 @@ INSERT INTO page_visibility_config (page_path, page_name, page_section, visible_
 ('/admin/activity-logs', 'Activity Logs', 'Admin', '["admin"]'),
 ('/admin/feedback', 'Feedback & Support', 'Admin', '["admin"]'),
 ('/admin/page-status', 'Page Status Management', 'Admin', '["admin"]'),
+('/admin/maintenance', 'Maintenance Mode', 'Admin', '["admin"]'),
+('/admin/target-audit-log', 'Target Audit Log', 'Admin', '["admin"]'),
+('/admin/tier-management', 'Tier Management', 'Admin', '["admin"]'),
 ('/supabase', 'Supabase Connection', 'Other', '["admin"]');
 
 -- ============================================================
