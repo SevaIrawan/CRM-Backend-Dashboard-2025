@@ -115,11 +115,31 @@ export async function GET(request: NextRequest) {
     const minDate = dateRangeData?.[0]?.date || ''
     const maxDate = maxDateData?.[0]?.date || ''
 
+    // ✅ Get default year and month from MAX date in database
+    let defaultYear = years.length > 0 ? years[0] : '' // Latest year (already sorted DESC)
+    let defaultMonth = ''
+    let defaultLine = finalLines.length > 0 ? finalLines[0] : 'ALL'
+    
+    if (maxDate && typeof maxDate === 'string' && maxDate.length > 0) {
+      // Extract year and month from max date
+      const maxDateObj = new Date(maxDate)
+      if (!isNaN(maxDateObj.getTime())) {
+        defaultYear = maxDateObj.getFullYear().toString()
+        
+        const monthNames = [
+          'January', 'February', 'March', 'April', 'May', 'June',
+          'July', 'August', 'September', 'October', 'November', 'December'
+        ]
+        defaultMonth = monthNames[maxDateObj.getMonth()]
+      }
+    }
+
     console.log('✅ Blue_whale_usc slicer options processed:', {
       lines_count: finalLines.length,
       years: years.length,
       months: months.length,
-      dateRange: { min: minDate, max: maxDate }
+      dateRange: { min: minDate, max: maxDate },
+      defaults: { line: defaultLine, year: defaultYear, month: defaultMonth }
     })
 
     return NextResponse.json({
@@ -131,6 +151,11 @@ export async function GET(request: NextRequest) {
         dateRange: {
           min: minDate,
           max: maxDate
+        },
+        defaults: {
+          line: defaultLine,
+          year: defaultYear,
+          month: defaultMonth
         }
       }
     })

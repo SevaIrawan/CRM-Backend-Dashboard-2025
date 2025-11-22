@@ -25,14 +25,18 @@ export async function GET(request: NextRequest) {
       is_squad_lead: userAllowedBrands !== null && userAllowedBrands.length > 0
     })
 
-    // ✅ ALWAYS AGGREGATE MODE: GROUP BY user, SUM all metrics (for both month and date range)
-    console.log('📊 [AGGREGATED MODE] Grouping by user...')
-    
     // ✅ Check if using date range or month mode
     const isDateRangeMode = filterMode === 'daterange' && startDate && endDate
-    const isMonthMode = filterMode === 'month' && month && month !== 'ALL'
+    const isMonthMode = filterMode === 'month' // ✅ MONTH mode (ALL or specific) → ALWAYS AGGREGATED
+    
+    // ✅ Check if date range is single day (per-daily mode) - ONLY when date range is 1 day
+    const isSingleDayMode = isDateRangeMode && startDate === endDate
 
-    if (isDateRangeMode || isMonthMode) {
+    // ✅ AGGREGATED MODE: 
+    // - Date range multi-day
+    // - Month mode (ALL or specific) → ALWAYS aggregate all transactions per userkey
+    // ✅ PER-DAILY MODE: ONLY when date range is exactly 1 day
+    if (!isSingleDayMode && (isDateRangeMode || isMonthMode)) {
       // ✅ AGGREGATED MODE: GROUP BY user, SUM all metrics
       console.log('📊 [AGGREGATED MODE] Filter mode:', filterMode, isDateRangeMode ? 'date range' : 'monthly')
       
@@ -41,16 +45,22 @@ export async function GET(request: NextRequest) {
         .from('blue_whale_usc')
         .select('*')
       
-      // ✅ Apply date/month filter based on mode
+      // ✅ Apply date/month filter based on mode - SAME AS CUSTOMER RETENTION
       if (isDateRangeMode) {
-        query = query.gte('date', startDate).lte('date', endDate)
-      } else if (isMonthMode) {
-        query = query.eq('month', month)
+        query = query
+          .filter('date', 'gte', startDate)
+          .filter('date', 'lte', endDate)
       }
+      // ✅ For month mode: only filter if month is specified (not ALL)
+      // KALAU MONTH ALL → tidak filter by month (tampilkan semua data)
+      if (filterMode === 'month' && month && month !== 'ALL') {
+        query = query.filter('month', 'eq', month)
+      }
+      // ✅ When month=ALL, aggregate ALL data (no month filter)
       
       // ✅ Apply brand filter with user permission check
+      // KALAU LINE ALL → tampilkan semua data tanpa filter LINE (kecuali Squad Lead)
       if (line && line !== 'ALL') {
-        // Validate Squad Lead access
         if (userAllowedBrands && userAllowedBrands.length > 0 && !userAllowedBrands.includes(line)) {
           return NextResponse.json({
             success: false,
@@ -58,28 +68,129 @@ export async function GET(request: NextRequest) {
             message: `You do not have access to brand "${line}"`
           }, { status: 403 })
         }
-        query = query.eq('line', line)
+        query = query.filter('line', 'eq', line)
       } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
-        // Squad Lead selected 'ALL' (though they shouldn't have this option) - filter to their brands
+        // Squad Lead dengan LINE ALL → filter by allowed_brands
         query = query.in('line', userAllowedBrands)
       }
+      // ✅ LINE ALL untuk Admin → tidak ada filter line (tampilkan semua)
+
+      // ✅ KALAU MONTH ALL → tetap filter by YEAR jika year aktif
+      // KALAU LINE ALL DAN MONTH ALL → tampilkan semua data berdasarkan YEAR aktif
       if (year && year !== 'ALL') {
-        query = query.eq('year', parseInt(year))
+        query = query.filter('year', 'eq', parseInt(year))
       }
       
-      // Fetch ALL data for aggregation
-      const { data: rawData, error: rawError } = await query
+      // Fetch ALL data for aggregation (no limit - get all records)
+      console.log('📊 [AGGREGATED MODE] Executing query with filters:', {
+        line: line || 'ALL (no filter)',
+        year: year || 'ALL (no filter)',
+        month: month || 'ALL (no filter)',
+        filterMode,
+        isDateRangeMode,
+        isMonthMode,
+        userAllowedBrands: userAllowedBrands ? userAllowedBrands.length + ' brands' : 'Admin (all brands)',
+        query_has_filters: !!(line && line !== 'ALL') || !!(year && year !== 'ALL') || !!(month && month !== 'ALL')
+      })
       
-      if (rawError) {
-        console.error('❌ Error fetching raw data:', rawError)
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Database error',
-          message: rawError.message 
-        }, { status: 500 })
+      // ✅ Fetch ALL data without limit - use batch fetching (same as export route)
+      let allData: any[] = []
+      let batchOffset = 0
+      const batchSize = 5000 // Process 5000 records at a time
+      let hasMoreData = true
+      
+      console.log('📊 [AGGREGATED MODE] Fetching all data in batches (no limit)...')
+      
+      while (hasMoreData) {
+        // Build new query for each batch with same filters
+        let batchQuery = supabase
+          .from('blue_whale_usc')
+          .select('*')
+        
+        // Re-apply all filters for this batch
+        if (isDateRangeMode) {
+          batchQuery = batchQuery
+            .filter('date', 'gte', startDate)
+            .filter('date', 'lte', endDate)
+        }
+        if (filterMode === 'month' && month && month !== 'ALL') {
+          batchQuery = batchQuery.filter('month', 'eq', month)
+        }
+        if (line && line !== 'ALL') {
+          if (userAllowedBrands && userAllowedBrands.length > 0 && !userAllowedBrands.includes(line)) {
+            return NextResponse.json({
+              success: false,
+              error: 'Unauthorized',
+              message: `You do not have access to brand "${line}"`
+            }, { status: 403 })
+          }
+          batchQuery = batchQuery.filter('line', 'eq', line)
+        } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
+          batchQuery = batchQuery.in('line', userAllowedBrands)
+        }
+        if (year && year !== 'ALL') {
+          batchQuery = batchQuery.filter('year', 'eq', parseInt(year))
+        }
+        
+        // Execute batch query
+        const batchResult = await batchQuery
+          .order('date', { ascending: false })
+          .order('year', { ascending: false })
+          .order('month', { ascending: false })
+          .range(batchOffset, batchOffset + batchSize - 1)
+        
+        if (batchResult.error) {
+          console.error('❌ Supabase batch query error:', batchResult.error)
+          return NextResponse.json({ 
+            success: false, 
+            error: 'Database error while fetching blue_whale_usc data',
+            message: batchResult.error.message 
+          }, { status: 500 })
+        }
+        
+        const batchData = batchResult.data || []
+        allData = [...allData, ...batchData]
+        
+        const batchNumber = Math.floor(batchOffset / batchSize) + 1
+        console.log(`📊 [AGGREGATED MODE] Batch ${batchNumber}: ${batchData.length} records (Total: ${allData.length})`)
+        
+        // Check if there's more data
+        hasMoreData = batchData.length === batchSize
+        batchOffset += batchSize
+        
+        // Log sample data from first batch to verify structure
+        if (batchNumber === 1 && batchData.length > 0) {
+          console.log(`📊 [AGGREGATED MODE] Sample from first batch:`, {
+            userkey: batchData[0]?.userkey,
+            date: batchData[0]?.date,
+            deposit_cases: batchData[0]?.deposit_cases,
+            total_unique_dates_in_batch: new Set(batchData.map((r: any) => r.date)).size
+          })
+        }
+        
+        // Safety limit to prevent infinite loops (but allow large datasets)
+        if (allData.length > 1000000) {
+          console.log('⚠️ [AGGREGATED MODE] Safety limit reached: 1,000,000 records')
+          break
+        }
       }
       
-      console.log('📊 Raw data fetched:', rawData?.length, 'records')
+      console.log(`📊 [AGGREGATED MODE] Total records fetched: ${allData.length}`)
+      
+      const rawData = allData
+      console.log(`📊 Raw blue_whale_usc records found: ${rawData.length}`)
+      
+      if (rawData.length === 0) {
+        console.warn('⚠️ [AGGREGATED MODE] No data found with current filters!')
+        console.warn('⚠️ Filters applied:', {
+          line: line || 'ALL',
+          year: year || 'ALL',
+          month: month || 'ALL',
+          filterMode
+        })
+      } else {
+        console.log(`📊 Sample raw data (first 3 records):`, rawData.slice(0, 3))
+      }
       
       // ✅ GROUP BY userkey and aggregate
       const userMap = new Map<string, any>()
@@ -92,9 +203,14 @@ export async function GET(request: NextRequest) {
           // ✅ Set date_range based on mode
           const dateRangeValue = isDateRangeMode 
             ? `${startDate} to ${endDate}`
-            : `Month: ${month} ${year !== 'ALL' ? year : ''}`.trim()
+            : (month && month !== 'ALL')
+            ? `Month: ${month} ${year !== 'ALL' ? year : ''}`.trim()
+            : (year && year !== 'ALL')
+            ? `Year: ${year}`
+            : 'All Time'
           
           userMap.set(key, {
+            userkey: key,
             date_range: dateRangeValue,
             line: row.line,
             user_name: row.user_name,
@@ -107,7 +223,7 @@ export async function GET(request: NextRequest) {
             first_deposit_amount: row.first_deposit_amount,
             last_deposit_date: row.last_deposit_date,
             days_inactive: row.days_inactive,
-            days_active: 0,
+            activeDates: new Set(), // ✅ Track unique dates with deposit_cases > 0
             deposit_cases: 0,
             deposit_amount: 0,
             withdraw_cases: 0,
@@ -129,9 +245,9 @@ export async function GET(request: NextRequest) {
         
         const userRecord = userMap.get(key)
         
-        // ✅ COUNT Days Active (days where deposit_cases > 0)
-        if ((row.deposit_cases || 0) > 0) {
-          userRecord.days_active += 1
+        // ✅ COUNT Days Active (unique dates where deposit_cases > 0) - SAME AS CUSTOMER RETENTION
+        if ((row.deposit_cases || 0) > 0 && row.date) {
+          userRecord.activeDates.add(row.date)
         }
         
         // ✅ SUM all numeric metrics
@@ -152,16 +268,53 @@ export async function GET(request: NextRequest) {
         userRecord.net_profit += (row.net_profit || 0)
       })
       
-      // Convert Map to Array
-      const aggregatedData = Array.from(userMap.values())
+      // Convert Map to Array and calculate days_active from activeDates
+      const aggregatedData = Array.from(userMap.values()).map((user: any) => {
+        // ✅ Calculate days_active from unique dates (SAME AS CUSTOMER RETENTION)
+        const daysActive = user.activeDates ? user.activeDates.size : 0
+        return {
+          ...user,
+          days_active: daysActive,
+          activeDates: undefined // Remove from final data
+        }
+      })
       
       console.log('📊 Aggregated data:', aggregatedData.length, 'unique users')
       
+      // ✅ Calculate ATV and PF for each row
+      const enrichedData = aggregatedData.map(row => {
+        const depositAmount = row.deposit_amount || 0
+        const depositCases = row.deposit_cases || 0
+        const daysActive = row.days_active || 0
+        
+        // ATV = Average Transaction Value = deposit_amount / deposit_cases
+        const atv = depositCases > 0 ? depositAmount / depositCases : 0
+        
+        // PF = Purchase Frequency = deposit_cases / days_active
+        const pf = daysActive > 0 ? depositCases / daysActive : 0
+        
+        return {
+          ...row,
+          atv,
+          pf
+        }
+      })
+      
+      // ✅ Sort by Line (ascending) and Days Active (descending)
+      enrichedData.sort((a, b) => {
+        // First sort by line (ascending)
+        if (a.line !== b.line) {
+          return (a.line || '').localeCompare(b.line || '')
+        }
+        // Then sort by days_active (descending - more active first)
+        return (b.days_active || 0) - (a.days_active || 0)
+      })
+      
       // ✅ Apply pagination to aggregated data
-      const totalRecords = aggregatedData.length
+      const totalRecords = enrichedData.length
       const totalPages = Math.ceil(totalRecords / limit)
       const offset = (page - 1) * limit
-      const paginatedData = aggregatedData.slice(offset, offset + limit)
+      const paginatedData = enrichedData.slice(offset, offset + limit)
       
       return NextResponse.json({
         success: true,
@@ -187,8 +340,8 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // ✅ ORIGINAL MODE: Per-daily data (for monthly mode)
-    console.log('📊 [PER-DAILY MODE] Fetching per-daily data...')
+    // ✅ PER-DAILY MODE: ONLY when date range is exactly 1 day
+    console.log('📊 [PER-DAILY MODE] Fetching per-daily data (single day date range only)...')
     
     // Build base query for filtering - using blue_whale_usc table
     let baseQuery = supabase.from('blue_whale_usc').select('userkey, user_name, unique_code, date, line, year, month, vip_level, operator, traffic, register_date, first_deposit_date, first_deposit_amount, last_deposit_date, days_inactive, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, add_transaction, deduct_transaction, cases_adjustment, cases_bets, bets_amount, valid_amount, ggr, net_profit, last_activity_days')
@@ -226,6 +379,14 @@ export async function GET(request: NextRequest) {
     // Apply same filters to count query (no currency filter needed)
     // ✅ NEW: Apply brand filter with user permission check
     if (line && line !== 'ALL') {
+      // Validate Squad Lead access (same check as baseQuery)
+      if (userAllowedBrands && userAllowedBrands.length > 0 && !userAllowedBrands.includes(line)) {
+        return NextResponse.json({
+          success: false,
+          error: 'Unauthorized',
+          message: `You do not have access to brand "${line}"`
+        }, { status: 403 })
+      }
       countQuery = countQuery.filter('line', 'eq', line)
     } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
       countQuery = countQuery.in('line', userAllowedBrands)
@@ -242,7 +403,7 @@ export async function GET(request: NextRequest) {
 
     console.log(`📊 Total blue_whale_usc records found: ${totalRecords}`)
 
-    // Get data with pagination and sorting
+    // Get data with pagination and sorting - SAME AS MYR/SGD
     const offset = (page - 1) * limit
     const result = await baseQuery
       .order('date', { ascending: false })
@@ -262,9 +423,30 @@ export async function GET(request: NextRequest) {
     const totalPages = Math.ceil(totalRecords / limit)
     console.log(`✅ Found ${result.data?.length || 0} blue_whale_usc records (Page ${page} of ${totalPages})`)
 
+    // ✅ Calculate ATV and PF for each row (per-daily mode)
+    const enrichedData = (result.data || []).map((row: any) => {
+      const depositAmount = row.deposit_amount || 0
+      const depositCases = row.deposit_cases || 0
+      // For per-daily mode, days_active = 1 if deposit_cases > 0, else 0
+      const daysActive = depositCases > 0 ? 1 : 0
+      
+      // ATV = Average Transaction Value = deposit_amount / deposit_cases
+      const atv = depositCases > 0 ? depositAmount / depositCases : 0
+      
+      // PF = Purchase Frequency = deposit_cases / days_active
+      const pf = daysActive > 0 ? depositCases / daysActive : 0
+      
+      return {
+        ...row,
+        days_active: daysActive,
+        atv,
+        pf
+      }
+    })
+    
     return NextResponse.json({
       success: true,
-      data: result.data || [],
+      data: enrichedData,
       pagination: {
         currentPage: page,
         totalPages: totalPages,

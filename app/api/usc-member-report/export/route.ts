@@ -86,22 +86,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Convert to CSV - use custom column order and exclude hidden columns
-    const hiddenColumns = ['ABSENT', 'YEAR', 'MONTH', 'USERKEY', 'UNIQUEKEY', 'WINRATE', 'CURRENCY']
+    const hiddenColumns = ['ABSENT', 'YEAR', 'MONTH', 'USERKEY', 'UNIQUEKEY', 'WINRATE', 'CURRENCY', 'DATE', 'VIP_LEVEL', 'OPERATOR', 'REGISTER_DATE', 'LAST_ACTIVITY_DAYS', 'DATE_RANGE']
     
     // Custom column order - same as frontend
     const columnOrder = [
-      'date',
-      'line', 
+      'line',
       'user_name',
       'unique_code',
-      'vip_level',
-      'operator',
       'traffic',
-      'register_date',
       'first_deposit_date',
       'first_deposit_amount',
       'last_deposit_date',
       'days_inactive',
+      'days_active',
+      'atv',
+      'pf',
       'deposit_cases',
       'deposit_amount',
       'withdraw_cases',
@@ -116,9 +115,64 @@ export async function POST(request: NextRequest) {
       'bets_amount',
       'valid_amount',
       'ggr',
-      'net_profit',
-      'last_activity_days'
+      'net_profit'
     ]
+    
+    // Function to format header title for CSV (same mapping as frontend)
+    const formatHeaderTitle = (column: string): string => {
+      const headerMap: { [key: string]: string } = {
+        'first_deposit_date': 'FDD',
+        'first_deposit_amount': 'FDA',
+        'last_deposit_date': 'LDD',
+        'days_inactive': 'ABSENT',
+        'deposit_cases': 'DC',
+        'deposit_amount': 'DA',
+        'withdraw_cases': 'WC',
+        'withdraw_amount': 'WA',
+        'add_transaction': 'ADJUST IN',
+        'deduct_transaction': 'ADJUST OUT',
+        'cases_adjustment': '# ADJUST',
+        'cases_bets': '# BETS',
+        'atv': 'ATV',
+        'pf': 'PF'
+      }
+      
+      if (headerMap[column]) {
+        return headerMap[column]
+      }
+      
+      // Default: convert snake_case to UPPERCASE
+      return column
+        .split('_')
+        .map(word => word.toUpperCase())
+        .join(' ')
+    }
+    
+    // Function to calculate ATV and PF for each row
+    const enrichDataWithCalculatedFields = (data: any[]): any[] => {
+      return data.map(row => {
+        const depositAmount = row.deposit_amount || 0
+        const depositCases = row.deposit_cases || 0
+        // For per-daily mode, if days_active doesn't exist, set to 1 if deposit_cases > 0
+        const daysActive = row.days_active !== undefined ? row.days_active : (depositCases > 0 ? 1 : 0)
+        
+        // ATV = Average Transaction Value = deposit_amount / deposit_cases
+        const atv = depositCases > 0 ? depositAmount / depositCases : 0
+        
+        // PF = Purchase Frequency = deposit_cases / days_active
+        const pf = daysActive > 0 ? depositCases / daysActive : 0
+        
+        return {
+          ...row,
+          days_active: daysActive, // Ensure days_active is always present
+          atv,
+          pf
+        }
+      })
+    }
+    
+    // Enrich data with calculated fields (ATV, PF)
+    const enrichedData = enrichDataWithCalculatedFields(data)
     
     // Function to get sorted columns according to custom order (same as frontend)
     const getSortedColumns = (dataKeys: string[]): string[] => {
@@ -134,15 +188,23 @@ export async function POST(request: NextRequest) {
       return [...sortedColumns, ...remainingColumns]
     }
     
-    const allHeaders = Object.keys(data[0])
+    const allHeaders = Object.keys(enrichedData[0])
     const headers = getSortedColumns(allHeaders)
     
     const csvContent = [
-      headers.join(','),
-      ...data.map(row => 
+      headers.map(header => formatHeaderTitle(header)).join(','),
+      ...enrichedData.map(row => 
         headers.map(header => {
           const value = (row as Record<string, unknown>)[header]
           if (value === null || value === undefined) return ''
+          if (typeof value === 'number') {
+            // Format numbers with 2 decimal places if not integer
+            if (Number.isInteger(value)) {
+              return value.toString()
+            } else {
+              return value.toFixed(2)
+            }
+          }
           if (typeof value === 'string' && value.includes(',')) {
             return `"${value.replace(/"/g, '""')}"`
           }
