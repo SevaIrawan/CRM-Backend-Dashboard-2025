@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, usePathname } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Image from 'next/image'
 import { getRoleDisplayName } from '@/utils/rolePermissions'
 import RealtimeTimestamp from './RealtimeTimestamp'
@@ -50,7 +50,8 @@ export default function Header({
     }
   }, [])
 
-  const getPageTitle = () => {
+  // ✅ Memoize page title for instant update when pathname changes
+  const currentPageTitle = useMemo(() => {
     if (pageTitle) return pageTitle
     
     // Auto-detect page title based on pathname
@@ -129,7 +130,7 @@ export default function Header({
     }
     
     return 'NEXMAX Dashboard'
-  }
+  }, [pageTitle, pathname])
 
   const handleLogout = async () => {
     try {
@@ -186,9 +187,36 @@ export default function Header({
   }
 
   return (
-    <header className={`header ${!sidebarOpen ? 'collapsed' : ''}`}>
+    <header className="header">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {/* Logo */}
+          <div style={{
+            width: '50px',
+            height: '50px',
+            borderRadius: '50%',
+            border: '3px solid #FFD700',
+            padding: '3px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#1f2937',
+            flexShrink: 0
+          }}>
+            <Image
+              src="/aset/images (1).jpg"
+              alt="NEXMAX Logo"
+              width={44}
+              height={44}
+              priority
+              style={{ 
+                borderRadius: '50%',
+                objectFit: 'cover'
+              }}
+            />
+          </div>
+          
+          {/* Hamburger Menu */}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             style={{
@@ -196,10 +224,9 @@ export default function Header({
               border: 'none',
               fontSize: '20px',
               cursor: 'pointer',
-              marginRight: '16px',
               color: '#6b7280',
-              /* ✅ OPTIMIZED: Faster button response */
-              transition: 'color 0.15s ease, transform 0.15s ease',
+              /* ✅ SMOOTH TRANSITION */
+              transition: 'color 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               padding: '8px',
               display: 'flex',
               alignItems: 'center',
@@ -235,7 +262,7 @@ export default function Header({
               overflow: 'hidden',
               textOverflow: 'ellipsis'
             }}>
-              {getPageTitle()}
+              {currentPageTitle}
             </h1>
             {subtitle ? (
               <p style={{

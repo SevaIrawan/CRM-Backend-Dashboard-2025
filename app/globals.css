@@ -83,17 +83,19 @@ body {
 /* JARAK ANTAR ELEMENT DALAM FRAME */
 .standard-frame {
   width: 100%;
+  max-width: 100%; /* ✅ Prevent overflow */
   height: calc(100vh - 130px);
   display: flex;
   flex-direction: column;
   gap: 18px; /* CENTRALIZED: Jarak antar element */
   padding: 20px; /* CENTRALIZED: Padding frame */
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: hidden; /* ✅ NO HORIZONTAL SCROLL - Prevent flash */
   grid-template-rows: auto 1fr 1fr;
   min-height: 100%;
   max-height: calc(100vh - 130px);
   position: relative;
+  box-sizing: border-box; /* ✅ Include padding in width calculation */
 }
 
 /* CENTRALIZED GAP - SEMUA ELEMENT MENGGUNAKAN GAP YANG SAMA */
@@ -167,22 +169,33 @@ body {
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  width: 100%;
+  max-width: 100%; /* ✅ Prevent overflow */
+  overflow-x: hidden; /* ✅ NO HORIZONTAL SCROLL */
+  box-sizing: border-box; /* ✅ Include padding in width */
 }
 
 .chart-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  width: 100%;
+  max-width: 100%; /* ✅ Prevent overflow */
+  overflow-x: hidden; /* ✅ NO HORIZONTAL SCROLL */
+  box-sizing: border-box; /* ✅ Include padding in width */
 }
 
 /* KPI ROW - CENTRALIZED GAP */
 .kpi-row {
   display: grid;
   width: 100%;
+  max-width: 100%; /* ✅ Prevent overflow */
   min-height: auto;
   margin-bottom: 0;
   flex-shrink: 0;
   padding: 0;
   flex: 0 0 auto;
+  overflow-x: hidden; /* ✅ NO HORIZONTAL SCROLL */
+  box-sizing: border-box; /* ✅ Include padding in width */
 }
 
 /* KPI CARD - SAME HEIGHT & STYLE FOR ALL */
@@ -204,13 +217,16 @@ body {
 .charts-row {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
+  width: 100%;
+  max-width: 100%; /* ✅ Prevent overflow */
   margin-bottom: 0;
   flex: 1;
   min-height: 200px;
   height: auto;
   position: relative;
   z-index: 1;
-  overflow: visible !important;
+  overflow-x: hidden; /* ✅ NO HORIZONTAL SCROLL */
+  box-sizing: border-box; /* ✅ Include padding in width */
 }
 
 /* CHART CONTAINER - RESPONSIVE & DYNAMIC */
@@ -228,8 +244,11 @@ body {
   flex-direction: column;
   position: relative;
   width: 100%;
+  max-width: 100%; /* ✅ Prevent overflow */
   transition: all 0.3s ease;
   overflow: hidden;
+  overflow-x: hidden; /* ✅ NO HORIZONTAL SCROLL */
+  box-sizing: border-box; /* ✅ Include padding in width */
 }
 
 /* Responsive chart grid - CENTRALIZED GAP */
@@ -237,9 +256,12 @@ body {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   width: 100%;
+  max-width: 100%; /* ✅ Prevent overflow */
   margin-top: 0;
   min-height: 0;
   flex: 1;
+  overflow-x: hidden; /* ✅ NO HORIZONTAL SCROLL */
+  box-sizing: border-box; /* ✅ Include padding in width */
 }
 
 /* Mobile responsive */
@@ -735,6 +757,9 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   gap: 24px;
   width: 100%;
+  max-width: 100%; /* ✅ Prevent overflow */
+  overflow-x: hidden; /* ✅ NO HORIZONTAL SCROLL */
+  box-sizing: border-box; /* ✅ Include padding in width */
 }
 
 /* Standard KPI Grid */
@@ -743,6 +768,10 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 20px;
   margin-bottom: 24px;
+  width: 100%;
+  max-width: 100%; /* ✅ Prevent overflow */
+  overflow-x: hidden; /* ✅ NO HORIZONTAL SCROLL */
+  box-sizing: border-box; /* ✅ Include padding in width */
 }
 
 /* Standard Slicer Styles */
@@ -805,8 +834,8 @@ body {
 .sidebar {
   position: fixed;
   left: 0;
-  top: 0;
-  height: 100vh;
+  top: 90px; /* ✅ Below header - header is full width */
+  height: calc(100vh - 90px); /* ✅ Full height minus header */
   width: 280px; /* Increased width for better text display */
   background-color: #1f2937; /* Dark blue background */
   color: white;
@@ -814,13 +843,16 @@ body {
   overflow: hidden; /* NO SCROLL for sidebar */
   display: flex;
   flex-direction: column;
-  /* ✅ OPTIMIZED: Only transition width (not "all") */
-  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  /* ✅ SMOOTH TRANSITION: Only transition width - smooth dari kiri ke kanan */
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   /* Performance optimizations */
   transform: translateZ(0); /* Hardware acceleration */
   will-change: width; /* Only width will change */
   contain: layout style;
   backface-visibility: hidden; /* Prevent flickering */
+  /* ✅ Prevent text flash/jump */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .sidebar.collapsed {
@@ -851,11 +883,11 @@ body {
   background: #718096; /* Lighter gray on hover */
 }
 
-/* Header */
+/* Header - Full Width, Static, Not Affected by Sidebar */
 .header {
   position: fixed;
   top: 0;
-  left: 280px; /* Match sidebar width */
+  left: 0; /* ✅ Full width - not affected by sidebar */
   right: 0;
   height: 90px;
   background-color: #1f2937;
@@ -866,43 +898,31 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  /* ✅ OPTIMIZED: Only transition left and width */
-  transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  /* ✅ NO TRANSITION - Header is always full width and static */
+  transition: none;
   overflow: hidden; /* NO SCROLL for header */
   transform: translateZ(0); /* Hardware acceleration */
-  will-change: left, width;
   backface-visibility: hidden; /* Prevent flickering */
 }
 
-.header.collapsed {
-  left: 80px; /* Match collapsed sidebar width dengan spacing yang tepat */
-  width: calc(100vw - 80px);
-}
-
-/* Custom SubHeader - Only for pages with customSubHeader */
+/* Custom SubHeader - Full Width, Static, Not Affected by Sidebar */
 .subheader {
   position: fixed;
-  top: 90px;
-  left: 280px; /* Match sidebar width */
+  top: 90px; /* Below header */
+  left: 0; /* ✅ Full width - not affected by sidebar */
   right: 0;
   height: 60px;
   background-color: #ffffff;
   border-bottom: 1px solid #e2e8f0;
-  z-index: 900;
+  z-index: 899; /* Below header */
   display: flex;
   align-items: center;
   padding: 0 24px;
-  /* ✅ OPTIMIZED: Only transition left and width */
-  transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  /* ✅ NO TRANSITION - Subheader is always full width and static */
+  transition: none;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   transform: translateZ(0); /* Hardware acceleration */
-  will-change: left, width;
   backface-visibility: hidden; /* Prevent flickering */
-}
-
-.subheader.collapsed {
-  left: 80px; /* Match collapsed sidebar width */
-  width: calc(100vw - 80px);
 }
 
 .subheader-content {
@@ -933,7 +953,7 @@ body {
   background: white;
   color: #374151;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   min-width: 100px;
   position: relative;
   z-index: 1000;
@@ -954,20 +974,26 @@ body {
   position: fixed;
   top: 90px; /* Only header height when no subheader */
   left: 280px; /* Match sidebar width */
-  right: 0;
+  right: 0; /* ✅ FLEXIBLE - width auto from left+right */
   bottom: 0;
   background-color: #f8f9fa;
-  /* ✅ OPTIMIZED: Only transition left and width - FASTER! */
-  transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: auto; /* Scroll only for main content */
-  width: calc(100vw - 280px);
+  /* ✅ SMOOTH TRANSITION: Only transition left - width auto adjust from left+right */
+  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto; /* Vertical scroll only */
+  overflow-x: hidden !important; /* ✅ NO HORIZONTAL SCROLL - Prevent flash */
+  /* ✅ NO width property - use left + right for flexible width */
   /* Performance optimizations */
   transform: translateZ(0); /* Hardware acceleration */
-  will-change: left, width; /* Only what actually changes */
+  will-change: left; /* Only what actually changes */
   contain: layout style;
   backface-visibility: hidden; /* Prevent flickering */
-  /* ✅ NEW: Ensure no white flash during transition */
   -webkit-overflow-scrolling: touch;
+}
+
+/* ✅ FORCE: Prevent horizontal overflow in all main-content children */
+.main-content * {
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .main-content.has-subheader {
@@ -1007,9 +1033,8 @@ body {
 }
 
 .main-content.collapsed {
-  left: 80px; /* Match collapsed sidebar width dari rules */
-  width: calc(100vw - 80px);
-  margin-left: 0; /* Reset margin */
+  left: 80px; /* Match collapsed sidebar width */
+  right: 0; /* ✅ FLEXIBLE - width auto adjust */
   top: 90px; /* Only header height when no subheader */
 }
 
@@ -1026,6 +1051,10 @@ body {
   gap: 24px;
   margin-bottom: 32px;
   padding: 24px;
+  width: 100%;
+  max-width: 100%; /* ✅ Prevent overflow */
+  overflow-x: hidden; /* ✅ NO HORIZONTAL SCROLL */
+  box-sizing: border-box; /* ✅ Include padding in width */
 }
 
 .kpi-card {

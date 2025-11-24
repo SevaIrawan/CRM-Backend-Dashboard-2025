@@ -21,9 +21,13 @@ export default function AccessControl({ children }: AccessControlProps) {
   }, [])
 
   useEffect(() => {
-    // Only check maintenance mode after component is mounted (client-side only)
-    if (isMounted) {
-      checkMaintenanceMode()
+    // ✅ Only check maintenance mode after component is mounted (client-side only)
+    // ✅ Run in background - completely non-blocking, don't wait for it
+    if (isMounted && pathname !== '/login' && pathname !== '/maintenance') {
+      // ✅ Fire and forget - use setTimeout to ensure it doesn't block
+      setTimeout(() => {
+        checkMaintenanceMode().catch(() => {})
+      }, 0) // Run in next tick - completely non-blocking
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, isMounted])
@@ -56,44 +60,40 @@ export default function AccessControl({ children }: AccessControlProps) {
         }
       }
 
-      // ✅ Check API in background (non-blocking)
+      // ✅ Check API in background - completely non-blocking
       // Don't show loading screen, just check and redirect if needed
+      // Use very short timeout and fire-and-forget
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 2000) // 2 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 300) // ✅ Very short timeout
       
-      try {
-        const response = await fetch('/api/maintenance/status', {
+      // ✅ Fire and forget - don't await, don't block navigation at all
+      // This runs in background and doesn't affect page navigation speed
+      Promise.resolve().then(() => {
+        return fetch('/api/maintenance/status', {
           signal: controller.signal
         })
+      })
+      .then(response => response.json())
+      .then(result => {
         clearTimeout(timeoutId)
-        const result = await response.json()
-
         if (result.success && result.data.is_maintenance_mode) {
           // Maintenance mode is ON, redirect to maintenance page
           console.log('🔧 [AccessControl] Maintenance mode ON, redirecting to maintenance page')
           router.push('/maintenance')
           setIsAuthorized(false)
           setHasChecked(true)
-          return
-        }
-
-        // Maintenance mode is OFF
-        console.log('✅ [AccessControl] Access granted')
-        setIsAuthorized(true)
-        setHasChecked(true)
-      } catch (fetchError: any) {
-        clearTimeout(timeoutId)
-        // If error or timeout, allow access (fail-open for better UX)
-        // Don't block user experience
-        if (fetchError.name === 'AbortError') {
-          console.warn('⚠️ [AccessControl] Maintenance check timeout, allowing access')
         } else {
-          console.error('❌ [AccessControl] Error checking maintenance mode:', fetchError)
+          // Maintenance mode is OFF
+          setIsAuthorized(true)
+          setHasChecked(true)
         }
-        // Fail-open: allow access if check fails
+      })
+      .catch(() => {
+        clearTimeout(timeoutId)
+        // Fail-open: allow access if check fails - don't block navigation
         setIsAuthorized(true)
         setHasChecked(true)
-      }
+      })
     } catch (error) {
       console.error('❌ [AccessControl] Error in checkMaintenanceMode:', error)
       // If error, allow access (fail-open)

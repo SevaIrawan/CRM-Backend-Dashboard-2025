@@ -72,10 +72,11 @@ export default function ActivityTracker({ children }: ActivityTrackerProps) {
       }
     }
 
-    // Track page view with small delay to ensure page is loaded
-    const timer = setTimeout(trackPageView, 500)
-    
-    return () => clearTimeout(timer)
+    // ✅ Track page view in background - completely non-blocking
+    // Use setTimeout to ensure it runs in next tick and doesn't block navigation
+    setTimeout(() => {
+      trackPageView().catch(() => {}) // Fire and forget - never blocks
+    }, 0) // Run in next tick - completely non-blocking
   }, [pathname])
 
   // Force-logout watcher: detect admin-triggered global logout and logout non-admins immediately

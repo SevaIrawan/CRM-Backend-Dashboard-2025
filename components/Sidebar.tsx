@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, startTransition } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
@@ -98,12 +98,18 @@ export default function Sidebar({
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [pageVisibilityData, setPageVisibilityData] = useState<PageVisibilityData[]>([])
   const [pageVisibilityLoading, setPageVisibilityLoading] = useState<boolean>(true)
+  const navigationInProgress = useRef<boolean>(false) // ✅ Prevent multiple clicks
 
   useEffect(() => {
-    fetchLastUpdate()
-    loadPageVisibilityData()
+    // ✅ Fire and forget - don't block navigation
+    // These operations run in background and don't affect page navigation
+    fetchLastUpdate().catch(() => {}) // Fire and forget
+    loadPageVisibilityData().catch(() => {}) // Fire and forget
+    
     // Auto refresh setiap 30 detik
-    const interval = setInterval(fetchLastUpdate, 30000)
+    const interval = setInterval(() => {
+      fetchLastUpdate().catch(() => {}) // Fire and forget
+    }, 30000)
     return () => clearInterval(interval)
   }, [pathname]) // Re-fetch when page changes (USC vs non-USC)
 
@@ -126,23 +132,21 @@ export default function Sidebar({
     }
   }
 
+  // ✅ AUTO-CLOSE SUBMENU WHEN SIDEBAR COLLAPSED
+  useEffect(() => {
+    if (!sidebarOpen) {
+      // Close all submenus when sidebar is collapsed
+      setOpenSubmenu(null)
+    }
+  }, [sidebarOpen])
+
   // STANDARD SUB MENU RULES:
-  // 1. Auto show sub menu ketika user berada di halaman sub menu
+  // 1. User harus open submenu secara manual (tidak auto-open)
   // 2. Toggle sub menu ketika user klik menu yang sama
   // 3. Auto hide sub menu ketika user klik menu lain
   // 4. Highlight icon ketika sub menu aktif
   // 5. Scroll hanya untuk sub menu dengan styling konsisten
-  useEffect(() => {
-    if (pathname.startsWith('/usc/')) {
-      setOpenSubmenu('USC')
-    } else if (pathname.startsWith('/myr/')) {
-      setOpenSubmenu('MYR')
-    } else if (pathname.startsWith('/sgd/')) {
-      setOpenSubmenu('SGD')
-    } else if (pathname.startsWith('/admin/') || pathname.startsWith('/users') || pathname.startsWith('/supabase')) {
-      setOpenSubmenu('Admin')
-    }
-  }, [pathname])
+  // ✅ REMOVED: Auto-open submenu based on pathname - user must open manually
 
   const fetchLastUpdate = async () => {
     try {
@@ -446,9 +450,26 @@ export default function Sidebar({
     return null
   }
 
-  const handleMenuClick = (path: string) => {
+  const handleMenuClick = (path: string, e?: React.MouseEvent) => {
+    // Prevent default and stop propagation
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    
+    // ✅ Prevent multiple clicks
+    if (navigationInProgress.current) {
+      return
+    }
+    
     // Skip navigation if already on the same path
-    if (pathname === path) return
+    if (pathname === path) {
+      navigationInProgress.current = false
+      return
+    }
+    
+    // Set navigation flag immediately
+    navigationInProgress.current = true
     
     // Cek apakah path ini adalah sub menu dari menu manapun
     const parentMenu = getParentMenuFromPath(path)
@@ -461,18 +482,35 @@ export default function Sidebar({
       setOpenSubmenu(null)
     }
     
-    // Optimized navigation with smooth transition
+    // ✅ Prefetch immediately for instant navigation
+    router.prefetch(path)
+    
+    // ✅ Immediate navigation - router.push is non-blocking
+    // Use router.push directly - Next.js App Router handles it asynchronously
+    // Don't wrap in startTransition as it may cause delay
     router.push(path)
+    
+    // ✅ Reset flag immediately after push (don't wait)
+    // Navigation is handled by Next.js, we just need to prevent rapid clicks
+    setTimeout(() => {
+      navigationInProgress.current = false
+    }, 200) // Very short delay
   }
 
   // Enhanced menu click handler for main menu items (non-submenu)
-  const handleMainMenuClick = (item: any) => {
+  const handleMainMenuClick = (item: any, e?: React.MouseEvent) => {
+    // Prevent default and stop propagation
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    
     if (item.submenu) {
       // Jika menu memiliki submenu, toggle submenu
       handleSubmenuToggle(item.title, isSubmenuPath(pathname) && getParentMenuFromPath(pathname) === item.title)
     } else if (item.path) {
       // Jika menu tidak memiliki submenu, navigasi langsung
-      handleMenuClick(item.path)
+      handleMenuClick(item.path, e)
     }
   }
 
@@ -512,52 +550,7 @@ export default function Sidebar({
          backgroundColor: '#1f2937' // Dark blue background
        }}
      >
-      {/* Logo Section with Circular Gold Border */}
-             <div style={{
-         padding: sidebarOpen ? '20px' : '20px 0',
-         borderBottom: '1px solid #374151', // Darker border for dark blue
-         display: 'flex',
-         alignItems: 'center',
-         justifyContent: sidebarOpen ? 'flex-start' : 'center',
-         minHeight: '80px',
-         flexShrink: 0, // Prevent logo section from shrinking
-         backgroundColor: '#1f2937' // Dark blue background
-       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            width: '50px',
-            height: '50px',
-            borderRadius: '50%',
-            border: '3px solid #FFD700',
-            padding: '3px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: '#1f2937' // Dark blue background
-          }}>
-            <Image
-              src="/aset/images (1).jpg"
-              alt="NEXMAX Logo"
-              width={44}
-              height={44}
-              priority
-              style={{ 
-                borderRadius: '50%',
-                objectFit: 'cover'
-              }}
-            />
-          </div>
-          {sidebarOpen && (
-            <span style={{ 
-              fontSize: '18px', 
-              fontWeight: '600',
-              color: '#ffffff'
-            }}>
-              NEXMAX
-            </span>
-          )}
-        </div>
-      </div>
+      {/* Logo Section Removed - Logo is now in Header */}
 
       {/* Menu Items - NO SCROLL */}
              <div style={{
@@ -567,22 +560,26 @@ export default function Sidebar({
          backgroundColor: '#1f2937', // Dark blue background
          display: 'flex',
          flexDirection: 'column',
-         alignItems: sidebarOpen ? 'stretch' : 'center'
+         alignItems: 'stretch' // Always stretch - items handle their own centering
        }}>
         {menuItems.map((item, index) => (
           <div key={index}>
             {item.submenu ? (
               <div>
                                  <div
-                   onClick={() => handleSubmenuToggle(item.title, isSubmenuPath(pathname) && getParentMenuFromPath(pathname) === item.title)}
+                   onClick={(e) => {
+                     e.preventDefault()
+                     e.stopPropagation()
+                     handleSubmenuToggle(item.title, isSubmenuPath(pathname) && getParentMenuFromPath(pathname) === item.title)
+                   }}
                    style={{
-                     padding: sidebarOpen ? '12px 20px' : '12px 0',
+                     padding: sidebarOpen ? '12px 20px' : '12px',
                      cursor: 'pointer',
                      display: 'flex',
                      alignItems: 'center',
-                     justifyContent: sidebarOpen ? 'space-between' : 'center',
+                     justifyContent: sidebarOpen ? 'space-between' : 'center', // Center when collapsed, space-between when expanded
                      backgroundColor: openSubmenu === item.title ? '#374151' : 'transparent', // Darker blue for active
-                     transition: 'all 0.2s ease',
+                     transition: 'padding 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                      color: '#ffffff'
                    }}
                    onMouseEnter={(e) => {
@@ -591,6 +588,7 @@ export default function Sidebar({
                      const iconElement = e.currentTarget.querySelector('[data-icon]') as HTMLElement
                      if (iconElement) {
                        iconElement.style.color = '#3b82f6' // Bright blue
+                       iconElement.style.transition = 'color 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                      }
                    }}
                    onMouseLeave={(e) => {
@@ -599,69 +597,82 @@ export default function Sidebar({
                      const iconElement = e.currentTarget.querySelector('[data-icon]') as HTMLElement
                      if (iconElement) {
                        iconElement.style.color = '#ffffff'
+                       iconElement.style.transition = 'color 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                      }
                    }}
                  >
-                   <div style={{ 
-                     display: 'flex', 
-                     alignItems: 'center', 
-                     gap: sidebarOpen ? '12px' : '0',
-                     justifyContent: sidebarOpen ? 'flex-start' : 'center',
-                     width: sidebarOpen ? 'auto' : '100%'
-                   }}>
-                     <div 
-                       style={{ 
-                         display: 'flex', 
-                         alignItems: 'center', 
-                         justifyContent: 'center', 
-                         width: '16px',
-                         flexShrink: 0
-                       }}
-                       data-icon="true"
-                     >
-                       {React.cloneElement(item.icon, {
-                         color: (isSubmenuPath(pathname) && openSubmenu === item.title) ? '#3b82f6' : '#ffffff'
-                       })}
-                     </div>
-                    {sidebarOpen && (
-                      <span style={{ 
-                        fontSize: '14px', 
-                        fontWeight: '500',
-                        color: '#ffffff',
-                        lineHeight: '1.2',
-                        wordWrap: 'break-word',
-                        maxWidth: '140px'
-                      }}>{item.title}</span>
-                    )}
-                  </div>
+                   {/* ✅ Icon - Always center when collapsed */}
+                   <div 
+                     style={{ 
+                       display: 'flex', 
+                       alignItems: 'center', 
+                       justifyContent: 'center', 
+                       width: '20px',
+                       height: '20px',
+                       flexShrink: 0,
+                       transition: 'color 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                     }}
+                     data-icon="true"
+                   >
+                     {React.cloneElement(item.icon, {
+                       color: (isSubmenuPath(pathname) && openSubmenu === item.title) ? '#3b82f6' : '#ffffff',
+                       style: { transition: 'color 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }
+                     })}
+                   </div>
+                   {/* ✅ Text - Smooth fade and slide from left */}
+                   {sidebarOpen && (
+                     <span style={{ 
+                       fontSize: '14px', 
+                       fontWeight: '500',
+                       color: '#ffffff',
+                       lineHeight: '1.2',
+                       marginLeft: '12px',
+                       opacity: sidebarOpen ? 1 : 0,
+                       overflow: 'hidden',
+                       whiteSpace: 'nowrap',
+                       transform: sidebarOpen ? 'translateX(0)' : 'translateX(-10px)',
+                       transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                       flexShrink: 0
+                     }}>{item.title}</span>
+                   )}
+                  {/* ✅ Arrow Indicator - Only show when expanded */}
                   {sidebarOpen && (
-                    <span style={{ fontSize: '12px', color: '#ffffff' }}>
+                    <span style={{ 
+                      fontSize: '12px', 
+                      color: '#ffffff',
+                      marginLeft: 'auto',
+                      transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      whiteSpace: 'nowrap'
+                    }}>
                       {openSubmenu === item.title ? '▼' : '▶'}
                     </span>
                   )}
                 </div>
                 
+                {/* ✅ Only render submenu when sidebar is open AND submenu is open */}
                 {openSubmenu === item.title && sidebarOpen && (
                   <div style={{ 
                     backgroundColor: '#1f2937', // DARK BLUE background for submenu (same as sidebar)
-                    maxHeight: '200px', // Fixed height for submenu
+                    maxHeight: sidebarOpen && openSubmenu === item.title ? '200px' : '0',
                     overflowY: 'auto', // SCROLL ONLY FOR SUBMENU
                     overflowX: 'hidden',
                     scrollbarWidth: 'thin',
-                    scrollbarColor: '#4a5568 #1f2937' // Dark gray scrollbar on dark blue
+                    scrollbarColor: '#4a5568 #1f2937', // Dark gray scrollbar on dark blue
+                    transition: 'max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    opacity: sidebarOpen && openSubmenu === item.title ? 1 : 0
                   }}
                   className="sidebar-submenu"
                 >
                     {item.submenu.map((subItem: { title: string; path: string }, subIndex: number) => (
                                              <div
                          key={subIndex}
-                         onClick={() => handleMenuClick(subItem.path)}
+                         onClick={(e) => handleMenuClick(subItem.path, e)}
                          style={{
                            padding: '8px 20px 8px 52px',
                            cursor: 'pointer',
                            fontSize: '13px',
                            backgroundColor: pathname === subItem.path ? '#374151' : 'transparent', // Darker blue for active submenu item
-                           transition: 'all 0.2s ease',
+                           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                            color: '#ffffff',
                            display: 'flex',
                            alignItems: 'center',
@@ -690,16 +701,15 @@ export default function Sidebar({
               </div>
             ) : (
                              <div
-                 onClick={() => handleMainMenuClick(item)}
+                 onClick={(e) => handleMainMenuClick(item, e)}
                  style={{
-                   padding: sidebarOpen ? '12px 20px' : '12px 0',
+                   padding: sidebarOpen ? '12px 20px' : '12px',
                    cursor: 'pointer',
                    display: 'flex',
                    alignItems: 'center',
                    justifyContent: sidebarOpen ? 'flex-start' : 'center',
-                   gap: sidebarOpen ? '12px' : '0',
                    backgroundColor: pathname === item.path ? '#374151' : 'transparent', // Darker blue for active
-                   transition: 'all 0.2s ease',
+                   transition: 'padding 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                    color: '#ffffff'
                  }}
                  onMouseEnter={(e) => {
@@ -708,6 +718,7 @@ export default function Sidebar({
                    const iconElement = e.currentTarget.querySelector('[data-icon]') as HTMLElement
                    if (iconElement) {
                      iconElement.style.color = '#3b82f6' // Bright blue
+                     iconElement.style.transition = 'color 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                    }
                  }}
                  onMouseLeave={(e) => {
@@ -716,122 +727,179 @@ export default function Sidebar({
                    const iconElement = e.currentTarget.querySelector('[data-icon]') as HTMLElement
                    if (iconElement) {
                      iconElement.style.color = '#ffffff'
+                     iconElement.style.transition = 'color 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                    }
                  }}
                >
+                 {/* ✅ Icon - Always center when collapsed */}
                  <div 
                    style={{ 
                      display: 'flex', 
                      alignItems: 'center', 
                      justifyContent: 'center', 
-                     width: '16px',
-                     flexShrink: 0
+                     width: '20px',
+                     height: '20px',
+                     flexShrink: 0,
+                     transition: 'color 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                    }}
                    data-icon="true"
                  >
                    {React.cloneElement(item.icon, {
-                     color: pathname === item.path ? '#3b82f6' : '#ffffff'
+                     color: pathname === item.path ? '#3b82f6' : '#ffffff',
+                     style: { transition: 'color 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }
                    })}
                  </div>
-                {sidebarOpen && (
-                  <span style={{ 
-                    fontSize: '14px', 
-                    fontWeight: '500',
-                    color: '#ffffff',
-                    lineHeight: '1.2',
-                    wordWrap: 'break-word',
-                    maxWidth: '140px'
-                  }}>{item.title}</span>
-                )}
+                 {/* ✅ Text - Only show when expanded */}
+                 {sidebarOpen && (
+                   <span style={{ 
+                     fontSize: '14px', 
+                     fontWeight: '500',
+                     color: '#ffffff',
+                     lineHeight: '1.2',
+                     marginLeft: '12px',
+                     opacity: sidebarOpen ? 1 : 0,
+                     overflow: 'hidden',
+                     whiteSpace: 'nowrap',
+                     transform: sidebarOpen ? 'translateX(0)' : 'translateX(-10px)',
+                     transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                     flexShrink: 0
+                   }}>{item.title}</span>
+                 )}
               </div>
             )}
           </div>
         ))}
       </div>
 
-      {/* LAST UPDATE Section with Enhanced Loading Animation */}
+      {/* LAST UPDATE Section with Smooth Transition from Left to Right */}
       <div style={{
         padding: '20px',
         borderTop: '1px solid #374151', // Darker border for dark blue
         backgroundColor: '#1f2937', // DARK BLUE background for update section
-        flexShrink: 0 // Prevent last update section from shrinking
+        flexShrink: 0, // Prevent last update section from shrinking
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+        overflow: 'hidden'
       }}>
-        {sidebarOpen ? (
-          <div style={{ textAlign: 'center' }}>
+        {/* ✅ COLLAPSED: Calendar icon with gold circular border - Always rendered */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          width: '40px',
+          height: '40px',
+          opacity: sidebarOpen ? 0 : 1,
+          transform: sidebarOpen ? 'translateX(-20px) scale(0.8)' : 'translateX(0) scale(1)',
+          transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          position: sidebarOpen ? 'absolute' : 'relative',
+          pointerEvents: sidebarOpen ? 'none' : 'auto'
+        }}>
+          {isLoading ? (
             <div style={{
-              fontSize: '14px',
-              fontWeight: '600',
-              color: '#ffffff',
-              padding: '8px 12px',
-              backgroundColor: '#1f2937', // DARK BLUE background
-              borderRadius: '8px',
-              border: `2px solid #FFD700`,
-              marginBottom: '4px',
-              position: 'relative',
-              overflow: 'hidden',
-              minHeight: '40px',
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
+              border: '3px solid #FFD700',
+              padding: '3px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              backgroundColor: '#1f2937'
             }}>
-              {isLoading ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{
-                    width: '16px',
-                    height: '16px',
-                    border: '2px solid #FFD700',
-                    borderTop: '2px solid transparent',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite'
-                  }}></div>
-                  <span style={{ color: '#ffffff', fontSize: '12px' }}>Loading Update...</span>
-                </div>
-              ) : (
-                <>
-                  <span style={{ color: '#ffffff' }}>Update: </span>
-                  <span style={{ color: '#ffffff' }}>{lastUpdate}</span>
-                </>
-              )}
+              <div style={{
+                width: '16px',
+                height: '16px',
+                border: '2px solid #FFD700',
+                borderTop: '2px solid transparent',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite'
+              }}></div>
             </div>
-          </div>
-        ) : (
-          <div style={{ textAlign: 'center' }}>
-            <div style={{
-              fontSize: '10px',
-              color: '#ffffff',
-              fontWeight: '600',
-              padding: '4px 8px',
-              backgroundColor: '#1f2937', // DARK BLUE background
-              borderRadius: '4px',
-              border: `1px solid #FFD700`,
-              position: 'relative',
-              overflow: 'hidden',
-              minHeight: '24px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              {isLoading ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <div style={{
-                    width: '8px',
-                    height: '8px',
-                    border: '1px solid #FFD700',
-                    borderTop: '1px solid transparent',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite'
-                  }}></div>
-                  <span style={{ color: '#ffffff', fontSize: '8px' }}>Loading...</span>
-                </div>
-              ) : (
-                <>
-                  <span style={{ color: '#ffffff' }}>Update: </span>
-                  <span style={{ color: '#ffffff' }}>{lastUpdate}</span>
-                </>
-              )}
+          ) : (
+            <div
+              title={`Update: ${lastUpdate}`}
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                border: '3px solid #FFD700',
+                padding: '3px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: '#1f2937',
+                cursor: 'pointer',
+                transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.1)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)'
+              }}
+            >
+              <span style={{ 
+                fontSize: '20px',
+                color: '#FFD700'
+              }}>
+                📅
+              </span>
             </div>
+          )}
+        </div>
+
+        {/* ✅ EXTENDED: Full text display - Always rendered */}
+        <div style={{ 
+          textAlign: 'center', 
+          width: '100%',
+          maxWidth: sidebarOpen ? '100%' : '0',
+          opacity: sidebarOpen ? 1 : 0,
+          transform: sidebarOpen ? 'translateX(0)' : 'translateX(-20px)',
+          overflow: 'hidden',
+          transition: 'max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          transitionDelay: sidebarOpen ? '0.05s' : '0s',
+          position: sidebarOpen ? 'relative' : 'absolute',
+          pointerEvents: sidebarOpen ? 'auto' : 'none'
+        }}>
+          <div style={{
+            fontSize: '14px',
+            fontWeight: '600',
+            color: '#ffffff',
+            padding: '8px 12px',
+            backgroundColor: '#1f2937', // DARK BLUE background
+            borderRadius: '8px',
+            border: `2px solid #FFD700`,
+            marginBottom: '4px',
+            position: 'relative',
+            overflow: 'hidden',
+            minHeight: '40px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            whiteSpace: 'nowrap'
+          }}>
+            {isLoading ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{
+                  width: '16px',
+                  height: '16px',
+                  border: '2px solid #FFD700',
+                  borderTop: '2px solid transparent',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }}></div>
+                <span style={{ color: '#ffffff', fontSize: '12px' }}>Loading Update...</span>
+              </div>
+            ) : (
+              <>
+                <span style={{ color: '#ffffff' }}>Update: </span>
+                <span style={{ color: '#ffffff' }}>{lastUpdate}</span>
+              </>
+            )}
           </div>
-        )}
+        </div>
         <style jsx>{`
           @keyframes spin {
             0% { transform: rotate(0deg); }

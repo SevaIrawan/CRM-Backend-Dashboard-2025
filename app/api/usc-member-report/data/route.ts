@@ -141,13 +141,13 @@ export async function GET(request: NextRequest) {
         
         if (batchResult.error) {
           console.error('❌ Supabase batch query error:', batchResult.error)
-          return NextResponse.json({ 
-            success: false, 
+        return NextResponse.json({ 
+          success: false, 
             error: 'Database error while fetching blue_whale_usc data',
             message: batchResult.error.message 
-          }, { status: 500 })
-        }
-        
+        }, { status: 500 })
+      }
+      
         const batchData = batchResult.data || []
         allData = [...allData, ...batchData]
         
@@ -443,7 +443,7 @@ export async function GET(request: NextRequest) {
         pf
       }
     })
-    
+
     return NextResponse.json({
       success: true,
       data: enrichedData,

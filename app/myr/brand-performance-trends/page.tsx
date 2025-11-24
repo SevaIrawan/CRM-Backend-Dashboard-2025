@@ -297,13 +297,25 @@ export default function BrandPerformanceTrendsPage() {
           message="Verification in progress — Please allow until 14:00 GMT+7 for adjustment validation to ensure 100% accurate data."
         />
       </div>
-      <div className="subheader-controls" style={{ gap: '16px', marginRight: '40px' }}>
+      <div className="subheader-controls">
         {/* Period A */}
         <div className="slicer-group" style={{ position: 'relative' }}>
           <label className="slicer-label">PERIOD A:</label>
           <input type="text" value={`${periodAStart} to ${periodAEnd}`} readOnly
             onClick={() => { setTempAStart(periodAStart); setTempAEnd(periodAEnd); setShowPickerA(true) }}
-            className="subheader-select" style={{ minWidth: '220px', cursor: 'pointer' }} />
+            className="subheader-select" style={{ 
+              minWidth: '220px', 
+              cursor: 'pointer',
+              padding: '8px 12px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              backgroundColor: 'white',
+              fontSize: '14px',
+              color: '#374151',
+              outline: 'none',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+            }} />
           {showPickerA && (
             <div style={{ position:'absolute', top:'42px', left:0, zIndex:9999, background:'white', border:'1px solid #e5e7eb', borderRadius:8, padding:12, pointerEvents:'auto' }}>
               <div style={{ display:'flex', gap:8, alignItems:'center' }}>
@@ -325,7 +337,19 @@ export default function BrandPerformanceTrendsPage() {
           <label className="slicer-label">PERIOD B:</label>
           <input type="text" value={`${periodBStart} to ${periodBEnd}`} readOnly
             onClick={() => { setTempBStart(periodBStart); setTempBEnd(periodBEnd); setShowPickerB(true) }}
-            className="subheader-select" style={{ minWidth: '220px', cursor: 'pointer' }} />
+            className="subheader-select" style={{ 
+              minWidth: '220px', 
+              cursor: 'pointer',
+              padding: '8px 12px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              backgroundColor: 'white',
+              fontSize: '14px',
+              color: '#374151',
+              outline: 'none',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+            }} />
           {showPickerB && (
             <div style={{ position:'absolute', top:'42px', left:0, zIndex:9999, background:'white', border:'1px solid #e5e7eb', borderRadius:8, padding:12, pointerEvents:'auto' }}>
               <div style={{ display:'flex', gap:8, alignItems:'center' }}>
@@ -340,8 +364,23 @@ export default function BrandPerformanceTrendsPage() {
             </div>
           )}
         </div>
-        <button onClick={handleApplyFilters} className="export-button">
-          Search
+        <button 
+          onClick={handleApplyFilters}
+          disabled={loading}
+          className={`export-button ${loading ? 'disabled' : ''}`}
+          style={{ 
+            backgroundColor: '#10b981',
+            padding: '8px 16px',
+            border: 'none',
+            borderRadius: '8px',
+            color: 'white',
+            fontSize: '14px',
+            fontWeight: 500,
+            cursor: loading ? 'not-allowed' : 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          {loading ? 'Loading...' : 'Search'}
         </button>
       </div>
     </div>
