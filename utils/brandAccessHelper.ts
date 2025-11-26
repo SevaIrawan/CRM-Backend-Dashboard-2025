@@ -67,22 +67,22 @@ export const filterBrandsByUser = (
 }
 
 /**
- * Remove 'ALL' option for Squad Lead users
+ * Remove 'ALL' or 'All' option for Squad Lead users
  * @param brands - Array of brand names
  * @param userAllowedBrands - User's allowed brands (null = unrestricted)
- * @returns Brands array without 'ALL' if user is Squad Lead
+ * @returns Brands array without 'ALL'/'All' if user is Squad Lead
  */
 export const removeAllOptionForSquadLead = (
   brands: string[],
   userAllowedBrands: string[] | null
 ): string[] => {
-  // If user has unrestricted access (null), keep 'ALL' option
+  // If user has unrestricted access (null), keep 'ALL'/'All' option
   if (!userAllowedBrands || userAllowedBrands.length === 0) {
     return brands
   }
   
-  // Remove 'ALL' option for Squad Lead users
-  return brands.filter(brand => brand !== 'ALL')
+  // Remove 'ALL' or 'All' option for Squad Lead users
+  return brands.filter(brand => brand !== 'ALL' && brand !== 'All')
 }
 
 /**
@@ -99,16 +99,16 @@ export const applyBrandFilter = (
 ) => {
   // Admin/Manager/SQ = no restriction
   if (!userAllowedBrands || userAllowedBrands.length === 0) {
-    if (selectedLine && selectedLine !== 'ALL') {
+    if (selectedLine && selectedLine !== 'ALL' && selectedLine !== 'All') {
       return query.eq('line', selectedLine)
     }
-    // selectedLine === 'ALL' => no filter, return all
+    // selectedLine === 'ALL' or 'All' => no filter, return all
     return query
   }
   
   // Squad Lead = restrict to allowed brands only
-  if (selectedLine === 'ALL') {
-    // User selected "ALL" but they should not have this option
+  if (selectedLine === 'ALL' || selectedLine === 'All') {
+    // User selected "ALL"/"All" but they should not have this option
     // Filter to user's allowed brands
     return query.in('line', userAllowedBrands)
   } else {
@@ -149,8 +149,8 @@ export const validateBrandAccess = (
     return true
   }
   
-  // 'ALL' should not be allowed for Squad Lead
-  if (selectedBrand === 'ALL') {
+  // 'ALL' or 'All' should not be allowed for Squad Lead
+  if (selectedBrand === 'ALL' || selectedBrand === 'All') {
     return false
   }
   
@@ -175,5 +175,45 @@ export const getAllowedBrandsFromStorage = (): string[] | null => {
     console.error('❌ Error reading allowed_brands from storage:', error)
     return null
   }
+}
+
+/**
+ * Apply squad_lead filter to Supabase query
+ * IMPORTANT: When "All" is selected, NO FILTER is applied (includes NULL values)
+ * @param query - Supabase query object
+ * @param selectedSquadLead - Selected squad lead from slicer ("All" or specific value)
+ * @returns Filtered query (or unchanged query if "All")
+ */
+export const applySquadLeadFilter = (
+  query: any,
+  selectedSquadLead: string
+) => {
+  // If "All" is selected, return query without filter (includes NULL values)
+  if (!selectedSquadLead || selectedSquadLead === 'All' || selectedSquadLead === 'ALL') {
+    return query
+  }
+  
+  // Apply filter for specific squad lead
+  return query.eq('squad_lead', selectedSquadLead)
+}
+
+/**
+ * Apply channel/traffic filter to Supabase query
+ * IMPORTANT: When "All" is selected, NO FILTER is applied (includes NULL values)
+ * @param query - Supabase query object
+ * @param selectedChannel - Selected channel from slicer ("All" or specific value)
+ * @returns Filtered query (or unchanged query if "All")
+ */
+export const applyChannelFilter = (
+  query: any,
+  selectedChannel: string
+) => {
+  // If "All" is selected, return query without filter (includes NULL values)
+  if (!selectedChannel || selectedChannel === 'All' || selectedChannel === 'ALL') {
+    return query
+  }
+  
+  // Apply filter for specific channel
+  return query.eq('traffic', selectedChannel)
 }
 

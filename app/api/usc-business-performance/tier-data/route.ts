@@ -4,6 +4,7 @@ import {
   TIER_NAMES,
   TIER_GROUPS
 } from '@/lib/uscTierClassification'
+import { applySquadLeadFilter, applyChannelFilter } from '@/utils/brandAccessHelper'
 
 /**
  * ============================================================================
@@ -38,6 +39,8 @@ export async function GET(request: NextRequest) {
     const month = searchParams.get('month')
     const quarter = searchParams.get('quarter')
     const line = searchParams.get('line')
+    const squadLead = searchParams.get('squadLead')
+    const channel = searchParams.get('channel')
     const tierGroup = searchParams.get('tierGroup')
     
     if (!year || !month) {
@@ -61,8 +64,20 @@ export async function GET(request: NextRequest) {
         .eq('month', month)
         .not('tier', 'is', null)
       
-      if (line && line !== 'ALL') query = query.eq('line', line)
-      if (tierGroup && tierGroup !== 'ALL') query = query.eq('tier_group', tierGroup)
+      // Apply filters (only if not "All")
+      if (line && line !== 'All' && line !== 'ALL') {
+        query = query.eq('line', line)
+      }
+      
+      // Apply squad_lead filter (includes NULL when "All" is selected)
+      query = applySquadLeadFilter(query, squadLead || 'All')
+      
+      // Apply channel filter (includes NULL when "All" is selected)
+      query = applyChannelFilter(query, channel || 'All')
+      
+      if (tierGroup && tierGroup !== 'ALL') {
+        query = query.eq('tier_group', tierGroup)
+      }
       
       const { data, error } = await query.order('score', { ascending: false })
       
@@ -106,7 +121,16 @@ export async function GET(request: NextRequest) {
       query = query.in('month', months)
     }
     
-    if (line && line !== 'ALL') query = query.eq('line', line)
+    // Apply filters (only if not "All")
+    if (line && line !== 'All' && line !== 'ALL') {
+      query = query.eq('line', line)
+    }
+    
+    // Apply squad_lead filter (includes NULL when "All" is selected)
+    query = applySquadLeadFilter(query, squadLead || 'All')
+    
+    // Apply channel filter (includes NULL when "All" is selected)
+    query = applyChannelFilter(query, channel || 'All')
     
     const { data: monthlyRecords, error } = await query
     

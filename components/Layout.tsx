@@ -64,7 +64,7 @@ export default function Layout({
           />
           
           {customSubHeader && (
-            <div className="subheader">
+            <div className={`subheader ${!sidebarOpen ? 'collapsed' : ''}`}>
               {customSubHeader}
             </div>
           )}

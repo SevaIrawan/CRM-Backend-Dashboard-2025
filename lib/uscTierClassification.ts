@@ -210,22 +210,45 @@ export function calibrateTierBoundaries(scores: number[]): {
     cumulativeIndex += count
   }
   
+  // Fix: Assign any remaining customers to Tier 7 (lowest tier)
+  // This handles imperfect distributions (e.g., 23 customers → 3 uncovered)
+  if (cumulativeIndex < total) {
+    const remainingCount = total - cumulativeIndex
+    const tier7Boundary = boundaries[boundaries.length - 1] // Last boundary is Tier 7
+    if (tier7Boundary && tier7Boundary.tier === 7) {
+      // Extend Tier 7 to cover remaining customers
+      const newEndIndex = total - 1
+      tier7Boundary.minScore = sorted[newEndIndex] || sorted[total - 1]
+      tier7Boundary.count += remainingCount
+      tier7Boundary.percentage = (tier7Boundary.count / total) * 100
+    }
+  }
+  
   return boundaries
 }
 
 /**
  * Assign tier using calibrated boundaries
+ * 
+ * IMPORTANT: Boundaries must be checked from highest tier (Tier 1) first,
+ * because higher tiers have higher minScore thresholds.
+ * We check in tier order (1→7) which is correct since boundaries array
+ * is already ordered from Tier 1 to Tier 7.
  */
 export function assignTierWithBoundaries(
   score: number, 
   boundaries: ReturnType<typeof calibrateTierBoundaries>
 ): number {
+  // Check boundaries in order (Tier 1 → Tier 7)
+  // Higher tiers have higher minScore, so we check from top tier first
   for (const boundary of boundaries) {
     if (score >= boundary.minScore) {
       return boundary.tier
     }
   }
-  return 7 // Default to lowest tier
+  // Fallback: If score is lower than all minScores, assign to Tier 7
+  // This should rarely happen if boundaries are calibrated correctly
+  return 7
 }
 
 /**
@@ -359,8 +382,12 @@ export function getTierMovementSummary(movements: TierMovement[]): {
   totalStable: number
   totalNew: number
   totalChurned: number
+  totalCustomers: number
   upgradesByTier: Record<number, number>  // To Tier
   downgradesByTier: Record<number, number>  // To Tier
+  upgradesPercentage: number
+  downgradesPercentage: number
+  stablePercentage: number
 } {
   const summary = {
     totalUpgrades: 0,
@@ -368,8 +395,12 @@ export function getTierMovementSummary(movements: TierMovement[]): {
     totalStable: 0,
     totalNew: 0,
     totalChurned: 0,
+    totalCustomers: 0,
     upgradesByTier: {} as Record<number, number>,
-    downgradesByTier: {} as Record<number, number>
+    downgradesByTier: {} as Record<number, number>,
+    upgradesPercentage: 0,
+    downgradesPercentage: 0,
+    stablePercentage: 0
   }
   
   movements.forEach(m => {
@@ -398,7 +429,110 @@ export function getTierMovementSummary(movements: TierMovement[]): {
     }
   })
   
+  // Calculate total customers (excluding NEW and CHURNED for percentage base)
+  summary.totalCustomers = summary.totalUpgrades + summary.totalDowngrades + summary.totalStable
+  
+  // Calculate percentages
+  if (summary.totalCustomers > 0) {
+    summary.upgradesPercentage = Math.round((summary.totalUpgrades / summary.totalCustomers) * 10000) / 100
+    summary.downgradesPercentage = Math.round((summary.totalDowngrades / summary.totalCustomers) * 10000) / 100
+    summary.stablePercentage = Math.round((summary.totalStable / summary.totalCustomers) * 10000) / 100
+  }
+  
   return summary
+}
+
+/**
+ * Generate Tier Movement Matrix
+ * 
+ * Creates a matrix showing customer movement from Period A (fromTier) to Period B (toTier)
+ * Format: { fromTier: { toTier: count } }
+ * 
+ * Also calculates:
+ * - Total Out: Total customers starting in each Period A tier
+ * - Total In: Total customers ending in each Period B tier
+ */
+export function generateTierMovementMatrix(movements: TierMovement[]): {
+  matrix: Record<number, Record<number, number>>  // fromTier -> toTier -> count
+  totalOut: Record<number, number>  // Total customers per Period A tier
+  totalIn: Record<number, number>   // Total customers per Period B tier
+  tierOrder: number[]  // Ordered list of all tiers (1-7)
+  grandTotal: number
+} {
+  const matrix: Record<number, Record<number, number>> = {}
+  const totalOut: Record<number, number> = {}
+  const totalIn: Record<number, number> = {}
+  const tierSet = new Set<number>()
+  
+  // Initialize matrix and counters
+  movements.forEach(m => {
+    // Only process movements with both fromTier and toTier (exclude NEW and CHURNED for matrix)
+    if (m.fromTier !== null && m.toTier !== null) {
+      const fromTier = m.fromTier
+      const toTier = m.toTier
+      
+      // Add to tier set
+      tierSet.add(fromTier)
+      tierSet.add(toTier)
+      
+      // Initialize matrix row if needed
+      if (!matrix[fromTier]) {
+        matrix[fromTier] = {}
+      }
+      
+      // Initialize matrix cell if needed
+      if (!matrix[fromTier][toTier]) {
+        matrix[fromTier][toTier] = 0
+      }
+      
+      // Increment count
+      matrix[fromTier][toTier]++
+      
+      // Update Total Out (Period A)
+      totalOut[fromTier] = (totalOut[fromTier] || 0) + 1
+      
+      // Update Total In (Period B)
+      totalIn[toTier] = (totalIn[toTier] || 0) + 1
+    }
+  })
+  
+  // Ensure all tiers are in matrix (even if no movement)
+  const tierOrder = Array.from(tierSet).sort((a, b) => a - b)
+  
+  // Initialize all possible combinations with 0
+  tierOrder.forEach(fromTier => {
+    if (!matrix[fromTier]) {
+      matrix[fromTier] = {}
+    }
+    tierOrder.forEach(toTier => {
+      if (!matrix[fromTier][toTier]) {
+        matrix[fromTier][toTier] = 0
+      }
+    })
+    
+    // Ensure totalOut is initialized
+    if (!totalOut[fromTier]) {
+      totalOut[fromTier] = 0
+    }
+  })
+  
+  tierOrder.forEach(toTier => {
+    // Ensure totalIn is initialized
+    if (!totalIn[toTier]) {
+      totalIn[toTier] = 0
+    }
+  })
+  
+  // Calculate grand total
+  const grandTotal = Object.values(totalOut).reduce((sum, count) => sum + count, 0)
+  
+  return {
+    matrix,
+    totalOut,
+    totalIn,
+    tierOrder,
+    grandTotal
+  }
 }
 
 // ============================================================================

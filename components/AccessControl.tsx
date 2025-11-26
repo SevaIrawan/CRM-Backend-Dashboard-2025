@@ -83,9 +83,9 @@ export default function AccessControl({ children }: AccessControlProps) {
           setIsAuthorized(false)
           setHasChecked(true)
         } else {
-          // Maintenance mode is OFF
-          setIsAuthorized(true)
-          setHasChecked(true)
+        // Maintenance mode is OFF
+        setIsAuthorized(true)
+        setHasChecked(true)
         }
       })
       .catch(() => {

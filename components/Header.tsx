@@ -29,6 +29,7 @@ export default function Header({
   const router = useRouter()
   const pathname = usePathname()
   const [userInfo, setUserInfo] = useState<{username: string, role: string} | null>(null)
+  const [notificationCount, setNotificationCount] = useState(0)
 
   useEffect(() => {
     // Get user info from session
@@ -49,6 +50,39 @@ export default function Header({
       console.error('Error getting user info:', error)
     }
   }, [])
+
+  // Update notification count when on business performance page
+  useEffect(() => {
+    if (pathname !== '/usc/business-performance') {
+      setNotificationCount(0)
+      return
+    }
+
+    const updateNotification = () => {
+      try {
+        const notificationData = localStorage.getItem('business_performance_notification')
+        if (notificationData) {
+          const data = JSON.parse(notificationData)
+          // Get count based on current tab
+          const currentTab = data.tab || 'marketing'
+          const count = currentTab === 'marketing' 
+            ? (data.marketing || data.count || 3)
+            : (data.tierAnalytics || data.count || 4)
+          setNotificationCount(count)
+        } else {
+          setNotificationCount(3) // Default for marketing tab
+        }
+      } catch (e) {
+        console.error('Error reading notification count:', e)
+        setNotificationCount(0)
+      }
+    }
+    
+    updateNotification()
+    // Listen for storage changes (when tab switches)
+    const interval = setInterval(updateNotification, 100)
+    return () => clearInterval(interval)
+  }, [pathname])
 
   // ✅ Memoize page title for instant update when pathname changes
   const currentPageTitle = useMemo(() => {
@@ -287,6 +321,44 @@ export default function Header({
               Welcome, <strong>{userInfo?.username || 'User'}</strong>
             </span>
           </div>
+
+          {/* Notification Bell - Only show on Business Performance page */}
+          {pathname === '/usc/business-performance' && (
+            <div style={{ position: 'relative', cursor: 'pointer' }}>
+              <svg 
+                width="24" 
+                height="24" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2"
+                style={{ color: '#ffffff' }}
+              >
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+              </svg>
+              {notificationCount > 0 && (
+                <div style={{
+                  position: 'absolute',
+                  top: '-5px',
+                  right: '-5px',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  borderRadius: '50%',
+                  width: '20px',
+                  height: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                  border: '2px solid #1f2937'
+                }}>
+                  {notificationCount > 9 ? '9+' : notificationCount}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Malaysian Flag */}
           <div style={{ display: 'flex', alignItems: 'center' }}>

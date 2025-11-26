@@ -602,30 +602,30 @@ export default function Sidebar({
                    }}
                  >
                    {/* ✅ Icon - Always center when collapsed */}
-                   <div 
-                     style={{ 
-                       display: 'flex', 
-                       alignItems: 'center', 
-                       justifyContent: 'center', 
+                     <div 
+                       style={{ 
+                         display: 'flex', 
+                         alignItems: 'center', 
+                         justifyContent: 'center', 
                        width: '20px',
                        height: '20px',
                        flexShrink: 0,
                        transition: 'color 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                     }}
-                     data-icon="true"
-                   >
-                     {React.cloneElement(item.icon, {
+                       }}
+                       data-icon="true"
+                     >
+                       {React.cloneElement(item.icon, {
                        color: (isSubmenuPath(pathname) && openSubmenu === item.title) ? '#3b82f6' : '#ffffff',
                        style: { transition: 'color 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }
-                     })}
-                   </div>
+                       })}
+                     </div>
                    {/* ✅ Text - Smooth fade and slide from left */}
-                   {sidebarOpen && (
-                     <span style={{ 
-                       fontSize: '14px', 
-                       fontWeight: '500',
-                       color: '#ffffff',
-                       lineHeight: '1.2',
+                    {sidebarOpen && (
+                      <span style={{ 
+                        fontSize: '14px', 
+                        fontWeight: '500',
+                        color: '#ffffff',
+                        lineHeight: '1.2',
                        marginLeft: '12px',
                        opacity: sidebarOpen ? 1 : 0,
                        overflow: 'hidden',
@@ -633,8 +633,8 @@ export default function Sidebar({
                        transform: sidebarOpen ? 'translateX(0)' : 'translateX(-10px)',
                        transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                        flexShrink: 0
-                     }}>{item.title}</span>
-                   )}
+                      }}>{item.title}</span>
+                    )}
                   {/* ✅ Arrow Indicator - Only show when expanded */}
                   {sidebarOpen && (
                     <span style={{ 
@@ -750,12 +750,12 @@ export default function Sidebar({
                    })}
                  </div>
                  {/* ✅ Text - Only show when expanded */}
-                 {sidebarOpen && (
-                   <span style={{ 
-                     fontSize: '14px', 
-                     fontWeight: '500',
-                     color: '#ffffff',
-                     lineHeight: '1.2',
+                {sidebarOpen && (
+                  <span style={{ 
+                    fontSize: '14px', 
+                    fontWeight: '500',
+                    color: '#ffffff',
+                    lineHeight: '1.2',
                      marginLeft: '12px',
                      opacity: sidebarOpen ? 1 : 0,
                      overflow: 'hidden',
@@ -763,8 +763,8 @@ export default function Sidebar({
                      transform: sidebarOpen ? 'translateX(0)' : 'translateX(-10px)',
                      transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                      flexShrink: 0
-                   }}>{item.title}</span>
-                 )}
+                  }}>{item.title}</span>
+                )}
               </div>
             )}
           </div>
@@ -784,9 +784,9 @@ export default function Sidebar({
         overflow: 'hidden'
       }}>
         {/* ✅ COLLAPSED: Calendar icon with gold circular border - Always rendered */}
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
           justifyContent: 'center',
           width: '40px',
           height: '40px',
@@ -795,8 +795,8 @@ export default function Sidebar({
           transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           position: sidebarOpen ? 'absolute' : 'relative',
           pointerEvents: sidebarOpen ? 'none' : 'auto'
-        }}>
-          {isLoading ? (
+            }}>
+              {isLoading ? (
             <div style={{
               width: '40px',
               height: '40px',
@@ -808,16 +808,16 @@ export default function Sidebar({
               justifyContent: 'center',
               backgroundColor: '#1f2937'
             }}>
-              <div style={{
-                width: '16px',
-                height: '16px',
-                border: '2px solid #FFD700',
-                borderTop: '2px solid transparent',
-                borderRadius: '50%',
-                animation: 'spin 1s linear infinite'
-              }}></div>
-            </div>
-          ) : (
+                  <div style={{
+                    width: '16px',
+                    height: '16px',
+                    border: '2px solid #FFD700',
+                    borderTop: '2px solid transparent',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }}></div>
+                </div>
+              ) : (
             <div
               title={`Update: ${lastUpdate}`}
               style={{
@@ -847,11 +847,11 @@ export default function Sidebar({
                 📅
               </span>
             </div>
-          )}
-        </div>
+              )}
+            </div>
 
         {/* ✅ EXTENDED: Full text display - Always rendered */}
-        <div style={{ 
+            <div style={{
           textAlign: 'center', 
           width: '100%',
           maxWidth: sidebarOpen ? '100%' : '0',
@@ -865,41 +865,41 @@ export default function Sidebar({
         }}>
           <div style={{
             fontSize: '14px',
-            fontWeight: '600',
+              fontWeight: '600',
             color: '#ffffff',
             padding: '8px 12px',
-            backgroundColor: '#1f2937', // DARK BLUE background
+              backgroundColor: '#1f2937', // DARK BLUE background
             borderRadius: '8px',
             border: `2px solid #FFD700`,
             marginBottom: '4px',
-            position: 'relative',
-            overflow: 'hidden',
+              position: 'relative',
+              overflow: 'hidden',
             minHeight: '40px',
-            display: 'flex',
-            alignItems: 'center',
+              display: 'flex',
+              alignItems: 'center',
             justifyContent: 'center',
             whiteSpace: 'nowrap'
-          }}>
-            {isLoading ? (
+            }}>
+              {isLoading ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{
+                  <div style={{
                   width: '16px',
                   height: '16px',
                   border: '2px solid #FFD700',
                   borderTop: '2px solid transparent',
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
-                }}></div>
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }}></div>
                 <span style={{ color: '#ffffff', fontSize: '12px' }}>Loading Update...</span>
-              </div>
-            ) : (
-              <>
-                <span style={{ color: '#ffffff' }}>Update: </span>
-                <span style={{ color: '#ffffff' }}>{lastUpdate}</span>
-              </>
-            )}
+                </div>
+              ) : (
+                <>
+                  <span style={{ color: '#ffffff' }}>Update: </span>
+                  <span style={{ color: '#ffffff' }}>{lastUpdate}</span>
+                </>
+              )}
+            </div>
           </div>
-        </div>
         <style jsx>{`
           @keyframes spin {
             0% { transform: rotate(0deg); }

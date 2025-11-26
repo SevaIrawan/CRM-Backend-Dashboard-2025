@@ -905,11 +905,11 @@ body {
   backface-visibility: hidden; /* Prevent flickering */
 }
 
-/* Custom SubHeader - Full Width, Static, Not Affected by Sidebar */
+/* Custom SubHeader - Flexible, Follows Sidebar Collapse/Extend */
 .subheader {
   position: fixed;
   top: 90px; /* Below header */
-  left: 0; /* ✅ Full width - not affected by sidebar */
+  left: 280px; /* ✅ Start after sidebar when extended */
   right: 0;
   height: 60px;
   background-color: #ffffff;
@@ -918,11 +918,15 @@ body {
   display: flex;
   align-items: center;
   padding: 0 24px;
-  /* ✅ NO TRANSITION - Subheader is always full width and static */
-  transition: none;
+  /* ✅ Smooth transition for sidebar collapse/extend */
+  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   transform: translateZ(0); /* Hardware acceleration */
   backface-visibility: hidden; /* Prevent flickering */
+}
+
+.subheader.collapsed {
+  left: 80px; /* ✅ Adjust when sidebar collapsed */
 }
 
 .subheader-content {
@@ -1041,6 +1045,9 @@ body {
 .main-content.collapsed.has-subheader {
   top: 150px; /* Header height (90px) + SubHeader height (60px) */
 }
+
+/* Slicer Canvas - Below subheader in content flow */
+/* NOTE: Moved to Business Performance page-specific styling to avoid conflicts */
 
 
 

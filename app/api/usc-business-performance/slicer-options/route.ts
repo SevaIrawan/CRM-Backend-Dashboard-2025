@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { filterBrandsByUser, removeAllOptionForSquadLead, getDefaultBrandForSquadLead } from '@/utils/brandAccessHelper'
+import { ORDERED_TIER_GROUPS } from '@/app/usc/business-performance/constants'
 
 /**
  * ============================================================================
@@ -45,17 +46,57 @@ export async function GET(request: NextRequest) {
     // Filter brands based on user permission
     const filteredBrands = filterBrandsByUser(cleanLines, userAllowedBrands)
     
-    let linesWithAll = ['ALL', ...filteredBrands.sort()]
+    let linesWithAll = ['All', ...filteredBrands.sort()]
     
-    // Remove 'ALL' option for Squad Lead users
+    // Remove 'All' option for Squad Lead users
     linesWithAll = removeAllOptionForSquadLead(linesWithAll, userAllowedBrands)
     
     console.log('✅ [USC BP Slicer] FINAL BRANDS:', {
       total_available: cleanLines.length,
       user_access: filteredBrands.length,
-      has_all_option: linesWithAll.includes('ALL'),
+      has_all_option: linesWithAll.includes('All'),
       final_brands: linesWithAll
     })
+    
+    // Get DISTINCT squad_lead from blue_whale_usc
+    const { data: allSquadLeads, error: squadLeadsError } = await supabase
+      .from('blue_whale_usc')
+      .select('squad_lead')
+      .eq('currency', 'USC')
+      .not('squad_lead', 'is', null)
+    
+    if (squadLeadsError) {
+      console.error('❌ Error fetching squad_leads:', squadLeadsError)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Database error',
+        message: squadLeadsError.message 
+      }, { status: 500 })
+    }
+    
+    const uniqueSquadLeads = Array.from(new Set(allSquadLeads?.map(row => row.squad_lead).filter(Boolean) || [])) as string[]
+    const sortedSquadLeads = uniqueSquadLeads.sort()
+    const squadLeadsWithAll = ['All', ...sortedSquadLeads]
+    
+    // Get DISTINCT traffic (Channel) from blue_whale_usc
+    const { data: allChannels, error: channelsError } = await supabase
+      .from('blue_whale_usc')
+      .select('traffic')
+      .eq('currency', 'USC')
+      .not('traffic', 'is', null)
+    
+    if (channelsError) {
+      console.error('❌ Error fetching channels:', channelsError)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Database error',
+        message: channelsError.message 
+      }, { status: 500 })
+    }
+    
+    const uniqueChannels = Array.from(new Set(allChannels?.map(row => row.traffic).filter(Boolean) || [])) as string[]
+    const sortedChannels = uniqueChannels.sort()
+    const channelsWithAll = ['All', ...sortedChannels]
     
     // Get years from MASTER TABLE
     const { data: allYears, error: yearsError } = await supabase
@@ -137,19 +178,65 @@ export async function GET(request: NextRequest) {
       ...monthsWithYearInfo
     ]
     
+    // Get distinct tier_name + tier_group pairs for filter
+    const { data: tierNameRows, error: tierNamesError } = await supabase
+      .from('blue_whale_usc')
+      .select('tier_name, tier_group')
+      .eq('currency', 'USC')
+      .not('tier_name', 'is', null)
+
+    if (tierNamesError) {
+      console.error('❌ Error fetching tier names for filter:', tierNamesError)
+      return NextResponse.json({
+        success: false,
+        error: 'Database error',
+        message: tierNamesError.message
+      }, { status: 500 })
+    }
+
+    const tierNameMap = new Map<string, string | null>()
+    tierNameRows?.forEach(row => {
+      const name = row.tier_name as string
+      if (!name) return
+      const normalized = name.trim()
+      if (!normalized) return
+      if (!tierNameMap.has(normalized)) {
+        tierNameMap.set(normalized, row.tier_group || null)
+      }
+    })
+
+    const tierNameOptions = Array.from(tierNameMap.entries())
+      .map(([name, group]) => ({ name, group }))
+      .sort((a, b) => {
+        const groupOrder = ORDERED_TIER_GROUPS
+        const aIndex = groupOrder.indexOf(a.group || '')
+        const bIndex = groupOrder.indexOf(b.group || '')
+        if (aIndex !== bIndex) {
+          if (aIndex === -1) return 1
+          if (bIndex === -1) return -1
+          return aIndex - bIndex
+        }
+        return a.name.localeCompare(b.name)
+      })
+    
     // Set default line
     const defaultLine = userAllowedBrands && userAllowedBrands.length > 0 
       ? getDefaultBrandForSquadLead(userAllowedBrands) || filteredBrands[0] 
-      : 'ALL'
+      : 'All'
     
     const slicerOptions = {
       currencies: ['USC'],
       lines: linesWithAll,
+      squadLeads: squadLeadsWithAll,
+      channels: channelsWithAll,
       years: sortedYears,
       months: monthsWithAll,
+      tierNames: tierNameOptions,
       defaults: {
         currency: 'USC',
         line: defaultLine,
+        squadLead: 'All',
+        channel: 'All',
         year: defaultYear,
         month: defaultMonth
       }
