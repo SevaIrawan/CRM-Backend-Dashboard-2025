@@ -201,7 +201,8 @@ export async function GET(request: NextRequest) {
       const normalized = name.trim()
       if (!normalized) return
       if (!tierNameMap.has(normalized)) {
-        tierNameMap.set(normalized, row.tier_group || null)
+        const group = row.tier_group as string | null
+        tierNameMap.set(normalized, group && typeof group === 'string' ? group : null)
       }
     })
 
