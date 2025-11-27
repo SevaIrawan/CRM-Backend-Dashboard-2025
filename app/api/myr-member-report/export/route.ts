@@ -76,16 +76,103 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const data = allData
-    console.log(`📊 Export completed: ${data.length} blue_whale_myr records`)
+    const rawData = allData
+    console.log(`📊 Export completed: ${rawData.length} blue_whale_myr raw records`)
 
-    if (data.length === 0) {
+    if (rawData.length === 0) {
       return NextResponse.json({ 
         error: 'No data found for the selected filters' 
       }, { status: 404 })
     }
 
-    // Convert to CSV - use custom column order and exclude hidden columns
+    // ✅ AGGREGATE BY USERKEY (same as data endpoint)
+    const userMap = new Map<string, any>()
+    
+    rawData?.forEach((row: any) => {
+      const key = row.userkey
+      
+      if (!userMap.has(key)) {
+        // Initialize user record
+        const dateRangeValue = filterMode === 'daterange' && startDate && endDate
+          ? `${startDate} to ${endDate}`
+          : (month && month !== 'ALL')
+          ? `Month: ${month} ${year !== 'ALL' ? year : ''}`.trim()
+          : (year && year !== 'ALL')
+          ? `Year: ${year}`
+          : 'All Time'
+        
+        userMap.set(key, {
+          userkey: key,
+          date_range: dateRangeValue,
+          line: row.line,
+          user_name: row.user_name,
+          unique_code: row.unique_code,
+          vip_level: row.vip_level,
+          operator: row.operator,
+          traffic: row.traffic,
+          register_date: row.register_date,
+          first_deposit_date: row.first_deposit_date,
+          first_deposit_amount: row.first_deposit_amount,
+          last_deposit_date: row.last_deposit_date,
+          days_inactive: row.days_inactive,
+          activeDates: new Set(),
+          deposit_cases: 0,
+          deposit_amount: 0,
+          withdraw_cases: 0,
+          withdraw_amount: 0,
+          bonus: 0,
+          add_bonus: 0,
+          deduct_bonus: 0,
+          add_transaction: 0,
+          deduct_transaction: 0,
+          cases_adjustment: 0,
+          cases_bets: 0,
+          bets_amount: 0,
+          valid_amount: 0,
+          ggr: 0,
+          net_profit: 0,
+          last_activity_days: row.last_activity_days
+        })
+      }
+      
+      const userRecord = userMap.get(key)
+      
+      // COUNT Days Active (unique dates where deposit_cases > 0)
+      if ((row.deposit_cases || 0) > 0 && row.date) {
+        userRecord.activeDates.add(row.date)
+      }
+      
+      // SUM all numeric metrics
+      userRecord.deposit_cases += (row.deposit_cases || 0)
+      userRecord.deposit_amount += (row.deposit_amount || 0)
+      userRecord.withdraw_cases += (row.withdraw_cases || 0)
+      userRecord.withdraw_amount += (row.withdraw_amount || 0)
+      userRecord.bonus += (row.bonus || 0)
+      userRecord.add_bonus += (row.add_bonus || 0)
+      userRecord.deduct_bonus += (row.deduct_bonus || 0)
+      userRecord.add_transaction += (row.add_transaction || 0)
+      userRecord.deduct_transaction += (row.deduct_transaction || 0)
+      userRecord.cases_adjustment += (row.cases_adjustment || 0)
+      userRecord.cases_bets += (row.cases_bets || 0)
+      userRecord.bets_amount += (row.bets_amount || 0)
+      userRecord.valid_amount += (row.valid_amount || 0)
+      userRecord.ggr += (row.ggr || 0)
+      userRecord.net_profit += (row.net_profit || 0)
+    })
+    
+    // Convert Map to Array and calculate days_active from activeDates
+    const aggregatedData = Array.from(userMap.values()).map((user: any) => {
+      const daysActive = user.activeDates ? user.activeDates.size : 0
+      return {
+        ...user,
+        days_active: daysActive,
+        activeDates: undefined // Remove from final data
+      }
+    })
+    
+    console.log(`📊 Aggregated export data: ${aggregatedData.length} unique users`)
+
+    // Convert aggregated data to CSV - use custom column order and exclude hidden columns
     const hiddenColumns = ['ABSENT', 'YEAR', 'MONTH', 'USERKEY', 'UNIQUEKEY', 'WINRATE', 'CURRENCY', 'DATE', 'VIP_LEVEL', 'OPERATOR', 'REGISTER_DATE', 'LAST_ACTIVITY_DAYS', 'DATE_RANGE']
     
     // Custom column order - same as frontend
@@ -148,31 +235,24 @@ export async function POST(request: NextRequest) {
         .join(' ')
     }
     
-    // Function to calculate ATV and PF for each row
-    const enrichDataWithCalculatedFields = (data: any[]): any[] => {
-      return data.map(row => {
-        const depositAmount = row.deposit_amount || 0
-        const depositCases = row.deposit_cases || 0
-        // For per-daily mode, if days_active doesn't exist, set to 1 if deposit_cases > 0
-        const daysActive = row.days_active !== undefined ? row.days_active : (depositCases > 0 ? 1 : 0)
-        
-        // ATV = Average Transaction Value = deposit_amount / deposit_cases
-        const atv = depositCases > 0 ? depositAmount / depositCases : 0
-        
-        // PF = Purchase Frequency = deposit_cases / days_active
-        const pf = daysActive > 0 ? depositCases / daysActive : 0
-        
-        return {
-          ...row,
-          days_active: daysActive, // Ensure days_active is always present
-          atv,
-          pf
-        }
-      })
-    }
-    
-    // Enrich data with calculated fields (ATV, PF)
-    const enrichedData = enrichDataWithCalculatedFields(data)
+    // Calculate ATV and PF for aggregated data
+    const enrichedData = aggregatedData.map(row => {
+      const depositAmount = row.deposit_amount || 0
+      const depositCases = row.deposit_cases || 0
+      const daysActive = row.days_active || 0
+      
+      // ATV = Average Transaction Value = deposit_amount / deposit_cases
+      const atv = depositCases > 0 ? depositAmount / depositCases : 0
+      
+      // PF = Purchase Frequency = deposit_cases / days_active
+      const pf = daysActive > 0 ? depositCases / daysActive : 0
+      
+      return {
+        ...row,
+        atv,
+        pf
+      }
+    })
     
     // Function to get sorted columns according to custom order (same as frontend)
     const getSortedColumns = (dataKeys: string[]): string[] => {
