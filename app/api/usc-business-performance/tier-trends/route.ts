@@ -244,9 +244,24 @@ function getLastDayOfMonth(year: number, month: number): number {
 }
 
 /**
+ * Format date to DD MMM format (e.g., "01 Jan", "15 Dec")
+ */
+function formatDateLabel(dateString: string): string {
+  const date = new Date(dateString)
+  if (isNaN(date.getTime())) return dateString
+  
+  const day = String(date.getDate()).padStart(2, '0')
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const month = monthNames[date.getMonth()]
+  
+  return `${day} ${month}`
+}
+
+/**
  * Get daily active count by tier_group for a period (DEFAULT MODE)
  * Count = COUNT(DISTINCT userkey) per tier_group per day
  * Active = deposit_cases > 0
+ * Returns both data and dates (eliminates redundant query)
  */
 async function getDailyActiveCountByTierGroup(
   period: PeriodInfo,
@@ -254,8 +269,9 @@ async function getDailyActiveCountByTierGroup(
   squadLead: string,
   channel: string,
   userAllowedBrands: string[] | null
-): Promise<Record<string, number[]>> {
-  let dailyQuery = supabase
+): Promise<{ data: Record<string, number[]>, dates: string[] }> {
+  // Build base query
+  let baseQuery = supabase
     .from('blue_whale_usc')
     .select('date, userkey, tier_group')
     .eq('currency', 'USC')
@@ -265,26 +281,47 @@ async function getDailyActiveCountByTierGroup(
     .not('tier_group', 'is', null)
   
   if (brand && brand !== 'All' && brand !== 'ALL') {
-    dailyQuery = dailyQuery.eq('line', brand)
+    baseQuery = baseQuery.eq('line', brand)
   }
   
-  dailyQuery = applySquadLeadFilter(dailyQuery, squadLead || 'All')
-  dailyQuery = applyChannelFilter(dailyQuery, channel || 'All')
+  baseQuery = applySquadLeadFilter(baseQuery, squadLead || 'All')
+  baseQuery = applyChannelFilter(baseQuery, channel || 'All')
   
   if (userAllowedBrands && userAllowedBrands.length > 0) {
-    dailyQuery = dailyQuery.in('line', userAllowedBrands)
+    baseQuery = baseQuery.in('line', userAllowedBrands)
   }
   
-  const { data: dailyData, error: dailyError } = await dailyQuery
+  // ✅ BATCH FETCHING for large datasets
+  const batchSize = 10000
+  let allData: any[] = []
+  let offset = 0
+  let hasMore = true
   
-  if (dailyError) {
-    console.error('❌ [Tier Trends] Error fetching daily data:', dailyError)
-    throw dailyError
+  while (hasMore) {
+    const batchQuery = baseQuery.range(offset, offset + batchSize - 1)
+    const batchResult = await batchQuery.order('date', { ascending: true })
+    
+    if (batchResult.error) {
+      console.error('❌ [Tier Trends] Error fetching batch data:', batchResult.error)
+      throw batchResult.error
+    }
+    
+    const batchData = batchResult.data || []
+    allData = [...allData, ...batchData]
+    
+    hasMore = batchData.length === batchSize
+    offset += batchSize
+    
+    // Safety limit
+    if (allData.length > 500000) {
+      console.log('⚠️ [Tier Trends] Safety limit reached: 500,000 records')
+      break
+    }
   }
   
   const dateTierMap = new Map<string, Map<string, Set<string>>>()
   
-  dailyData?.forEach(record => {
+  allData.forEach(record => {
     const date = record.date as string
     const userkey = record.userkey as string
     const tierGroup = record.tier_group as string
@@ -303,7 +340,11 @@ async function getDailyActiveCountByTierGroup(
     tierMap.get(tierGroup)!.add(userkey)
   })
   
+  // ✅ Extract dates directly from aggregation (sorted)
   const allDates = Array.from(dateTierMap.keys()).sort()
+  
+  // ✅ Format dates to DD MMM format
+  const formattedDates = allDates.map(formatDateLabel)
   
   const tierGroups = ['High Value', 'Medium Value', 'Low Value', 'Potential']
   const result: Record<string, number[]> = {}
@@ -317,13 +358,14 @@ async function getDailyActiveCountByTierGroup(
     })
   })
   
-  return result
+  return { data: result, dates: formattedDates }
 }
 
 /**
  * Get daily active count by tier_name for a period (FILTERED MODE)
  * Count = COUNT(DISTINCT userkey) per tier_name per day
  * Active = deposit_cases > 0
+ * Returns both data and dates (eliminates redundant query)
  */
 async function getDailyActiveCountByTierName(
   period: PeriodInfo,
@@ -332,8 +374,9 @@ async function getDailyActiveCountByTierName(
   channel: string,
   userAllowedBrands: string[] | null,
   tierNameFilter: string[] = []
-): Promise<Record<string, number[]>> {
-  let dailyQuery = supabase
+): Promise<{ data: Record<string, number[]>, dates: string[] }> {
+  // Build base query
+  let baseQuery = supabase
     .from('blue_whale_usc')
     .select('date, userkey, tier_name')
     .eq('currency', 'USC')
@@ -343,31 +386,52 @@ async function getDailyActiveCountByTierName(
     .not('tier_name', 'is', null)
   
   if (brand && brand !== 'All' && brand !== 'ALL') {
-    dailyQuery = dailyQuery.eq('line', brand)
+    baseQuery = baseQuery.eq('line', brand)
   }
   
-  dailyQuery = applySquadLeadFilter(dailyQuery, squadLead || 'All')
-  dailyQuery = applyChannelFilter(dailyQuery, channel || 'All')
+  baseQuery = applySquadLeadFilter(baseQuery, squadLead || 'All')
+  baseQuery = applyChannelFilter(baseQuery, channel || 'All')
   
   if (userAllowedBrands && userAllowedBrands.length > 0) {
-    dailyQuery = dailyQuery.in('line', userAllowedBrands)
+    baseQuery = baseQuery.in('line', userAllowedBrands)
   }
   
   // Apply tier_name filter
   if (tierNameFilter && tierNameFilter.length > 0) {
-    dailyQuery = dailyQuery.in('tier_name', tierNameFilter)
+    baseQuery = baseQuery.in('tier_name', tierNameFilter)
   }
   
-  const { data: dailyData, error: dailyError } = await dailyQuery
+  // ✅ BATCH FETCHING for large datasets
+  const batchSize = 10000
+  let allData: any[] = []
+  let offset = 0
+  let hasMore = true
   
-  if (dailyError) {
-    console.error('❌ [Tier Trends] Error fetching daily data:', dailyError)
-    throw dailyError
+  while (hasMore) {
+    const batchQuery = baseQuery.range(offset, offset + batchSize - 1)
+    const batchResult = await batchQuery.order('date', { ascending: true })
+    
+    if (batchResult.error) {
+      console.error('❌ [Tier Trends] Error fetching batch data:', batchResult.error)
+      throw batchResult.error
+    }
+    
+    const batchData = batchResult.data || []
+    allData = [...allData, ...batchData]
+    
+    hasMore = batchData.length === batchSize
+    offset += batchSize
+    
+    // Safety limit
+    if (allData.length > 500000) {
+      console.log('⚠️ [Tier Trends] Safety limit reached: 500,000 records')
+      break
+    }
   }
   
   const dateTierMap = new Map<string, Map<string, Set<string>>>()
   
-  dailyData?.forEach(record => {
+  allData.forEach(record => {
     const date = record.date as string
     const userkey = record.userkey as string
     const tierName = record.tier_name as string
@@ -386,7 +450,11 @@ async function getDailyActiveCountByTierName(
     tierMap.get(tierName)!.add(userkey)
   })
   
+  // ✅ Extract dates directly from aggregation (sorted)
   const allDates = Array.from(dateTierMap.keys()).sort()
+  
+  // ✅ Format dates to DD MMM format
+  const formattedDates = allDates.map(formatDateLabel)
   
   const allTierNames = new Set<string>()
   dateTierMap.forEach(tierMap => {
@@ -404,7 +472,39 @@ async function getDailyActiveCountByTierName(
     })
   })
   
-  return result
+  return { data: result, dates: formattedDates }
+}
+
+// ✅ Simple in-memory cache (TTL: 5 minutes)
+const cache = new Map<string, { data: any, timestamp: number }>()
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+/**
+ * Generate cache key from request parameters
+ */
+function generateCacheKey(
+  comparePeriod: string | null,
+  periodAStart: string | null,
+  periodAEnd: string | null,
+  periodBStart: string | null,
+  periodBEnd: string | null,
+  brand: string,
+  squadLead: string,
+  channel: string,
+  tierNameFilter: string[]
+): string {
+  const keyParts = [
+    comparePeriod || 'custom',
+    periodAStart || '',
+    periodAEnd || '',
+    periodBStart || '',
+    periodBEnd || '',
+    brand,
+    squadLead,
+    channel,
+    tierNameFilter.sort().join(',')
+  ]
+  return `tier-trends:${keyParts.join('|')}`
 }
 
 export async function GET(request: NextRequest) {
@@ -440,6 +540,25 @@ export async function GET(request: NextRequest) {
         success: false,
         error: 'comparePeriod must be "Monthly", "3 Month", or "6 Month"'
       }, { status: 400 })
+    }
+    
+    // ✅ Check cache first
+    const cacheKey = generateCacheKey(
+      comparePeriod,
+      periodAStart,
+      periodAEnd,
+      periodBStart,
+      periodBEnd,
+      brand,
+      squadLead,
+      channel,
+      tierNameFilter
+    )
+    
+    const cachedResult = cache.get(cacheKey)
+    if (cachedResult && Date.now() - cachedResult.timestamp < CACHE_TTL) {
+      console.log('✅ [Tier Trends] Using cached result')
+      return NextResponse.json(cachedResult.data)
     }
     
     // Get user's allowed brands from header
@@ -515,28 +634,25 @@ export async function GET(request: NextRequest) {
     
     console.log('📊 [Tier Trends] Mode:', useTierNameMode ? 'tier_name (filtered)' : 'tier_group (default)')
     
-    let periodAData: Record<string, number[]>
-    let periodBData: Record<string, number[]>
+    let periodAResult: { data: Record<string, number[]>, dates: string[] }
+    let periodBResult: { data: Record<string, number[]>, dates: string[] }
     
     if (useTierNameMode) {
       // FILTERED MODE: Use tier_name
-      [periodAData, periodBData] = await Promise.all([
+      [periodAResult, periodBResult] = await Promise.all([
         getDailyActiveCountByTierName(periodA, brand, squadLead, channel, userAllowedBrands, tierNameFilter),
         getDailyActiveCountByTierName(periodB, brand, squadLead, channel, userAllowedBrands, tierNameFilter)
       ])
     } else {
       // DEFAULT MODE: Use tier_group
-      [periodAData, periodBData] = await Promise.all([
+      [periodAResult, periodBResult] = await Promise.all([
         getDailyActiveCountByTierGroup(periodA, brand, squadLead, channel, userAllowedBrands),
         getDailyActiveCountByTierGroup(periodB, brand, squadLead, channel, userAllowedBrands)
       ])
     }
     
-    // Get date labels for both periods
-    const periodADates = await getDateLabels(periodA)
-    const periodBDates = await getDateLabels(periodB)
-    
-    return NextResponse.json({
+    // ✅ Dates already included in result (no need for separate query)
+    const responseData = {
       success: true,
       data: {
         comparePeriod,
@@ -545,19 +661,37 @@ export async function GET(request: NextRequest) {
           months: periodA.months,
           startDate: periodA.startDate,
           endDate: periodA.endDate,
-          dates: periodADates,
-          data: periodAData
+          dates: periodAResult.dates, // ✅ Already formatted as DD MMM
+          data: periodAResult.data
         },
         periodB: {
           label: periodB.label,
           months: periodB.months,
           startDate: periodB.startDate,
           endDate: periodB.endDate,
-          dates: periodBDates,
-          data: periodBData
+          dates: periodBResult.dates, // ✅ Already formatted as DD MMM
+          data: periodBResult.data
         }
       }
+    }
+    
+    // ✅ Cache the result
+    cache.set(cacheKey, {
+      data: responseData,
+      timestamp: Date.now()
     })
+    
+    // ✅ Clean up old cache entries (every 10 requests)
+    if (cache.size > 100) {
+      const now = Date.now()
+      for (const [key, value] of cache.entries()) {
+        if (now - value.timestamp > CACHE_TTL) {
+          cache.delete(key)
+        }
+      }
+    }
+    
+    return NextResponse.json(responseData)
     
   } catch (error) {
     console.error('❌ [Tier Trends] Error:', error)
@@ -568,27 +702,4 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * Get date labels for a period (Day 1, Day 2, etc.)
- * Returns array of day labels matching the data array length
- */
-async function getDateLabels(period: PeriodInfo): Promise<string[]> {
-  // Get all unique dates from blue_whale_usc for this period
-  const { data, error } = await supabase
-    .from('blue_whale_usc')
-    .select('date')
-    .eq('currency', 'USC')
-    .gte('date', period.startDate)
-    .lte('date', period.endDate)
-    .gt('deposit_cases', 0)
-  
-  if (error || !data) {
-    return []
-  }
-  
-  const uniqueDates = Array.from(new Set(data.map(r => r.date as string))).sort()
-  
-  // Return as "Day 1", "Day 2", etc.
-  return uniqueDates.map((_, index) => `Day ${index + 1}`)
-}
 

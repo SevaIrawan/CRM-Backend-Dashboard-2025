@@ -115,19 +115,25 @@ export default function CustomerTierLineChart({
   const data = {
     labels: categories,
     datasets: series.map((item, index) => {
+      // ✅ Use color from series (matches filter dropdown colors)
       const lineColor = item.color || '#3B82F6'
+      
+      // Debug: Log only if color is missing (indicates a problem)
+      if (!item.color) {
+        console.warn(`⚠️ [Chart] Series ${index} "${item.name}" has no color, using blue fallback`)
+      }
       
       return {
         label: item.name,
         data: item.data,
-        borderColor: lineColor,
+        borderColor: lineColor, // ✅ Clear, distinct color from tierColors
         backgroundColor: 'transparent', // ✅ BP Standard: No background fill
-        borderWidth: 3,
-        pointBackgroundColor: lineColor,
-        pointBorderColor: '#ffffff',
-        pointBorderWidth: 2,
-        pointRadius: 6,
-        pointHoverRadius: 8,
+        borderWidth: 4, // ✅ Increased from 3 to 4 for better visibility
+        pointBackgroundColor: lineColor, // ✅ Same color as line
+        pointBorderColor: '#ffffff', // ✅ White border for contrast
+        pointBorderWidth: 2.5, // ✅ Slightly thicker border
+        pointRadius: 7, // ✅ Increased from 6 to 7 for better visibility
+        pointHoverRadius: 9, // ✅ Increased hover size
         fill: false, // ✅ BP Standard: No area fill
         tension: 0.4,
         yAxisID: 'y' // Always use single Y-axis
@@ -266,9 +272,9 @@ export default function CustomerTierLineChart({
                 }}
               >
                 <div style={{
-                  width: '12px',
-                  height: '3px',
-                  backgroundColor: lineColor,
+                  width: '16px', // ✅ Increased from 12px to 16px for better visibility
+                  height: '4px', // ✅ Increased from 3px to 4px for better visibility
+                  backgroundColor: lineColor, // ✅ Same color as chart line
                   borderRadius: '2px',
                   opacity: isOtherHidden ? 0.4 : 1
                 }} />

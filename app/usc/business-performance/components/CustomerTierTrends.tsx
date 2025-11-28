@@ -214,19 +214,38 @@ export default function CustomerTierTrends({ dateRange, brand, squadLead, channe
     TIER_NAME_OPTIONS.filter(opt => selectedTiers.includes(opt.key)) :
     TIER_GROUP_OPTIONS
     
+  // ✅ Build tier color mapping - USE EXACT SAME COLORS AS FILTER DROPDOWN
+  // This ensures chart lines use the same colors shown in the tier filter dropdown
   const tierColors: Record<string, string> = React.useMemo(() => {
     const colors: Record<string, string> = {}
-    TIER_GROUP_OPTIONS.forEach(opt => colors[opt.key] = opt.color)
-    TIER_NAME_OPTIONS.forEach(opt => colors[opt.key] = opt.color)
+    
+    // First, add tier_group colors
+    TIER_GROUP_OPTIONS.forEach(opt => {
+      colors[opt.key] = opt.color
+    })
+    
+    // Most important: Use EXACT same colors from TIER_NAME_OPTIONS (same as filter dropdown)
+    // TIER_NAME_OPTIONS already has correct colors from TIER_NAME_COLORS or DEFAULT_TIER_COLORS
+    TIER_NAME_OPTIONS.forEach(opt => {
+      // ✅ Use color directly from TIER_NAME_OPTIONS (matches filter dropdown exactly)
+      // This ensures chart lines have the same colors as shown in the filter dropdown
+      colors[opt.key] = opt.color
+    })
+    
+    // Debug: Log color mapping to verify
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🎨 [Tier Colors] Color mapping:', Object.entries(colors))
+    }
+    
     return colors
-  }, [])
+  }, [TIER_NAME_OPTIONS]) // ✅ Dependency ensures colors update when tier options change
   
   const tierLabels: Record<string, string> = React.useMemo(() => {
     const labels: Record<string, string> = {}
     TIER_GROUP_OPTIONS.forEach(opt => labels[opt.key] = opt.label)
     TIER_NAME_OPTIONS.forEach(opt => labels[opt.key] = opt.label)
     return labels
-  }, [])
+  }, [TIER_NAME_OPTIONS]) // ✅ Add dependency
   
   // Validate date range (start <= end)
   const validateDateRange = (start: string, end: string): { valid: boolean; error?: string } => {
@@ -326,15 +345,20 @@ export default function CustomerTierTrends({ dateRange, brand, squadLead, channe
     }
   }, [dateRange])
   
-  // Fetch data function - hanya dipanggil saat initial load atau saat search
-  const fetchData = React.useCallback(async () => {
+  // ✅ Debounce ref for tier filter changes
+  const tierFilterDebounceRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // ✅ Fetch data function - optimized with proper dependencies
+  const fetchData = React.useCallback(async (skipLoadingState = false) => {
     // Check jika Custom mode tapi dates belum dipilih - tidak fetch, chart tetap tampil data terakhir
     if (dateRange === 'Custom' && (!periodAStart || !periodAEnd || !periodBStart || !periodBEnd)) {
       // Tidak fetch data baru, chart tetap tampil data terakhir (tidak set loading, tidak error)
       return
     }
     
-    setLoading(true)
+    if (!skipLoadingState) {
+      setLoading(true)
+    }
     setError(null)
     
     try {
@@ -406,36 +430,71 @@ export default function CustomerTierTrends({ dateRange, brand, squadLead, channe
       console.error('❌ [Customer Tier Trends] Error:', err)
       setError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
-      setLoading(false)
+      if (!skipLoadingState) {
+        setLoading(false)
+      }
     }
   }, [dateRange, brand, squadLead, channel, periodAStart, periodAEnd, periodBStart, periodBEnd, selectedTiers])
   
-  // Initial load - hanya sekali saat mount
-  useEffect(() => {
-    fetchData()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // Empty dependency - hanya sekali saat initial load
+  // ✅ CONSOLIDATED useEffect: Handle all fetch triggers
+  const isInitialMountRef = useRef(true)
+  const lastSearchTriggerRef = useRef(0)
   
-  // Trigger fetch saat search button diklik (dari parent)
   useEffect(() => {
-    if (searchTrigger && searchTrigger > 0) {
+    // Initial mount: fetch once
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false
       fetchData()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTrigger]) // Hanya trigger saat searchTrigger berubah
-  
-  // Auto-fetch when tier filter changes (except initial load)
-  const isInitialMount = useRef(true)
-  useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false
       return
     }
     
-    // Fetch data when tier selection changes
-    fetchData()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTiers])
+    // Search trigger from parent: fetch immediately when button clicked
+    if (searchTrigger && searchTrigger > 0 && searchTrigger !== lastSearchTriggerRef.current) {
+      lastSearchTriggerRef.current = searchTrigger
+      fetchData()
+      return
+    }
+  }, [searchTrigger, fetchData])
+  
+  // ✅ Separate effect for date picker changes (custom mode only)
+  useEffect(() => {
+    // Only trigger on date picker changes, not on initial mount
+    if (isInitialMountRef.current) return
+    
+    if (dateRange === 'Custom' && periodAStart && periodAEnd && periodBStart && periodBEnd) {
+      // Debounce date picker changes too
+      const timeoutId = setTimeout(() => {
+        fetchData()
+      }, 300)
+      
+      return () => clearTimeout(timeoutId)
+    }
+  }, [periodAStart, periodAEnd, periodBStart, periodBEnd, dateRange, fetchData])
+  
+  // ✅ Debounced tier filter changes (500ms delay)
+  useEffect(() => {
+    // Skip on initial mount
+    if (isInitialMountRef.current) {
+      return
+    }
+    
+    // Clear previous debounce
+    if (tierFilterDebounceRef.current) {
+      clearTimeout(tierFilterDebounceRef.current)
+    }
+    
+    // Set new debounce
+    tierFilterDebounceRef.current = setTimeout(() => {
+      fetchData(true) // Skip loading state for smoother UX
+    }, 500)
+    
+    // Cleanup
+    return () => {
+      if (tierFilterDebounceRef.current) {
+        clearTimeout(tierFilterDebounceRef.current)
+      }
+    }
+  }, [selectedTiers, fetchData])
 
   if (loading) {
     return (
@@ -498,26 +557,82 @@ export default function CustomerTierTrends({ dateRange, brand, squadLead, channe
     )
   }
 
-  // Prepare series for Period A
+  // ✅ Prepare series for Period A with clear, distinct colors
   // Use all tiers from API response data (tier_group or tier_name based on filter)
   const availableTiersA = Object.keys(data.periodA.data || {})
   const periodASeries = availableTiersA
     .filter(tier => data.periodA.data[tier] && Array.isArray(data.periodA.data[tier]))
-    .map(tier => ({
-      name: `${tierLabels[tier] || tier} Customer Count`,
-      data: data.periodA.data[tier] || [],
-      color: tierColors[tier] || '#6B7280'
-    }))
+    .map(tier => {
+      // ✅ Get color from tierColors - this now uses EXACT same colors as filter dropdown
+      // tierColors is built from TIER_NAME_OPTIONS which matches the filter dropdown colors
+      
+      // Try multiple ways to get the color
+      let tierColor = tierColors[tier]
+      
+      // If not found, try to find in TIER_NAME_OPTIONS directly
+      if (!tierColor) {
+        const tierOption = TIER_NAME_OPTIONS.find(opt => opt.key === tier)
+        tierColor = tierOption?.color
+      }
+      
+      // If still not found, try from constants
+      if (!tierColor) {
+        tierColor = TIER_NAME_COLORS[tier]
+      }
+      
+      // Final fallback
+      if (!tierColor) {
+        tierColor = '#6B7280' // Gray as last resort
+      }
+      
+      // Debug: Log only if color not found (indicates a problem)
+      if (tierColor === '#6B7280' && tierColors[tier] === undefined) {
+        console.warn(`⚠️ [Period A] Tier "${tier}" not found in color mapping, using gray fallback`)
+      }
+      
+      return {
+        name: `${tierLabels[tier] || tier} Customer Count`,
+        data: data.periodA.data[tier] || [],
+        color: tierColor // ✅ Exact same color as shown in filter dropdown
+      }
+    })
 
-  // Prepare series for Period B
+  // ✅ Prepare series for Period B with clear, distinct colors
   const availableTiersB = Object.keys(data.periodB.data || {})
   const periodBSeries = availableTiersB
     .filter(tier => data.periodB.data[tier] && Array.isArray(data.periodB.data[tier]))
-    .map(tier => ({
-      name: `${tierLabels[tier] || tier} Customer Count`,
-      data: data.periodB.data[tier] || [],
-      color: tierColors[tier] || '#6B7280'
-    }))
+    .map(tier => {
+      // ✅ Get color from tierColors - this now uses EXACT same colors as filter dropdown
+      // tierColors is built from TIER_NAME_OPTIONS which matches the filter dropdown colors
+      
+      // Try multiple ways to get the color (same as Period A)
+      let tierColor = tierColors[tier]
+      
+      // If not found, try to find in TIER_NAME_OPTIONS directly
+      if (!tierColor) {
+        const tierOption = TIER_NAME_OPTIONS.find(opt => opt.key === tier)
+        tierColor = tierOption?.color
+      }
+      
+      // If still not found, try from constants
+      if (!tierColor) {
+        tierColor = TIER_NAME_COLORS[tier]
+      }
+      
+      // Final fallback
+      if (!tierColor) {
+        tierColor = '#6B7280' // Gray as last resort
+      }
+      
+      // Debug: Always log to see what's happening
+      console.log(`🎨 [Period B] Tier: "${tier}", Color: ${tierColor}`)
+      
+      return {
+        name: `${tierLabels[tier] || tier} Customer Count`,
+        data: data.periodB.data[tier] || [],
+        color: tierColor // ✅ Exact same color as shown in filter dropdown
+      }
+    })
   
   // Get categories for charts
   const periodACategories = data.periodA.dates && Array.isArray(data.periodA.dates) ? data.periodA.dates : []
