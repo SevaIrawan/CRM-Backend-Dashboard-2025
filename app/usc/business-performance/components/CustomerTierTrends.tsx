@@ -567,12 +567,14 @@ export default function CustomerTierTrends({ dateRange, brand, squadLead, channe
       // tierColors is built from TIER_NAME_OPTIONS which matches the filter dropdown colors
       
       // Try multiple ways to get the color
-      let tierColor = tierColors[tier]
+      let tierColor: string | undefined = tierColors[tier]
       
       // If not found, try to find in TIER_NAME_OPTIONS directly
       if (!tierColor) {
         const tierOption = TIER_NAME_OPTIONS.find(opt => opt.key === tier)
-        tierColor = tierOption?.color
+        if (tierOption) {
+          tierColor = tierOption.color
+        }
       }
       
       // If still not found, try from constants
@@ -580,20 +582,18 @@ export default function CustomerTierTrends({ dateRange, brand, squadLead, channe
         tierColor = TIER_NAME_COLORS[tier]
       }
       
-      // Final fallback
-      if (!tierColor) {
-        tierColor = '#6B7280' // Gray as last resort
-      }
+      // Final fallback - ensure it's always a string
+      const finalTierColor = tierColor || '#6B7280' // Gray as last resort
       
       // Debug: Log only if color not found (indicates a problem)
-      if (tierColor === '#6B7280' && tierColors[tier] === undefined) {
+      if (finalTierColor === '#6B7280' && tierColors[tier] === undefined) {
         console.warn(`⚠️ [Period A] Tier "${tier}" not found in color mapping, using gray fallback`)
       }
       
       return {
         name: `${tierLabels[tier] || tier} Customer Count`,
         data: data.periodA.data[tier] || [],
-        color: tierColor // ✅ Exact same color as shown in filter dropdown
+        color: finalTierColor // ✅ Exact same color as shown in filter dropdown
       }
     })
 
@@ -606,12 +606,14 @@ export default function CustomerTierTrends({ dateRange, brand, squadLead, channe
       // tierColors is built from TIER_NAME_OPTIONS which matches the filter dropdown colors
       
       // Try multiple ways to get the color (same as Period A)
-      let tierColor = tierColors[tier]
+      let tierColor: string | undefined = tierColors[tier]
       
       // If not found, try to find in TIER_NAME_OPTIONS directly
       if (!tierColor) {
         const tierOption = TIER_NAME_OPTIONS.find(opt => opt.key === tier)
-        tierColor = tierOption?.color
+        if (tierOption) {
+          tierColor = tierOption.color
+        }
       }
       
       // If still not found, try from constants
@@ -619,18 +621,13 @@ export default function CustomerTierTrends({ dateRange, brand, squadLead, channe
         tierColor = TIER_NAME_COLORS[tier]
       }
       
-      // Final fallback
-      if (!tierColor) {
-        tierColor = '#6B7280' // Gray as last resort
-      }
-      
-      // Debug: Always log to see what's happening
-      console.log(`🎨 [Period B] Tier: "${tier}", Color: ${tierColor}`)
+      // Final fallback - ensure it's always a string
+      const finalTierColor = tierColor || '#6B7280' // Gray as last resort
       
       return {
         name: `${tierLabels[tier] || tier} Customer Count`,
         data: data.periodB.data[tier] || [],
-        color: tierColor // ✅ Exact same color as shown in filter dropdown
+        color: finalTierColor // ✅ Exact same color as shown in filter dropdown
       }
     })
   
