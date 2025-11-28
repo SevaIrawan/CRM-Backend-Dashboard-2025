@@ -520,7 +520,7 @@ export default function USCOverviewPage() {
               }}
             />
             <StatCard
-              title="PURCHASE FREQUENCY"
+              title="PURCHASE FREQ"
               value={formatNumericKPI(kpiData?.purchaseFrequency || 0)}
               icon="Purchase Frequency"
               additionalKpi={{
@@ -533,7 +533,7 @@ export default function USCOverviewPage() {
               }}
             />
             <StatCard
-              title="AVERAGE TRANSACTION VALUE"
+              title="ATV"
               value={formatCurrencyKPI(kpiData?.avgTransactionValue || 0, selectedCurrency)}
               icon="Average Transaction Value"
               additionalKpi={{

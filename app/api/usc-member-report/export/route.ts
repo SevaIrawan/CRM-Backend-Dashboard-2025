@@ -237,22 +237,22 @@ export async function POST(request: NextRequest) {
     
     // Calculate ATV and PF for aggregated data
     const enrichedData = aggregatedData.map(row => {
-      const depositAmount = row.deposit_amount || 0
-      const depositCases = row.deposit_cases || 0
+        const depositAmount = row.deposit_amount || 0
+        const depositCases = row.deposit_cases || 0
       const daysActive = row.days_active || 0
-      
-      // ATV = Average Transaction Value = deposit_amount / deposit_cases
-      const atv = depositCases > 0 ? depositAmount / depositCases : 0
-      
-      // PF = Purchase Frequency = deposit_cases / days_active
-      const pf = daysActive > 0 ? depositCases / daysActive : 0
-      
-      return {
-        ...row,
-        atv,
-        pf
-      }
-    })
+        
+        // ATV = Average Transaction Value = deposit_amount / deposit_cases
+        const atv = depositCases > 0 ? depositAmount / depositCases : 0
+        
+        // PF = Purchase Frequency = deposit_cases / days_active
+        const pf = daysActive > 0 ? depositCases / daysActive : 0
+        
+        return {
+          ...row,
+          atv,
+          pf
+        }
+      })
     
     // Function to get sorted columns according to custom order (same as frontend)
     const getSortedColumns = (dataKeys: string[]): string[] => {

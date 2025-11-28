@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import StandardLoadingSpinner from '@/components/StandardLoadingSpinner'
+import TierMovementCustomerModal from './TierMovementCustomerModal'
 
 interface MovementSummary {
   totalUpgrades: number
@@ -47,6 +48,10 @@ interface CustomerTierMovementProps {
   squadLead: string
   channel: string
   searchTrigger?: number
+  periodAStart?: string
+  periodAEnd?: string
+  periodBStart?: string
+  periodBEnd?: string
 }
 
 export default function CustomerTierMovement({
@@ -54,18 +59,39 @@ export default function CustomerTierMovement({
   brand,
   squadLead,
   channel,
-  searchTrigger
+  searchTrigger,
+  periodAStart: propPeriodAStart,
+  periodAEnd: propPeriodAEnd,
+  periodBStart: propPeriodBStart,
+  periodBEnd: propPeriodBEnd
 }: CustomerTierMovementProps) {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<TierMovementData | null>(null)
   const [error, setError] = useState<string | null>(null)
+  
+  // Modal state
+  const [modalOpen, setModalOpen] = useState(false)
+  const [selectedFromTier, setSelectedFromTier] = useState<number | null>(null)
+  const [selectedToTier, setSelectedToTier] = useState<number | null>(null)
+  const [selectedFromTierName, setSelectedFromTierName] = useState<string>('')
+  const [selectedToTierName, setSelectedToTierName] = useState<string>('')
+  const [periods, setPeriods] = useState<{
+    currentMonth: string
+    currentYear: string
+    previousMonth: string
+    previousYear: string
+    periodAStart: string | null
+    periodAEnd: string | null
+    periodBStart: string | null
+    periodBEnd: string | null
+  } | null>(null)
 
-  // Calculate periods based on dateRange
-  const calculatePeriods = () => {
-    const today = new Date()
-    const currentYear = today.getFullYear()
-    const currentMonth = today.getMonth() // 0-based
-
+  // Convert date range to year/month format for API (used by tier_usc_v1 which is monthly aggregation)
+  const dateRangeToYearMonth = (startDate: string, endDate: string) => {
+    // Use end date to determine year/month (most recent date in the range)
+    // This is correct because tier_usc_v1 is monthly aggregation
+    const date = new Date(endDate)
+    const year = date.getFullYear()
     const monthNames = [
       'January',
       'February',
@@ -80,26 +106,8 @@ export default function CustomerTierMovement({
       'November',
       'December'
     ]
-
-    // Current period (last available month)
-    const currMonth = monthNames[currentMonth]
-    const currYear = currentYear
-
-    // Previous period (month before)
-    let prevMonthIndex = currentMonth - 1
-    let prevYear = currentYear
-    if (prevMonthIndex < 0) {
-      prevMonthIndex = 11
-      prevYear = currentYear - 1
-    }
-    const prevMonth = monthNames[prevMonthIndex]
-
-    return {
-      currentMonth: currMonth,
-      currentYear: currYear.toString(),
-      previousMonth: prevMonth,
-      previousYear: prevYear.toString()
-    }
+    const month = monthNames[date.getMonth()]
+    return { year: year.toString(), month }
   }
 
   const fetchData = React.useCallback(async () => {
@@ -107,7 +115,32 @@ export default function CustomerTierMovement({
     setError(null)
 
     try {
-      const periods = calculatePeriods()
+      // ✅ ALWAYS use periods from props (shared with CustomerTierTrends from parent)
+      // No duplicate calculation - single source of truth is in CustomerTierAnalytics
+      if (!propPeriodAStart || !propPeriodAEnd || !propPeriodBStart || !propPeriodBEnd) {
+        // If periods not available yet, wait (they will be set by parent)
+        setLoading(false)
+        return
+      }
+
+      // Convert date ranges to year/month for API (tier_usc_v1 uses monthly aggregation)
+      const periodB = dateRangeToYearMonth(propPeriodBStart, propPeriodBEnd)
+      const periodA = dateRangeToYearMonth(propPeriodAStart, propPeriodAEnd)
+      
+      const periods = {
+        currentMonth: periodB.month,
+        currentYear: periodB.year,
+        previousMonth: periodA.month,
+        previousYear: periodA.year,
+        periodAStart: propPeriodAStart,
+        periodAEnd: propPeriodAEnd,
+        periodBStart: propPeriodBStart,
+        periodBEnd: propPeriodBEnd
+      }
+      
+      // Store periods in state for modal usage
+      setPeriods(periods)
+      
       const userAllowedBrands = localStorage.getItem('user_allowed_brands')
       const headers: HeadersInit = {
         'Content-Type': 'application/json'
@@ -118,27 +151,40 @@ export default function CustomerTierMovement({
       }
 
       const params = new URLSearchParams({
-        currentYear: periods.currentYear,
-        currentMonth: periods.currentMonth,
-        previousYear: periods.previousYear,
-        previousMonth: periods.previousMonth,
         line: brand || 'All',
         squadLead: squadLead || 'All',
         channel: channel || 'All'
       })
+      
+      // Use date range format (same as Customer Tier Trends) if available
+      if (periods.periodAStart && periods.periodAEnd && periods.periodBStart && periods.periodBEnd) {
+        params.append('periodAStart', periods.periodAStart)
+        params.append('periodAEnd', periods.periodAEnd)
+        params.append('periodBStart', periods.periodBStart)
+        params.append('periodBEnd', periods.periodBEnd)
+      } else {
+        // Fallback to year/month format (backward compatibility)
+        params.append('currentYear', periods.currentYear)
+        params.append('currentMonth', periods.currentMonth)
+        params.append('previousYear', periods.previousYear)
+        params.append('previousMonth', periods.previousMonth)
+      }
 
       const response = await fetch(`/api/usc-business-performance/tier-movement?${params}`, {
         headers
       })
 
       if (!response.ok) {
-        throw new Error(`API error: ${response.status}`)
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `API error: ${response.status}`)
       }
 
       const result = await response.json()
 
       if (result.success && result.data) {
         setData(result.data)
+        // Store periods for modal
+        setPeriods(periods)
       } else {
         throw new Error(result.error || 'Failed to fetch data')
       }
@@ -148,21 +194,22 @@ export default function CustomerTierMovement({
     } finally {
       setLoading(false)
     }
-  }, [brand, squadLead, channel])
+  }, [brand, squadLead, channel, dateRange, propPeriodAStart, propPeriodAEnd, propPeriodBStart, propPeriodBEnd])
 
-  // Initial load
+  // ✅ Initial load and when periods from props change
   useEffect(() => {
-    fetchData()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    // Only fetch if periods are available from props
+    if (propPeriodAStart && propPeriodAEnd && propPeriodBStart && propPeriodBEnd) {
+      fetchData()
+    }
+  }, [propPeriodAStart, propPeriodAEnd, propPeriodBStart, propPeriodBEnd, fetchData])
 
   // Trigger fetch when search button clicked
   useEffect(() => {
     if (searchTrigger && searchTrigger > 0) {
       fetchData()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTrigger])
+  }, [searchTrigger, fetchData])
 
   if (loading) {
     return (
@@ -243,12 +290,81 @@ export default function CustomerTierMovement({
     return `${num.toFixed(1)}%`
   }
 
-  // Get cell color based on movement type
+  // ✅ Get cell color based on movement type
+  // Tier numbering: Tier 1 = Super VIP (highest), Tier 7 = Regular (lowest)
+  // Logic: 
+  // - fromTier > toTier = UPGRADE (from tier 7→1, tier number decreases) = Green
+  // - fromTier < toTier = DOWNGRADE (from tier 1→7, tier number increases) = Pink
+  // - fromTier === toTier = STABLE (same tier) = Blue
   const getCellColor = (fromTier: number, toTier: number, value: number): string => {
     if (value === 0) return 'transparent'
     if (fromTier === toTier) return '#DBEAFE' // Blue - Stable
-    if (fromTier > toTier) return '#FEE2E2' // Red - Downgrade
-    return '#D1FAE5' // Green - Upgrade
+    if (fromTier > toTier) return '#D1FAE5' // Green - Upgrade (from higher tier number to lower)
+    return '#FCE7F3' // Pink - Downgrade (from lower tier number to higher) - Light pink with better visibility
+  }
+
+  // Handle cell click to open modal
+  const handleCellClick = (fromTier: number, toTier: number, fromTierName: string, toTierName: string, cellValue: number) => {
+    try {
+      // ✅ Validate cell value first
+      if (!cellValue || cellValue <= 0) {
+        console.warn('⚠️ [Customer Tier Movement] Cell has no value, cannot open modal:', { fromTier, toTier, value: cellValue })
+        return
+      }
+
+      // ✅ Validate tier values
+      if (!fromTier || !toTier || !fromTierName || !toTierName) {
+        console.error('❌ [Customer Tier Movement] Invalid tier values:', { fromTier, toTier, fromTierName, toTierName })
+        setError('Invalid tier selection. Please try again.')
+        return
+      }
+
+      // ✅ Use periods from state (already calculated and stored from props in fetchData)
+      if (!periods) {
+        console.error('❌ [Customer Tier Movement] Periods not available. Please ensure date range is selected and data is loaded.')
+        setError('Periods not available. Please refresh the page or select a date range.')
+        return
+      }
+
+      // ✅ Validate periods have required fields
+      if (!periods.currentYear || !periods.currentMonth || !periods.previousYear || !periods.previousMonth) {
+        console.error('❌ [Customer Tier Movement] Incomplete period data:', periods)
+        setError('Period data is incomplete. Please refresh the page.')
+        return
+      }
+
+      console.log('✅ [Customer Tier Movement] Opening modal for cell:', {
+        fromTier,
+        toTier,
+        fromTierName,
+        toTierName,
+        cellValue,
+        periods: {
+          currentYear: periods.currentYear,
+          currentMonth: periods.currentMonth,
+          previousYear: periods.previousYear,
+          previousMonth: periods.previousMonth
+        }
+      })
+
+      setSelectedFromTier(fromTier)
+      setSelectedToTier(toTier)
+      setSelectedFromTierName(fromTierName)
+      setSelectedToTierName(toTierName)
+      setError(null) // Clear any previous errors
+      setModalOpen(true)
+    } catch (err) {
+      console.error('❌ [Customer Tier Movement] Error opening modal:', err)
+      setError(err instanceof Error ? err.message : 'Failed to open customer list')
+      setModalOpen(false) // Ensure modal doesn't open if there's an error
+    }
+  }
+
+  // Close modal
+  const handleCloseModal = () => {
+    setModalOpen(false)
+    setSelectedFromTier(null)
+    setSelectedToTier(null)
   }
 
   return (
@@ -337,14 +453,14 @@ export default function CustomerTierMovement({
             </div>
           </div>
 
-          {/* Downgrades Card */}
+          {/* Downgrades Card - Pink */}
           <div
             style={{
-              backgroundColor: '#FEE2E2',
+              backgroundColor: '#FCE7F3', // ✅ Pink background
               borderRadius: '12px',
               padding: '16px',
               position: 'relative',
-              border: '1px solid #FECACA',
+              border: '1px solid #F9A8D4', // ✅ Pink border
               boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.08), 0 1px 4px 0 rgba(0, 0, 0, 0.04)',
               transition: 'all 0.3s ease',
               cursor: 'pointer'
@@ -352,19 +468,19 @@ export default function CustomerTierMovement({
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-3px)'
               e.currentTarget.style.boxShadow = '0 8px 25px 0 rgba(0, 0, 0, 0.12), 0 4px 10px 0 rgba(0, 0, 0, 0.08)'
-              e.currentTarget.style.borderColor = '#FCA5A5'
+              e.currentTarget.style.borderColor = '#F472B6'
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)'
               e.currentTarget.style.boxShadow = '0 2px 8px 0 rgba(0, 0, 0, 0.08), 0 1px 4px 0 rgba(0, 0, 0, 0.04)'
-              e.currentTarget.style.borderColor = '#FECACA'
+              e.currentTarget.style.borderColor = '#F9A8D4'
             }}
           >
-            <div style={{ fontSize: '12px', fontWeight: 600, color: '#991B1B', marginBottom: '8px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: '#9F1239', marginBottom: '8px' }}>
               Downgrades
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-              <div style={{ fontSize: '32px', fontWeight: 700, color: '#DC2626' }}>
+              <div style={{ fontSize: '32px', fontWeight: 700, color: '#BE185D' }}>
                 {formatNumber(data.summary.downgradesCard.count)}
               </div>
               <svg
@@ -372,14 +488,14 @@ export default function CustomerTierMovement({
                 height="24"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="#EF4444"
+                stroke="#EC4899"
                 strokeWidth="2"
                 style={{ position: 'absolute', top: '16px', right: '16px' }}
               >
                 <path d="M13 17l5-5m0 0l-5-5m5 5H6" transform="rotate(180 12 12)" />
               </svg>
             </div>
-            <div style={{ fontSize: '13px', color: '#991B1B', marginTop: '4px' }}>
+            <div style={{ fontSize: '13px', color: '#9F1239', marginTop: '4px' }}>
               {formatPercentage(data.summary.downgradesCard.percentage)} of total
             </div>
           </div>
@@ -522,20 +638,49 @@ export default function CustomerTierMovement({
                     </td>
                     {data.matrix.tierOrder.map((tier) => {
                       const value = row.cells[tier.tier] || 0
-                      const bgColor = getCellColor(row.fromTier, tier.tier, value)
+                      const numericValue = typeof value === 'number' ? value : parseFloat(String(value)) || 0
+                      const bgColor = getCellColor(row.fromTier, tier.tier, numericValue)
+                      // ✅ Cell is clickable if value is a positive number
+                      const isClickable = numericValue > 0 && !isNaN(numericValue) && isFinite(numericValue)
                       return (
                         <td
                           key={tier.tier}
+                          onClick={() => {
+                            if (isClickable) {
+                              handleCellClick(row.fromTier, tier.tier, row.fromTierName, tier.tierName, numericValue)
+                            }
+                          }}
                           style={{
                             padding: '12px',
                             textAlign: 'center',
                             backgroundColor: bgColor,
                             borderBottom: '1px solid #E5E7EB',
                             fontWeight: row.fromTier === tier.tier ? 600 : 400,
-                            color: value === 0 ? '#9CA3AF' : '#1F2937'
+                            color: numericValue === 0 ? '#9CA3AF' : '#1F2937',
+                            cursor: isClickable ? 'pointer' : 'default',
+                            transition: isClickable ? 'all 0.2s ease' : 'none',
+                            position: 'relative',
+                            userSelect: 'none' // Prevent text selection on click
                           }}
+                          onMouseEnter={(e) => {
+                            if (isClickable) {
+                              e.currentTarget.style.opacity = '0.85'
+                              e.currentTarget.style.transform = 'scale(1.03)'
+                              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.15)'
+                              e.currentTarget.style.zIndex = '10'
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (isClickable) {
+                              e.currentTarget.style.opacity = '1'
+                              e.currentTarget.style.transform = 'scale(1)'
+                              e.currentTarget.style.boxShadow = 'none'
+                              e.currentTarget.style.zIndex = '1'
+                            }
+                          }}
+                          title={isClickable ? `Click to view ${numericValue} customer${numericValue > 1 ? 's' : ''}` : ''}
                         >
-                          {value === 0 ? '-' : formatNumber(value)}
+                          {numericValue === 0 ? '-' : formatNumber(numericValue)}
                         </td>
                       )
                     })}
@@ -618,6 +763,29 @@ export default function CustomerTierMovement({
           </ul>
         </div>
       </div>
+
+      {/* Customer Modal - Render only when both tiers are selected and periods are available */}
+      {modalOpen && selectedFromTier !== null && selectedToTier !== null && periods && (
+        <TierMovementCustomerModal
+          isOpen={modalOpen}
+          onClose={handleCloseModal}
+          fromTier={selectedFromTier}
+          toTier={selectedToTier}
+          fromTierName={selectedFromTierName}
+          toTierName={selectedToTierName}
+          currentYear={periods.currentYear}
+          currentMonth={periods.currentMonth}
+          previousYear={periods.previousYear}
+          previousMonth={periods.previousMonth}
+          periodAStart={periods.periodAStart}
+          periodAEnd={periods.periodAEnd}
+          periodBStart={periods.periodBStart}
+          periodBEnd={periods.periodBEnd}
+          line={brand || 'All'}
+          squadLead={squadLead || 'All'}
+          channel={channel || 'All'}
+        />
+      )}
     </div>
   )
 }

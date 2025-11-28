@@ -1,14 +1,67 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 
-// Standard Modal Styles
+// Sidebar width constants
+const SIDEBAR_EXPANDED_WIDTH = '280px'
+const SIDEBAR_COLLAPSED_WIDTH = '80px'
+
+// Hook to detect sidebar state
+const useSidebarState = () => {
+  const [sidebarWidth, setSidebarWidth] = useState<string>(SIDEBAR_EXPANDED_WIDTH)
+
+  useEffect(() => {
+    // Function to check sidebar state
+    const checkSidebarState = () => {
+      if (typeof document === 'undefined') return
+      
+      // Find sidebar element
+      const sidebar = document.querySelector('.sidebar')
+      if (sidebar) {
+        // Check if sidebar has 'collapsed' class
+        const isCollapsed = sidebar.classList.contains('collapsed')
+        setSidebarWidth(isCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_EXPANDED_WIDTH)
+      } else {
+        // Fallback to expanded if sidebar not found
+        setSidebarWidth(SIDEBAR_EXPANDED_WIDTH)
+      }
+    }
+
+    // Check initial state
+    checkSidebarState()
+
+    // Create MutationObserver to watch for class changes on sidebar
+    const observer = new MutationObserver(checkSidebarState)
+    
+    // Observe sidebar element if it exists
+    const sidebar = document.querySelector('.sidebar')
+    if (sidebar) {
+      observer.observe(sidebar, {
+        attributes: true,
+        attributeFilter: ['class'],
+        subtree: false
+      })
+    }
+
+    // Also listen for resize events (in case sidebar is toggled via different method)
+    window.addEventListener('resize', checkSidebarState)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', checkSidebarState)
+    }
+  }, [])
+
+  return sidebarWidth
+}
+
+// Standard Modal Styles (left will be overridden dynamically)
 export const MODAL_STYLES = {
   wrapper: {
     position: 'fixed' as const,
     top: '150px',
-    left: '280px',
+    left: SIDEBAR_EXPANDED_WIDTH, // Default, will be overridden
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -17,7 +70,8 @@ export const MODAL_STYLES = {
     justifyContent: 'center' as const,
     zIndex: 10000,
     padding: 0,
-    margin: 0
+    margin: 0,
+    transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)' // Smooth transition matching sidebar
   },
   container: {
     backgroundColor: 'white',
@@ -190,6 +244,9 @@ export default function StandardModal({
   onBack,
   zIndex = 10000
 }: StandardModalProps) {
+  // ✅ Get current sidebar width (responsive to collapse/expand)
+  const sidebarWidth = useSidebarState()
+
   if (!isOpen || typeof document === 'undefined') return null
 
   const handleCloseButtonHover = (e: React.MouseEvent<HTMLButtonElement>, isEnter: boolean) => {
@@ -209,6 +266,7 @@ export default function StandardModal({
       aria-modal="true"
       style={{
         ...MODAL_STYLES.wrapper,
+        left: sidebarWidth, // ✅ Dynamic left position based on sidebar state
         zIndex
       }}
     >

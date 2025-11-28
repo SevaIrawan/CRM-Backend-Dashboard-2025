@@ -74,9 +74,28 @@ interface CustomerTierTrendsProps {
   onSearch?: () => void // Callback untuk trigger search
   searchTrigger?: number // Counter untuk trigger search dari parent
   tierNameOptions: Array<{ name: string; group: string | null }>
+  periodAStart?: string
+  periodAEnd?: string
+  periodBStart?: string
+  periodBEnd?: string
+  onPeriodAChange?: (start: string, end: string) => void
+  onPeriodBChange?: (start: string, end: string) => void
 }
 
-export default function CustomerTierTrends({ dateRange, brand, squadLead, channel, searchTrigger, tierNameOptions }: CustomerTierTrendsProps) {
+export default function CustomerTierTrends({ 
+  dateRange, 
+  brand, 
+  squadLead, 
+  channel, 
+  searchTrigger, 
+  tierNameOptions,
+  periodAStart: propPeriodAStart,
+  periodAEnd: propPeriodAEnd,
+  periodBStart: propPeriodBStart,
+  periodBEnd: propPeriodBEnd,
+  onPeriodAChange,
+  onPeriodBChange
+}: CustomerTierTrendsProps) {
   // Build tier_name options from database for the filter dropdown
   const TIER_NAME_OPTIONS: TierOption[] = React.useMemo(() => {
     return tierNameOptions.map((option, index) => ({
@@ -102,10 +121,49 @@ export default function CustomerTierTrends({ dateRange, brand, squadLead, channe
   const tierFilterRef = useRef<HTMLDivElement | null>(null)
   
   // Date range states for Period A and Period B
-  const [periodAStart, setPeriodAStart] = useState<string>('')
-  const [periodAEnd, setPeriodAEnd] = useState<string>('')
-  const [periodBStart, setPeriodBStart] = useState<string>('')
-  const [periodBEnd, setPeriodBEnd] = useState<string>('')
+  // Use props if provided (from parent), otherwise use local state
+  const [localPeriodAStart, setLocalPeriodAStart] = useState<string>('')
+  const [localPeriodAEnd, setLocalPeriodAEnd] = useState<string>('')
+  const [localPeriodBStart, setLocalPeriodBStart] = useState<string>('')
+  const [localPeriodBEnd, setLocalPeriodBEnd] = useState<string>('')
+  
+  // Use props if provided, otherwise use local state
+  const periodAStart = propPeriodAStart !== undefined ? propPeriodAStart : localPeriodAStart
+  const periodAEnd = propPeriodAEnd !== undefined ? propPeriodAEnd : localPeriodAEnd
+  const periodBStart = propPeriodBStart !== undefined ? propPeriodBStart : localPeriodBStart
+  const periodBEnd = propPeriodBEnd !== undefined ? propPeriodBEnd : localPeriodBEnd
+  
+  // Wrapper functions to update period (use callback if provided, otherwise update local state)
+  const updatePeriodA = (start: string, end: string) => {
+    if (onPeriodAChange) {
+      onPeriodAChange(start, end)
+    } else {
+      setLocalPeriodAStart(start)
+      setLocalPeriodAEnd(end)
+    }
+  }
+  const updatePeriodB = (start: string, end: string) => {
+    if (onPeriodBChange) {
+      onPeriodBChange(start, end)
+    } else {
+      setLocalPeriodBStart(start)
+      setLocalPeriodBEnd(end)
+    }
+  }
+  
+  // Keep setPeriodAStart, setPeriodAEnd, etc. for backward compatibility with existing code
+  const setPeriodAStart = (start: string) => {
+    updatePeriodA(start, periodAEnd)
+  }
+  const setPeriodAEnd = (end: string) => {
+    updatePeriodA(periodAStart, end)
+  }
+  const setPeriodBStart = (start: string) => {
+    updatePeriodB(start, periodBEnd)
+  }
+  const setPeriodBEnd = (end: string) => {
+    updatePeriodB(periodBStart, end)
+  }
   
   // UI states for date pickers
   const [showPickerA, setShowPickerA] = useState<boolean>(false)
@@ -325,25 +383,28 @@ export default function CustomerTierTrends({ dateRange, brand, squadLead, channe
   const isDatePickerEnabled = dateRange === 'Custom'
   
   // Initialize date ranges based on dateRange - HARUS di-set sebelum fetchData
+  // Only update if using local state (not controlled by parent)
   useEffect(() => {
-    if (dateRange === 'Custom') {
-      // Custom mode: Set to empty (Select Date) - user harus pilih manual
-      // Chart tetap tampil data terakhir, tidak fetch baru
-      setPeriodAStart('')
-      setPeriodAEnd('')
-      setPeriodBStart('')
-      setPeriodBEnd('')
-    } else {
-      // Auto mode: Calculate dates for Last 7 Days or Last 30 Days immediately
-      const calculatedRanges = calculateDateRanges(dateRange)
-      if (calculatedRanges) {
-        setPeriodAStart(calculatedRanges.periodA.start)
-        setPeriodAEnd(calculatedRanges.periodA.end)
-        setPeriodBStart(calculatedRanges.periodB.start)
-        setPeriodBEnd(calculatedRanges.periodB.end)
+    if (propPeriodAStart === undefined) { // Only if not controlled by parent
+      if (dateRange === 'Custom') {
+        // Custom mode: Set to empty (Select Date) - user harus pilih manual
+        // Chart tetap tampil data terakhir, tidak fetch baru
+        setLocalPeriodAStart('')
+        setLocalPeriodAEnd('')
+        setLocalPeriodBStart('')
+        setLocalPeriodBEnd('')
+      } else {
+        // Auto mode: Calculate dates for Last 7 Days or Last 30 Days immediately
+        const calculatedRanges = calculateDateRanges(dateRange)
+        if (calculatedRanges) {
+          setLocalPeriodAStart(calculatedRanges.periodA.start)
+          setLocalPeriodAEnd(calculatedRanges.periodA.end)
+          setLocalPeriodBStart(calculatedRanges.periodB.start)
+          setLocalPeriodBEnd(calculatedRanges.periodB.end)
+        }
       }
     }
-  }, [dateRange])
+  }, [dateRange, propPeriodAStart])
   
   // ✅ Debounce ref for tier filter changes
   const tierFilterDebounceRef = useRef<NodeJS.Timeout | null>(null)
@@ -1034,8 +1095,7 @@ export default function CustomerTierTrends({ dateRange, brand, squadLead, channe
                         onClick={() => {
                           const validation = validateDateRange(tempAStart, tempAEnd)
                           if (validation.valid) {
-                            setPeriodAStart(tempAStart)
-                            setPeriodAEnd(tempAEnd)
+                            updatePeriodA(tempAStart, tempAEnd)
                             setErrorA('')
                             setShowPickerA(false)
                             // Trigger data reload - handled by useEffect watching periodAStart/periodAEnd
@@ -1269,8 +1329,7 @@ export default function CustomerTierTrends({ dateRange, brand, squadLead, channe
                         onClick={() => {
                           const validation = validateDateRange(tempBStart, tempBEnd)
                           if (validation.valid) {
-                            setPeriodBStart(tempBStart)
-                            setPeriodBEnd(tempBEnd)
+                            updatePeriodB(tempBStart, tempBEnd)
                             setErrorB('')
                             setShowPickerB(false)
                             // Trigger data reload - handled by useEffect watching periodBStart/periodBEnd

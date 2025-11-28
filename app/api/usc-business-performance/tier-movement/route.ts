@@ -21,18 +21,72 @@ import {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
+    
+    // Support both old format (year/month) and new format (date ranges like Customer Tier Trends)
     const currentYear = searchParams.get('currentYear')
     const currentMonth = searchParams.get('currentMonth')
     const previousYear = searchParams.get('previousYear')
     const previousMonth = searchParams.get('previousMonth')
+    
+    // New format: date ranges (same as Customer Tier Trends)
+    const periodAStart = searchParams.get('periodAStart')
+    const periodAEnd = searchParams.get('periodAEnd')
+    const periodBStart = searchParams.get('periodBStart')
+    const periodBEnd = searchParams.get('periodBEnd')
+    
     const line = searchParams.get('line')
     const squadLead = searchParams.get('squadLead')
     const channel = searchParams.get('channel')
     
-    if (!currentYear || !currentMonth || !previousYear || !previousMonth) {
+    // Helper function to extract year and month from date string
+    const extractYearMonth = (dateStr: string): { year: number; month: string } | null => {
+      if (!dateStr) return null
+      const date = new Date(dateStr)
+      if (isNaN(date.getTime())) return null
+      
+      const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ]
+      
+      return {
+        year: date.getFullYear(),
+        month: monthNames[date.getMonth()]
+      }
+    }
+    
+    // Determine which format to use
+    let currentPeriod: { year: number; month: string } | null = null
+    let previousPeriod: { year: number; month: string } | null = null
+    
+    if (periodBStart && periodBEnd && periodAStart && periodAEnd) {
+      // Use date range format (new format - same as Customer Tier Trends)
+      const periodB = extractYearMonth(periodBEnd) // Use end date to determine period
+      const periodA = extractYearMonth(periodAEnd) // Use end date to determine period
+      
+      if (!periodB || !periodA) {
+        return NextResponse.json({
+          success: false,
+          error: 'Invalid date format in period date ranges'
+        }, { status: 400 })
+      }
+      
+      currentPeriod = periodB
+      previousPeriod = periodA
+    } else if (currentYear && currentMonth && previousYear && previousMonth) {
+      // Use year/month format (old format - for backward compatibility)
+      currentPeriod = {
+        year: parseInt(currentYear),
+        month: currentMonth
+      }
+      previousPeriod = {
+        year: parseInt(previousYear),
+        month: previousMonth
+      }
+    } else {
       return NextResponse.json({
         success: false,
-        error: 'Required: currentYear, currentMonth, previousYear, previousMonth'
+        error: 'Required: either (currentYear, currentMonth, previousYear, previousMonth) or (periodAStart, periodAEnd, periodBStart, periodBEnd)'
       }, { status: 400 })
     }
     
@@ -40,8 +94,8 @@ export async function GET(request: NextRequest) {
     let currentQuery = supabase
       .from('tier_usc_v1')
       .select('userkey, unique_code, line, tier, tier_name, score, total_deposit_amount, total_ggr')
-      .eq('year', parseInt(currentYear))
-      .eq('month', currentMonth)
+      .eq('year', currentPeriod.year)
+      .eq('month', currentPeriod.month)
       .not('tier', 'is', null)
     
     // Apply filters (only if not "All")
@@ -65,8 +119,8 @@ export async function GET(request: NextRequest) {
     let previousQuery = supabase
       .from('tier_usc_v1')
       .select('userkey, unique_code, line, tier, tier_name, score, total_deposit_amount, total_ggr')
-      .eq('year', parseInt(previousYear))
-      .eq('month', previousMonth)
+      .eq('year', previousPeriod.year)
+      .eq('month', previousPeriod.month)
       .not('tier', 'is', null)
     
     // Apply filters (only if not "All")
@@ -108,8 +162,13 @@ export async function GET(request: NextRequest) {
     const summary = getTierMovementSummary(movements)
     const matrixData = generateTierMovementMatrix(movements)
     
-    // Format matrix for frontend (with tier names)
-    const formattedMatrix = matrixData.tierOrder.map(fromTier => {
+    // ✅ Reverse tierOrder: Display from lowest (Regular/Tier 7) to highest (Super VIP/Tier 1)
+    // tierOrder from generateTierMovementMatrix is [1,2,3,4,5,6,7] (low to high numbers)
+    // We need to reverse to [7,6,5,4,3,2,1] (lowest tier to highest tier visually)
+    const reversedTierOrder = [...matrixData.tierOrder].reverse()
+    
+    // Format matrix for frontend (with tier names) - using reversed order
+    const formattedMatrix = reversedTierOrder.map(fromTier => {
       const row: Record<string, any> = {
         fromTier,
         fromTierName: TIER_NAMES[fromTier] || `Tier ${fromTier}`,
@@ -117,21 +176,22 @@ export async function GET(request: NextRequest) {
         cells: {} as Record<number, number>
       }
       
-      matrixData.tierOrder.forEach(toTier => {
+      // Use reversed order for columns too
+      reversedTierOrder.forEach(toTier => {
         row.cells[toTier] = matrixData.matrix[fromTier]?.[toTier] || 0
       })
       
       return row
     })
     
-    // Format Total In row
+    // Format Total In row - using reversed order
     const totalInRow = {
       label: 'Total In',
       cells: {} as Record<number, number>,
       total: matrixData.grandTotal
     }
     
-    matrixData.tierOrder.forEach(toTier => {
+    reversedTierOrder.forEach(toTier => {
       totalInRow.cells[toTier] = matrixData.totalIn[toTier] || 0
     })
     
@@ -171,7 +231,7 @@ export async function GET(request: NextRequest) {
         matrix: {
           rows: formattedMatrix,
           totalInRow,
-          tierOrder: matrixData.tierOrder.map(tier => ({
+          tierOrder: reversedTierOrder.map(tier => ({
             tier,
             tierName: TIER_NAMES[tier] || `Tier ${tier}`
           })),
