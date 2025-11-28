@@ -727,7 +727,7 @@ export default function TierMovementCustomerModal({
                     <th
                       style={{
                         padding: CELL_PADDING,
-                        textAlign: 'left',
+                        textAlign: 'center', // ✅ Semua header rata tengah
                         backgroundColor: '#374151', // ✅ Dark background
                         borderBottom: '1px solid #4B5563',
                         borderRight: '1px solid #4B5563',
@@ -750,7 +750,7 @@ export default function TierMovementCustomerModal({
                     <th
                       style={{
                         padding: CELL_PADDING,
-                        textAlign: 'left',
+                        textAlign: 'center', // ✅ Semua header rata tengah
                         backgroundColor: '#374151', // ✅ Dark background
                         borderBottom: '1px solid #4B5563',
                         borderRight: '1px solid #4B5563',
@@ -773,7 +773,7 @@ export default function TierMovementCustomerModal({
                     <th
                       style={{
                         padding: CELL_PADDING,
-                        textAlign: 'left',
+                        textAlign: 'center', // ✅ Semua header rata tengah
                         backgroundColor: '#374151', // ✅ Dark background
                         borderBottom: '1px solid #4B5563',
                         borderRight: '1px solid #4B5563',
@@ -796,7 +796,7 @@ export default function TierMovementCustomerModal({
                     <th
                       style={{
                         padding: CELL_PADDING,
-                        textAlign: 'left',
+                        textAlign: 'center', // ✅ Semua header rata tengah
                         backgroundColor: '#374151', // ✅ Dark background
                         borderBottom: '1px solid #4B5563',
                         borderRight: '1px solid #4B5563',
@@ -819,7 +819,7 @@ export default function TierMovementCustomerModal({
                     <th
                       style={{
                         padding: CELL_PADDING,
-                        textAlign: 'right',
+                        textAlign: 'center', // ✅ Semua header rata tengah
                         backgroundColor: '#374151', // ✅ Dark background
                         borderBottom: '1px solid #4B5563',
                         borderRight: '1px solid #4B5563',
@@ -842,7 +842,7 @@ export default function TierMovementCustomerModal({
                     <th
                       style={{
                         padding: CELL_PADDING,
-                        textAlign: 'right',
+                        textAlign: 'center', // ✅ Semua header rata tengah
                         backgroundColor: '#374151', // ✅ Dark background
                         borderBottom: '1px solid #4B5563',
                         borderRight: '1px solid #4B5563',
@@ -865,7 +865,7 @@ export default function TierMovementCustomerModal({
                     <th
                       style={{
                         padding: CELL_PADDING,
-                        textAlign: 'right',
+                        textAlign: 'center', // ✅ Semua header rata tengah
                         backgroundColor: '#374151', // ✅ Dark background
                         borderBottom: '1px solid #4B5563',
                         borderRight: '1px solid #4B5563',
@@ -888,7 +888,7 @@ export default function TierMovementCustomerModal({
                     <th
                       style={{
                         padding: CELL_PADDING,
-                        textAlign: 'left',
+                        textAlign: 'center', // ✅ Rata tengah untuk header Assigne
                         backgroundColor: '#374151', // ✅ Dark background
                         borderBottom: '1px solid #4B5563',
                         borderRight: '1px solid #4B5563',
@@ -911,7 +911,7 @@ export default function TierMovementCustomerModal({
                     <th
                       style={{
                         padding: CELL_PADDING,
-                        textAlign: 'center',
+                        textAlign: 'center', // ✅ Rata tengah untuk header Action
                         backgroundColor: '#374151', // ✅ Dark background
                         borderBottom: '1px solid #4B5563',
                         fontWeight: 600,
@@ -1049,6 +1049,7 @@ export default function TierMovementCustomerModal({
                       <td
                         style={{
                           padding: CELL_PADDING,
+                          textAlign: 'center', // ✅ Rata tengah untuk kolom Assigne
                           borderRight: '1px solid #E5E7EB',
                           height: `${CELL_HEIGHT}px`, // ✅ Semua cell = 28px
                           lineHeight: CELL_LINE_HEIGHT,
