@@ -684,11 +684,12 @@ export async function GET(request: NextRequest) {
     // ✅ Clean up old cache entries (every 10 requests)
     if (cache.size > 100) {
       const now = Date.now()
-      for (const [key, value] of cache.entries()) {
+      // Use Array.from() for compatibility with lower TypeScript targets
+      Array.from(cache.entries()).forEach(([key, value]) => {
         if (now - value.timestamp > CACHE_TTL) {
           cache.delete(key)
         }
-      }
+      })
     }
     
     return NextResponse.json(responseData)
