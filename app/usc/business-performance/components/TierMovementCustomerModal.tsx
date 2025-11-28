@@ -201,7 +201,7 @@ export default function TierMovementCustomerModal({
           actual: paginatedCustomers.length,
           customersLength: customers.length,
           startIndex,
-          endIndex
+          endIndex: endIndexForDisplay
         })
       }
     }
