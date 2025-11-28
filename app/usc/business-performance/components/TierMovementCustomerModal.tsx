@@ -53,9 +53,9 @@ interface Customer {
   user_name: string | null
   line: string | null // ✅ Add line/brand field
   handler: string | null
-  da: number
-  ggr: number
-  atv: number
+  daChangePercent: number | null
+  ggrChangePercent: number | null
+  atvChangePercent: number | null
   assigne: string | null
 }
 
@@ -223,6 +223,22 @@ export default function TierMovementCustomerModal({
   // Format number without decimals
   const formatInteger = (num: number): string => {
     return new Intl.NumberFormat('en-US').format(num)
+  }
+
+  // Format comparison percentage: green for positive (+), red for negative (-), 2 decimal places
+  const formatComparisonPercent = (percent: number | null): { text: string; color: string } => {
+    if (percent === null || percent === undefined || isNaN(percent)) {
+      return { text: '-', color: '#6B7280' } // Gray for null/undefined
+    }
+    
+    const formattedValue = Math.abs(percent).toFixed(2)
+    const sign = percent >= 0 ? '+' : '-'
+    const color = percent >= 0 ? '#10B981' : '#EF4444' // Green for positive, red for negative
+    
+    return {
+      text: `${sign}${formattedValue}%`,
+      color
+    }
   }
 
   // Fetch customer data
@@ -477,9 +493,9 @@ export default function TierMovementCustomerModal({
         'Unique Code',
         'User Name',
         'Handler',
-        'DA',
-        'GGR',
-        'ATV',
+        'DA 变化',
+        'GGR 变化',
+        'ATV 变化',
         'Assigne'
       ]
       
@@ -487,14 +503,18 @@ export default function TierMovementCustomerModal({
       
       // Export all customers (not just paginated)
       customers.forEach((customer, idx) => {
+        const daChange = formatComparisonPercent(customer.daChangePercent)
+        const ggrChange = formatComparisonPercent(customer.ggrChangePercent)
+        const atvChange = formatComparisonPercent(customer.atvChangePercent)
+        
         csvContent += [
           customer.line || '-',
           customer.unique_code || '-',
           customer.user_name || '-',
           customer.handler || '-',
-          formatNumber(customer.da),
-          formatNumber(customer.ggr),
-          formatNumber(customer.atv),
+          daChange.text,
+          ggrChange.text,
+          atvChange.text,
           assignments[idx] || '-'
         ].join(',') + '\n'
       })
@@ -837,7 +857,7 @@ export default function TierMovementCustomerModal({
                         boxSizing: 'border-box' // ✅ Pastikan padding termasuk dalam height
                       }}
                     >
-                      DA
+                      DA 变化
                     </th>
                     <th
                       style={{
@@ -860,7 +880,7 @@ export default function TierMovementCustomerModal({
                         boxSizing: 'border-box' // ✅ Pastikan padding termasuk dalam height
                       }}
                     >
-                      GGR
+                      GGR 变化
                     </th>
                     <th
                       style={{
@@ -883,7 +903,7 @@ export default function TierMovementCustomerModal({
                         boxSizing: 'border-box' // ✅ Pastikan padding termasuk dalam height
                       }}
                     >
-                      ATV
+                      ATV 变化
                     </th>
                     <th
                       style={{
@@ -1016,7 +1036,34 @@ export default function TierMovementCustomerModal({
                           boxSizing: 'border-box' // ✅ Pastikan padding termasuk dalam height
                         }}
                       >
-                        {formatNumber(customer.da)}
+                        {(() => {
+                          const { text, color } = formatComparisonPercent(customer.daChangePercent)
+                          return (
+                            <span style={{ color, fontWeight: 500 }}>
+                              {text}
+                            </span>
+                          )
+                        })()}
+                      </td>
+                      <td
+                        style={{
+                          padding: CELL_PADDING,
+                          textAlign: 'right',
+                          borderRight: '1px solid #E5E7EB',
+                          height: `${CELL_HEIGHT}px`, // ✅ Semua cell = 28px
+                          lineHeight: CELL_LINE_HEIGHT,
+                          verticalAlign: 'middle',
+                          boxSizing: 'border-box' // ✅ Pastikan padding termasuk dalam height
+                        }}
+                      >
+                        {(() => {
+                          const { text, color } = formatComparisonPercent(customer.ggrChangePercent)
+                          return (
+                            <span style={{ color, fontWeight: 500 }}>
+                              {text}
+                            </span>
+                          )
+                        })()}
                       </td>
                       <td
                         style={{
@@ -1030,21 +1077,14 @@ export default function TierMovementCustomerModal({
                           boxSizing: 'border-box' // ✅ Pastikan padding termasuk dalam height
                         }}
                       >
-                        {formatNumber(customer.ggr)}
-                      </td>
-                      <td
-                        style={{
-                          padding: CELL_PADDING,
-                          textAlign: 'right',
-                          color: '#1F2937',
-                          borderRight: '1px solid #E5E7EB',
-                          height: `${CELL_HEIGHT}px`, // ✅ Semua cell = 28px
-                          lineHeight: CELL_LINE_HEIGHT,
-                          verticalAlign: 'middle',
-                          boxSizing: 'border-box' // ✅ Pastikan padding termasuk dalam height
-                        }}
-                      >
-                        {formatNumber(customer.atv)}
+                        {(() => {
+                          const { text, color } = formatComparisonPercent(customer.atvChangePercent)
+                          return (
+                            <span style={{ color, fontWeight: 500 }}>
+                              {text}
+                            </span>
+                          )
+                        })()}
                       </td>
                       <td
                         style={{

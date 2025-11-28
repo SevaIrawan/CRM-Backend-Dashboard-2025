@@ -70,6 +70,8 @@ export async function GET(request: NextRequest) {
     
     if (periodBStart && periodBEnd && periodAStart && periodAEnd) {
       // Use date range format (new format - same as Customer Tier Trends)
+      // ✅ Period B = Current Period (from slicer Period B)
+      // ✅ Period A = Previous Period (from slicer Period A) 
       const periodB = extractYearMonth(periodBEnd) // Use end date
       const periodA = extractYearMonth(periodAEnd) // Use end date
       
@@ -80,8 +82,9 @@ export async function GET(request: NextRequest) {
         )
       }
       
-      currentPeriod = periodB
-      previousPeriod = periodA
+      // ✅ Mapping: Period B (current/saat ini) -> currentPeriod, Period A (previous/sebelumnya) -> previousPeriod
+      currentPeriod = periodB  // Period B = Period saat ini (dari slicer)
+      previousPeriod = periodA  // Period A = Period sebelumnya (dari slicer)
     } else if (currentYear && currentMonth && previousYear && previousMonth) {
       // Use year/month format (old format - for backward compatibility)
       currentPeriod = {
@@ -117,13 +120,14 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Build query for previous period (fromTier)
+    // ✅ Build query for Period A (previousPeriod) - filter by fromTier
+    // ✅ Query berdasarkan: year/month dari Period A, tier = fromTier, dan filters (line, squadLead, channel)
     let previousQuery = supabase
       .from('tier_usc_v1')
-      .select('userkey, unique_code, user_name, tier')
-      .eq('year', previousPeriod.year)
-      .eq('month', previousPeriod.month)
-      .eq('tier', fromTierNum)
+      .select('userkey, unique_code, user_name, tier, total_deposit_amount, total_withdraw_amount, total_deposit_cases, avg_transaction_value')
+      .eq('year', previousPeriod.year)  // ✅ Period A year
+      .eq('month', previousPeriod.month)  // ✅ Period A month
+      .eq('tier', fromTierNum)  // ✅ Tier di Period A = fromTier
       .not('tier', 'is', null)
 
     if (line && line !== 'All' && line !== 'ALL') {
@@ -203,6 +207,8 @@ export async function GET(request: NextRequest) {
       // ✅ Fetch all data from current period and filter in memory (more reliable for large datasets)
       console.log(`⚠️ [Tier Movement Customers] Large userkeys array (${uniqueUserkeys.length}), using fetch-all-then-filter approach`)
       
+      // ✅ Build query for Period B (currentPeriod) - filter by toTier
+      // ✅ Query berdasarkan: year/month dari Period B, tier = toTier, dan filters (line, squadLead, channel)
       let allCurrentQuery = supabase
         .from('tier_usc_v1')
         .select(`
@@ -216,9 +222,9 @@ export async function GET(request: NextRequest) {
           total_deposit_cases,
           avg_transaction_value
         `)
-        .eq('year', currentPeriod.year)
-        .eq('month', currentPeriod.month)
-        .eq('tier', toTierNum)
+        .eq('year', currentPeriod.year)  // ✅ Period B year
+        .eq('month', currentPeriod.month)  // ✅ Period B month
+        .eq('tier', toTierNum)  // ✅ Tier di Period B = toTier
         .not('tier', 'is', null)
 
       if (line && line !== 'All' && line !== 'ALL') {
@@ -314,9 +320,10 @@ export async function GET(request: NextRequest) {
         )
       }
 
-      // Filter in memory: only users that were in fromTier in previous period
+      // ✅ Filter in memory: only users that were in fromTier in Period A
+      // ✅ Matching berdasarkan userkey: hanya userkey yang ada di Period A (fromTier) yang diambil dari Period B (toTier)
       currentData = allCurrentData.filter((row: any) => 
-        row.userkey && userkeysSet.has(row.userkey)
+        row.userkey && userkeysSet.has(row.userkey)  // ✅ Validasi: userkey valid dan ada di Period A
       )
       
       console.log(`✅ [Tier Movement Customers] Filtered ${currentData.length} matching records from ${allCurrentData.length} total records`)
@@ -326,7 +333,8 @@ export async function GET(request: NextRequest) {
       const IN_QUERY_BATCH_SIZE = 500 // Supabase .in() can handle up to 1000, but use 500 for safety
       
       if (uniqueUserkeys.length <= IN_QUERY_BATCH_SIZE) {
-        // Single query for small arrays
+        // ✅ Single query for small arrays - Query Period B data
+        // ✅ Query berdasarkan: year/month dari Period B, tier = toTier, userkeys dari Period A, dan filters
         let currentQuery = supabase
           .from('tier_usc_v1')
           .select(`
@@ -340,10 +348,10 @@ export async function GET(request: NextRequest) {
             total_deposit_cases,
             avg_transaction_value
           `)
-          .eq('year', currentPeriod.year)
-          .eq('month', currentPeriod.month)
-          .eq('tier', toTierNum)
-          .in('userkey', uniqueUserkeys)
+          .eq('year', currentPeriod.year)  // ✅ Period B year
+          .eq('month', currentPeriod.month)  // ✅ Period B month
+          .eq('tier', toTierNum)  // ✅ Tier di Period B = toTier
+          .in('userkey', uniqueUserkeys)  // ✅ Hanya userkeys yang ada di Period A
           .not('tier', 'is', null)
 
         if (line && line !== 'All' && line !== 'ALL') {
@@ -489,29 +497,83 @@ export async function GET(request: NextRequest) {
       return lineA.localeCompare(lineB)
     })
 
-    // Format customer data
+    // ✅ Create map of Period A data by userkey for quick lookup
+    // ✅ Data ini digunakan untuk comparison dengan Period B
+    const previousDataMap = new Map<string, { da: number; ggr: number; atv: number }>()
+    if (previousData && previousData.length > 0) {
+      previousData.forEach((prev: any) => {
+        // ✅ Validasi: hanya userkey yang valid (tidak null/undefined)
+        if (prev.userkey) {
+          const prevDA = Number(prev.total_deposit_amount) || 0  // ✅ DA dari Period A
+          const prevWithdraw = Number(prev.total_withdraw_amount) || 0
+          const prevGGR = prevDA - prevWithdraw  // ✅ GGR dari Period A
+          const prevDepositCases = Number(prev.total_deposit_cases) || 0
+          const prevAvgTransactionValue = Number(prev.avg_transaction_value) || 0
+          
+          // ✅ Calculate ATV for Period A
+          const prevATV = prevAvgTransactionValue > 0 
+            ? prevAvgTransactionValue 
+            : (prevDepositCases > 0 ? prevDA / prevDepositCases : 0)
+          
+          // ✅ Store Period A data indexed by userkey untuk comparison
+          previousDataMap.set(prev.userkey, {
+            da: prevDA,    // ✅ Period A DA
+            ggr: prevGGR,  // ✅ Period A GGR
+            atv: prevATV   // ✅ Period A ATV
+          })
+        }
+      })
+    }
+
+    // ✅ Format customer data with comparison percentage (Period B vs Period A)
+    // ✅ sortedCurrentData = data dari Period B dengan tier = toTier, sudah difilter berdasarkan userkey dari Period A
     const customers = sortedCurrentData.map(customer => {
-      const depositAmount = Number(customer.total_deposit_amount) || 0
+      // ✅ Period B values (current period)
+      const depositAmount = Number(customer.total_deposit_amount) || 0  // ✅ Period B DA
       const withdrawAmount = Number(customer.total_withdraw_amount) || 0
       const depositCases = Number(customer.total_deposit_cases) || 0
       const avgTransactionValue = Number(customer.avg_transaction_value) || 0
 
-      // Calculate GGR = deposit_amount - withdraw_amount
-      const ggr = depositAmount - withdrawAmount
+      // ✅ Calculate GGR for Period B = deposit_amount - withdraw_amount
+      const ggr = depositAmount - withdrawAmount  // ✅ Period B GGR
 
-      // Calculate ATV = deposit_amount / deposit_cases (use from database if available, else calculate)
+      // ✅ Calculate ATV for Period B = deposit_amount / deposit_cases (use from database if available, else calculate)
       const atv = avgTransactionValue > 0 
         ? avgTransactionValue 
-        : (depositCases > 0 ? depositAmount / depositCases : 0)
+        : (depositCases > 0 ? depositAmount / depositCases : 0)  // ✅ Period B ATV
+
+      // ✅ Get Period A data for comparison based on userkey matching
+      // ✅ Validasi: customer.userkey harus valid untuk matching
+      const prevData = customer.userkey ? previousDataMap.get(customer.userkey) : null
+      const prevDA = prevData?.da || 0    // ✅ Period A DA
+      const prevGGR = prevData?.ggr || 0  // ✅ Period A GGR
+      const prevATV = prevData?.atv || 0  // ✅ Period A ATV
+
+      // ✅ Calculate comparison percentage: ((Period B - Period A) / Period A) * 100
+      // ✅ Formula: ((Current Value - Previous Value) / Previous Value) * 100
+      // ✅ depositAmount, ggr, atv = Period B values (current period)
+      // ✅ prevDA, prevGGR, prevATV = Period A values (previous period)
+      // ✅ If Period A is 0, return null (no comparison possible)
+      const daChangePercent = prevDA !== 0 
+        ? ((depositAmount - prevDA) / Math.abs(prevDA)) * 100   // ✅ (Period B DA - Period A DA) / Period A DA * 100
+        : null // If Period A is 0, cannot calculate percentage
+      
+      const ggrChangePercent = prevGGR !== 0 
+        ? ((ggr - prevGGR) / Math.abs(prevGGR)) * 100   // ✅ (Period B GGR - Period A GGR) / Period A GGR * 100
+        : null // If Period A is 0, cannot calculate percentage
+      
+      const atvChangePercent = prevATV !== 0 
+        ? ((atv - prevATV) / Math.abs(prevATV)) * 100   // ✅ (Period B ATV - Period A ATV) / Period A ATV * 100
+        : null // If Period A is 0, cannot calculate percentage
 
       return {
         unique_code: customer.unique_code || null,
         user_name: customer.user_name || null,
         line: customer.line || null, // ✅ Add line/brand field
         handler: null, // Will be null until handler column is added to tier_usc_v1
-        da: depositAmount,
-        ggr: ggr,
-        atv: atv,
+        daChangePercent: daChangePercent !== null ? Number(daChangePercent.toFixed(2)) : null,
+        ggrChangePercent: ggrChangePercent !== null ? Number(ggrChangePercent.toFixed(2)) : null,
+        atvChangePercent: atvChangePercent !== null ? Number(atvChangePercent.toFixed(2)) : null,
         assigne: null // For dropdown/assignment (will be populated when handler column is added)
       }
     })
