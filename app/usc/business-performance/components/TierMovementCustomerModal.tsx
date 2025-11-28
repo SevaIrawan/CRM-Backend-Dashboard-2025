@@ -676,7 +676,7 @@ export default function TierMovementCustomerModal({
         >
           {loading ? (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px', padding: '24px' }}>
-              <StandardLoadingSpinner />
+              <StandardLoadingSpinner message="Loading customer data..." />
             </div>
           ) : error ? (
             <div
