@@ -13,6 +13,21 @@ import {
   Legend
 } from 'chart.js'
 
+// Tier mapping untuk sorting (tier_number: tier_name)
+// Lower tier_number = Higher tier (Tier 1 = Highest, Tier 7 = Lowest)
+const TIER_NAME_TO_NUMBER: Record<string, number> = {
+  'Super VIP': 1,
+  'Tier 5': 2,
+  'Tier 4': 3,
+  'Tier 3': 4,
+  'Tier 2': 5,
+  'Tier 1': 6,
+  'Regular': 7,
+  'ND_P': 8,  // Potential tiers (lower priority)
+  'P1': 9,
+  'P2': 10
+}
+
 // ✅ BP Standard: NO Filler plugin - chart area harus transparent
 ChartJS.register(
   CategoryScale,
@@ -54,6 +69,43 @@ export default function CustomerTierLineChart({
   // State untuk track line yang sedang di-isolate (null = semua visible, number = hanya line tersebut visible)
   const [isolatedIndex, setIsolatedIndex] = useState<number | null>(null)
   
+  // ✅ CSS untuk tooltip scroll - modern dan fleksibel
+  useEffect(() => {
+    const styleId = 'customer-tier-tooltip-scroll'
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style')
+      style.id = styleId
+      style.textContent = `
+        /* Tooltip container dengan scroll */
+        canvas ~ div[style*="position: absolute"] {
+          max-height: 400px !important;
+          overflow-y: auto !important;
+          overflow-x: hidden !important;
+        }
+        canvas ~ div[style*="position: absolute"] ul {
+          max-height: 350px !important;
+          overflow-y: auto !important;
+        }
+        /* Scrollbar styling */
+        canvas ~ div[style*="position: absolute"]::-webkit-scrollbar {
+          width: 6px !important;
+        }
+        canvas ~ div[style*="position: absolute"]::-webkit-scrollbar-track {
+          background: #f1f5f9 !important;
+          border-radius: 3px !important;
+        }
+        canvas ~ div[style*="position: absolute"]::-webkit-scrollbar-thumb {
+          background: #cbd5e1 !important;
+          border-radius: 3px !important;
+        }
+        canvas ~ div[style*="position: absolute"]::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8 !important;
+        }
+      `
+      document.head.appendChild(style)
+    }
+  }, [])
+  
   // Error handling for empty data
   if (!series || series.length === 0 || !categories || categories.length === 0) {
     return (
@@ -80,6 +132,11 @@ export default function CustomerTierLineChart({
   // Extract tier name from series name (remove " Customer Count" atau "Customer Count")
   const getTierName = (seriesName: string): string => {
     return seriesName.replace(/\s*Customer\s*Count\s*/gi, '').trim()
+  }
+
+  // Get tier number from tier name untuk sorting
+  const getTierNumber = (tierName: string): number => {
+    return TIER_NAME_TO_NUMBER[tierName] || 99 // 99 untuk tier yang tidak dikenal (akan di akhir)
   }
 
   // Isolate dataset - hanya tampilkan line yang diklik
@@ -164,19 +221,104 @@ export default function CustomerTierLineChart({
         enabled: true,
         mode: 'index' as const,
         intersect: false,
-        backgroundColor: 'rgba(0, 0, 0, 0.9)',
-        borderColor: 'transparent',
-        titleColor: '#fff',
-        bodyColor: '#fff',
-        padding: 12,
+        backgroundColor: 'rgba(0, 0, 0, 0.85)',
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        borderWidth: 1,
+        titleColor: '#ffffff',
+        bodyColor: '#ffffff',
+        titleFont: {
+          size: 14,
+          weight: 'bold' as const,
+          family: "'Inter', -apple-system, sans-serif"
+        },
+        bodyFont: {
+          size: 13,
+          weight: '500' as const,
+          family: "'Inter', -apple-system, sans-serif"
+        },
+        padding: {
+          top: 16,
+          bottom: 16,
+          left: 18,
+          right: 18
+        },
         displayColors: true,
+        boxWidth: 14,
+        boxHeight: 14,
+        boxPadding: 7,
+        cornerRadius: 8,
+        titleSpacing: 10,
+        bodySpacing: 10,
+        titleMarginBottom: 12,
+        itemSort: function(a: any, b: any) {
+          // Sort by tier number (ascending: tier 1 first = high tier, tier 7 last = low tier)
+          // Urutan dari tinggi ke rendah (Z to A): Super VIP → Tier 5 → Tier 4 → Tier 3 → Tier 2 → Tier 1 → Regular
+          const tierNameA = getTierName(a.dataset.label || '')
+          const tierNameB = getTierName(b.dataset.label || '')
+          const tierNumA = getTierNumber(tierNameA)
+          const tierNumB = getTierNumber(tierNameB)
+          return tierNumA - tierNumB // Ascending: tier 1 (Super VIP) first, then 2, 3, 4, 5, 6, 7 (Regular)
+        },
         callbacks: {
+          title: function(context: any) {
+            if (context.length > 0 && context[0].label) {
+              const dateStr = context[0].label
+              try {
+                if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                  const [year, month, day] = dateStr.split('-').map(Number)
+                  const date = new Date(year, month - 1, day)
+                  if (!isNaN(date.getTime()) && date.getFullYear() >= 2020 && date.getFullYear() <= 2030) {
+                    return date.toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })
+                  }
+                } else {
+                  const date = new Date(dateStr)
+                  if (!isNaN(date.getTime()) && date.getFullYear() >= 2020 && date.getFullYear() <= 2030) {
+                    return date.toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })
+                  }
+                }
+              } catch (e) {
+                // Fallback
+              }
+              return dateStr
+            }
+            return ''
+          },
           label: function(context: any) {
+            // Get all dataPoints untuk calculate total
+            const tooltipModel = context.chart.tooltip
+            const allDataPoints = tooltipModel?.dataPoints || []
+            const total = allDataPoints.reduce((sum: number, item: any) => {
+              return sum + (item.parsed?.y || 0)
+            }, 0)
+            
             const label = context.dataset.label || ''
-            // Remove " Customer Count" atau "Customer Count" dari label
             const tierName = label.replace(/\s*Customer\s*Count\s*/gi, '').trim()
-            const value = context.parsed.y
-            return `${tierName}: ${formatIntegerKPI(value)}`
+            const value = context.parsed.y || 0
+            const percent = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0'
+            
+            return `${tierName}: ${formatIntegerKPI(value)} (${percent}%)`
+          },
+          afterBody: function(context: any) {
+            if (context.length > 1) {
+              const total = context.reduce((sum: number, item: any) => {
+                return sum + (item.parsed.y || 0)
+              }, 0)
+              
+              if (total > 0) {
+                return ['', `Total: ${formatIntegerKPI(total)}`]
+              }
+            }
+            return []
           }
         }
       }
@@ -238,7 +380,14 @@ export default function CustomerTierLineChart({
           padding: '12px 16px',
           marginTop: '8px'
         }}>
-          {series.map((item, index) => {
+          {[...series].sort((a, b) => {
+            // Sort legend dari tinggi ke rendah (Z to A): Super VIP → Tier 5 → Tier 4 → Tier 3 → Tier 2 → Tier 1 → Regular
+            const tierNameA = getTierName(a.name)
+            const tierNameB = getTierName(b.name)
+            const tierNumA = getTierNumber(tierNameA)
+            const tierNumB = getTierNumber(tierNameB)
+            return tierNumA - tierNumB // Ascending: tier 1 (Super VIP) first, then 2, 3, 4, 5, 6, 7 (Regular)
+          }).map((item, index) => {
             const lineColor = item.color || '#3B82F6'
             const tierName = getTierName(item.name)
             const isIsolated = isolatedIndex === index

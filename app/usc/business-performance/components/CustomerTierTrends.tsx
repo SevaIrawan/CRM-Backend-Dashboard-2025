@@ -96,13 +96,40 @@ export default function CustomerTierTrends({
   onPeriodAChange,
   onPeriodBChange
 }: CustomerTierTrendsProps) {
+  // Tier mapping untuk sorting (tier_number: tier_name)
+  // Lower tier_number = Higher tier (Tier 1 = Highest, Tier 7 = Lowest)
+  const TIER_NAME_TO_NUMBER: Record<string, number> = {
+    'Super VIP': 1,
+    'Tier 5': 2,
+    'Tier 4': 3,
+    'Tier 3': 4,
+    'Tier 2': 5,
+    'Tier 1': 6,
+    'Regular': 7,
+    'ND_P': 8,  // Potential tiers (lower priority)
+    'P1': 9,
+    'P2': 10
+  }
+
+  // Get tier number from tier name untuk sorting
+  const getTierNumber = (tierName: string): number => {
+    return TIER_NAME_TO_NUMBER[tierName] || 99 // 99 untuk tier yang tidak dikenal (akan di akhir)
+  }
+
   // Build tier_name options from database for the filter dropdown
+  // Sort dari tinggi ke rendah (Z to A): Super VIP → Tier 5 → Tier 4 → Tier 3 → Tier 2 → Tier 1 → Regular
   const TIER_NAME_OPTIONS: TierOption[] = React.useMemo(() => {
-    return tierNameOptions.map((option, index) => ({
+    const mapped = tierNameOptions.map((option, index) => ({
       key: option.name,
       label: option.name,
       color: TIER_NAME_COLORS[option.name] || DEFAULT_TIER_COLORS[index % DEFAULT_TIER_COLORS.length]
     }))
+    // Sort dari tinggi ke rendah (ascending by tier number)
+    return mapped.sort((a, b) => {
+      const tierNumA = getTierNumber(a.key)
+      const tierNumB = getTierNumber(b.key)
+      return tierNumA - tierNumB // Ascending: tier 1 (Super VIP) first, then 2, 3, 4, 5, 6, 7 (Regular)
+    })
   }, [tierNameOptions])
   
   // Default tier_group options (when no filter selected)
@@ -268,9 +295,21 @@ export default function CustomerTierTrends({
   // Determine which tier options to display in the chart
   // If no filter selected, use tier_group
   // If filter selected, use filtered tier_name data from API
-  const displayTierOptions = selectedTiers.length > 0 ? 
-    TIER_NAME_OPTIONS.filter(opt => selectedTiers.includes(opt.key)) :
-    TIER_GROUP_OPTIONS
+  // Determine which tier options to display in the chart
+  // If no filter selected, use tier_group
+  // If filter selected, use filtered tier_name data from API
+  // Sort dari tinggi ke rendah (Z to A): Super VIP → Tier 5 → Tier 4 → Tier 3 → Tier 2 → Tier 1 → Regular
+  const displayTierOptions = React.useMemo(() => {
+    const options = selectedTiers.length > 0 ? 
+      TIER_NAME_OPTIONS.filter(opt => selectedTiers.includes(opt.key)) :
+      TIER_GROUP_OPTIONS
+    // Sort dari tinggi ke rendah (ascending by tier number)
+    return options.sort((a, b) => {
+      const tierNumA = getTierNumber(a.key)
+      const tierNumB = getTierNumber(b.key)
+      return tierNumA - tierNumB // Ascending: tier 1 (Super VIP) first, then 2, 3, 4, 5, 6, 7 (Regular)
+    })
+  }, [selectedTiers, TIER_NAME_OPTIONS])
     
   // ✅ Build tier color mapping - USE EXACT SAME COLORS AS FILTER DROPDOWN
   // This ensures chart lines use the same colors shown in the tier filter dropdown
@@ -654,8 +693,15 @@ export default function CustomerTierTrends({
       return {
         name: `${tierLabels[tier] || tier} Customer Count`,
         data: data.periodA.data[tier] || [],
-        color: finalTierColor // ✅ Exact same color as shown in filter dropdown
+        color: finalTierColor, // ✅ Exact same color as shown in filter dropdown
+        tierKey: tier // Store tier key for sorting
       }
+    })
+    .sort((a, b) => {
+      // Sort dari tinggi ke rendah (Z to A): Super VIP → Tier 5 → Tier 4 → Tier 3 → Tier 2 → Tier 1 → Regular
+      const tierNumA = getTierNumber(a.tierKey)
+      const tierNumB = getTierNumber(b.tierKey)
+      return tierNumA - tierNumB // Ascending: tier 1 (Super VIP) first, then 2, 3, 4, 5, 6, 7 (Regular)
     })
 
   // ✅ Prepare series for Period B with clear, distinct colors
@@ -688,8 +734,15 @@ export default function CustomerTierTrends({
       return {
         name: `${tierLabels[tier] || tier} Customer Count`,
         data: data.periodB.data[tier] || [],
-        color: finalTierColor // ✅ Exact same color as shown in filter dropdown
+        color: finalTierColor, // ✅ Exact same color as shown in filter dropdown
+        tierKey: tier // Store tier key for sorting
       }
+    })
+    .sort((a, b) => {
+      // Sort dari tinggi ke rendah (Z to A): Super VIP → Tier 5 → Tier 4 → Tier 3 → Tier 2 → Tier 1 → Regular
+      const tierNumA = getTierNumber(a.tierKey)
+      const tierNumB = getTierNumber(b.tierKey)
+      return tierNumA - tierNumB // Ascending: tier 1 (Super VIP) first, then 2, 3, 4, 5, 6, 7 (Regular)
     })
   
   // Get categories for charts

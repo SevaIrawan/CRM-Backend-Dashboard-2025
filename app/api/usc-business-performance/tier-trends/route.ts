@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { applySquadLeadFilter, applyChannelFilter } from '@/utils/brandAccessHelper'
+import { validatePeriodRanges, validateDateFormat } from '../_utils/dateValidation'
 
 /**
  * ============================================================================
@@ -540,6 +541,17 @@ export async function GET(request: NextRequest) {
         success: false,
         error: 'comparePeriod must be "Monthly", "3 Month", or "6 Month"'
       }, { status: 400 })
+    }
+    
+    // ✅ Validate custom date ranges if provided
+    if (useCustomDates) {
+      const dateValidation = validatePeriodRanges(periodAStart, periodAEnd, periodBStart, periodBEnd)
+      if (!dateValidation.valid) {
+        return NextResponse.json({
+          success: false,
+          error: dateValidation.error
+        }, { status: 400 })
+      }
     }
     
     // ✅ Check cache first
