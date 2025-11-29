@@ -290,17 +290,46 @@ export default function CustomerTierMovement({
     return `${num.toFixed(1)}%`
   }
 
-  // ✅ Get cell color based on movement type
+  // ✅ Get cell color based on movement type with enhanced modern styling
   // Tier numbering: Tier 1 = Super VIP (highest), Tier 7 = Regular (lowest)
   // Logic: 
   // - fromTier > toTier = UPGRADE (from tier 7→1, tier number decreases) = Green
   // - fromTier < toTier = DOWNGRADE (from tier 1→7, tier number increases) = Pink
   // - fromTier === toTier = STABLE (same tier) = Blue
-  const getCellColor = (fromTier: number, toTier: number, value: number): string => {
-    if (value === 0) return 'transparent'
-    if (fromTier === toTier) return '#DBEAFE' // Blue - Stable
-    if (fromTier > toTier) return '#D1FAE5' // Green - Upgrade (from higher tier number to lower)
-    return '#FCE7F3' // Pink - Downgrade (from lower tier number to higher) - Light pink with better visibility
+  const getCellColor = (fromTier: number, toTier: number, value: number): { bg: string; border: string; text: string } => {
+    if (value === 0) return { bg: '#FFFFFF', border: '#F3F4F6', text: '#9CA3AF' }
+    
+    if (fromTier === toTier) {
+      // Blue - Stable (with gradient effect)
+      return { 
+        bg: '#EFF6FF', 
+        border: '#BFDBFE', 
+        text: '#1E40AF' 
+      }
+    }
+    
+    if (fromTier > toTier) {
+      // Green - Upgrade (from higher tier number to lower)
+      return { 
+        bg: '#ECFDF5', 
+        border: '#A7F3D0', 
+        text: '#047857' 
+      }
+    }
+    
+    // Pink - Downgrade (from lower tier number to higher)
+    return { 
+      bg: '#FDF2F8', 
+      border: '#F9A8D4', 
+      text: '#BE185D' 
+    }
+  }
+  
+  // ✅ Get movement icon based on movement type
+  const getMovementIcon = (fromTier: number, toTier: number): string => {
+    if (fromTier === toTier) return '●' // Stable - Circle
+    if (fromTier > toTier) return '▲' // Upgrade - Up arrow
+    return '▼' // Downgrade - Down arrow
   }
 
   // Handle cell click to open modal
@@ -584,10 +613,21 @@ export default function CustomerTierMovement({
 
         {/* Tier Movement Matrix */}
         <div>
-          <h4 style={{ fontSize: '16px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' }}>
+          <h4 style={{ 
+            fontSize: '18px', 
+            fontWeight: 700, 
+            color: '#111827', 
+            marginBottom: '6px',
+            letterSpacing: '-0.02em'
+          }}>
             Tier Movement Matrix
           </h4>
-          <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>
+          <p style={{ 
+            fontSize: '13px', 
+            color: '#6b7280', 
+            marginBottom: '16px',
+            lineHeight: '1.5'
+          }}>
             Rows represent Period A tiers, columns represent Period B tiers. Cell values show customer count moving
             between tiers.
           </p>
@@ -595,21 +635,26 @@ export default function CustomerTierMovement({
           <div 
             style={{ 
               overflowX: 'auto',
-              borderRadius: '8px',
-              transition: 'box-shadow 0.3s ease',
-              border: '1px solid #e5e7eb'
+              borderRadius: '12px',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              border: '1px solid #E5E7EB',
+              backgroundColor: '#FFFFFF',
+              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.15)'
+              e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+              e.currentTarget.style.borderColor = '#D1D5DB'
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = 'none'
+              e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
+              e.currentTarget.style.borderColor = '#E5E7EB'
             }}
           >
             <table
               style={{
                 width: '100%',
-                borderCollapse: 'collapse',
+                borderCollapse: 'separate',
+                borderSpacing: 0,
                 fontSize: '13px'
               }}
             >
@@ -617,12 +662,19 @@ export default function CustomerTierMovement({
                 <tr>
                   <th
                     style={{
-                      padding: '12px',
+                      padding: '16px 14px',
                       textAlign: 'left',
                       backgroundColor: '#F9FAFB',
                       borderBottom: '2px solid #E5E7EB',
-                      fontWeight: 600,
-                      color: '#374151'
+                      borderRight: '1px solid #E5E7EB',
+                      fontWeight: 700,
+                      color: '#111827',
+                      fontSize: '14px',
+                      letterSpacing: '-0.01em',
+                      position: 'sticky',
+                      left: 0,
+                      zIndex: 10,
+                      boxShadow: '2px 0 4px rgba(0, 0, 0, 0.02)'
                     }}
                   >
                     Period A → Period B
@@ -631,12 +683,17 @@ export default function CustomerTierMovement({
                     <th
                       key={tier.tier}
                       style={{
-                        padding: '12px',
+                        padding: '16px 12px',
                         textAlign: 'center',
                         backgroundColor: '#F9FAFB',
                         borderBottom: '2px solid #E5E7EB',
-                        fontWeight: 600,
-                        color: '#374151'
+                        borderRight: '1px solid #E5E7EB',
+                        fontWeight: 700,
+                        color: '#111827',
+                        fontSize: '13px',
+                        letterSpacing: '-0.01em',
+                        whiteSpace: 'nowrap',
+                        minWidth: '90px'
                       }}
                     >
                       {tier.tierName}
@@ -644,12 +701,15 @@ export default function CustomerTierMovement({
                   ))}
                   <th
                     style={{
-                      padding: '12px',
+                      padding: '16px 14px',
                       textAlign: 'center',
-                      backgroundColor: '#F9FAFB',
-                      borderBottom: '2px solid #E5E7EB',
-                      fontWeight: 600,
-                      color: '#374151'
+                      backgroundColor: '#F3F4F6',
+                      borderBottom: '2px solid #D1D5DB',
+                      fontWeight: 700,
+                      color: '#111827',
+                      fontSize: '13px',
+                      letterSpacing: '-0.01em',
+                      minWidth: '100px'
                     }}
                   >
                     Total Out
@@ -657,15 +717,25 @@ export default function CustomerTierMovement({
                 </tr>
               </thead>
               <tbody>
-                {data.matrix.rows.map((row) => (
-                  <tr key={row.fromTier}>
+                {data.matrix.rows.map((row, rowIndex) => (
+                  <tr key={row.fromTier} style={{
+                    backgroundColor: rowIndex % 2 === 0 ? '#FFFFFF' : '#FAFAFA',
+                    transition: 'background-color 0.2s ease'
+                  }}>
                     <td
                       style={{
-                        padding: '12px',
+                        padding: '14px 16px',
                         backgroundColor: '#F9FAFB',
                         borderBottom: '1px solid #E5E7EB',
-                        fontWeight: 600,
-                        color: '#374151'
+                        borderRight: '1px solid #E5E7EB',
+                        fontWeight: 700,
+                        color: '#111827',
+                        fontSize: '13px',
+                        position: 'sticky',
+                        left: 0,
+                        zIndex: 5,
+                        boxShadow: '2px 0 4px rgba(0, 0, 0, 0.02)',
+                        whiteSpace: 'nowrap'
                       }}
                     >
                       {row.fromTierName}
@@ -691,7 +761,9 @@ export default function CustomerTierMovement({
                         numericValue = 0
                       }
                       
-                      const bgColor = getCellColor(row.fromTier, tier.tier, numericValue)
+                      const cellColors = getCellColor(row.fromTier, tier.tier, numericValue)
+                      const movementIcon = getMovementIcon(row.fromTier, tier.tier)
+                      const isStable = row.fromTier === tier.tier
                       
                       // ✅ Cell is clickable if value is a positive number (> 0)
                       const isClickable = numericValue > 0 && typeof numericValue === 'number' && !isNaN(numericValue) && isFinite(numericValue)
@@ -722,47 +794,76 @@ export default function CustomerTierMovement({
                             }
                           }}
                           style={{
-                            padding: '12px',
+                            padding: '14px 12px',
                             textAlign: 'center',
-                            backgroundColor: bgColor,
+                            backgroundColor: cellColors.bg,
                             borderBottom: '1px solid #E5E7EB',
-                            fontWeight: row.fromTier === tier.tier ? 600 : 400,
-                            color: numericValue === 0 ? '#9CA3AF' : '#1F2937',
+                            borderRight: '1px solid #E5E7EB',
+                            borderLeft: numericValue > 0 ? `3px solid ${cellColors.border}` : 'none',
+                            fontWeight: isStable ? 700 : 600,
+                            color: numericValue === 0 ? cellColors.text : cellColors.text,
                             cursor: isClickable ? 'pointer' : 'default',
-                            transition: isClickable ? 'all 0.2s ease' : 'none',
+                            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                             position: 'relative',
-                            userSelect: 'none' // Prevent text selection on click
+                            userSelect: 'none',
+                            fontSize: numericValue > 0 ? '13px' : '12px',
+                            verticalAlign: 'middle'
                           }}
                           onMouseEnter={(e) => {
                             if (isClickable) {
-                              e.currentTarget.style.opacity = '0.85'
-                              e.currentTarget.style.transform = 'scale(1.03)'
-                              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.15)'
+                              e.currentTarget.style.transform = 'scale(1.05) translateZ(0)'
+                              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1)'
                               e.currentTarget.style.zIndex = '10'
+                              e.currentTarget.style.borderLeftWidth = '4px'
                             }
                           }}
                           onMouseLeave={(e) => {
                             if (isClickable) {
-                              e.currentTarget.style.opacity = '1'
-                              e.currentTarget.style.transform = 'scale(1)'
+                              e.currentTarget.style.transform = 'scale(1) translateZ(0)'
                               e.currentTarget.style.boxShadow = 'none'
                               e.currentTarget.style.zIndex = '1'
+                              e.currentTarget.style.borderLeftWidth = '3px'
                             }
                           }}
-                          title={isClickable ? `Click to view ${numericValue} customer${numericValue > 1 ? 's' : ''}` : ''}
+                          title={isClickable ? `Click to view ${numericValue} customer${numericValue > 1 ? 's' : ''} (${isStable ? 'Stable' : row.fromTier > tier.tier ? 'Upgrade' : 'Downgrade'})` : ''}
                         >
-                          {numericValue === 0 ? '-' : formatNumber(numericValue)}
+                          {numericValue === 0 ? (
+                            <span style={{ color: '#9CA3AF', fontSize: '12px' }}>—</span>
+                          ) : (
+                            <div style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center',
+                              gap: '6px',
+                              flexWrap: 'nowrap'
+                            }}>
+                              <span style={{ 
+                                fontSize: '10px', 
+                                color: cellColors.text,
+                                opacity: 0.8,
+                                lineHeight: '1'
+                              }}>
+                                {movementIcon}
+                              </span>
+                              <span style={{ fontWeight: 'inherit' }}>
+                                {formatNumber(numericValue)}
+                              </span>
+                            </div>
+                          )}
                         </td>
                       )
                     })}
                     <td
                       style={{
-                        padding: '12px',
+                        padding: '14px 16px',
                         textAlign: 'center',
-                        backgroundColor: '#F9FAFB',
-                        borderBottom: '1px solid #E5E7EB',
-                        fontWeight: 600,
-                        color: '#374151'
+                        backgroundColor: '#F3F4F6',
+                        borderBottom: '1px solid #D1D5DB',
+                        borderLeft: '1px solid #E5E7EB',
+                        fontWeight: 700,
+                        color: '#111827',
+                        fontSize: '13px',
+                        minWidth: '100px'
                       }}
                     >
                       {formatNumber(row.totalOut)}
@@ -770,14 +871,22 @@ export default function CustomerTierMovement({
                   </tr>
                 ))}
                 {/* Total In Row */}
-                <tr>
+                <tr style={{ backgroundColor: '#F3F4F6' }}>
                   <td
                     style={{
-                      padding: '12px',
-                      backgroundColor: '#F9FAFB',
-                      borderTop: '2px solid #E5E7EB',
-                      fontWeight: 600,
-                      color: '#374151'
+                      padding: '16px 14px',
+                      backgroundColor: '#F3F4F6',
+                      borderTop: '3px solid #D1D5DB',
+                      borderBottom: 'none',
+                      borderRight: '1px solid #D1D5DB',
+                      fontWeight: 700,
+                      color: '#111827',
+                      fontSize: '14px',
+                      position: 'sticky',
+                      left: 0,
+                      zIndex: 5,
+                      boxShadow: '2px 0 4px rgba(0, 0, 0, 0.02)',
+                      whiteSpace: 'nowrap'
                     }}
                   >
                     Total In
@@ -786,12 +895,16 @@ export default function CustomerTierMovement({
                     <td
                       key={tier.tier}
                       style={{
-                        padding: '12px',
+                        padding: '16px 12px',
                         textAlign: 'center',
-                        backgroundColor: '#F9FAFB',
-                        borderTop: '2px solid #E5E7EB',
-                        fontWeight: 600,
-                        color: '#374151'
+                        backgroundColor: '#F3F4F6',
+                        borderTop: '3px solid #D1D5DB',
+                        borderBottom: 'none',
+                        borderRight: '1px solid #D1D5DB',
+                        fontWeight: 700,
+                        color: '#111827',
+                        fontSize: '13px',
+                        minWidth: '90px'
                       }}
                     >
                       {formatNumber(data.matrix.totalInRow.cells[tier.tier] || 0)}
@@ -799,12 +912,15 @@ export default function CustomerTierMovement({
                   ))}
                   <td
                     style={{
-                      padding: '12px',
+                      padding: '16px 14px',
                       textAlign: 'center',
-                      backgroundColor: '#F9FAFB',
-                      borderTop: '2px solid #E5E7EB',
-                      fontWeight: 600,
-                      color: '#374151'
+                      backgroundColor: '#E5E7EB',
+                      borderTop: '3px solid #9CA3AF',
+                      borderBottom: 'none',
+                      fontWeight: 700,
+                      color: '#111827',
+                      fontSize: '14px',
+                      minWidth: '100px'
                     }}
                   >
                     {formatNumber(data.matrix.grandTotal)}
@@ -812,6 +928,38 @@ export default function CustomerTierMovement({
                 </tr>
               </tbody>
             </table>
+            
+            {/* ✅ Modern styling with CSS animations */}
+            <style jsx>{`
+              @keyframes fadeInCell {
+                from {
+                  opacity: 0;
+                  transform: scale(0.95);
+                }
+                to {
+                  opacity: 1;
+                  transform: scale(1);
+                }
+              }
+              
+              @keyframes pulseGlow {
+                0%, 100% {
+                  box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+                }
+                50% {
+                  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0);
+                }
+              }
+              
+              /* Smooth transitions for table interactions */
+              table tbody tr {
+                animation: fadeInCell 0.3s ease-out;
+              }
+              
+              table tbody tr:hover {
+                background-color: #F9FAFB !important;
+              }
+            `}</style>
           </div>
         </div>
 
@@ -824,12 +972,25 @@ export default function CustomerTierMovement({
             borderLeft: '4px solid #3B82F6'
           }}
         >
-          <h4 style={{ fontSize: '14px', fontWeight: 600, color: '#1E40AF', marginBottom: '12px' }}>
+          <h4 style={{ 
+            fontSize: '15px', 
+            fontWeight: 700, 
+            color: '#1E40AF', 
+            marginBottom: '14px',
+            letterSpacing: '-0.01em'
+          }}>
             Key Insights
           </h4>
-          <ul style={{ margin: 0, paddingLeft: '20px', color: '#1E40AF', fontSize: '13px', lineHeight: '1.8' }}>
-            <li>Higher upgrade rate indicates successful customer engagement and value delivery</li>
-            <li>Monitor downgrade patterns to identify at-risk customer segments</li>
+          <ul style={{ 
+            margin: 0, 
+            paddingLeft: '24px', 
+            color: '#1E3A8A', 
+            fontSize: '13px', 
+            lineHeight: '1.9',
+            listStyle: 'disc'
+          }}>
+            <li style={{ marginBottom: '6px' }}>Higher upgrade rate indicates successful customer engagement and value delivery</li>
+            <li style={{ marginBottom: '6px' }}>Monitor downgrade patterns to identify at-risk customer segments</li>
             <li>Stable customers in high-value tiers represent consistent revenue base</li>
           </ul>
         </div>
