@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import StandardLoadingSpinner from '@/components/StandardLoadingSpinner'
+import CustomerDetailModal from './CustomerDetailModal'
 
 // Sidebar width constants
 const SIDEBAR_EXPANDED_WIDTH = '280px'
@@ -101,6 +102,7 @@ export default function TierMovementCustomerModal({
   // ✅ Get current sidebar width (responsive to collapse/expand)
   const sidebarWidth = useSidebarState()
   const [loading, setLoading] = useState(false)
+  const [initialLoading, setInitialLoading] = useState(true) // ✅ Track initial load to prevent flash
   const [customers, setCustomers] = useState<Customer[]>([])
   const [totalRecords, setTotalRecords] = useState(0) // ✅ WAJIB: Total count dari API (data.count), bukan customers.length
   const [error, setError] = useState<string | null>(null)
@@ -111,6 +113,87 @@ export default function TierMovementCustomerModal({
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(10) // Default 10 rows per page
   const [exporting, setExporting] = useState(false)
+
+  // ✅ Customer detail modal state
+  const [selectedCustomerForDetail, setSelectedCustomerForDetail] = useState<Customer | null>(null)
+  const [detailModalOpen, setDetailModalOpen] = useState(false)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailLoadingCustomer, setDetailLoadingCustomer] = useState<string | null>(null) // Track which customer is loading
+  const [detailData, setDetailData] = useState<any>(null) // ✅ Store fetched data to pass to modal
+
+  // ✅ Notification state
+  const [showNotification, setShowNotification] = useState(false)
+  const [notificationMessage, setNotificationMessage] = useState('')
+  const [notificationType, setNotificationType] = useState<'success' | 'error' | 'info'>('success')
+
+  // ✅ Show notification helper (defined early so it can be used in other functions)
+  const showNotificationToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setNotificationMessage(message)
+    setNotificationType(type)
+    setShowNotification(true)
+    
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+      setShowNotification(false)
+    }, 3000)
+  }
+
+  // ✅ Fetch customer detail data BEFORE opening modal
+  const handleCustomerDetailClick = async (customer: Customer) => {
+    if (!customer.unique_code || !periodAStart || !periodAEnd || !periodBStart || !periodBEnd) {
+      return
+    }
+
+    // Prevent multiple clicks
+    if (detailLoading) return
+
+    setDetailLoading(true)
+    setDetailLoadingCustomer(customer.unique_code)
+
+    try {
+      // Fetch data first
+      const params = new URLSearchParams({
+        uniqueCode: customer.unique_code,
+        periodAStart: periodAStart,
+        periodAEnd: periodAEnd,
+        periodBStart: periodBStart,
+        periodBEnd: periodBEnd,
+        line: line || 'All',
+        squadLead: squadLead || 'All',
+        channel: channel || 'All'
+      })
+
+      const response = await fetch(`/api/usc-business-performance/customer-detail?${params}`)
+
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text()
+        console.error('❌ [Customer Detail] Non-JSON response:', text.substring(0, 200))
+        throw new Error(`Server returned non-JSON response (${response.status})`)
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error occurred' }))
+        throw new Error(errorData.error || `Failed to fetch customer detail (Status: ${response.status})`)
+      }
+
+      // ✅ Get fetched data and store it
+      const result = await response.json()
+      
+      // Data fetched successfully, now open modal
+      setDetailData(result) // ✅ Store data before opening modal
+      setSelectedCustomerForDetail(customer)
+      setDetailModalOpen(true)
+    } catch (err: any) {
+      console.error('❌ [Customer Detail] Error:', err)
+      // Show error notification instead of alert
+      showNotificationToast(`Failed to load customer details: ${err.message}`, 'error')
+    } finally {
+      setDetailLoading(false)
+      setDetailLoadingCustomer(null)
+    }
+  }
 
   // Handler options (hardcoded for now, will be dynamic later)
   const handlerOptions = ['Select...', 'Handler 1', 'Handler 2', 'Handler 3', 'Handler 4', 'Handler 5']
@@ -248,10 +331,12 @@ export default function TierMovementCustomerModal({
       setCustomers([])
       setTotalRecords(0)
       setPage(1)
+      setInitialLoading(true) // ✅ Reset initial loading state
       return
     }
 
     const fetchCustomers = async () => {
+      setInitialLoading(true) // ✅ Set initial loading immediately to prevent flash
       setLoading(true)
       setError(null)
       setTotalRecords(0) // ✅ Reset totalRecords sebelum fetch
@@ -428,6 +513,10 @@ export default function TierMovementCustomerModal({
         setError(errorMessage)
       } finally {
         setLoading(false)
+        // ✅ Set initialLoading to false after a small delay to allow smooth transition
+        setTimeout(() => {
+          setInitialLoading(false)
+        }, 200) // Small delay for smooth fade transition
       }
     }
 
@@ -466,7 +555,7 @@ export default function TierMovementCustomerModal({
   const handleSend = (index: number) => {
     const handler = assignments[startIndex + index] // Use global index
     if (!handler || handler === 'Select...') {
-      alert('Please select a handler first')
+      showNotificationToast('Please select a handler first', 'error')
       return
     }
 
@@ -477,7 +566,8 @@ export default function TierMovementCustomerModal({
       handler
     })
 
-    alert(`Assignment sent: ${customer.unique_code} → ${handler}`)
+    // ✅ Show professional notification instead of alert (use 'info' type for assignment)
+    showNotificationToast(`Assignment sent: ${customer.unique_code} → ${handler}`, 'info')
   }
   
   // ✅ Export CSV function
@@ -533,7 +623,7 @@ export default function TierMovementCustomerModal({
       document.body.removeChild(a)
       window.URL.revokeObjectURL(url)
     } catch (e: any) {
-      alert('Failed to export: ' + (e.message || 'Unknown error'))
+      showNotificationToast('Failed to export: ' + (e.message || 'Unknown error'), 'error')
     } finally {
       setExporting(false)
     }
@@ -694,9 +784,59 @@ export default function TierMovementCustomerModal({
             minHeight: 0 // ✅ Allow content to expand
           }}
         >
-          {loading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px', padding: '24px' }}>
-              <StandardLoadingSpinner message="Loading customer data..." />
+          {initialLoading || loading ? (
+            <div style={{ 
+              padding: '20px 24px',
+              display: 'flex',
+              flexDirection: 'column',
+              height: '100%'
+            }}>
+              {/* ✅ Table Container dengan ukuran yang sama seperti ketika data loaded */}
+              <div style={{
+                overflowX: 'auto',
+                overflowY: 'hidden',
+                height: `${MAX_TABLE_HEIGHT}px`, // ✅ Gunakan tinggi yang sama seperti table loaded
+                position: 'relative',
+                borderRadius: '8px',
+                border: '1px solid #E5E7EB',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)',
+                boxSizing: 'border-box',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: '#F9FAFB'
+              }}>
+                <StandardLoadingSpinner message="Loading customer data..." />
+                <p style={{ 
+                  marginTop: '16px', 
+                  fontSize: '13px', 
+                  color: '#6B7280',
+                  textAlign: 'center'
+                }}>
+                  Fetching real-time data from database...
+                </p>
+              </div>
+              
+              {/* ✅ Footer placeholder untuk maintain layout */}
+              <div
+                style={{
+                  padding: '16px 24px',
+                  borderTop: '1px solid #E5E7EB',
+                  backgroundColor: '#FFFFFF',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexShrink: 0,
+                  marginTop: 'auto'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{ width: '80px', height: '32px' }}></div>
+                  <div style={{ fontSize: '13px', color: '#9CA3AF' }}>Loading...</div>
+                </div>
+                <div style={{ width: '100px', height: '32px' }}></div>
+              </div>
             </div>
           ) : error ? (
             <div
@@ -722,7 +862,22 @@ export default function TierMovementCustomerModal({
               No customers found for this tier movement.
             </div>
           ) : (
-            <>
+            <div
+              style={{
+                animation: 'fadeInContent 0.3s ease-in',
+                opacity: initialLoading ? 0 : 1
+              }}
+            >
+              <style jsx>{`
+                @keyframes fadeInContent {
+                  from {
+                    opacity: 0;
+                  }
+                  to {
+                    opacity: 1;
+                  }
+                }
+              `}</style>
               {/* ✅ Table Container - FIX: Hapus flex constraint yang membatasi */}
               <div style={{ 
                 padding: '20px 24px'
@@ -1009,7 +1164,86 @@ export default function TierMovementCustomerModal({
                           boxSizing: 'border-box' // ✅ Pastikan padding termasuk dalam height
                         }}
                       >
-                        {customer.user_name || '-'}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'space-between' }}>
+                          <span>{customer.user_name || '-'}</span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleCustomerDetailClick(customer)
+                            }}
+                            disabled={detailLoading && detailLoadingCustomer === customer.unique_code}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              cursor: detailLoading && detailLoadingCustomer === customer.unique_code ? 'wait' : 'pointer',
+                              padding: '4px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: detailLoading && detailLoadingCustomer === customer.unique_code ? '#9CA3AF' : '#6B7280',
+                              transition: 'color 0.2s',
+                              opacity: detailLoading && detailLoadingCustomer === customer.unique_code ? 0.6 : 1
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!(detailLoading && detailLoadingCustomer === customer.unique_code)) {
+                                e.currentTarget.style.color = '#1F2937'
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!(detailLoading && detailLoadingCustomer === customer.unique_code)) {
+                                e.currentTarget.style.color = '#6B7280'
+                              }
+                            }}
+                            title={detailLoading && detailLoadingCustomer === customer.unique_code ? 'Loading...' : 'View customer details'}
+                          >
+                            {detailLoading && detailLoadingCustomer === customer.unique_code ? (
+                              <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <circle 
+                                  cx="12" 
+                                  cy="12" 
+                                  r="10" 
+                                  strokeDasharray="32" 
+                                  strokeDashoffset="8"
+                                  style={{
+                                    transformOrigin: 'center',
+                                    animation: 'spin 1s linear infinite'
+                                  }}
+                                >
+                                  <animateTransform
+                                    attributeName="transform"
+                                    type="rotate"
+                                    from="0 12 12"
+                                    to="360 12 12"
+                                    dur="1s"
+                                    repeatCount="indefinite"
+                                  />
+                                </circle>
+                              </svg>
+                            ) : (
+                              <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                              </svg>
+                            )}
+                          </button>
+                        </div>
                       </td>
                       <td
                         style={{
@@ -1353,10 +1587,157 @@ export default function TierMovementCustomerModal({
                   </button>
                 </div>
               </div>
-            </>
+            </div>
           )}
         </div>
       </div>
+
+      {/* ✅ Customer Detail Modal */}
+      {detailModalOpen && selectedCustomerForDetail && (
+        <CustomerDetailModal
+          isOpen={detailModalOpen}
+          onClose={() => {
+            setDetailModalOpen(false)
+            setSelectedCustomerForDetail(null)
+            setDetailData(null) // ✅ Clear data when closing
+          }}
+          uniqueCode={selectedCustomerForDetail.unique_code}
+          userName={selectedCustomerForDetail.user_name}
+          periodAStart={periodAStart || null}
+          periodAEnd={periodAEnd || null}
+          periodBStart={periodBStart || null}
+          periodBEnd={periodBEnd || null}
+          line={line}
+          squadLead={squadLead}
+          channel={channel}
+          skipFetch={true} // ✅ Skip fetch because data already loaded before opening modal
+          preloadedData={detailData} // ✅ Pass pre-loaded data
+        />
+      )}
+
+      {/* ✅ Notification Toast - Professional White Design */}
+      {showNotification && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
+            backgroundColor: '#FFFFFF',
+            color: '#1F2937',
+            padding: '16px 20px',
+            borderRadius: '12px',
+            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.1)',
+            border: '1px solid #E5E7EB',
+            zIndex: 10003, // ✅ Above modals
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
+            minWidth: '320px',
+            maxWidth: '480px',
+            animation: 'slideInRight 0.3s ease-out',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease-out'
+          }}
+          onClick={() => setShowNotification(false)}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = '0 12px 30px -5px rgba(0, 0, 0, 0.2), 0 6px 8px -2px rgba(0, 0, 0, 0.12)'
+            e.currentTarget.style.transform = 'translateY(-2px)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.1)'
+            e.currentTarget.style.transform = 'translateY(0)'
+          }}
+        >
+          {/* Icon - Info Circle */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            backgroundColor: notificationType === 'success' ? '#10B981' : notificationType === 'error' ? '#EF4444' : '#3B82F6',
+            flexShrink: 0
+          }}>
+            {notificationType === 'success' ? (
+              <svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M13.3333 4L6 11.3333L2.66667 8" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            ) : notificationType === 'error' ? (
+              <svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 4L4 12M4 4L12 12" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="8" cy="8" r="6" stroke="#FFFFFF" strokeWidth="2"/>
+                <path d="M8 5.33333V8" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"/>
+                <circle cx="8" cy="10.6667" r="0.666667" fill="#FFFFFF"/>
+              </svg>
+            )}
+          </div>
+          
+          {/* Message */}
+          <p style={{ 
+            margin: 0, 
+            fontSize: '14px', 
+            fontWeight: 500,
+            lineHeight: '1.6',
+            flex: 1,
+            color: '#1F2937'
+          }}>
+            {notificationMessage}
+          </p>
+
+          {/* Close button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setShowNotification(false)
+            }}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#6B7280',
+              cursor: 'pointer',
+              padding: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: 0.7,
+              transition: 'opacity 0.2s',
+              flexShrink: 0,
+              borderRadius: '4px'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '1'
+              e.currentTarget.style.backgroundColor = '#F3F4F6'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '0.7'
+              e.currentTarget.style.backgroundColor = 'transparent'
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+
+          {/* Animation styles */}
+          <style jsx global>{`
+            @keyframes slideInRight {
+              from {
+                transform: translateX(calc(100% + 20px));
+                opacity: 0;
+              }
+              to {
+                transform: translateX(0);
+                opacity: 1;
+              }
+            }
+          `}</style>
+        </div>,
+        document.body
+      )}
     </div>,
     document.body
   )

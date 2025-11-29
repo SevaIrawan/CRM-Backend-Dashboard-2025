@@ -306,15 +306,33 @@ export default function CustomerTierMovement({
   // Handle cell click to open modal
   const handleCellClick = (fromTier: number, toTier: number, fromTierName: string, toTierName: string, cellValue: number) => {
     try {
-      // ✅ Validate cell value first
-      if (!cellValue || cellValue <= 0) {
-        console.warn('⚠️ [Customer Tier Movement] Cell has no value, cannot open modal:', { fromTier, toTier, value: cellValue })
+      // ✅ Validate cell value first - must be > 0
+      if (typeof cellValue !== 'number' || isNaN(cellValue) || !isFinite(cellValue) || cellValue <= 0) {
+        console.warn('⚠️ [Customer Tier Movement] Cell has invalid value, cannot open modal:', { 
+          fromTier, 
+          toTier, 
+          fromTierName,
+          toTierName,
+          value: cellValue,
+          type: typeof cellValue,
+          isNaN: isNaN(cellValue),
+          isFinite: isFinite(cellValue)
+        })
         return
       }
 
-      // ✅ Validate tier values
-      if (!fromTier || !toTier || !fromTierName || !toTierName) {
-        console.error('❌ [Customer Tier Movement] Invalid tier values:', { fromTier, toTier, fromTierName, toTierName })
+      // ✅ Validate tier values - must be valid numbers and names
+      if (typeof fromTier !== 'number' || typeof toTier !== 'number' || 
+          !fromTierName || !toTierName || 
+          isNaN(fromTier) || isNaN(toTier)) {
+        console.error('❌ [Customer Tier Movement] Invalid tier values:', { 
+          fromTier, 
+          toTier, 
+          fromTierName, 
+          toTierName,
+          fromTierType: typeof fromTier,
+          toTierType: typeof toTier
+        })
         setError('Invalid tier selection. Please try again.')
         return
       }
@@ -326,9 +344,16 @@ export default function CustomerTierMovement({
         return
       }
 
-      // ✅ Validate periods have required fields
-      if (!periods.currentYear || !periods.currentMonth || !periods.previousYear || !periods.previousMonth) {
-        console.error('❌ [Customer Tier Movement] Incomplete period data:', periods)
+      // ✅ Validate periods have required fields - check both year/month and date range
+      const hasYearMonth = periods.currentYear && periods.currentMonth && periods.previousYear && periods.previousMonth
+      const hasDateRange = periods.periodAStart && periods.periodAEnd && periods.periodBStart && periods.periodBEnd
+      
+      if (!hasYearMonth && !hasDateRange) {
+        console.error('❌ [Customer Tier Movement] Incomplete period data:', {
+          periods,
+          hasYearMonth,
+          hasDateRange
+        })
         setError('Period data is incomplete. Please refresh the page.')
         return
       }
@@ -343,7 +368,16 @@ export default function CustomerTierMovement({
           currentYear: periods.currentYear,
           currentMonth: periods.currentMonth,
           previousYear: periods.previousYear,
-          previousMonth: periods.previousMonth
+          previousMonth: periods.previousMonth,
+          periodAStart: periods.periodAStart,
+          periodAEnd: periods.periodAEnd,
+          periodBStart: periods.periodBStart,
+          periodBEnd: periods.periodBEnd
+        },
+        filters: {
+          line: brand || 'All',
+          squadLead: squadLead || 'All',
+          channel: channel || 'All'
         }
       })
 
@@ -638,16 +672,52 @@ export default function CustomerTierMovement({
                     </td>
                     {data.matrix.tierOrder.map((tier) => {
                       const value = row.cells[tier.tier] || 0
-                      const numericValue = typeof value === 'number' ? value : parseFloat(String(value)) || 0
+                      
+                      // ✅ Parse value carefully - handle number, string, and edge cases
+                      let numericValue = 0
+                      if (typeof value === 'number') {
+                        numericValue = value
+                      } else if (typeof value === 'string') {
+                        const parsed = parseFloat(value.replace(/[^0-9.-]/g, ''))
+                        numericValue = isNaN(parsed) ? 0 : parsed
+                      } else if (value !== null && value !== undefined) {
+                        // Try to convert other types
+                        numericValue = Number(value) || 0
+                      }
+                      
+                      // ✅ Ensure numericValue is valid number
+                      if (isNaN(numericValue) || !isFinite(numericValue)) {
+                        numericValue = 0
+                      }
+                      
                       const bgColor = getCellColor(row.fromTier, tier.tier, numericValue)
-                      // ✅ Cell is clickable if value is a positive number
-                      const isClickable = numericValue > 0 && !isNaN(numericValue) && isFinite(numericValue)
+                      
+                      // ✅ Cell is clickable if value is a positive number (> 0)
+                      const isClickable = numericValue > 0 && typeof numericValue === 'number' && !isNaN(numericValue) && isFinite(numericValue)
+                      
                       return (
                         <td
                           key={tier.tier}
                           onClick={() => {
                             if (isClickable) {
+                              console.log('🔍 [Cell Click] Opening modal for:', {
+                                fromTier: row.fromTier,
+                                toTier: tier.tier,
+                                fromTierName: row.fromTierName,
+                                toTierName: tier.tierName,
+                                cellValue: numericValue,
+                                originalValue: value,
+                                isClickable
+                              })
                               handleCellClick(row.fromTier, tier.tier, row.fromTierName, tier.tierName, numericValue)
+                            } else {
+                              console.warn('⚠️ [Cell Click] Cell not clickable:', {
+                                fromTier: row.fromTier,
+                                toTier: tier.tier,
+                                cellValue: numericValue,
+                                originalValue: value,
+                                reason: numericValue <= 0 ? 'value <= 0' : 'invalid number'
+                              })
                             }
                           }}
                           style={{

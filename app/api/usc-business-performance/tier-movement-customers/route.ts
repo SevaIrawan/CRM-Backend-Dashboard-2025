@@ -2,6 +2,231 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { TIER_NAMES } from '@/lib/uscTierClassification'
 
+/**
+ * Helper: Aggregate blue_whale_usc data per user within a date range
+ * Returns aggregated data with tier determination (highest tier in period)
+ */
+async function aggregateUserDataByDateRange(
+  startDate: string,
+  endDate: string,
+  userkeys?: string[],
+  line?: string,
+  squadLead?: string,
+  channel?: string
+): Promise<Map<string, {
+  unique_code: string | null
+  user_name: string | null
+  line: string | null
+  tier: number | null
+  depositAmount: number
+  withdrawAmount: number
+  depositCases: number
+  avgTransactionValue: number
+}>> {
+  let query = supabase
+    .from('blue_whale_usc')
+    .select('userkey, unique_code, user_name, line, tier_name, tier_group, deposit_amount, withdraw_amount, deposit_cases, date')
+    .eq('currency', 'USC')
+    .gte('date', startDate)
+    .lte('date', endDate)
+    .not('tier_name', 'is', null) // Only users with tier
+
+  if (userkeys && userkeys.length > 0) {
+    // Use batch processing for large arrays
+    const BATCH_SIZE = 500
+    const results: any[] = []
+    
+    for (let i = 0; i < userkeys.length; i += BATCH_SIZE) {
+      const batch = userkeys.slice(i, i + BATCH_SIZE)
+      const batchQuery = query.in('userkey', batch)
+      const { data, error } = await batchQuery
+      
+      if (error) {
+        console.error(`❌ Error fetching batch ${i / BATCH_SIZE + 1}:`, error)
+        continue
+      }
+      
+      if (data) {
+        results.push(...data)
+      }
+    }
+    
+    // Process results
+    return aggregateUserData(results, line, squadLead, channel)
+  } else {
+    // No userkey filter - get all data (with other filters)
+    if (line && line !== 'All' && line !== 'ALL') {
+      query = query.eq('line', line)
+    }
+    if (squadLead && squadLead !== 'All' && squadLead !== 'ALL') {
+      query = query.eq('squad_lead', squadLead)
+    }
+    if (channel && channel !== 'All' && channel !== 'ALL') {
+      query = query.eq('traffic', channel)
+    }
+    
+    // Batch fetch for large datasets
+    const BATCH_SIZE = 5000
+    let allData: any[] = []
+    let offset = 0
+    let hasMore = true
+    
+    while (hasMore) {
+      const batchQuery = query.range(offset, offset + BATCH_SIZE - 1)
+      const { data, error } = await batchQuery
+      
+      if (error) {
+        console.error(`❌ Error fetching batch at offset ${offset}:`, error)
+        break
+      }
+      
+      if (!data || data.length === 0) {
+        hasMore = false
+      } else {
+        allData.push(...data)
+        hasMore = data.length === BATCH_SIZE
+        offset += BATCH_SIZE
+      }
+      
+      // Safety limit
+      if (allData.length > 100000) {
+        console.warn('⚠️ Safety limit reached: 100,000 records')
+        break
+      }
+    }
+    
+    return aggregateUserData(allData, line, squadLead, channel)
+  }
+}
+
+/**
+ * Helper: Aggregate raw data per user and determine tier
+ */
+function aggregateUserData(
+  rawData: any[],
+  line?: string,
+  squadLead?: string,
+  channel?: string
+): Map<string, {
+  unique_code: string | null
+  user_name: string | null
+  line: string | null
+  tier: number | null
+  depositAmount: number
+  withdrawAmount: number
+  depositCases: number
+  avgTransactionValue: number
+}> {
+  const userMap = new Map<string, {
+    unique_code: string | null
+    user_name: string | null
+    line: string | null
+    tier: number | null
+    tierNumbers: Set<number> // Track all tier numbers that appear in period
+    depositAmount: number
+    withdrawAmount: number
+    depositCases: number
+    dates: Set<string> // Track dates
+  }>()
+  
+  // First pass: aggregate all metrics and track all tier numbers
+  rawData.forEach(row => {
+    if (!row.userkey) return
+    
+    // Apply filters in memory (if not already filtered)
+    if (line && line !== 'All' && line !== 'ALL' && row.line !== line) return
+    if (squadLead && squadLead !== 'All' && squadLead !== 'ALL' && row.squad_lead !== squadLead) return
+    if (channel && channel !== 'All' && channel !== 'ALL' && row.traffic !== channel) return
+    
+    if (!userMap.has(row.userkey)) {
+      userMap.set(row.userkey, {
+        unique_code: row.unique_code || null,
+        user_name: row.user_name || null,
+        line: row.line || null,
+        tier: null,
+        tierNumbers: new Set(),
+        depositAmount: 0,
+        withdrawAmount: 0,
+        depositCases: 0,
+        dates: new Set()
+      })
+    }
+    
+    const user = userMap.get(row.userkey)!
+    
+    // Aggregate metrics
+    user.depositAmount += Number(row.deposit_amount) || 0
+    user.withdrawAmount += Number(row.withdraw_amount) || 0
+    user.depositCases += Number(row.deposit_cases) || 0
+    
+    // Track tier number for determination (use tier_name to get tier number)
+    if (row.tier_name) {
+      // Find tier number from tier_name using TIER_NAMES (case-insensitive)
+      const tierNameLower = (row.tier_name as string).trim()
+      const tierEntry = Object.entries(TIER_NAMES).find(([_, name]) => 
+        name.toLowerCase() === tierNameLower.toLowerCase()
+      )
+      
+      if (tierEntry) {
+        const tierNum = tierEntry[0]
+        const tier = parseInt(tierNum)
+        if (!isNaN(tier) && tier >= 1 && tier <= 7) {
+          // Track all tier numbers that appear (to determine highest tier)
+          user.tierNumbers.add(tier)
+        }
+      }
+    }
+    
+    // Track dates
+    if (row.date) {
+      user.dates.add(row.date)
+    }
+  })
+  
+  // Second pass: determine tier (highest tier number in period)
+  // Tier hierarchy: Tier 1 (highest) > Tier 2 > ... > Tier 7 > Regular (lowest)
+  const result = new Map<string, {
+    unique_code: string | null
+    user_name: string | null
+    line: string | null
+    tier: number | null
+    depositAmount: number
+    withdrawAmount: number
+    depositCases: number
+    avgTransactionValue: number
+  }>()
+  
+  userMap.forEach((user, userkey) => {
+    // Determine tier: highest tier number in period
+    // Tier 1 = highest, Tier 7 = lower, Regular = lowest (usually tier 0 or high number)
+    let highestTier: number | null = null
+    
+    if (user.tierNumbers.size > 0) {
+      // Find highest tier (lowest number = highest tier)
+      // Tier 1 < Tier 2 < ... < Tier 7
+      highestTier = Math.min(...Array.from(user.tierNumbers))
+    }
+    
+    // Calculate ATV
+    const avgTransactionValue = user.depositCases > 0
+      ? user.depositAmount / user.depositCases
+      : 0
+    
+    result.set(userkey, {
+      unique_code: user.unique_code,
+      user_name: user.user_name,
+      line: user.line,
+      tier: highestTier,  // ✅ Use highestTier (tier tertinggi dalam period)
+      depositAmount: user.depositAmount,
+      withdrawAmount: user.withdrawAmount,
+      depositCases: user.depositCases,
+      avgTransactionValue
+    })
+  })
+  
+  return result
+}
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
@@ -64,29 +289,32 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    // Determine which format to use
+    // ✅ PREFER date range format (new format - required for blue_whale_usc)
+    // Support both date range and year/month for backward compatibility
+    let useDateRange = false
+    let periodAStartDate: string | null = null
+    let periodAEndDate: string | null = null
+    let periodBStartDate: string | null = null
+    let periodBEndDate: string | null = null
     let currentPeriod: { year: number; month: string } | null = null
     let previousPeriod: { year: number; month: string } | null = null
     
     if (periodBStart && periodBEnd && periodAStart && periodAEnd) {
-      // Use date range format (new format - same as Customer Tier Trends)
-      // ✅ Period B = Current Period (from slicer Period B)
-      // ✅ Period A = Previous Period (from slicer Period A) 
-      const periodB = extractYearMonth(periodBEnd) // Use end date
-      const periodA = extractYearMonth(periodAEnd) // Use end date
+      // ✅ Use date range format (preferred - same as Customer Tier Trends)
+      useDateRange = true
+      periodAStartDate = periodAStart
+      periodAEndDate = periodAEnd
+      periodBStartDate = periodBStart
+      periodBEndDate = periodBEnd
       
-      if (!periodB || !periodA) {
-        return NextResponse.json(
-          { error: 'Invalid date format in period date ranges' },
-          { status: 400 }
-        )
-      }
-      
-      // ✅ Mapping: Period B (current/saat ini) -> currentPeriod, Period A (previous/sebelumnya) -> previousPeriod
-      currentPeriod = periodB  // Period B = Period saat ini (dari slicer)
-      previousPeriod = periodA  // Period A = Period sebelumnya (dari slicer)
+      // Also extract year/month for logging
+      const periodB = extractYearMonth(periodBEnd)
+      const periodA = extractYearMonth(periodAEnd)
+      currentPeriod = periodB
+      previousPeriod = periodA
     } else if (currentYear && currentMonth && previousYear && previousMonth) {
       // Use year/month format (old format - for backward compatibility)
+      // Convert to date range (use first and last day of month)
       currentPeriod = {
         year: parseInt(currentYear),
         month: currentMonth
@@ -94,6 +322,31 @@ export async function GET(request: NextRequest) {
       previousPeriod = {
         year: parseInt(previousYear),
         month: previousMonth
+      }
+      
+      // Convert year/month to date range
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December']
+      const monthNumbers: Record<string, number> = {
+        'January': 1, 'February': 2, 'March': 3, 'April': 4, 'May': 5, 'June': 6,
+        'July': 7, 'August': 8, 'September': 9, 'October': 10, 'November': 11, 'December': 12
+      }
+      
+      const getLastDayOfMonth = (year: number, month: number) => {
+        return new Date(year, month, 0).getDate()
+      }
+      
+      if (currentPeriod && previousPeriod) {
+        const currentMonthNum = monthNumbers[currentPeriod.month]
+        const prevMonthNum = monthNumbers[previousPeriod.month]
+        
+        periodAStartDate = `${previousPeriod.year}-${String(prevMonthNum).padStart(2, '0')}-01`
+        periodAEndDate = `${previousPeriod.year}-${String(prevMonthNum).padStart(2, '0')}-${String(getLastDayOfMonth(previousPeriod.year, prevMonthNum)).padStart(2, '0')}`
+        
+        periodBStartDate = `${currentPeriod.year}-${String(currentMonthNum).padStart(2, '0')}-01`
+        periodBEndDate = `${currentPeriod.year}-${String(currentMonthNum).padStart(2, '0')}-${String(getLastDayOfMonth(currentPeriod.year, currentMonthNum)).padStart(2, '0')}`
+        
+        useDateRange = true
       }
     } else {
       return NextResponse.json(
@@ -103,9 +356,16 @@ export async function GET(request: NextRequest) {
     }
 
     // Validation
-    if (!fromTier || !toTier || !currentPeriod || !previousPeriod) {
+    if (!fromTier || !toTier) {
       return NextResponse.json(
-        { error: 'Missing required parameters' },
+        { error: 'Missing required parameters: fromTier and toTier' },
+        { status: 400 }
+      )
+    }
+    
+    if (useDateRange && (!periodAStartDate || !periodAEndDate || !periodBStartDate || !periodBEndDate)) {
+      return NextResponse.json(
+        { error: 'Invalid date range parameters' },
         { status: 400 }
       )
     }
@@ -120,50 +380,43 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // ✅ Build query for Period A (previousPeriod) - filter by fromTier
-    // ✅ Query berdasarkan: year/month dari Period A, tier = fromTier, dan filters (line, squadLead, channel)
-    let previousQuery = supabase
-      .from('tier_usc_v1')
-      .select('userkey, unique_code, user_name, tier, total_deposit_amount, total_withdraw_amount, total_deposit_cases, avg_transaction_value')
-      .eq('year', previousPeriod.year)  // ✅ Period A year
-      .eq('month', previousPeriod.month)  // ✅ Period A month
-      .eq('tier', fromTierNum)  // ✅ Tier di Period A = fromTier
-      .not('tier', 'is', null)
+    console.log(`📊 [Tier Movement Customers API] Fetching Period A data (${periodAStartDate} to ${periodAEndDate}) for tier ${fromTierNum}`)
 
-    if (line && line !== 'All' && line !== 'ALL') {
-      previousQuery = previousQuery.eq('line', line)
-    }
+    // ✅ Query Period A data from blue_whale_usc with date range
+    // Aggregate per user and filter by fromTier
+    const periodADataMap = await aggregateUserDataByDateRange(
+      periodAStartDate!,
+      periodAEndDate!,
+      undefined, // Get all users first
+      line || undefined,  // Convert null to undefined
+      squadLead || undefined,  // Convert null to undefined
+      channel || undefined  // Convert null to undefined
+    )
 
-    if (squadLead && squadLead !== 'All' && squadLead !== 'ALL') {
-      previousQuery = previousQuery.eq('squad_lead', squadLead)
-    }
-
-    if (channel && channel !== 'All' && channel !== 'ALL') {
-      previousQuery = previousQuery.eq('traffic', channel)
-    }
-
-    console.log(`📊 [Tier Movement Customers API] Fetching previous period data for tier ${fromTierNum}:`, {
-      year: previousPeriod.year,
-      month: previousPeriod.month,
-      line,
-      squadLead,
-      channel
+    // Filter users with fromTier in Period A
+    const periodAUserkeys: string[] = []
+    const periodAUserData = new Map<string, typeof periodADataMap extends Map<string, infer V> ? V : never>()
+    
+    periodADataMap.forEach((userData, userkey) => {
+      if (userData.tier === fromTierNum) {
+        periodAUserkeys.push(userkey)
+        periodAUserData.set(userkey, userData)
+      }
     })
 
-    const { data: previousData, error: previousError } = await previousQuery
+    console.log(`📊 [Tier Movement Customers API] Period A: Found ${periodAUserkeys.length} users with tier ${fromTierNum} out of ${periodADataMap.size} total users`)
+    
+    // ✅ DEBUG: Log tier distribution in Period A
+    const tierDistributionA = new Map<number, number>()
+    periodADataMap.forEach((userData) => {
+      const tier = userData.tier || 0
+      tierDistributionA.set(tier, (tierDistributionA.get(tier) || 0) + 1)
+    })
+    console.log(`🔍 [Tier Movement Customers API] Period A tier distribution:`, Object.fromEntries(tierDistributionA))
 
-    if (previousError) {
-      console.error('❌ [Tier Movement Customers API] Error fetching previous period data:', previousError)
-      return NextResponse.json(
-        { error: 'Failed to fetch previous period data', details: previousError.message },
-        { status: 500 }
-      )
-    }
-
-    console.log(`📊 [Tier Movement Customers API] Previous period data found: ${previousData?.length || 0} records`)
-
-    if (!previousData || previousData.length === 0) {
-      console.log(`⚠️ [Tier Movement Customers API] No data found in previous period for tier ${fromTierNum}`)
+    if (periodAUserkeys.length === 0) {
+      console.warn(`⚠️ [Tier Movement Customers API] No users found in Period A for tier ${fromTierNum}. This might indicate a data mismatch with the chart.`)
+      console.warn(`⚠️ Available tiers in Period A:`, Array.from(tierDistributionA.keys()).sort((a, b) => a - b))
       return NextResponse.json({
         customers: [],
         fromTierName: TIER_NAMES[fromTierNum] || `Tier ${fromTierNum}`,
@@ -173,314 +426,58 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Get userkeys that have the fromTier in previous period
-    // ✅ Filter out null/undefined userkeys
-    const userkeys = previousData
-      .map(row => row.userkey)
-      .filter((userkey): userkey is string => Boolean(userkey))
+    console.log(`📊 [Tier Movement Customers API] Fetching Period B data (${periodBStartDate} to ${periodBEndDate}) for ${periodAUserkeys.length} userkeys with tier ${toTierNum}`)
 
-    // ✅ Additional validation: Check if userkeys array is empty after filtering
-    if (!userkeys || userkeys.length === 0) {
-      console.warn('⚠️ [Tier Movement Customers] No valid userkeys found after filtering')
-      return NextResponse.json({
-        customers: [],
-        fromTierName: TIER_NAMES[fromTierNum] || `Tier ${fromTierNum}`,
-        toTierName: TIER_NAMES[toTierNum] || `Tier ${toTierNum}`,
-        movementType: fromTierNum === toTierNum ? 'STABLE' : (fromTierNum > toTierNum ? 'UPGRADE' : 'DOWNGRADE'),
-        count: 0
-      })
-    }
+    // ✅ Query Period B data from blue_whale_usc with date range
+    // Only query for userkeys from Period A (more efficient)
+    const periodBDataMap = await aggregateUserDataByDateRange(
+      periodBStartDate!,
+      periodBEndDate!,
+      periodAUserkeys, // Only query for these userkeys
+      line || undefined,  // Convert null to undefined
+      squadLead || undefined,  // Convert null to undefined
+      channel || undefined  // Convert null to undefined
+    )
 
-    // ✅ Use Set to ensure uniqueness and better performance
-    const userkeysSet = new Set(userkeys)
-    const uniqueUserkeys = Array.from(userkeysSet)
-
-    console.log(`📊 [Tier Movement Customers] Fetching for ${uniqueUserkeys.length} unique userkeys (fromTier: ${fromTierNum}, toTier: ${toTierNum})`)
-
-    // ✅ Handle large userkeys array with batch processing (Supabase .in() has limits)
-    // If array is too large, fetch all current period data and filter in memory
-    const MAX_IN_QUERY_SIZE = 1000 // Conservative limit for Supabase .in() queries
+    // Filter users with toTier in Period B
+    const periodBUserData: Array<{
+      userkey: string
+      unique_code: string | null
+      user_name: string | null
+      line: string | null
+      tier: number | null
+      depositAmount: number
+      withdrawAmount: number
+      depositCases: number
+      avgTransactionValue: number
+    }> = []
     
-    let currentData: any[] = []
-    
-    if (uniqueUserkeys.length > MAX_IN_QUERY_SIZE) {
-      // ✅ Fetch all data from current period and filter in memory (more reliable for large datasets)
-      console.log(`⚠️ [Tier Movement Customers] Large userkeys array (${uniqueUserkeys.length}), using fetch-all-then-filter approach`)
-      
-      // ✅ Build query for Period B (currentPeriod) - filter by toTier
-      // ✅ Query berdasarkan: year/month dari Period B, tier = toTier, dan filters (line, squadLead, channel)
-      let allCurrentQuery = supabase
-        .from('tier_usc_v1')
-        .select(`
+    periodBDataMap.forEach((userData, userkey) => {
+      if (userData.tier === toTierNum) {
+        periodBUserData.push({
           userkey,
-          unique_code,
-          user_name,
-          line,
-          tier,
-          total_deposit_amount,
-          total_withdraw_amount,
-          total_deposit_cases,
-          avg_transaction_value
-        `)
-        .eq('year', currentPeriod.year)  // ✅ Period B year
-        .eq('month', currentPeriod.month)  // ✅ Period B month
-        .eq('tier', toTierNum)  // ✅ Tier di Period B = toTier
-        .not('tier', 'is', null)
-
-      if (line && line !== 'All' && line !== 'ALL') {
-        allCurrentQuery = allCurrentQuery.eq('line', line)
+          ...userData
+        })
       }
+    })
 
-      if (squadLead && squadLead !== 'All' && squadLead !== 'ALL') {
-        allCurrentQuery = allCurrentQuery.eq('squad_lead', squadLead)
-      }
-
-      if (channel && channel !== 'All' && channel !== 'ALL') {
-        allCurrentQuery = allCurrentQuery.eq('traffic', channel)
-      }
-
-      console.log(`📊 [Tier Movement Customers] Fetching ALL current period data for filtering (tier ${toTierNum}):`, {
-        year: currentPeriod.year,
-        month: currentPeriod.month,
-        line,
-        squadLead,
-        channel
-      })
-
-      // ✅ BATCH FETCHING untuk menghindari timeout pada dataset besar
-      const batchSize = 5000 // Smaller batches untuk menghindari timeout
-      let allCurrentData: any[] = []
-      let offset = 0
-      let hasMore = true
-      let batchErrors: any[] = []
-
-      while (hasMore) {
-        try {
-          const batchQuery = allCurrentQuery.range(offset, offset + batchSize - 1)
-          const { data: batchData, error: batchError } = await batchQuery
-
-          if (batchError) {
-            console.error(`❌ [Tier Movement Customers] Error in batch ${offset}-${offset + batchSize - 1}:`, batchError)
-            batchErrors.push(batchError)
-            
-            // ✅ Continue dengan batch berikutnya jika error tidak fatal
-            if (batchError.code && ['PGRST116', 'TIMEOUT'].includes(batchError.code)) {
-              console.warn(`⚠️ [Tier Movement Customers] Batch query failed, skipping...`)
-              offset += batchSize
-              hasMore = offset < 100000 // Safety limit
-              continue
-            } else {
-              // Fatal error, stop
-              throw batchError
-            }
-          }
-
-          const batchRecords = batchData || []
-          allCurrentData = [...allCurrentData, ...batchRecords]
-
-          hasMore = batchRecords.length === batchSize
-          offset += batchSize
-
-          // Safety limit - jangan fetch lebih dari 100k records
-          if (allCurrentData.length >= 100000) {
-            console.warn(`⚠️ [Tier Movement Customers] Safety limit reached: 100,000 records`)
-            hasMore = false
-          }
-
-          console.log(`📊 [Tier Movement Customers] Fetched batch: ${batchRecords.length} records (total: ${allCurrentData.length})`)
-        } catch (batchErr: any) {
-          console.error(`❌ [Tier Movement Customers] Fatal error in batch processing:`, batchErr)
-          
-          // Jika sudah ada data, gunakan data yang sudah di-fetch
-          if (allCurrentData.length > 0) {
-            console.warn(`⚠️ [Tier Movement Customers] Using partial data (${allCurrentData.length} records)`)
-            hasMore = false
-          } else {
-            // Tidak ada data sama sekali, return error
-            return NextResponse.json(
-              { 
-                error: 'Failed to fetch current period data', 
-                details: batchErr?.message || 'Database query failed during batch processing',
-                code: batchErr?.code
-              },
-              { status: 500 }
-            )
-          }
-        }
-      }
-
-      if (batchErrors.length > 0 && allCurrentData.length === 0) {
-        return NextResponse.json(
-          { 
-            error: 'Failed to fetch current period data', 
-            details: `All batch queries failed. Last error: ${batchErrors[batchErrors.length - 1]?.message || 'Unknown error'}`,
-            code: batchErrors[batchErrors.length - 1]?.code
-          },
-          { status: 500 }
-        )
-      }
-
-      // ✅ Filter in memory: only users that were in fromTier in Period A
-      // ✅ Matching berdasarkan userkey: hanya userkey yang ada di Period A (fromTier) yang diambil dari Period B (toTier)
-      currentData = allCurrentData.filter((row: any) => 
-        row.userkey && userkeysSet.has(row.userkey)  // ✅ Validasi: userkey valid dan ada di Period A
-      )
-      
-      console.log(`✅ [Tier Movement Customers] Filtered ${currentData.length} matching records from ${allCurrentData.length} total records`)
-    } else {
-      // ✅ Use .in() query for smaller arrays (more efficient)
-      // ✅ Handle .in() queries in batches if userkeys array is still large
-      const IN_QUERY_BATCH_SIZE = 500 // Supabase .in() can handle up to 1000, but use 500 for safety
-      
-      if (uniqueUserkeys.length <= IN_QUERY_BATCH_SIZE) {
-        // ✅ Single query for small arrays - Query Period B data
-        // ✅ Query berdasarkan: year/month dari Period B, tier = toTier, userkeys dari Period A, dan filters
-        let currentQuery = supabase
-          .from('tier_usc_v1')
-          .select(`
-            userkey,
-            unique_code,
-            user_name,
-            line,
-            tier,
-            total_deposit_amount,
-            total_withdraw_amount,
-            total_deposit_cases,
-            avg_transaction_value
-          `)
-          .eq('year', currentPeriod.year)  // ✅ Period B year
-          .eq('month', currentPeriod.month)  // ✅ Period B month
-          .eq('tier', toTierNum)  // ✅ Tier di Period B = toTier
-          .in('userkey', uniqueUserkeys)  // ✅ Hanya userkeys yang ada di Period A
-          .not('tier', 'is', null)
-
-        if (line && line !== 'All' && line !== 'ALL') {
-          currentQuery = currentQuery.eq('line', line)
-        }
-
-        if (squadLead && squadLead !== 'All' && squadLead !== 'ALL') {
-          currentQuery = currentQuery.eq('squad_lead', squadLead)
-        }
-
-        if (channel && channel !== 'All' && channel !== 'ALL') {
-          currentQuery = currentQuery.eq('traffic', channel)
-        }
-
-        console.log(`📊 [Tier Movement Customers] Executing single .in() query for ${uniqueUserkeys.length} userkeys`)
-
-        const { data: queriedData, error: currentError } = await currentQuery
-
-        if (currentError) {
-          console.error('❌ [Tier Movement Customers] Error fetching current period data:', currentError)
-          console.error('Query details:', {
-            year: currentPeriod.year,
-            month: currentPeriod.month,
-            tier: toTierNum,
-            userkeysCount: uniqueUserkeys.length,
-            errorCode: currentError.code,
-            errorMessage: currentError.message,
-            errorDetails: currentError.details
-          })
-          return NextResponse.json(
-            { 
-              error: 'Failed to fetch current period data', 
-              details: currentError.message || 'Database query failed',
-              code: currentError.code
-            },
-            { status: 500 }
-          )
-        }
-
-        currentData = queriedData || []
-        console.log(`✅ [Tier Movement Customers] Found ${currentData.length} matching records`)
-      } else {
-        // ✅ Batch .in() queries for arrays larger than IN_QUERY_BATCH_SIZE
-        console.log(`📊 [Tier Movement Customers] Splitting ${uniqueUserkeys.length} userkeys into batches of ${IN_QUERY_BATCH_SIZE}`)
-        
-        const batches: string[][] = []
-        for (let i = 0; i < uniqueUserkeys.length; i += IN_QUERY_BATCH_SIZE) {
-          batches.push(uniqueUserkeys.slice(i, i + IN_QUERY_BATCH_SIZE))
-        }
-
-        const allResults: any[] = []
-        const batchErrors: any[] = []
-
-        for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
-          const batch = batches[batchIdx]
-          
-          try {
-            let currentQuery = supabase
-              .from('tier_usc_v1')
-              .select(`
-                userkey,
-                unique_code,
-                user_name,
-                line,
-                tier,
-                total_deposit_amount,
-                total_withdraw_amount,
-                total_deposit_cases,
-                avg_transaction_value
-              `)
-              .eq('year', currentPeriod.year)
-              .eq('month', currentPeriod.month)
-              .eq('tier', toTierNum)
-              .in('userkey', batch)
-              .not('tier', 'is', null)
-
-            if (line && line !== 'All' && line !== 'ALL') {
-              currentQuery = currentQuery.eq('line', line)
-            }
-
-            if (squadLead && squadLead !== 'All' && squadLead !== 'ALL') {
-              currentQuery = currentQuery.eq('squad_lead', squadLead)
-            }
-
-            if (channel && channel !== 'All' && channel !== 'ALL') {
-              currentQuery = currentQuery.eq('traffic', channel)
-            }
-
-            console.log(`📊 [Tier Movement Customers] Executing batch ${batchIdx + 1}/${batches.length} (${batch.length} userkeys)`)
-
-            const { data: batchData, error: batchError } = await currentQuery
-
-            if (batchError) {
-              console.error(`❌ [Tier Movement Customers] Error in batch ${batchIdx + 1}:`, batchError)
-              batchErrors.push({ batch: batchIdx + 1, error: batchError })
-              // Continue with next batch instead of failing completely
-              continue
-            }
-
-            if (batchData && batchData.length > 0) {
-              allResults.push(...batchData)
-              console.log(`✅ [Tier Movement Customers] Batch ${batchIdx + 1} returned ${batchData.length} records`)
-            }
-          } catch (err: any) {
-            console.error(`❌ [Tier Movement Customers] Exception in batch ${batchIdx + 1}:`, err)
-            batchErrors.push({ batch: batchIdx + 1, error: err })
-          }
-        }
-
-        if (allResults.length === 0 && batchErrors.length > 0) {
-          // All batches failed
-          return NextResponse.json(
-            { 
-              error: 'Failed to fetch current period data', 
-              details: `All ${batches.length} batches failed. First error: ${batchErrors[0].error?.message || 'Unknown error'}`,
-              code: batchErrors[0].error?.code
-            },
-            { status: 500 }
-          )
-        }
-
-        currentData = allResults
-        console.log(`✅ [Tier Movement Customers] Found ${currentData.length} matching records from ${batches.length} batches${batchErrors.length > 0 ? ` (${batchErrors.length} batches failed)` : ''}`)
-      }
-    }
+    console.log(`📊 [Tier Movement Customers API] Period B: Found ${periodBUserData.length} users with tier ${toTierNum} out of ${periodBDataMap.size} queried users`)
+    
+    // ✅ DEBUG: Log tier distribution in Period B for the queried users
+    const tierDistributionB = new Map<number, number>()
+    periodBDataMap.forEach((userData) => {
+      const tier = userData.tier || 0
+      tierDistributionB.set(tier, (tierDistributionB.get(tier) || 0) + 1)
+    })
+    console.log(`🔍 [Tier Movement Customers API] Period B tier distribution for ${periodAUserkeys.length} queried users:`, Object.fromEntries(tierDistributionB))
 
     // ✅ Handle empty result gracefully (this is normal - customers might have moved or churned)
-    if (!currentData || currentData.length === 0) {
-      console.log(`⚠️ [Tier Movement Customers] No customers found for movement ${fromTierNum} → ${toTierNum}. This is normal if customers moved to other tiers or churned.`)
+    if (periodBUserData.length === 0) {
+      console.warn(`⚠️ [Tier Movement Customers] No customers found for movement ${fromTierNum} → ${toTierNum}.`)
+      console.warn(`⚠️ This might indicate:`)
+      console.warn(`   - Customers moved to other tiers:`, Array.from(tierDistributionB.keys()).filter(t => t !== toTierNum).sort((a, b) => a - b))
+      console.warn(`   - Customers churned (no data in Period B)`)
+      console.warn(`   - Data mismatch with chart (chart shows value > 0 but API finds 0 customers)`)
       return NextResponse.json({
         customers: [],
         fromTierName: TIER_NAMES[fromTierNum] || `Tier ${fromTierNum}`,
@@ -491,86 +488,45 @@ export async function GET(request: NextRequest) {
     }
 
     // ✅ Sort customers by line/brand (alphabetically)
-    const sortedCurrentData = [...currentData].sort((a: any, b: any) => {
+    const sortedPeriodBData = [...periodBUserData].sort((a, b) => {
       const lineA = (a.line || '').toLowerCase()
       const lineB = (b.line || '').toLowerCase()
       return lineA.localeCompare(lineB)
     })
 
-    // ✅ Create map of Period A data by userkey for quick lookup
-    // ✅ Data ini digunakan untuk comparison dengan Period B
-    const previousDataMap = new Map<string, { da: number; ggr: number; atv: number }>()
-    if (previousData && previousData.length > 0) {
-      previousData.forEach((prev: any) => {
-        // ✅ Validasi: hanya userkey yang valid (tidak null/undefined)
-        if (prev.userkey) {
-          const prevDA = Number(prev.total_deposit_amount) || 0  // ✅ DA dari Period A
-          const prevWithdraw = Number(prev.total_withdraw_amount) || 0
-          const prevGGR = prevDA - prevWithdraw  // ✅ GGR dari Period A
-          const prevDepositCases = Number(prev.total_deposit_cases) || 0
-          const prevAvgTransactionValue = Number(prev.avg_transaction_value) || 0
-          
-          // ✅ Calculate ATV for Period A
-          const prevATV = prevAvgTransactionValue > 0 
-            ? prevAvgTransactionValue 
-            : (prevDepositCases > 0 ? prevDA / prevDepositCases : 0)
-          
-          // ✅ Store Period A data indexed by userkey untuk comparison
-          previousDataMap.set(prev.userkey, {
-            da: prevDA,    // ✅ Period A DA
-            ggr: prevGGR,  // ✅ Period A GGR
-            atv: prevATV   // ✅ Period A ATV
-          })
-        }
-      })
-    }
-
     // ✅ Format customer data with comparison percentage (Period B vs Period A)
-    // ✅ sortedCurrentData = data dari Period B dengan tier = toTier, sudah difilter berdasarkan userkey dari Period A
-    const customers = sortedCurrentData.map(customer => {
-      // ✅ Period B values (current period)
-      const depositAmount = Number(customer.total_deposit_amount) || 0  // ✅ Period B DA
-      const withdrawAmount = Number(customer.total_withdraw_amount) || 0
-      const depositCases = Number(customer.total_deposit_cases) || 0
-      const avgTransactionValue = Number(customer.avg_transaction_value) || 0
-
-      // ✅ Calculate GGR for Period B = deposit_amount - withdraw_amount
+    const customers = sortedPeriodBData.map(customer => {
+      // ✅ Period B values (current period) - already aggregated
+      const depositAmount = customer.depositAmount
+      const withdrawAmount = customer.withdrawAmount
       const ggr = depositAmount - withdrawAmount  // ✅ Period B GGR
+      const atv = customer.avgTransactionValue  // ✅ Period B ATV
 
-      // ✅ Calculate ATV for Period B = deposit_amount / deposit_cases (use from database if available, else calculate)
-      const atv = avgTransactionValue > 0 
-        ? avgTransactionValue 
-        : (depositCases > 0 ? depositAmount / depositCases : 0)  // ✅ Period B ATV
-
-      // ✅ Get Period A data for comparison based on userkey matching
-      // ✅ Validasi: customer.userkey harus valid untuk matching
-      const prevData = customer.userkey ? previousDataMap.get(customer.userkey) : null
-      const prevDA = prevData?.da || 0    // ✅ Period A DA
-      const prevGGR = prevData?.ggr || 0  // ✅ Period A GGR
-      const prevATV = prevData?.atv || 0  // ✅ Period A ATV
+      // ✅ Get Period A data for comparison
+      const prevData = periodAUserData.get(customer.userkey)
+      const prevDA = prevData?.depositAmount || 0    // ✅ Period A DA
+      const prevWithdraw = prevData?.withdrawAmount || 0
+      const prevGGR = prevDA - prevWithdraw  // ✅ Period A GGR
+      const prevATV = prevData?.avgTransactionValue || 0  // ✅ Period A ATV
 
       // ✅ Calculate comparison percentage: ((Period B - Period A) / Period A) * 100
-      // ✅ Formula: ((Current Value - Previous Value) / Previous Value) * 100
-      // ✅ depositAmount, ggr, atv = Period B values (current period)
-      // ✅ prevDA, prevGGR, prevATV = Period A values (previous period)
-      // ✅ If Period A is 0, return null (no comparison possible)
       const daChangePercent = prevDA !== 0 
-        ? ((depositAmount - prevDA) / Math.abs(prevDA)) * 100   // ✅ (Period B DA - Period A DA) / Period A DA * 100
-        : null // If Period A is 0, cannot calculate percentage
+        ? ((depositAmount - prevDA) / Math.abs(prevDA)) * 100
+        : null
       
       const ggrChangePercent = prevGGR !== 0 
-        ? ((ggr - prevGGR) / Math.abs(prevGGR)) * 100   // ✅ (Period B GGR - Period A GGR) / Period A GGR * 100
-        : null // If Period A is 0, cannot calculate percentage
+        ? ((ggr - prevGGR) / Math.abs(prevGGR)) * 100
+        : null
       
       const atvChangePercent = prevATV !== 0 
-        ? ((atv - prevATV) / Math.abs(prevATV)) * 100   // ✅ (Period B ATV - Period A ATV) / Period A ATV * 100
-        : null // If Period A is 0, cannot calculate percentage
+        ? ((atv - prevATV) / Math.abs(prevATV)) * 100
+        : null
 
       return {
         unique_code: customer.unique_code || null,
         user_name: customer.user_name || null,
-        line: customer.line || null, // ✅ Add line/brand field
-        handler: null, // Will be null until handler column is added to tier_usc_v1
+        line: customer.line || null,
+        handler: null, // Will be null until handler column is added to blue_whale_usc
         daChangePercent: daChangePercent !== null ? Number(daChangePercent.toFixed(2)) : null,
         ggrChangePercent: ggrChangePercent !== null ? Number(ggrChangePercent.toFixed(2)) : null,
         atvChangePercent: atvChangePercent !== null ? Number(atvChangePercent.toFixed(2)) : null,
