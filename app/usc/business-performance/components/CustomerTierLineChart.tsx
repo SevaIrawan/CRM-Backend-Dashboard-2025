@@ -233,7 +233,7 @@ export default function CustomerTierLineChart({
         },
         bodyFont: {
           size: 13,
-          weight: '500' as const,
+          weight: 'normal' as const,
           family: "'Inter', -apple-system, sans-serif"
         },
         padding: {
