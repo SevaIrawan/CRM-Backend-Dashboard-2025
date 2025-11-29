@@ -678,7 +678,8 @@ export default function CustomerTierMovement({
                       if (typeof value === 'number') {
                         numericValue = value
                       } else if (typeof value === 'string') {
-                        const parsed = parseFloat(value.replace(/[^0-9.-]/g, ''))
+                        const stringValue = value as string // ✅ Explicit type assertion
+                        const parsed = parseFloat(stringValue.replace(/[^0-9.-]/g, ''))
                         numericValue = isNaN(parsed) ? 0 : parsed
                       } else if (value !== null && value !== undefined) {
                         // Try to convert other types
