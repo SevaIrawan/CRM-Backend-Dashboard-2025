@@ -7,35 +7,50 @@ import StandardLoadingSpinner from '@/components/StandardLoadingSpinner'
 import { TIER_NAME_DEFINITIONS, TIER_NAME_COLORS } from '../constants'
 
 // CSS untuk override chart border dan background agar semua dalam 1 canvas
+// IMPORTANT: Hanya berlaku untuk Business Performance page dengan parent selector bp-subheader-wrapper
+// Tidak akan mempengaruhi page lain karena selector sangat spesifik
 const chartOverrideStyle = `
-  .customer-tier-trends-chart-wrapper > div[role="img"] {
+  .bp-subheader-wrapper .customer-tier-trends-chart-wrapper > div[role="img"] {
     background-color: transparent !important;
     border: none !important;
     box-shadow: none !important;
     border-radius: 0 !important;
     padding: 0 !important;
   }
-  .customer-tier-trends-chart-wrapper > div[role="img"] > div {
+  .bp-subheader-wrapper .customer-tier-trends-chart-wrapper > div[role="img"] > div {
     background-color: transparent !important;
   }
-  /* Placeholder styling untuk date picker */
-  input[placeholder="Select Date"]::placeholder {
+  /* Background grey full canvas untuk Business Performance USC page - HANYA untuk BP page */
+  .bp-subheader-wrapper .usc-business-performance-chart-wrapper > div[role="img"] {
+    background-color: transparent !important;
+  }
+  .bp-subheader-wrapper .usc-business-performance-chart-wrapper > div[role="img"] > div {
+    background-color: transparent !important;
+  }
+  .bp-subheader-wrapper .usc-business-performance-chart-wrapper [style*="background-color: rgb(255, 255, 255)"] {
+    background-color: transparent !important;
+  }
+  .bp-subheader-wrapper .usc-business-performance-chart-wrapper [style*="background-color: #ffffff"] {
+    background-color: transparent !important;
+  }
+  /* Placeholder styling untuk date picker - HANYA untuk Business Performance page */
+  .bp-subheader-wrapper input[placeholder="Select Date"]::placeholder {
     color: #9ca3af !important;
     text-align: right !important;
   }
-  /* Scrollbar styling untuk tier filter dropdown */
-  .tier-filter-scroll::-webkit-scrollbar {
+  /* Scrollbar styling untuk tier filter dropdown - HANYA untuk Business Performance page */
+  .bp-subheader-wrapper .tier-filter-scroll::-webkit-scrollbar {
     width: 8px;
   }
-  .tier-filter-scroll::-webkit-scrollbar-track {
+  .bp-subheader-wrapper .tier-filter-scroll::-webkit-scrollbar-track {
     background: #f1f5f9;
     border-radius: 4px;
   }
-  .tier-filter-scroll::-webkit-scrollbar-thumb {
+  .bp-subheader-wrapper .tier-filter-scroll::-webkit-scrollbar-thumb {
     background: #cbd5e1;
     border-radius: 4px;
   }
-  .tier-filter-scroll::-webkit-scrollbar-thumb:hover {
+  .bp-subheader-wrapper .tier-filter-scroll::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
   }
 `
@@ -971,14 +986,17 @@ export default function CustomerTierTrends({
               border: '1px solid #e5e7eb', // ✅ Border permanent
               borderRadius: '8px',
               padding: '12px',
-              backgroundColor: '#ffffff',
-              transition: 'box-shadow 0.3s ease'
+              backgroundColor: '#F9FAFB',
+              transition: 'all 0.3s ease',
+              cursor: 'default'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.15)' // ✅ Hover shadow cover chart + legend
+              e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+              e.currentTarget.style.borderColor = '#D1D5DB'
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = 'none'
+              e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+              e.currentTarget.style.borderColor = '#e5e7eb'
             }}
           >
             {/* Period A Title and Date Range Slicer - Sejajar */}
@@ -1182,7 +1200,7 @@ export default function CustomerTierTrends({
               </div>
             </div>
             <div 
-              className="customer-tier-trends-chart" 
+              className="customer-tier-trends-chart usc-business-performance-chart-wrapper" 
               style={{ 
                 height: '350px',
                 width: '100%'
@@ -1205,14 +1223,17 @@ export default function CustomerTierTrends({
               border: '1px solid #e5e7eb', // ✅ Border permanent
               borderRadius: '8px',
               padding: '12px',
-              backgroundColor: '#ffffff',
-              transition: 'box-shadow 0.3s ease'
+              backgroundColor: '#F9FAFB',
+              transition: 'all 0.3s ease',
+              cursor: 'default'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.15)' // ✅ Hover shadow cover chart + legend
+              e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+              e.currentTarget.style.borderColor = '#D1D5DB'
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = 'none'
+              e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+              e.currentTarget.style.borderColor = '#e5e7eb'
             }}
           >
             {/* Period B Title and Date Range Slicer - Sejajar */}
@@ -1416,7 +1437,7 @@ export default function CustomerTierTrends({
               </div>
             </div>
             <div 
-              className="customer-tier-trends-chart" 
+              className="customer-tier-trends-chart usc-business-performance-chart-wrapper" 
               style={{ 
                 height: '350px',
                 width: '100%'

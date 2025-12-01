@@ -9,11 +9,12 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { Bar, Line } from 'react-chartjs-2';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { getChartIcon } from '../lib/CentralIcon';
 import { formatNumericKPI, formatIntegerKPI, formatCurrencyKPI, formatPercentageKPI } from '../lib/formatHelpers';
 
+// Register core Chart.js components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -22,9 +23,10 @@ ChartJS.register(
   LineElement,
   Title,
   Tooltip,
-  Legend,
-  ChartDataLabels
+  Legend
 );
+
+// ChartDataLabels will be registered conditionally per chart instance
 
 interface Series {
   name: string;
@@ -61,6 +63,43 @@ export default function BarChart({
   onDoubleClick,
   clickable = false
 }: BarChartProps) {
+  // Error handling for empty data - prevent chartjs-plugin-datalabels error
+  if (!series || series.length === 0 || !categories || categories.length === 0) {
+    return (
+      <div style={{ 
+        height: '400px', 
+        width: '100%', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        backgroundColor: '#f3f4f6',
+        border: '1px solid #d1d5db',
+        borderRadius: '8px'
+      }}>
+        <p style={{ color: '#6b7280', fontSize: '14px' }}>No chart data available</p>
+      </div>
+    )
+  }
+
+  // Validate data structure
+  const hasValidData = series.every(s => s.data && Array.isArray(s.data) && s.data.length > 0)
+  if (!hasValidData) {
+    return (
+      <div style={{ 
+        height: '400px', 
+        width: '100%', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        backgroundColor: '#f3f4f6',
+        border: '1px solid #d1d5db',
+        borderRadius: '8px'
+      }}>
+        <p style={{ color: '#6b7280', fontSize: '14px' }}>Invalid chart data structure</p>
+      </div>
+    )
+  }
+
   const getCurrencySymbol = (curr: string): string => {
     switch (curr) {
       case 'MYR': return 'RM';
@@ -175,8 +214,8 @@ export default function BarChart({
 
   // Convert ApexCharts series format to Chart.js format
   const data = {
-    labels: categories,
-    datasets: series.map((dataset, index) => ({
+    labels: categories || [],
+    datasets: (series || []).map((dataset, index) => ({
       label: dataset.name,
       data: dataset.data,
       backgroundColor: dataset.color || (index === 0 ? color : '#f97316'),
@@ -190,109 +229,78 @@ export default function BarChart({
   const options = {
     responsive: true,
     maintainAspectRatio: false,
-    indexAxis: horizontal ? 'y' as const : 'x' as const, // Enable horizontal bar
+    indexAxis: horizontal ? 'y' as const : 'x' as const,
+    interaction: {
+      mode: 'index' as const,
+      intersect: false
+    },
     plugins: {
       legend: {
-        display: false  // HAPUS LEGEND
+        display: false
       },
       datalabels: {
-        display: true, // ✅ ALWAYS SHOW LABELS - NO EXCEPTION!
-        color: '#1f2937', // ✅ STANDARD: BLACK COLOR FOR ALL LABELS
+        display: showDataLabels,
+        color: '#1f2937',
         font: {
           weight: 'bold' as const,
           size: 10
         },
-        anchor: 'end' as const, // Always anchor at end of bar
-        align: horizontal ? 'end' as const : 'top' as const, // ✅ ALWAYS TOP - SEMUA LABELS KELUAR!
-        offset: -2, // Small negative offset to place ABOVE bar top
+        anchor: horizontal ? 'start' as const : 'end' as const,
+        align: horizontal ? 'right' as const : 'top' as const,
+        offset: horizontal ? 4 : -2,
         formatter: function(value: number, context: any) {
-          const datasetLabel = context.dataset.label;
+          const datasetLabel = context.dataset.label || '';
           
-          // For transaction trends and automation, use "c" suffix for labels (to avoid overlap)
-          if (datasetLabel && (
-            datasetLabel.toLowerCase().includes('overdue') ||
-            datasetLabel.toLowerCase().includes('transactions') ||
-            datasetLabel.toLowerCase().includes('transaction trend') ||
-            datasetLabel.toLowerCase().includes('trans automation') ||
-            datasetLabel.toLowerCase().includes('automation')
-          )) {
-            return formatIntegerKPI(value) + 'c';
-          }
+          // Check if this is cases type
+          const isCasesType = datasetLabel && datasetLabel.toLowerCase().includes('cases');
           
-          // For cases type, use "c" suffix
-          if (datasetLabel && datasetLabel.toLowerCase().includes('cases')) {
-            return formatIntegerKPI(value) + 'c';
-          }
+          // Check if this is count type (member, depositor, register)
+          const isCountType = datasetLabel && (
+            datasetLabel.toLowerCase().includes('depositor') || 
+            (datasetLabel.toLowerCase().includes('member') && !datasetLabel.toLowerCase().includes('user')) ||
+            datasetLabel.toLowerCase().includes('count') ||
+            datasetLabel.toLowerCase().includes('register')
+          );
           
-          // For purchase frequency, use 2 decimal places without unit
-          if (datasetLabel && datasetLabel.toLowerCase().includes('purchase frequency')) {
-            return value.toFixed(2);
-          }
-          
-          // For member type, do not use "Member" suffix
-          if (datasetLabel && (
-            datasetLabel.toLowerCase().includes('active member') ||
-            datasetLabel.toLowerCase().includes('member')
-          )) {
-            return formatIntegerKPI(value);
-          }
-          
-          // ✅ For RATE/PERCENTAGE types, use 2 decimal places with % symbol
-          if (datasetLabel && (
+          // Check if this is rate/percentage type
+          const isRateType = datasetLabel && (
             datasetLabel.toLowerCase().includes('rate') ||
-            datasetLabel.toLowerCase().includes('percentage') ||
-            datasetLabel.toLowerCase().includes('winrate')
-          )) {
-            return value.toFixed(2) + '%';
-          }
+            datasetLabel.toLowerCase().includes('winrate') ||
+            datasetLabel.toLowerCase().includes('percentage')
+          );
           
-          // ✅ For BONUS types, ALWAYS use 2 decimal places (RM X.XX)
-          if (title && title.toLowerCase().includes('bonus')) {
-            return getCurrencySymbol(currency) + ' ' + value.toFixed(2);
-          }
-          
-          // ✅ For currency/amount types, use ABBREVIATED format (K, M) for data labels
-          if (datasetLabel && (
-            datasetLabel.toLowerCase().includes('amount') ||
-            (datasetLabel.toLowerCase().includes('deposit') && !datasetLabel.toLowerCase().includes('depositor')) ||
-            datasetLabel.toLowerCase().includes('withdraw') ||
-            datasetLabel.toLowerCase().includes('revenue') ||
-            datasetLabel.toLowerCase().includes('ggr') ||
-            datasetLabel.toLowerCase().includes('profit') ||
-            datasetLabel.toLowerCase().includes('user') ||
-            datasetLabel.toLowerCase().includes('atv') ||
-            datasetLabel.toLowerCase().includes('value')
-          )) {
-            // ✅ Use abbreviated format for DATA LABELS (not full currency)
-            if (value >= 1000000) {
-              return getCurrencySymbol(currency) + ' ' + (value / 1000000).toFixed(1) + 'M';
-            } else if (value >= 1000) {
-              return getCurrencySymbol(currency) + ' ' + (value / 1000).toFixed(0) + 'K';
-            }
+          // Format based on type
+          if (isCasesType) {
+            return formatIntegerKPI(value) + 'c';
+          } else if (isCountType) {
+            return formatIntegerKPI(value);
+          } else if (isRateType) {
+            return formatPercentageKPI(value);
+          } else {
+            // For amount/currency - use currency format
             return formatCurrencyKPI(value, currency);
           }
-          
-          // Default formatting
-          return formatIntegerKPI(value);
         }
       },
       tooltip: {
-        enabled: true,
-        position: 'nearest' as const,
+        mode: 'index' as const,
+        intersect: false,
         backgroundColor: 'rgba(0, 0, 0, 0.9)',
         titleColor: '#ffffff',
         bodyColor: '#ffffff',
         borderColor: '#3B82F6',
         borderWidth: 1,
-        padding: 12,
         cornerRadius: 8,
+        padding: 12,
         displayColors: true,
         callbacks: {
+          title: function(context: any) {
+            return `📅 ${context[0].label}`;
+          },
           label: function(context: any) {
             const value = horizontal ? context.parsed.x : context.parsed.y;
             const datasetLabel = context.dataset.label;
             
-            // For transaction trends and automation, use "cases" suffix
             if (datasetLabel && (
               datasetLabel.toLowerCase().includes('overdue') ||
               datasetLabel.toLowerCase().includes('transactions') ||
@@ -303,12 +311,10 @@ export default function BarChart({
               return `${datasetLabel}: ${formatIntegerKPI(value)} cases`;
             }
             
-            // Check if this is a cases type (Deposit Cases, Withdraw Cases)
             const isCasesType = datasetLabel && (
               datasetLabel.toLowerCase().includes('cases')
             );
             
-            // Check if this is a count/integer type (New Depositor, Active Member, etc.)
             const isFormulaNumericType = datasetLabel && (
               datasetLabel.toLowerCase().includes('ggr user') ||
               datasetLabel.toLowerCase().includes('da user') ||
@@ -325,7 +331,6 @@ export default function BarChart({
               datasetLabel.toLowerCase().includes('register')
             ) && !isFormulaNumericType;
             
-            // Check if this is a rate/percentage type
             const isRateType = datasetLabel && (
               datasetLabel.toLowerCase().includes('rate') ||
               datasetLabel.toLowerCase().includes('winrate') ||
@@ -333,16 +338,12 @@ export default function BarChart({
             );
             
             if (isCasesType) {
-              // For cases - using standard format: 0,000
               return `${datasetLabel}: ${formatIntegerKPI(value)} cases`;
             } else if (isCountType) {
-              // For count/integer - using standard format: 0,000
               return `${datasetLabel}: ${formatIntegerKPI(value)} members`;
             } else if (isRateType) {
-              // For rate/percentage - using standard format: 00.00%
               return `${datasetLabel}: ${formatPercentageKPI(value)}`;
             } else {
-              // For amount/numeric - using standard format: RM 0,000.00
               return `${datasetLabel}: ${formatCurrencyKPI(value, currency)}`;
             }
           }
@@ -352,15 +353,32 @@ export default function BarChart({
     scales: horizontal ? {
       // For horizontal bar chart
       x: {
-        beginAtZero: true,
         // ✅ CONSISTENT X-AXIS: ALL bars use SAME min/max for proportional display
         min: (() => {
           // Get ALL values from ALL series (all bars in this chart)
           const allValues = series.flatMap(s => s.data);
           const minValue = Math.min(...allValues);
           
-          // Always start from 0 for positive data, floor for negative
-          return minValue >= 0 ? 0 : Math.floor(minValue * 1.1);
+          // For negative values (profit/loss), don't force beginAtZero, calculate proper min
+          if (minValue < 0) {
+            const targetMin = minValue * 1.1; // Add padding for negative values
+            // Round down to nice number
+            if (targetMin <= -1000000) {
+              return Math.floor(targetMin / 1000000) * 1000000;
+            } else if (targetMin <= -100000) {
+              return Math.floor(targetMin / 25000) * 25000;
+            } else if (targetMin <= -10000) {
+              return Math.floor(targetMin / 2500) * 2500;
+            } else if (targetMin <= -1000) {
+              return Math.floor(targetMin / 250) * 250;
+            } else if (targetMin <= -100) {
+              return Math.floor(targetMin / 25) * 25;
+            } else {
+              return Math.floor(targetMin / 5) * 5;
+            }
+          }
+          // Always start from 0 for positive-only data
+          return 0;
         })(),
         max: (() => {
           // Get MAX from ALL values in ALL series (all bars)
@@ -407,7 +425,9 @@ export default function BarChart({
           stepSize: (() => {
             const allValues = series.flatMap(s => s.data);
             const maxValue = Math.max(...allValues);
-            const targetMax = maxValue * 1.08;
+            const minValue = Math.min(...allValues);
+            const range = maxValue - minValue;
+            const targetMax = Math.abs(range) * 1.08;
             
             // Calculate nice round max (SAME logic as max calculation)
             let niceMax;
@@ -429,21 +449,23 @@ export default function BarChart({
               niceMax = Math.ceil(targetMax);
             }
             
-            // Divide by 5 for consistent 5 steps: 0, 20%, 40%, 60%, 80%, 100%
+            // Divide by 5 for consistent 5 steps
             return niceMax / 5;
           })(),
           callback: function(tickValue: string | number) {
             const value = typeof tickValue === 'string' ? parseFloat(tickValue) : tickValue;
+            const absValue = Math.abs(value);
+            const sign = value < 0 ? '-' : '';
             
-            // Clean formatting for easy reading
-            if (value >= 1000000) {
-              const mValue = value / 1000000;
-              return mValue % 1 === 0 ? mValue.toFixed(0) + 'M' : mValue.toFixed(1) + 'M';
-            } else if (value >= 1000) {
-              const kValue = value / 1000;
-              return kValue % 1 === 0 ? kValue.toFixed(0) + 'K' : kValue.toFixed(1) + 'K';
+            // Clean formatting for easy reading (support negative values)
+            if (absValue >= 1000000) {
+              const mValue = absValue / 1000000;
+              return sign + (mValue % 1 === 0 ? mValue.toFixed(0) + 'M' : mValue.toFixed(1) + 'M');
+            } else if (absValue >= 1000) {
+              const kValue = absValue / 1000;
+              return sign + (kValue % 1 === 0 ? kValue.toFixed(0) + 'K' : kValue.toFixed(1) + 'K');
             } else {
-              return value.toFixed(0);
+              return sign + absValue.toFixed(0);
             }
           },
           font: {
@@ -603,24 +625,23 @@ export default function BarChart({
         backgroundColor: '#ffffff',
         border: '1px solid #ffffff', // White border
         borderRadius: '8px',
-        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+        boxShadow: 'none', // ✅ HANYA 1 HOVER SHADOW - No initial shadow
         display: 'flex',
         flexDirection: 'column',
-        /* ✅ ALWAYS ACTIVE: Hover effect like StatCard */
         transition: 'all 0.2s ease',
         cursor: clickable ? 'pointer' : 'default'
       }}
       onDoubleClick={clickable ? onDoubleClick : undefined}
-    onMouseEnter={(e) => {
-      // ✅ ALWAYS ACTIVE: Show hover effect (match StatCard behavior)
-      e.currentTarget.style.transform = 'translateY(-3px)';
-      e.currentTarget.style.boxShadow = '0 8px 25px 0 rgba(0, 0, 0, 0.12), 0 4px 10px 0 rgba(0, 0, 0, 0.08)';
-    }}
-    onMouseLeave={(e) => {
-      // ✅ ALWAYS ACTIVE: Reset hover effect
-      e.currentTarget.style.transform = 'translateY(0)';
-      e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)';
-    }}>
+      onMouseEnter={(e) => {
+        // ✅ HANYA 1 HOVER SHADOW - Di dalam canvas, include canvas dan chart
+        e.currentTarget.style.transform = 'translateY(-3px)';
+        e.currentTarget.style.boxShadow = '0 8px 25px 0 rgba(0, 0, 0, 0.12), 0 4px 10px 0 rgba(0, 0, 0, 0.08)';
+      }}
+      onMouseLeave={(e) => {
+        // ✅ Reset - No shadow
+        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.boxShadow = 'none';
+      }}>
       {/* Chart Title with Icon */}
       {title && (
         <div style={{
@@ -688,10 +709,15 @@ export default function BarChart({
         padding: '16px',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        backgroundColor: '#ffffff'
       }}>
         <div style={{ height: '100%', width: '100%' }}>
-          <Bar data={data} options={options} />
+          <Bar 
+            data={data} 
+            options={options}
+            plugins={showDataLabels ? [ChartDataLabels] : []}
+          />
         </div>
       </div>
     </div>

@@ -1,0 +1,773 @@
+'use client'
+
+import React, { useState, useEffect, useRef, useMemo } from 'react'
+import dynamic from 'next/dynamic'
+import StandardLoadingSpinner from '@/components/StandardLoadingSpinner'
+import { TIER_NAME_COLORS } from '../constants'
+import { formatCurrencyKPI, formatIntegerKPI, formatPercentageKPI } from '@/lib/formatHelpers'
+
+// CSS override khusus untuk Business Performance USC page - background grey full canvas
+// IMPORTANT: Hanya berlaku untuk Business Performance page dengan parent selector bp-subheader-wrapper
+// Tidak akan mempengaruhi page lain karena selector sangat spesifik
+const businessPerformanceChartStyle = `
+  /* Override chart outer container menjadi transparan - HANYA untuk Business Performance */
+  .bp-subheader-wrapper .usc-business-performance-chart-wrapper > div[role="img"] {
+    background-color: transparent !important;
+  }
+  .bp-subheader-wrapper .usc-business-performance-chart-wrapper > div:not([class]) {
+    background-color: transparent !important;
+  }
+  /* Override semua background putih dalam chart wrapper menjadi transparan - HANYA untuk Business Performance */
+  .bp-subheader-wrapper .usc-business-performance-chart-wrapper div[style*="background-color: rgb(255, 255, 255)"],
+  .bp-subheader-wrapper .usc-business-performance-chart-wrapper div[style*="background-color: #ffffff"],
+  .bp-subheader-wrapper .usc-business-performance-chart-wrapper div[style*="background-color: #FFFFFF"],
+  .bp-subheader-wrapper .usc-business-performance-chart-wrapper > div[role="img"][style*="background-color"] {
+    background-color: transparent !important;
+  }
+  /* Override chart container background - HANYA untuk Business Performance */
+  .bp-subheader-wrapper .usc-business-performance-chart-wrapper > div > div[style*="padding: '16px'"] {
+    background-color: transparent !important;
+  }
+`
+
+// Dynamic import Chart.js components (SSR fix)
+// ✅ BP STANDARD: Gunakan custom PieChart dengan optimasi khusus untuk BP page
+const BusinessPerformancePieChart = dynamic(() => import('./BusinessPerformancePieChart'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-64 bg-gray-50 rounded-lg animate-pulse">
+      <div className="text-sm text-gray-500">Loading Chart...</div>
+    </div>
+  )
+})
+
+const BarChart = dynamic(() => import('@/components/BarChart'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-64 bg-gray-50 rounded-lg animate-pulse">
+      <div className="text-sm text-gray-500">Loading Chart...</div>
+    </div>
+  )
+})
+
+interface TierMetricsComparisonProps {
+  periodAStart?: string
+  periodAEnd?: string
+  periodBStart?: string
+  periodBEnd?: string
+  brand: string
+  squadLead: string
+  channel: string
+  searchTrigger?: number
+}
+
+interface TierMetricsData {
+  tierName: string
+  customerCount: number
+  depositAmount: number
+  ggr: number
+}
+
+interface PeriodMetrics {
+  period: 'A' | 'B'
+  startDate: string
+  endDate: string
+  totalCustomers: number
+  totalDepositAmount: number
+  totalGGR: number
+  winRate: number
+  tierMetrics: TierMetricsData[]
+}
+
+interface TierMetricsResponse {
+  success: boolean
+  data?: {
+    periodA: PeriodMetrics
+    periodB: PeriodMetrics
+  }
+  error?: string
+}
+
+// Tier name to number mapping (untuk sorting) - Lower tier_number = Higher tier
+const TIER_NAME_TO_NUMBER: Record<string, number> = {
+  'Super VIP': 1,
+  'Tier 5': 2,
+  'Tier 4': 3,
+  'Tier 3': 4,
+  'Tier 2': 5,
+  'Tier 1': 6,
+  'Regular': 7,
+  'ND_P': 8,
+  'P1': 9,
+  'P2': 10
+}
+
+function getTierNumber(tierName: string): number {
+  return TIER_NAME_TO_NUMBER[tierName] || 99
+}
+
+// Warna tier sesuai HTML wireframe
+const TIER_COLORS_WIREFRAME: Record<string, string> = {
+  'Regular': '#3b82f6',
+  'Tier 1': '#8b5cf6',
+  'Tier 2': '#ec4899',
+  'Tier 3': '#f59e0b',
+  'Tier 4': '#10b981',
+  'Tier 5': '#06b6d4',
+  'Super VIP': '#f97316',
+  'ND_P': '#6366f1',
+  'P1': '#14b8a6',
+  'P2': '#a855f7'
+}
+
+export default function TierMetricsComparison({
+  periodAStart,
+  periodAEnd,
+  periodBStart,
+  periodBEnd,
+  brand,
+  squadLead,
+  channel,
+  searchTrigger = 0
+}: TierMetricsComparisonProps) {
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [data, setData] = useState<TierMetricsResponse['data'] | null>(null)
+  
+  const lastParamsRef = useRef<string>('')
+  const isFetchingRef = useRef(false)
+
+  // Fetch data
+  const fetchData = React.useCallback(async () => {
+    if (!periodAStart || !periodAEnd || !periodBStart || !periodBEnd) {
+      return
+    }
+
+    const paramsSignature = JSON.stringify({
+      periodAStart,
+      periodAEnd,
+      periodBStart,
+      periodBEnd,
+      brand,
+      squadLead,
+      channel,
+      searchTrigger
+    })
+
+    if (lastParamsRef.current === paramsSignature) {
+      return
+    }
+
+    if (isFetchingRef.current) {
+      return
+    }
+
+    isFetchingRef.current = true
+    setLoading(true)
+    setError(null)
+    lastParamsRef.current = paramsSignature
+
+    try {
+      const userAllowedBrands = localStorage.getItem('user_allowed_brands')
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json'
+      }
+
+      if (userAllowedBrands) {
+        headers['x-user-allowed-brands'] = userAllowedBrands
+      }
+
+      const params = new URLSearchParams({
+        periodAStart: periodAStart!,
+        periodAEnd: periodAEnd!,
+        periodBStart: periodBStart!,
+        periodBEnd: periodBEnd!,
+        brand: brand || 'All',
+        squadLead: squadLead || 'All',
+        channel: channel || 'All'
+      })
+
+      const response = await fetch(`/api/usc-business-performance/tier-metrics?${params}`, {
+        headers
+      })
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`)
+      }
+
+      const result: TierMetricsResponse = await response.json()
+
+      if (result.success && result.data) {
+        setData(result.data)
+      } else {
+        throw new Error(result.error || 'Failed to fetch data')
+      }
+    } catch (err) {
+      console.error('❌ [Tier Metrics] Error:', err)
+      setError(err instanceof Error ? err.message : 'Unknown error')
+    } finally {
+      setLoading(false)
+      isFetchingRef.current = false
+    }
+  }, [periodAStart, periodAEnd, periodBStart, periodBEnd, brand, squadLead, channel, searchTrigger])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  // Inject CSS ke head untuk Business Performance chart styling
+  useEffect(() => {
+    const styleId = 'usc-business-performance-chart-style'
+    let styleElement = document.getElementById(styleId) as HTMLStyleElement
+    
+    if (!styleElement) {
+      styleElement = document.createElement('style')
+      styleElement.id = styleId
+      document.head.appendChild(styleElement)
+    }
+    
+    styleElement.textContent = businessPerformanceChartStyle
+    
+    return () => {
+      // Cleanup: hapus style element saat component unmount
+      const existingStyle = document.getElementById(styleId)
+      if (existingStyle) {
+        existingStyle.remove()
+      }
+    }
+  }, [])
+
+  // Helper functions
+  const calculatePercentageChange = (valueA: number, valueB: number): number => {
+    if (valueA === 0) return valueB > 0 ? 100 : 0
+    return ((valueB - valueA) / valueA) * 100
+  }
+
+  const preparePieChartData = (tierMetrics: TierMetricsData[], total: number) => {
+    const filteredTiers = tierMetrics
+      .filter(tier => tier.customerCount > 0)
+      .sort((a, b) => getTierNumber(a.tierName) - getTierNumber(b.tierName))
+
+    return filteredTiers.map(tier => ({
+      label: tier.tierName,
+      value: tier.customerCount,
+      color: TIER_COLORS_WIREFRAME[tier.tierName] || TIER_NAME_COLORS[tier.tierName] || '#6B7280',
+      percentage: total > 0 ? parseFloat(((tier.customerCount / total) * 100).toFixed(1)) : 0
+    }))
+  }
+
+  const prepareDepositBarChartData = (tierMetrics: TierMetricsData[]) => {
+    const filteredTiers = tierMetrics
+      .filter(tier => tier.depositAmount > 0)
+      .sort((a, b) => getTierNumber(a.tierName) - getTierNumber(b.tierName))
+
+    const colors = filteredTiers.map(tier => TIER_COLORS_WIREFRAME[tier.tierName] || TIER_NAME_COLORS[tier.tierName] || '#6B7280')
+
+    return {
+      categories: filteredTiers.map(tier => tier.tierName),
+      series: [{
+        name: 'Deposit Amount',
+        data: filteredTiers.map(tier => tier.depositAmount),
+        color: colors as any
+      }]
+    }
+  }
+
+  const prepareGGRBarChartData = (tierMetrics: TierMetricsData[]) => {
+    const filteredTiers = tierMetrics
+      .filter(tier => tier.ggr !== 0)
+      .sort((a, b) => getTierNumber(a.tierName) - getTierNumber(b.tierName))
+
+    const ggrValues: number[] = []
+    const colors: string[] = []
+
+    filteredTiers.forEach(tier => {
+      ggrValues.push(tier.ggr)
+      colors.push(tier.ggr >= 0 ? '#10b981' : '#ef4444')
+    })
+
+    return {
+      categories: filteredTiers.map(tier => tier.tierName),
+      series: [{
+        name: 'GGR',
+        data: ggrValues,
+        color: colors
+      }]
+    }
+  }
+
+  // Format date for display
+  const formatDateRange = (start: string, end: string): string => {
+    const startDate = new Date(start)
+    const endDate = new Date(end)
+    const startStr = startDate.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })
+    const endStr = endDate.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })
+    return `${startStr} ~ ${endStr}`
+  }
+
+  // Prepare chart data
+  const periodAPieData = useMemo(() => {
+    if (!data?.periodA) return []
+    return preparePieChartData(data.periodA.tierMetrics, data.periodA.totalCustomers)
+  }, [data?.periodA])
+
+  const periodBPieData = useMemo(() => {
+    if (!data?.periodB) return []
+    return preparePieChartData(data.periodB.tierMetrics, data.periodB.totalCustomers)
+  }, [data?.periodB])
+
+  const periodADepositBarData = useMemo(() => {
+    if (!data?.periodA) return { categories: [], series: [] }
+    return prepareDepositBarChartData(data.periodA.tierMetrics)
+  }, [data?.periodA])
+
+  const periodBDepositBarData = useMemo(() => {
+    if (!data?.periodB) return { categories: [], series: [] }
+    return prepareDepositBarChartData(data.periodB.tierMetrics)
+  }, [data?.periodB])
+
+  const periodAGGRBarData = useMemo(() => {
+    if (!data?.periodA) return { categories: [], series: [] }
+    return prepareGGRBarChartData(data.periodA.tierMetrics)
+  }, [data?.periodA])
+
+  const periodBGGRBarData = useMemo(() => {
+    if (!data?.periodB) return { categories: [], series: [] }
+    return prepareGGRBarChartData(data.periodB.tierMetrics)
+  }, [data?.periodB])
+
+  if (loading) {
+    return (
+      <div style={{
+        width: '100%',
+        backgroundColor: '#ffffff',
+        border: '1px solid #e5e7eb',
+        borderRadius: '8px',
+        padding: '16px',
+        minHeight: '400px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <StandardLoadingSpinner />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div style={{
+        width: '100%',
+        backgroundColor: '#ffffff',
+        border: '1px solid #e5e7eb',
+        borderRadius: '8px',
+        padding: '16px',
+        minHeight: '400px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#ef4444'
+      }}>
+        Error: {error}
+      </div>
+    )
+  }
+
+  if (!data) {
+    return (
+      <div style={{
+        width: '100%',
+        backgroundColor: '#ffffff',
+        border: '1px solid #e5e7eb',
+        borderRadius: '8px',
+        padding: '16px',
+        minHeight: '400px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#6b7280'
+      }}>
+        No data available. Please select date ranges.
+      </div>
+    )
+  }
+
+  const { periodA, periodB } = data
+  const customerChange = calculatePercentageChange(periodA.totalCustomers, periodB.totalCustomers)
+  const depositChange = calculatePercentageChange(periodA.totalDepositAmount, periodB.totalDepositAmount)
+  const ggrChange = calculatePercentageChange(periodA.totalGGR, periodB.totalGGR)
+
+  return (
+    <div style={{
+      width: '100%',
+      backgroundColor: '#ffffff',
+      border: '1px solid #e5e7eb',
+      borderRadius: '8px',
+      padding: '24px',
+      boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
+    }}>
+      {/* Header */}
+      <div style={{ marginBottom: '24px' }}>
+        <h2 style={{
+          fontSize: '20px',
+          fontWeight: 700,
+          color: '#1f2937',
+          margin: 0,
+          marginBottom: '8px'
+        }}>
+          Tier Metrics Comparison
+        </h2>
+        <p style={{
+          fontSize: '14px',
+          color: '#6b7280',
+          margin: 0
+        }}>
+          Distribution and contribution analysis across all tiers
+        </p>
+      </div>
+
+      {/* Period A Section */}
+      <div style={{ marginBottom: '32px' }}>
+        <h3 style={{
+          fontSize: '18px',
+          fontWeight: 600,
+          color: '#374151',
+          margin: 0,
+          marginBottom: '16px'
+        }}>
+          Period A: {formatDateRange(periodA.startDate, periodA.endDate)}
+        </h3>
+        
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: '24px'
+        }}>
+          {/* Customer Count Distribution Pie Chart */}
+          <div style={{
+            backgroundColor: '#F9FAFB',
+            border: '1px solid #e5e7eb',
+            borderRadius: '12px',
+            padding: '16px',
+            boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+              <h4 style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                color: '#374151',
+                margin: 0,
+                marginBottom: '8px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.6px',
+                lineHeight: '1.2'
+              }}>
+                Customer Count
+              </h4>
+              <div style={{
+                fontSize: '22px',
+                fontWeight: 600,
+                color: '#111827',
+                margin: '0 0 4px 0',
+                lineHeight: '1.1'
+              }}>
+                {formatIntegerKPI(periodA.totalCustomers)}
+              </div>
+            </div>
+            <div className="usc-business-performance-chart-wrapper" style={{ width: '100%', height: '500px' }}>
+              <BusinessPerformancePieChart
+                data={periodAPieData || []}
+                showLegend={true}
+                showPercentage={true}
+              />
+            </div>
+          </div>
+
+          {/* Deposit Amount by Tier */}
+          <div style={{
+            backgroundColor: '#F9FAFB',
+            border: '1px solid #e5e7eb',
+            borderRadius: '12px',
+            padding: '16px',
+            boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+              <h4 style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                color: '#374151',
+                margin: 0,
+                marginBottom: '8px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.6px',
+                lineHeight: '1.2'
+              }}>
+                Deposit Amount
+              </h4>
+              <div style={{
+                fontSize: '22px',
+                fontWeight: 600,
+                color: '#111827',
+                margin: '0 0 4px 0',
+                lineHeight: '1.1'
+              }}>
+                {formatCurrencyKPI(periodA.totalDepositAmount, 'USC')}
+              </div>
+            </div>
+            <div className="usc-business-performance-chart-wrapper" style={{ height: '500px', width: '100%' }}>
+              <BarChart
+                series={periodADepositBarData?.series || []}
+                categories={periodADepositBarData?.categories || []}
+                currency="USC"
+                horizontal={true}
+                showDataLabels={false}
+              />
+            </div>
+          </div>
+
+          {/* GGR by Tier (Profit/Loss) */}
+          <div style={{
+            backgroundColor: '#F9FAFB',
+            border: '1px solid #e5e7eb',
+            borderRadius: '12px',
+            padding: '16px',
+            boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+              <h4 style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                color: '#374151',
+                margin: 0,
+                marginBottom: '8px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.6px',
+                lineHeight: '1.2'
+              }}>
+                Gross Gaming Revenue
+              </h4>
+              <div style={{
+                fontSize: '22px',
+                fontWeight: 600,
+                color: '#111827',
+                margin: '0 0 4px 0',
+                lineHeight: '1.1'
+              }}>
+                {formatCurrencyKPI(periodA.totalGGR, 'USC')}
+              </div>
+            </div>
+            <div className="usc-business-performance-chart-wrapper" style={{ height: '500px', width: '100%' }}>
+              <BarChart
+                series={periodAGGRBarData?.series || []}
+                categories={periodAGGRBarData?.categories || []}
+                currency="USC"
+                horizontal={true}
+                showDataLabels={false}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Period B Section */}
+      <div>
+        <h3 style={{
+          fontSize: '18px',
+          fontWeight: 600,
+          color: '#374151',
+          margin: 0,
+          marginBottom: '16px'
+        }}>
+          Period B: {formatDateRange(periodB.startDate, periodB.endDate)}
+        </h3>
+        
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: '24px'
+        }}>
+          {/* Customer Count Distribution Pie Chart */}
+          <div style={{
+            backgroundColor: '#F9FAFB',
+            border: '1px solid #e5e7eb',
+            borderRadius: '12px',
+            padding: '16px',
+            boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+              <h4 style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                color: '#374151',
+                margin: 0,
+                marginBottom: '8px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.6px',
+                lineHeight: '1.2'
+              }}>
+                Customer Count
+              </h4>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                marginBottom: '4px'
+              }}>
+                <div style={{
+                  fontSize: '22px',
+                  fontWeight: 600,
+                  color: '#111827',
+                  lineHeight: '1.1'
+                }}>
+                  {formatIntegerKPI(periodB.totalCustomers)}
+                </div>
+                {customerChange !== 0 && (
+                  <span style={{
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    color: customerChange >= 0 ? '#059669' : '#dc2626',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '2px'
+                  }}>
+                    {customerChange >= 0 ? '↑' : '↓'} {Math.abs(customerChange).toFixed(1)}%
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="usc-business-performance-chart-wrapper" style={{ width: '100%', height: '500px' }}>
+              <BusinessPerformancePieChart
+                data={periodBPieData || []}
+                showLegend={true}
+                showPercentage={true}
+              />
+            </div>
+          </div>
+
+          {/* Deposit Amount by Tier */}
+          <div style={{
+            backgroundColor: '#F9FAFB',
+            border: '1px solid #e5e7eb',
+            borderRadius: '12px',
+            padding: '16px',
+            boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+              <h4 style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                color: '#374151',
+                margin: 0,
+                marginBottom: '8px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.6px',
+                lineHeight: '1.2'
+              }}>
+                Deposit Amount
+              </h4>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                marginBottom: '4px'
+              }}>
+                <div style={{
+                  fontSize: '22px',
+                  fontWeight: 600,
+                  color: '#111827',
+                  lineHeight: '1.1'
+                }}>
+                  {formatCurrencyKPI(periodB.totalDepositAmount, 'USC')}
+                </div>
+                {depositChange !== 0 && (
+                  <span style={{
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    color: depositChange >= 0 ? '#059669' : '#dc2626',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '2px'
+                  }}>
+                    {depositChange >= 0 ? '↑' : '↓'} {Math.abs(depositChange).toFixed(1)}%
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="usc-business-performance-chart-wrapper" style={{ height: '500px', width: '100%' }}>
+              <BarChart
+                series={periodBDepositBarData?.series || []}
+                categories={periodBDepositBarData?.categories || []}
+                currency="USC"
+                horizontal={true}
+                showDataLabels={false}
+              />
+            </div>
+          </div>
+
+          {/* GGR by Tier (Profit/Loss) */}
+          <div style={{
+            backgroundColor: '#F9FAFB',
+            border: '1px solid #e5e7eb',
+            borderRadius: '12px',
+            padding: '16px',
+            boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+              <h4 style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                color: '#374151',
+                margin: 0,
+                marginBottom: '8px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.6px',
+                lineHeight: '1.2'
+              }}>
+                Gross Gaming Revenue
+              </h4>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                marginBottom: '4px'
+              }}>
+                <div style={{
+                  fontSize: '22px',
+                  fontWeight: 600,
+                  color: '#111827',
+                  lineHeight: '1.1'
+                }}>
+                  {formatCurrencyKPI(periodB.totalGGR, 'USC')}
+                </div>
+                {ggrChange !== 0 && (
+                  <span style={{
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    color: ggrChange >= 0 ? '#059669' : '#dc2626',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '2px'
+                  }}>
+                    {ggrChange >= 0 ? '↑' : '↓'} {Math.abs(ggrChange).toFixed(1)}%
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="usc-business-performance-chart-wrapper" style={{ height: '500px', width: '100%' }}>
+              <BarChart
+                series={periodBGGRBarData?.series || []}
+                categories={periodBGGRBarData?.categories || []}
+                currency="USC"
+                horizontal={true}
+                showDataLabels={false}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

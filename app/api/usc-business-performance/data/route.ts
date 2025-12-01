@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAllUSCBPKPIsWithMoM } from '@/lib/USCBusinessPerformanceLogic'
+import { validateSingleDateRange } from '../_utils/dateValidation'
 
 /**
  * ============================================================================
@@ -35,6 +36,17 @@ export async function GET(request: NextRequest) {
         success: false,
         error: 'Either (startDate, endDate) or (year, month) parameters are required'
       }, { status: 400 })
+    }
+    
+    // ✅ Validate date range if provided
+    if (startDate && endDate) {
+      const dateValidation = validateSingleDateRange(startDate, endDate)
+      if (!dateValidation.valid) {
+        return NextResponse.json({
+          success: false,
+          error: dateValidation.error || 'Invalid date range parameters'
+        }, { status: 400 })
+      }
     }
     
     console.log('📊 [USC BP Data] Parameters:', { startDate, endDate, year, month, line, squadLead, channel })

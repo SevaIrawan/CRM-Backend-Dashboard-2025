@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import Frame from '@/components/Frame'
 import CustomerTierTrends from './CustomerTierTrends'
 import CustomerTierMovement from './CustomerTierMovement'
+import TierMetricsComparison from './TierMetricsComparison'
 import ComingSoon from '@/components/ComingSoon'
 
 interface CustomerTierAnalyticsProps {
@@ -154,73 +155,16 @@ export default function CustomerTierAnalytics({
         />
         
         {/* Row 2: Tier Metrics Comparison - 1 Metric = 1 Frame Canvas */}
-        <div style={{
-          width: '100%',
-          backgroundColor: '#ffffff',
-          border: '1px solid #e5e7eb',
-          borderRadius: '8px',
-          padding: '16px',
-          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
-          minHeight: '400px'
-        }}>
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: '12px',
-            width: '100%',
-            height: '100%'
-          }}>
-            {/* Header */}
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'flex-start',
-              width: '100%',
-              marginBottom: '8px'
-            }}>
-              <div style={{ flex: 1 }}>
-                <h3 style={{ 
-                  fontSize: '18px', 
-                  fontWeight: 700, 
-                  color: '#1f2937',
-                  margin: 0,
-                  marginBottom: '4px'
-                }}>
-                  Tier Metrics Comparison
-                </h3>
-                <p style={{ 
-                  fontSize: '13px', 
-                  color: '#6b7280',
-                  margin: 0
-                }}>
-                  Utilization and contribution analysis across all tiers
-                </p>
-              </div>
-            </div>
-            
-            {/* Horizontal Separator Line */}
-            <div style={{
-              width: '100%',
-              height: '1px',
-              backgroundColor: '#e5e7eb',
-              marginBottom: '12px'
-            }} />
-            
-            {/* Coming Soon Content */}
-            <div style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minHeight: '300px'
-            }}>
-              <ComingSoon 
-                title="Tier Metrics Comparison"
-                message="Detailed tier comparison metrics will be available soon"
-              />
-            </div>
-          </div>
-        </div>
+        <TierMetricsComparison 
+          periodAStart={periodAStart}
+          periodAEnd={periodAEnd}
+          periodBStart={periodBStart}
+          periodBEnd={periodBEnd}
+          brand={brand}
+          squadLead={squadLead}
+          channel={channel}
+          searchTrigger={searchTrigger}
+        />
         
         {/* Row 3: Customer Tier Movement Analysis - 1 Metric = 1 Frame Canvas */}
         <CustomerTierMovement 

@@ -69,40 +69,48 @@ export default function CustomerTierLineChart({
   // State untuk track line yang sedang di-isolate (null = semua visible, number = hanya line tersebut visible)
   const [isolatedIndex, setIsolatedIndex] = useState<number | null>(null)
   
-  // ✅ CSS untuk tooltip scroll - modern dan fleksibel
+  // ✅ CSS untuk tooltip scroll - modern dan fleksibel - HANYA untuk Business Performance page
   useEffect(() => {
-    const styleId = 'customer-tier-tooltip-scroll'
+    const styleId = 'customer-tier-tooltip-scroll-bp'
     if (!document.getElementById(styleId)) {
       const style = document.createElement('style')
       style.id = styleId
       style.textContent = `
-        /* Tooltip container dengan scroll */
-        canvas ~ div[style*="position: absolute"] {
+        /* Tooltip container dengan scroll - HANYA untuk Business Performance page */
+        .bp-subheader-wrapper canvas ~ div[style*="position: absolute"] {
           max-height: 400px !important;
           overflow-y: auto !important;
           overflow-x: hidden !important;
         }
-        canvas ~ div[style*="position: absolute"] ul {
+        .bp-subheader-wrapper canvas ~ div[style*="position: absolute"] ul {
           max-height: 350px !important;
           overflow-y: auto !important;
         }
-        /* Scrollbar styling */
-        canvas ~ div[style*="position: absolute"]::-webkit-scrollbar {
+        /* Scrollbar styling - HANYA untuk Business Performance page */
+        .bp-subheader-wrapper canvas ~ div[style*="position: absolute"]::-webkit-scrollbar {
           width: 6px !important;
         }
-        canvas ~ div[style*="position: absolute"]::-webkit-scrollbar-track {
+        .bp-subheader-wrapper canvas ~ div[style*="position: absolute"]::-webkit-scrollbar-track {
           background: #f1f5f9 !important;
           border-radius: 3px !important;
         }
-        canvas ~ div[style*="position: absolute"]::-webkit-scrollbar-thumb {
+        .bp-subheader-wrapper canvas ~ div[style*="position: absolute"]::-webkit-scrollbar-thumb {
           background: #cbd5e1 !important;
           border-radius: 3px !important;
         }
-        canvas ~ div[style*="position: absolute"]::-webkit-scrollbar-thumb:hover {
+        .bp-subheader-wrapper canvas ~ div[style*="position: absolute"]::-webkit-scrollbar-thumb:hover {
           background: #94a3b8 !important;
         }
       `
       document.head.appendChild(style)
+    }
+    
+    return () => {
+      // Cleanup: hapus style element saat component unmount
+      const existingStyle = document.getElementById(styleId)
+      if (existingStyle) {
+        existingStyle.remove()
+      }
     }
   }, [])
   
@@ -218,80 +226,20 @@ export default function CustomerTierLineChart({
         display: false // Use custom legend
       },
       tooltip: {
-        enabled: true,
         mode: 'index' as const,
         intersect: false,
-        backgroundColor: 'rgba(0, 0, 0, 0.85)',
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-        borderWidth: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.9)', // ✅ BP STANDARD: Sama dengan BarChart
         titleColor: '#ffffff',
         bodyColor: '#ffffff',
-        titleFont: {
-          size: 14,
-          weight: 'bold' as const,
-          family: "'Inter', -apple-system, sans-serif"
-        },
-        bodyFont: {
-          size: 13,
-          weight: 'normal' as const,
-          family: "'Inter', -apple-system, sans-serif"
-        },
-        padding: {
-          top: 16,
-          bottom: 16,
-          left: 18,
-          right: 18
-        },
-        displayColors: true,
-        boxWidth: 14,
-        boxHeight: 14,
-        boxPadding: 7,
+        borderColor: '#3B82F6', // ✅ BP STANDARD: Sama dengan BarChart
+        borderWidth: 1,
         cornerRadius: 8,
-        titleSpacing: 10,
-        bodySpacing: 10,
-        titleMarginBottom: 12,
-        itemSort: function(a: any, b: any) {
-          // Sort by tier number (ascending: tier 1 first = high tier, tier 7 last = low tier)
-          // Urutan dari tinggi ke rendah (Z to A): Super VIP → Tier 5 → Tier 4 → Tier 3 → Tier 2 → Tier 1 → Regular
-          const tierNameA = getTierName(a.dataset.label || '')
-          const tierNameB = getTierName(b.dataset.label || '')
-          const tierNumA = getTierNumber(tierNameA)
-          const tierNumB = getTierNumber(tierNameB)
-          return tierNumA - tierNumB // Ascending: tier 1 (Super VIP) first, then 2, 3, 4, 5, 6, 7 (Regular)
-        },
+        padding: 12, // ✅ BP STANDARD: Sama dengan BarChart
+        displayColors: true,
         callbacks: {
           title: function(context: any) {
-            if (context.length > 0 && context[0].label) {
-              const dateStr = context[0].label
-              try {
-                if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-                  const [year, month, day] = dateStr.split('-').map(Number)
-                  const date = new Date(year, month - 1, day)
-                  if (!isNaN(date.getTime()) && date.getFullYear() >= 2020 && date.getFullYear() <= 2030) {
-                    return date.toLocaleDateString('en-US', {
-                      weekday: 'short',
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric'
-                    })
-                  }
-                } else {
-                  const date = new Date(dateStr)
-                  if (!isNaN(date.getTime()) && date.getFullYear() >= 2020 && date.getFullYear() <= 2030) {
-                    return date.toLocaleDateString('en-US', {
-                      weekday: 'short',
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric'
-                    })
-                  }
-                }
-              } catch (e) {
-                // Fallback
-              }
-              return dateStr
-            }
-            return ''
+            // ✅ BP STANDARD: Sama dengan BarChart - simple format
+            return `📅 ${context[0].label}`
           },
           label: function(context: any) {
             // Get all dataPoints untuk calculate total
@@ -356,7 +304,27 @@ export default function CustomerTierLineChart({
   }
 
   return (
-    <div style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div 
+      style={{ 
+        height: '100%', 
+        width: '100%', 
+        display: 'flex', 
+        flexDirection: 'column',
+        boxShadow: 'none', // ✅ HANYA 1 HOVER SHADOW - No initial shadow
+        transition: 'all 0.2s ease',
+        cursor: 'default'
+      }}
+      onMouseEnter={(e) => {
+        // ✅ HANYA 1 HOVER SHADOW - Di dalam canvas, include canvas dan chart
+        e.currentTarget.style.transform = 'translateY(-3px)'
+        e.currentTarget.style.boxShadow = '0 8px 25px 0 rgba(0, 0, 0, 0.12), 0 4px 10px 0 rgba(0, 0, 0, 0.08)'
+      }}
+      onMouseLeave={(e) => {
+        // ✅ Reset - No shadow
+        e.currentTarget.style.transform = 'translateY(0)'
+        e.currentTarget.style.boxShadow = 'none'
+      }}
+    >
       {/* Chart */}
       <div 
         style={{ 

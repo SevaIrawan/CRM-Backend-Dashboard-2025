@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { validatePeriodRanges } from '../_utils/dateValidation'
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,17 +33,11 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Validate date formats
-    const validateDate = (dateStr: string): boolean => {
-      if (!dateStr || typeof dateStr !== 'string') return false
-      const date = new Date(dateStr)
-      return !isNaN(date.getTime())
-    }
-
-    if (!validateDate(periodAStart!) || !validateDate(periodAEnd!) || 
-        !validateDate(periodBStart!) || !validateDate(periodBEnd!)) {
+    // ✅ Validate date ranges using helper function
+    const dateValidation = validatePeriodRanges(periodAStart, periodAEnd, periodBStart, periodBEnd)
+    if (!dateValidation.valid) {
       return NextResponse.json(
-        { error: 'Invalid date format in period date ranges' },
+        { error: dateValidation.error || 'Invalid date format in period date ranges' },
         { status: 400 }
       )
     }
