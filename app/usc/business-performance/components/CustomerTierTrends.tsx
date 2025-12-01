@@ -983,20 +983,10 @@ export default function CustomerTierTrends({
             style={{ 
               width: '100%',
               height: '100%',
-              border: '1px solid #e5e7eb', // ✅ Border permanent
+              border: '1px solid #e5e7eb',
               borderRadius: '8px',
               padding: '12px',
-              backgroundColor: '#F9FAFB',
-              transition: 'all 0.3s ease',
-              cursor: 'default'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-              e.currentTarget.style.borderColor = '#D1D5DB'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
-              e.currentTarget.style.borderColor = '#e5e7eb'
+              backgroundColor: '#F9FAFB'
             }}
           >
             {/* Period A Title and Date Range Slicer - Sejajar */}
@@ -1220,20 +1210,10 @@ export default function CustomerTierTrends({
             style={{ 
               width: '100%',
               height: '100%',
-              border: '1px solid #e5e7eb', // ✅ Border permanent
+              border: '1px solid #e5e7eb',
               borderRadius: '8px',
               padding: '12px',
-              backgroundColor: '#F9FAFB',
-              transition: 'all 0.3s ease',
-              cursor: 'default'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-              e.currentTarget.style.borderColor = '#D1D5DB'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
-              e.currentTarget.style.borderColor = '#e5e7eb'
+              backgroundColor: '#F9FAFB'
             }}
           >
             {/* Period B Title and Date Range Slicer - Sejajar */}
