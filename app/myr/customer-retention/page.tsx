@@ -985,50 +985,116 @@ function TransactionHistoryModal({
     }
   }, [isOpen])
 
-  const handleExportCSV = () => {
-    if (transactions.length === 0) return
+  const handleExportCSV = async () => {
+    if (pagination.totalRecords === 0) return
 
     setExporting(true)
 
-    const columns = [
-      'transaction_date',
-      'brand',
-      'unique_code',
-      'first_deposit_date',
-      'last_deposit_date',
-      'deposit_cases',
-      'deposit_amount',
-      'withdraw_cases',
-      'withdraw_amount',
-      'ggr',
-      'net_profit'
-    ]
+    try {
+      // ✅ Fetch ALL data for export using batch fetching (to handle large datasets)
+      const userStr = localStorage.getItem('nexmax_user')
+      const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
 
-    const csvHeader = columns.map(col => col.toUpperCase().replace(/_/g, ' ')).join(',')
-    
-    const csvRows = transactions.map(row => {
-      return columns.map(col => {
-        let key = col
-        if (col === 'transaction_date') key = 'date'
-        if (col === 'brand') key = 'line'
-        const value = row[key]
-        return typeof value === 'number' ? value.toFixed(2) : (value || '')
-      }).join(',')
-    })
+      const batchSize = 1000 // Fetch 1000 records per batch
+      let allTransactions: any[] = []
+      let currentPage = 1
+      let hasMore = true
 
-    const csvContent = [csvHeader, ...csvRows].join('\n')
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    
-    link.setAttribute('href', url)
-    link.setAttribute('download', `transaction_history_${userkey}_${new Date().toISOString().split('T')[0]}.csv`)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+      // Fetch all data in batches
+      while (hasMore) {
+        const params = new URLSearchParams({
+          userkey,
+          line,
+          year,
+          month,
+          filterMode,
+          page: currentPage.toString(),
+          limit: batchSize.toString()
+        })
 
-    setExporting(false)
+        if (filterMode === 'daterange' && startDate && endDate) {
+          params.append('startDate', startDate)
+          params.append('endDate', endDate)
+        }
+
+        const response = await fetch(`/api/myr-customer-retention/transaction-history?${params}`, {
+          headers: allowedBrands ? {
+            'x-user-allowed-brands': JSON.stringify(allowedBrands)
+          } : {}
+        })
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch transaction data (page ${currentPage})`)
+        }
+
+        const result = await response.json()
+        
+        if (!result.success || !result.data) {
+          break
+        }
+
+        const batchData = result.data || []
+        allTransactions = [...allTransactions, ...batchData]
+
+        // Check if we have more data to fetch
+        hasMore = batchData.length === batchSize && allTransactions.length < pagination.totalRecords
+        currentPage++
+
+        // Safety limit to prevent infinite loops
+        if (allTransactions.length >= pagination.totalRecords || currentPage > 100) {
+          hasMore = false
+        }
+      }
+
+      if (allTransactions.length === 0) {
+        alert('No transaction data available to export')
+        setExporting(false)
+        return
+      }
+
+      const columns = [
+        'transaction_date',
+        'brand',
+        'unique_code',
+        'first_deposit_date',
+        'last_deposit_date',
+        'deposit_cases',
+        'deposit_amount',
+        'withdraw_cases',
+        'withdraw_amount',
+        'ggr',
+        'net_profit'
+      ]
+
+      const csvHeader = columns.map(col => col.toUpperCase().replace(/_/g, ' ')).join(',')
+      
+      const csvRows = allTransactions.map((row: any) => {
+        return columns.map(col => {
+          let key = col
+          if (col === 'transaction_date') key = 'date'
+          if (col === 'brand') key = 'line'
+          const value = row[key]
+          return typeof value === 'number' ? value.toFixed(2) : (value || '')
+        }).join(',')
+      })
+
+      const csvContent = [csvHeader, ...csvRows].join('\n')
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      
+      link.setAttribute('href', url)
+      link.setAttribute('download', `transaction_history_${userkey}_${new Date().toISOString().split('T')[0]}.csv`)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (error) {
+      console.error('Error exporting transaction history:', error)
+      alert('Failed to export transaction history. Please try again.')
+    } finally {
+      setExporting(false)
+    }
   }
 
   if (!isOpen) return null
@@ -1276,14 +1342,14 @@ function TransactionHistoryModal({
 
             <button
               onClick={handleExportCSV}
-              disabled={exporting || transactions.length === 0}
+              disabled={exporting || pagination.totalRecords === 0}
               style={{
                 padding: '8px 16px',
-                backgroundColor: transactions.length > 0 ? '#10b981' : '#d1d5db',
+                backgroundColor: pagination.totalRecords > 0 ? '#10b981' : '#d1d5db',
                 color: 'white',
                 border: 'none',
                 borderRadius: '6px',
-                cursor: transactions.length > 0 ? 'pointer' : 'not-allowed',
+                cursor: pagination.totalRecords > 0 ? 'pointer' : 'not-allowed',
                 fontSize: '14px',
                 fontWeight: 500
               }}
