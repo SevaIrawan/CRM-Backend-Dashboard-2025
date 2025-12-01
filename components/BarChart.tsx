@@ -31,7 +31,7 @@ ChartJS.register(
 interface Series {
   name: string;
   data: number[];
-  color?: string;
+  color?: string | string[]; // Support single color or array of colors for per-bar coloring
 }
 
 interface BarChartProps {
