@@ -77,6 +77,10 @@ export default function BusinessPerformancePieChart({
       legend: {
         display: false // We'll use custom legend
       },
+      // ✅ BP Standard: Explicitly disable datalabels - NO LABELS on chart
+      datalabels: {
+        display: false
+      },
       tooltip: {
         mode: 'index' as const,
         intersect: false,

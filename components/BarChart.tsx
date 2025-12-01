@@ -238,50 +238,53 @@ export default function BarChart({
       legend: {
         display: false
       },
-      datalabels: {
-        display: showDataLabels,
-        color: '#1f2937',
-        font: {
-          weight: 'bold' as const,
-          size: 10
-        },
-        anchor: horizontal ? 'start' as const : 'end' as const,
-        align: horizontal ? 'right' as const : 'top' as const,
-        offset: horizontal ? 4 : -2,
-        formatter: function(value: number, context: any) {
-          const datasetLabel = context.dataset.label || '';
-          
-          // Check if this is cases type
-          const isCasesType = datasetLabel && datasetLabel.toLowerCase().includes('cases');
-          
-          // Check if this is count type (member, depositor, register)
-          const isCountType = datasetLabel && (
-            datasetLabel.toLowerCase().includes('depositor') || 
-            (datasetLabel.toLowerCase().includes('member') && !datasetLabel.toLowerCase().includes('user')) ||
-            datasetLabel.toLowerCase().includes('count') ||
-            datasetLabel.toLowerCase().includes('register')
-          );
-          
-          // Check if this is rate/percentage type
-          const isRateType = datasetLabel && (
-            datasetLabel.toLowerCase().includes('rate') ||
-            datasetLabel.toLowerCase().includes('winrate') ||
-            datasetLabel.toLowerCase().includes('percentage')
-          );
-          
-          // Format based on type
-          if (isCasesType) {
-            return formatIntegerKPI(value) + 'c';
-          } else if (isCountType) {
-            return formatIntegerKPI(value);
-          } else if (isRateType) {
-            return formatPercentageKPI(value);
-          } else {
-            // For amount/currency - use currency format
-            return formatCurrencyKPI(value, currency);
+      // ✅ ONLY include datalabels config if showDataLabels is true
+      ...(showDataLabels && {
+        datalabels: {
+          display: true,
+          color: '#1f2937',
+          font: {
+            weight: 'bold' as const,
+            size: 10
+          },
+          anchor: horizontal ? 'start' as const : 'end' as const,
+          align: horizontal ? 'right' as const : 'top' as const,
+          offset: horizontal ? 4 : -2,
+          formatter: function(value: number, context: any) {
+            const datasetLabel = context.dataset.label || '';
+            
+            // Check if this is cases type
+            const isCasesType = datasetLabel && datasetLabel.toLowerCase().includes('cases');
+            
+            // Check if this is count type (member, depositor, register)
+            const isCountType = datasetLabel && (
+              datasetLabel.toLowerCase().includes('depositor') || 
+              (datasetLabel.toLowerCase().includes('member') && !datasetLabel.toLowerCase().includes('user')) ||
+              datasetLabel.toLowerCase().includes('count') ||
+              datasetLabel.toLowerCase().includes('register')
+            );
+            
+            // Check if this is rate/percentage type
+            const isRateType = datasetLabel && (
+              datasetLabel.toLowerCase().includes('rate') ||
+              datasetLabel.toLowerCase().includes('winrate') ||
+              datasetLabel.toLowerCase().includes('percentage')
+            );
+            
+            // Format based on type
+            if (isCasesType) {
+              return formatIntegerKPI(value) + 'c';
+            } else if (isCountType) {
+              return formatIntegerKPI(value);
+            } else if (isRateType) {
+              return formatPercentageKPI(value);
+            } else {
+              // For amount/currency - use currency format
+              return formatCurrencyKPI(value, currency);
+            }
           }
         }
-      },
+      }),
       tooltip: {
         mode: 'index' as const,
         intersect: false,

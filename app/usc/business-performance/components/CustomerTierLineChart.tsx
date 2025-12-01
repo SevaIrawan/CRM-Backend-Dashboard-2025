@@ -225,6 +225,10 @@ export default function CustomerTierLineChart({
       legend: {
         display: false // Use custom legend
       },
+      // ✅ BP Standard: Explicitly disable datalabels - NO LABELS on chart
+      datalabels: {
+        display: false
+      },
       tooltip: {
         mode: 'index' as const,
         intersect: false,
@@ -346,7 +350,7 @@ export default function CustomerTierLineChart({
           padding: '8px'
         }}
       >
-        <Line ref={chartRef} data={data} options={options} />
+        <Line ref={chartRef} data={data} options={options} plugins={[]} />
       </div>
       
       {/* Custom Legend - Tengah Bawah */}
