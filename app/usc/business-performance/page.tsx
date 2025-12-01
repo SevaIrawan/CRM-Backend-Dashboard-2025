@@ -169,13 +169,8 @@ export default function USCBusinessPerformancePage() {
               }
             }
             
-            // Set Channel options
-            if (result.data.channels) {
-              setChannelOptions(result.data.channels)
-              if (result.data.defaults?.channel) {
-                setChannel(result.data.defaults.channel)
-              }
-            }
+            // Channel removed from UI, but keep state as 'All' for API compatibility
+            setChannel('All')
             
             // Set Tier Name options (from database)
             if (result.data.tierNames) {
@@ -458,50 +453,6 @@ export default function USCBusinessPerformancePage() {
           </select>
         </div>
 
-        {/* Brand/Line Slicer */}
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: '8px',
-          flex: '1 1 0'
-        }}>
-          <label style={{ 
-            fontSize: '12px', 
-            fontWeight: 500, 
-            color: '#374151',
-            whiteSpace: 'nowrap'
-          }}>Brand</label>
-          <select
-            value={brand}
-            onChange={(e) => setBrand(e.target.value)}
-            disabled={loadingSlicers}
-            style={{
-              padding: '6px 10px',
-              borderRadius: '6px',
-              border: '2px solid #e5e7eb',
-              fontSize: '13px',
-              backgroundColor: loadingSlicers ? '#f3f4f6' : 'white',
-              color: '#374151',
-              cursor: loadingSlicers ? 'not-allowed' : 'pointer',
-              outline: 'none',
-              transition: 'border-color 0.2s ease',
-              flex: '1',
-              minWidth: 0
-            }}
-            onFocus={(e) => !loadingSlicers && (e.target.style.borderColor = '#3b82f6')}
-            onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
-          >
-            {loadingSlicers ? (
-              <option>Loading...</option>
-            ) : (
-              brandOptions.map((option) => (
-                <option key={option} value={option}>{option}</option>
-              ))
-            )}
-          </select>
-        </div>
-
         {/* Squad Lead Slicer */}
         <div style={{ 
           display: 'flex', 
@@ -546,7 +497,7 @@ export default function USCBusinessPerformancePage() {
           </select>
         </div>
 
-        {/* Channel Slicer */}
+        {/* Brand/Line Slicer */}
         <div style={{ 
           display: 'flex', 
           flexDirection: 'row',
@@ -559,10 +510,10 @@ export default function USCBusinessPerformancePage() {
             fontWeight: 500, 
             color: '#374151',
             whiteSpace: 'nowrap'
-          }}>Channel</label>
+          }}>Brand</label>
           <select
-            value={channel}
-            onChange={(e) => setChannel(e.target.value)}
+            value={brand}
+            onChange={(e) => setBrand(e.target.value)}
             disabled={loadingSlicers}
             style={{
               padding: '6px 10px',
@@ -583,7 +534,7 @@ export default function USCBusinessPerformancePage() {
             {loadingSlicers ? (
               <option>Loading...</option>
             ) : (
-              channelOptions.map((option) => (
+              brandOptions.map((option) => (
                 <option key={option} value={option}>{option}</option>
               ))
             )}
