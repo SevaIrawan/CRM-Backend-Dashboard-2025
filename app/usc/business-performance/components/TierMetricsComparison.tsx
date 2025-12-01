@@ -1181,7 +1181,8 @@ export default function TierMetricsComparison({
                         <td style={{
                           padding: '12px',
                           textAlign: 'right',
-                          color: '#374151',
+                          color: tierA.ggr >= 0 ? '#059669' : '#dc2626',
+                          fontWeight: 600,
                           borderRight: '1px solid #e5e7eb'
                         }}>
                           {formatCurrencyKPI(tierA.ggr, 'USC')}
@@ -1254,11 +1255,13 @@ export default function TierMetricsComparison({
                         <td style={{
                           padding: '12px',
                           textAlign: 'right',
-                          color: '#374151',
                           borderRight: '1px solid #e5e7eb'
                         }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
-                            <span>{formatCurrencyKPI(tierB.ggr, 'USC')}</span>
+                            <span style={{
+                              color: tierB.ggr >= 0 ? '#059669' : '#dc2626',
+                              fontWeight: 600
+                            }}>{formatCurrencyKPI(tierB.ggr, 'USC')}</span>
                             {ggrChange !== 0 && (
                               <span style={{
                                 fontSize: '11px',
@@ -1272,11 +1275,12 @@ export default function TierMetricsComparison({
                         </td>
                         <td style={{
                           padding: '12px',
-                          textAlign: 'right',
-                          color: '#374151'
+                          textAlign: 'right'
                         }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
-                            <span>{formatPercentageKPI(winRateB)}</span>
+                            <span style={{
+                              color: '#374151'
+                            }}>{formatPercentageKPI(winRateB)}</span>
                             {wrChange !== 0 && (
                               <span style={{
                                 fontSize: '11px',
