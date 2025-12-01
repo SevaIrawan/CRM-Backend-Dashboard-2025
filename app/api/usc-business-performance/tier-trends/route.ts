@@ -259,6 +259,40 @@ function formatDateLabel(dateString: string): string {
 }
 
 /**
+ * Generate all dates in a range (YYYY-MM-DD format)
+ * CRITICAL: This ensures chart shows ALL dates in period, even if no data exists
+ */
+function generateAllDatesInRange(startDate: string, endDate: string): string[] {
+  const dates: string[] = []
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+  
+  // Validate dates
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    console.error('❌ [Tier Trends] Invalid date range:', { startDate, endDate })
+    return []
+  }
+  
+  // Reset time to midnight for consistent comparison
+  start.setHours(0, 0, 0, 0)
+  end.setHours(0, 0, 0, 0)
+  
+  const currentDate = new Date(start)
+  
+  while (currentDate <= end) {
+    const year = currentDate.getFullYear()
+    const month = String(currentDate.getMonth() + 1).padStart(2, '0')
+    const day = String(currentDate.getDate()).padStart(2, '0')
+    dates.push(`${year}-${month}-${day}`)
+    
+    // Move to next day
+    currentDate.setDate(currentDate.getDate() + 1)
+  }
+  
+  return dates
+}
+
+/**
  * Get daily active count by tier_group for a period (DEFAULT MODE)
  * Count = COUNT(DISTINCT userkey) per tier_group per day
  * Active = deposit_cases > 0
@@ -271,35 +305,41 @@ async function getDailyActiveCountByTierGroup(
   channel: string,
   userAllowedBrands: string[] | null
 ): Promise<{ data: Record<string, number[]>, dates: string[] }> {
-  // Build base query
-  let baseQuery = supabase
-    .from('blue_whale_usc')
-    .select('date, userkey, tier_group')
-    .eq('currency', 'USC')
-    .gte('date', period.startDate)
-    .lte('date', period.endDate)
-    .gt('deposit_cases', 0)
-    .not('tier_group', 'is', null)
-  
-  if (brand && brand !== 'All' && brand !== 'ALL') {
-    baseQuery = baseQuery.eq('line', brand)
-  }
-  
-  baseQuery = applySquadLeadFilter(baseQuery, squadLead || 'All')
-  baseQuery = applyChannelFilter(baseQuery, channel || 'All')
-  
-  if (userAllowedBrands && userAllowedBrands.length > 0) {
-    baseQuery = baseQuery.in('line', userAllowedBrands)
-  }
-  
   // ✅ BATCH FETCHING for large datasets
+  // CRITICAL: Store period dates in constants to ensure they're used correctly
+  const queryStartDate = period.startDate
+  const queryEndDate = period.endDate
+  
   const batchSize = 10000
   let allData: any[] = []
   let offset = 0
   let hasMore = true
   
   while (hasMore) {
-    const batchQuery = baseQuery.range(offset, offset + batchSize - 1)
+    // CRITICAL: Rebuild query for each batch to ensure all filters are preserved
+    // This prevents filter loss when reusing query builder
+    let batchQuery = supabase
+      .from('blue_whale_usc')
+      .select('date, userkey, tier_group')
+      .eq('currency', 'USC')
+      .gte('date', queryStartDate) // CRITICAL: Use constant, not period.startDate
+      .lte('date', queryEndDate)   // CRITICAL: Use constant, not period.endDate
+      .gt('deposit_cases', 0)
+      .not('tier_group', 'is', null)
+    
+    if (brand && brand !== 'All' && brand !== 'ALL') {
+      batchQuery = batchQuery.eq('line', brand)
+    }
+    
+    batchQuery = applySquadLeadFilter(batchQuery, squadLead || 'All')
+    batchQuery = applyChannelFilter(batchQuery, channel || 'All')
+    
+    if (userAllowedBrands && userAllowedBrands.length > 0) {
+      batchQuery = batchQuery.in('line', userAllowedBrands)
+    }
+    
+    // Apply pagination
+    batchQuery = batchQuery.range(offset, offset + batchSize - 1)
     const batchResult = await batchQuery.order('date', { ascending: true })
     
     if (batchResult.error) {
@@ -341,17 +381,18 @@ async function getDailyActiveCountByTierGroup(
     tierMap.get(tierGroup)!.add(userkey)
   })
   
-  // ✅ Extract dates directly from aggregation (sorted)
-  const allDates = Array.from(dateTierMap.keys()).sort()
+  // ✅ CRITICAL: Generate ALL dates in period range (not just dates with data)
+  // This ensures chart shows complete date range even if some days have no data
+  const allDatesInRange = generateAllDatesInRange(period.startDate, period.endDate)
   
   // ✅ Format dates to DD MMM format
-  const formattedDates = allDates.map(formatDateLabel)
+  const formattedDates = allDatesInRange.map(formatDateLabel)
   
   const tierGroups = ['High Value', 'Medium Value', 'Low Value', 'Potential']
   const result: Record<string, number[]> = {}
   
   tierGroups.forEach(tierGroup => {
-    result[tierGroup] = allDates.map(date => {
+    result[tierGroup] = allDatesInRange.map(date => {
       const tierMap = dateTierMap.get(date)
       if (!tierMap) return 0
       const userSet = tierMap.get(tierGroup)
@@ -376,40 +417,46 @@ async function getDailyActiveCountByTierName(
   userAllowedBrands: string[] | null,
   tierNameFilter: string[] = []
 ): Promise<{ data: Record<string, number[]>, dates: string[] }> {
-  // Build base query
-  let baseQuery = supabase
-    .from('blue_whale_usc')
-    .select('date, userkey, tier_name')
-    .eq('currency', 'USC')
-    .gte('date', period.startDate)
-    .lte('date', period.endDate)
-    .gt('deposit_cases', 0)
-    .not('tier_name', 'is', null)
-  
-  if (brand && brand !== 'All' && brand !== 'ALL') {
-    baseQuery = baseQuery.eq('line', brand)
-  }
-  
-  baseQuery = applySquadLeadFilter(baseQuery, squadLead || 'All')
-  baseQuery = applyChannelFilter(baseQuery, channel || 'All')
-  
-  if (userAllowedBrands && userAllowedBrands.length > 0) {
-    baseQuery = baseQuery.in('line', userAllowedBrands)
-  }
-  
-  // Apply tier_name filter
-  if (tierNameFilter && tierNameFilter.length > 0) {
-    baseQuery = baseQuery.in('tier_name', tierNameFilter)
-  }
-  
   // ✅ BATCH FETCHING for large datasets
+  // CRITICAL: Store period dates in constants to ensure they're used correctly
+  const queryStartDate = period.startDate
+  const queryEndDate = period.endDate
+  
   const batchSize = 10000
   let allData: any[] = []
   let offset = 0
   let hasMore = true
   
   while (hasMore) {
-    const batchQuery = baseQuery.range(offset, offset + batchSize - 1)
+    // CRITICAL: Rebuild query for each batch to ensure all filters are preserved
+    // This prevents filter loss when reusing query builder
+    let batchQuery = supabase
+      .from('blue_whale_usc')
+      .select('date, userkey, tier_name')
+      .eq('currency', 'USC')
+      .gte('date', queryStartDate) // CRITICAL: Use constant, not period.startDate
+      .lte('date', queryEndDate)   // CRITICAL: Use constant, not period.endDate
+      .gt('deposit_cases', 0)
+      .not('tier_name', 'is', null)
+    
+    if (brand && brand !== 'All' && brand !== 'ALL') {
+      batchQuery = batchQuery.eq('line', brand)
+    }
+    
+    batchQuery = applySquadLeadFilter(batchQuery, squadLead || 'All')
+    batchQuery = applyChannelFilter(batchQuery, channel || 'All')
+    
+    if (userAllowedBrands && userAllowedBrands.length > 0) {
+      batchQuery = batchQuery.in('line', userAllowedBrands)
+    }
+    
+    // Apply tier_name filter
+    if (tierNameFilter && tierNameFilter.length > 0) {
+      batchQuery = batchQuery.in('tier_name', tierNameFilter)
+    }
+    
+    // Apply pagination
+    batchQuery = batchQuery.range(offset, offset + batchSize - 1)
     const batchResult = await batchQuery.order('date', { ascending: true })
     
     if (batchResult.error) {
@@ -451,11 +498,12 @@ async function getDailyActiveCountByTierName(
     tierMap.get(tierName)!.add(userkey)
   })
   
-  // ✅ Extract dates directly from aggregation (sorted)
-  const allDates = Array.from(dateTierMap.keys()).sort()
+  // ✅ CRITICAL: Generate ALL dates in period range (not just dates with data)
+  // This ensures chart shows complete date range even if some days have no data
+  const allDatesInRange = generateAllDatesInRange(period.startDate, period.endDate)
   
   // ✅ Format dates to DD MMM format
-  const formattedDates = allDates.map(formatDateLabel)
+  const formattedDates = allDatesInRange.map(formatDateLabel)
   
   const allTierNames = new Set<string>()
   dateTierMap.forEach(tierMap => {
@@ -465,7 +513,7 @@ async function getDailyActiveCountByTierName(
   const result: Record<string, number[]> = {}
   
   allTierNames.forEach(tierName => {
-    result[tierName] = allDates.map(date => {
+    result[tierName] = allDatesInRange.map(date => {
       const tierMap = dateTierMap.get(date)
       if (!tierMap) return 0
       const userSet = tierMap.get(tierName)

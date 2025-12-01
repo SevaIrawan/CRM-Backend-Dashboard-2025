@@ -93,62 +93,107 @@ async function aggregateTierMetricsByDateRange(
   line?: string,
   squadLead?: string,
   channel?: string,
-  userAllowedBrands?: string[] | null
+  userAllowedBrands?: string[] | null,
+  periodLabel?: string // Optional label for logging (e.g., "Period A" or "Period B")
 ): Promise<{
   customerCountByTier: Map<string, Set<string>> // tier_name -> Set<userkey>
   depositAmountByTier: Map<string, number> // tier_name -> total deposit_amount
   ggrByTier: Map<string, number> // tier_name -> total ggr
 }> {
-  console.log(`📊 [Tier Metrics Aggregate] Fetching data for date range: ${startDate} to ${endDate}`)
+  const periodPrefix = periodLabel ? `[${periodLabel}]` : ''
+  console.log(`📊 ${periodPrefix} [Tier Metrics Aggregate] Fetching data for date range: ${startDate} to ${endDate}`)
   
-  // Build base query
-  let query = supabase
-    .from('blue_whale_usc')
-    .select('userkey, tier_name, deposit_amount, withdraw_amount, deposit_cases, date')
-    .eq('currency', 'USC')
-    .gte('date', startDate)
-    .lte('date', endDate)
-    .not('tier_name', 'is', null) // Only users with tier
-
-  if (line && line !== 'All' && line !== 'ALL') {
-    query = query.eq('line', line)
+  // Validate dates
+  if (!startDate || !endDate) {
+    console.error(`❌ ${periodPrefix} [Tier Metrics Aggregate] ERROR: Missing date range - startDate: ${startDate}, endDate: ${endDate}`)
+    throw new Error('Start date and end date are required')
   }
-
-  query = applySquadLeadFilter(query, squadLead || 'All')
-  query = applyChannelFilter(query, channel || 'All')
-
-  if (userAllowedBrands && userAllowedBrands.length > 0) {
-    query = query.in('line', userAllowedBrands)
+  
+  if (startDate > endDate) {
+    console.error(`❌ ${periodPrefix} [Tier Metrics Aggregate] ERROR: Invalid date range - startDate (${startDate}) > endDate (${endDate})`)
+    throw new Error(`Invalid date range: start date ${startDate} is after end date ${endDate}`)
   }
-
+  
   // Batch fetch for large datasets
   const BATCH_SIZE = 10000
   let allData: any[] = []
   let offset = 0
   let hasMore = true
   
-  console.log(`📊 [Tier Metrics Aggregate] Query filters - date range: ${startDate} to ${endDate}, line: ${line || 'All'}, squadLead: ${squadLead || 'All'}, channel: ${channel || 'All'}`)
+  console.log(`📊 ${periodPrefix} [Tier Metrics Aggregate] Query filters - date range: ${startDate} to ${endDate}, line: ${line || 'All'}, squadLead: ${squadLead || 'All'}, channel: ${channel || 'All'}`)
+
+  // CRITICAL: Store date range in local constants to ensure they are not accidentally modified
+  const queryStartDate = startDate
+  const queryEndDate = endDate
 
   while (hasMore) {
-    // IMPORTANT: Create new query for each batch to ensure filters are preserved
-    const batchQuery = query.range(offset, offset + BATCH_SIZE - 1)
+    // IMPORTANT: Rebuild query for each batch to ensure all filters are preserved
+    // CRITICAL: Use queryStartDate and queryEndDate constants - these are the date range for THIS period
+    let batchQuery = supabase
+      .from('blue_whale_usc')
+      .select('userkey, tier_name, deposit_amount, withdraw_amount, deposit_cases, date')
+      .eq('currency', 'USC')
+      .gte('date', queryStartDate) // CRITICAL: Use queryStartDate constant
+      .lte('date', queryEndDate)   // CRITICAL: Use queryEndDate constant
+      .not('tier_name', 'is', null)
+    
+    if (line && line !== 'All' && line !== 'ALL') {
+      batchQuery = batchQuery.eq('line', line)
+    }
+    
+    batchQuery = applySquadLeadFilter(batchQuery, squadLead || 'All')
+    batchQuery = applyChannelFilter(batchQuery, channel || 'All')
+    
+    if (userAllowedBrands && userAllowedBrands.length > 0) {
+      batchQuery = batchQuery.in('line', userAllowedBrands)
+    }
+    
+    // Apply range for pagination
+    batchQuery = batchQuery.range(offset, offset + BATCH_SIZE - 1)
+    
     const { data, error } = await batchQuery
 
     if (error) {
-      console.error(`❌ [Tier Metrics Aggregate] Error fetching batch at offset ${offset} for date range ${startDate} to ${endDate}:`, error)
+      console.error(`❌ ${periodPrefix} [Tier Metrics Aggregate] Error fetching batch at offset ${offset} for date range ${startDate} to ${endDate}:`, error)
       break
+    }
+    
+    // CRITICAL: Log actual date range used in query for debugging
+    if (offset === 0) {
+      console.log(`📊 ${periodPrefix} [Tier Metrics Aggregate] Query executed with date range: .gte('date', '${startDate}') .lte('date', '${endDate}')`)
     }
 
     if (!data || data.length === 0) {
       hasMore = false
     } else {
+      // Verify that fetched data is within date range
+      const invalidDates = data.filter((row: any) => {
+        const rowDate = row.date
+        return !rowDate || rowDate < queryStartDate || rowDate > queryEndDate
+      })
+      
+      if (invalidDates.length > 0) {
+        console.warn(`⚠️ ${periodPrefix} [Tier Metrics Aggregate] Found ${invalidDates.length} records outside date range ${queryStartDate} to ${queryEndDate}`)
+      }
+      
       allData.push(...data)
       hasMore = data.length === BATCH_SIZE
       offset += BATCH_SIZE
       
       // Log progress for first batch only
       if (offset === BATCH_SIZE) {
-        console.log(`📊 [Tier Metrics Aggregate] First batch fetched: ${data.length} records for date range ${startDate} to ${endDate}`)
+        console.log(`📊 ${periodPrefix} [Tier Metrics Aggregate] First batch fetched: ${data.length} records for date range ${startDate} to ${endDate}`)
+        if (data.length > 0) {
+          const sampleDates = data.slice(0, 10).map((r: any) => r.date).sort()
+          const minDate = sampleDates[0]
+          const maxDate = sampleDates[sampleDates.length - 1]
+          console.log(`📊 ${periodPrefix} [Tier Metrics Aggregate] Sample dates in first batch (min: ${minDate}, max: ${maxDate}):`, sampleDates.join(', '))
+          
+          // Verify dates are within range
+          if (minDate < startDate || maxDate > endDate) {
+            console.error(`❌ ${periodPrefix} [Tier Metrics Aggregate] ERROR: Dates outside range! Expected: ${startDate} to ${endDate}, Got: ${minDate} to ${maxDate}`)
+          }
+        }
       }
     }
 
@@ -159,7 +204,27 @@ async function aggregateTierMetricsByDateRange(
     }
   }
   
-  console.log(`📊 [Tier Metrics Aggregate] Total records fetched: ${allData.length} for date range ${startDate} to ${endDate}`)
+  console.log(`📊 ${periodPrefix} [Tier Metrics Aggregate] Total records fetched: ${allData.length} for date range ${startDate} to ${endDate}`)
+  
+  // Final validation: Ensure all data is within date range
+  if (allData.length > 0) {
+    const allDates = allData.map((r: any) => r.date).filter((d: string) => d).sort()
+    const minFetchedDate = allDates[0]
+    const maxFetchedDate = allDates[allDates.length - 1]
+    console.log(`📊 ${periodPrefix} [Tier Metrics Aggregate] Date range validation - Expected: ${startDate} to ${endDate}, Actual fetched: ${minFetchedDate} to ${maxFetchedDate}`)
+    
+    const dateRangeValidation = allData.filter((row: any) => {
+      const rowDate = row.date
+      return !rowDate || rowDate < startDate || rowDate > endDate
+    })
+    
+    if (dateRangeValidation.length > 0) {
+      console.error(`❌ ${periodPrefix} [Tier Metrics Aggregate] ERROR: ${dateRangeValidation.length} records outside date range ${startDate} to ${endDate}`)
+      console.error(`❌ ${periodPrefix} [Tier Metrics Aggregate] Invalid dates sample:`, dateRangeValidation.slice(0, 10).map((r: any) => ({ date: r.date, userkey: r.userkey })))
+    } else {
+      console.log(`✅ ${periodPrefix} [Tier Metrics Aggregate] All ${allData.length} records are within date range ${startDate} to ${endDate}`)
+    }
+  }
 
   // Tier name to number mapping for sorting (to determine highest tier)
   const TIER_NAME_TO_NUMBER: Record<string, number> = {
@@ -342,34 +407,54 @@ export async function GET(request: NextRequest) {
     })
 
     // Fetch Period A metrics
+    console.log('📊 [Tier Metrics] ========== FETCHING PERIOD A ==========')
+    console.log('📊 [Tier Metrics] Period A date range:', { periodAStart, periodAEnd })
     const periodAMetrics = await aggregateTierMetricsByDateRange(
       periodAStart,
       periodAEnd,
       brand !== 'All' ? brand : undefined,
       squadLead !== 'All' ? squadLead : undefined,
       channel !== 'All' ? channel : undefined,
-      userAllowedBrands
+      userAllowedBrands,
+      'PERIOD A' // Label for logging
     )
 
     // Fetch Period B metrics
-    console.log('📊 [Tier Metrics] Fetching Period B data:', {
+    console.log('📊 [Tier Metrics] ========== FETCHING PERIOD B ==========')
+    console.log('📊 [Tier Metrics] Period B date range:', { periodBStart, periodBEnd })
+    console.log('📊 [Tier Metrics] Fetching Period B data with filters:', {
       periodBStart,
       periodBEnd,
       brand: brand !== 'All' ? brand : 'All',
       squadLead: squadLead !== 'All' ? squadLead : 'All',
       channel: channel !== 'All' ? channel : 'All'
     })
+    
+    // CRITICAL: Verify periodBStart and periodBEnd are not null/undefined
+    if (!periodBStart || !periodBEnd) {
+      console.error('❌ [Tier Metrics] ERROR: Period B dates are missing!', { periodBStart, periodBEnd })
+      return NextResponse.json({
+        success: false,
+        error: `Period B dates are missing: periodBStart=${periodBStart}, periodBEnd=${periodBEnd}`
+      }, { status: 400 })
+    }
+    
     const periodBMetrics = await aggregateTierMetricsByDateRange(
-      periodBStart!,
-      periodBEnd!,
+      periodBStart, // CRITICAL: Use periodBStart directly
+      periodBEnd,   // CRITICAL: Use periodBEnd directly
       brand !== 'All' ? brand : undefined,
       squadLead !== 'All' ? squadLead : undefined,
       channel !== 'All' ? channel : undefined,
-      userAllowedBrands
+      userAllowedBrands,
+      'PERIOD B' // Label for logging
     )
     console.log('📊 [Tier Metrics] Period B metrics received:', {
+      periodBStart,
+      periodBEnd,
       tiers: Array.from(periodBMetrics.customerCountByTier.keys()),
-      totalTiers: periodBMetrics.customerCountByTier.size
+      totalTiers: periodBMetrics.customerCountByTier.size,
+      totalCustomers: Array.from(periodBMetrics.customerCountByTier.values()).reduce((sum, set) => sum + set.size, 0),
+      totalDeposit: Array.from(periodBMetrics.depositAmountByTier.values()).reduce((sum, amt) => sum + amt, 0)
     })
 
     // Build tier metrics arrays

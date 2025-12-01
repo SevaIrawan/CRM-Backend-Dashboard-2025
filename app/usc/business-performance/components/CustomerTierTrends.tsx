@@ -534,18 +534,19 @@ export default function CustomerTierTrends({
         console.log('🔍 [Tier Trends] Using tier_group (default mode)')
       }
       
-      // ✅ Calculate dates based on dateRange (use ref to get latest value)
+      // ✅ CRITICAL: Use Period A and B from props/refs (managed by parent CustomerTierAnalytics)
+      // DO NOT recalculate here - parent already sets Period A and B based on Date Range slicer
       let datesToUse: { periodA: { start: string; end: string }; periodB: { start: string; end: string } } | null = null
       
-      if (currentDateRange === 'Last 7 Days' || currentDateRange === 'Last 30 Days') {
-        // Auto calculate dates for Last 7 Days or Last 30 Days
-        datesToUse = calculateDateRanges(currentDateRange)
-      } else if (currentDateRange === 'Custom') {
-        // For Custom mode, use dates from ref (sudah di-check di atas)
+      // ✅ Priority 1: Use Period A and B from props/refs if available (from parent CustomerTierAnalytics)
+      if (currentPeriodAStart && currentPeriodAEnd && currentPeriodBStart && currentPeriodBEnd) {
         datesToUse = {
           periodA: { start: currentPeriodAStart, end: currentPeriodAEnd },
           periodB: { start: currentPeriodBStart, end: currentPeriodBEnd }
         }
+      } else if (currentDateRange === 'Last 7 Days' || currentDateRange === 'Last 30 Days') {
+        // ✅ Priority 2: Fallback - calculate dates only if Period A/B not provided from parent
+        datesToUse = calculateDateRanges(currentDateRange)
       }
       
       // Send custom dates to API if available, otherwise use comparePeriod

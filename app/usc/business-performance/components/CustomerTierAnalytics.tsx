@@ -30,7 +30,9 @@ export default function CustomerTierAnalytics({
   const [periodBStart, setPeriodBStart] = useState<string>('')
   const [periodBEnd, setPeriodBEnd] = useState<string>('')
 
-  // Helper function to calculate date ranges (same logic as Customer Tier Trends)
+  // Helper function to calculate date ranges
+  // Period B (current): Based on Date Range slicer
+  // Period A (last): Same date range in previous month
   const calculateDateRanges = (rangeType: string) => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -41,11 +43,11 @@ export default function CustomerTierAnalytics({
       const periodBStart = new Date(today)
       periodBStart.setDate(today.getDate() - 6) // Last 7 days including today
       
-      // Period A: Previous month last 7 days (same day range, previous month)
+      // Period A: Same date range in previous month
       const periodAEnd = new Date(periodBEnd)
-      periodAEnd.setMonth(periodAEnd.getMonth() - 1)
+      periodAEnd.setMonth(periodAEnd.getMonth() - 1) // Same day, previous month
       const periodAStart = new Date(periodBStart)
-      periodAStart.setMonth(periodAStart.getMonth() - 1)
+      periodAStart.setMonth(periodAStart.getMonth() - 1) // Same day, previous month
       
       return {
         periodA: {
@@ -63,11 +65,11 @@ export default function CustomerTierAnalytics({
       const periodBStart = new Date(today)
       periodBStart.setDate(today.getDate() - 29) // Last 30 days including today
       
-      // Period A: Previous month last 30 days (same day range, previous month)
+      // Period A: Same date range in previous month
       const periodAEnd = new Date(periodBEnd)
-      periodAEnd.setMonth(periodAEnd.getMonth() - 1)
+      periodAEnd.setMonth(periodAEnd.getMonth() - 1) // Same day, previous month
       const periodAStart = new Date(periodBStart)
-      periodAStart.setMonth(periodAStart.getMonth() - 1)
+      periodAStart.setMonth(periodAStart.getMonth() - 1) // Same day, previous month
       
       return {
         periodA: {
@@ -82,6 +84,26 @@ export default function CustomerTierAnalytics({
     }
     
     return null
+  }
+  
+  // Helper function to calculate Period A from Period B (for Custom Date Range)
+  // Period A: Same date range in previous month
+  const calculatePeriodAFromPeriodB = (periodBStart: string, periodBEnd: string) => {
+    if (!periodBStart || !periodBEnd) return null
+    
+    const periodBStartDate = new Date(periodBStart)
+    const periodBEndDate = new Date(periodBEnd)
+    
+    // Period A: Same date range in previous month
+    const periodAEnd = new Date(periodBEndDate)
+    periodAEnd.setMonth(periodAEnd.getMonth() - 1) // Same day, previous month
+    const periodAStart = new Date(periodBStartDate)
+    periodAStart.setMonth(periodAStart.getMonth() - 1) // Same day, previous month
+    
+    return {
+      start: periodAStart.toISOString().split('T')[0],
+      end: periodAEnd.toISOString().split('T')[0]
+    }
   }
 
   // Initialize date ranges based on dateRange - HARUS di-set sebelum fetchData
@@ -103,6 +125,20 @@ export default function CustomerTierAnalytics({
       }
     }
   }, [dateRange])
+  
+  // Auto-calculate Period A when Period B changes (for Custom Date Range only)
+  // Period A = Previous period with same duration as Period B
+  useEffect(() => {
+    // Only auto-calculate for Custom Date Range mode
+    // For Last 7/30 Days, Period A is already calculated in calculateDateRanges
+    if (dateRange === 'Custom' && periodBStart && periodBEnd) {
+      const calculatedPeriodA = calculatePeriodAFromPeriodB(periodBStart, periodBEnd)
+      if (calculatedPeriodA) {
+        setPeriodAStart(calculatedPeriodA.start)
+        setPeriodAEnd(calculatedPeriodA.end)
+      }
+    }
+  }, [periodBStart, periodBEnd, dateRange])
   // Build footer info message
   const today = new Date()
   const year = today.getFullYear()
