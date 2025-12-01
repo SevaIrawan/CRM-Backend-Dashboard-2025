@@ -152,6 +152,54 @@ export default function TierMetricsComparison({
   const [isComparisonExpanded, setIsComparisonExpanded] = useState(false)
   const [isMovementExpanded, setIsMovementExpanded] = useState(false)
   
+  // State untuk track expanded row di Tier Movement & Match Analysis (hanya 1 row boleh expanded)
+  const [expandedMovementRow, setExpandedMovementRow] = useState<string | null>(null)
+  
+  // Function to toggle row expansion (hanya 1 row boleh expanded pada satu waktu)
+  const toggleMovementRow = (tierName: string) => {
+    setExpandedMovementRow(prev => {
+      // Jika row yang sama di-click, close (toggle)
+      if (prev === tierName) {
+        return null
+      }
+      // Jika row lain di-click, expand row baru dan close row sebelumnya
+      return tierName
+    })
+  }
+  
+  // Auto-close semua expanded rows ketika section di-collapse
+  useEffect(() => {
+    if (!isMovementExpanded) {
+      setExpandedMovementRow(null)
+    }
+  }, [isMovementExpanded])
+  
+  // Function to generate insight text based on customer change and DA change
+  const generateMovementInsight = (
+    tierName: string,
+    customerChange: number,
+    daChange: number,
+    matchDelta: number
+  ): string => {
+    if (matchDelta <= 5) {
+      return `Customer growth and DA growth are aligned (within 5% difference). Tier ${tierName} shows balanced movement.`
+    }
+    
+    // Format percentages for display
+    const customerChangeFormatted = customerChange >= 0 
+      ? `+${customerChange.toFixed(1)}%` 
+      : `${customerChange.toFixed(1)}%`
+    const daChangeFormatted = daChange >= 0 
+      ? `+${daChange.toFixed(1)}%` 
+      : `${daChange.toFixed(1)}%`
+    
+    if (daChange > customerChange) {
+      return `DA growth (${daChangeFormatted}) exceeds customer growth (${customerChangeFormatted}). Possible high-value customer acquisition or increased spending.`
+    } else {
+      return `Customer growth (${customerChangeFormatted}) exceeds DA growth (${daChangeFormatted}). Possible acquisition of lower-value customers or churn risk.`
+    }
+  }
+  
   const lastParamsRef = useRef<string>('')
   const isFetchingRef = useRef(false)
   
@@ -1481,24 +1529,28 @@ export default function TierMetricsComparison({
                     const matchStatus = matchDelta <= 5 ? 'Match' : (customerChange > daChange ? 'Churn Risk' : 'Value Up')
                     const matchColor = matchDelta <= 5 ? '#059669' : (customerChange > daChange ? '#dc2626' : '#3b82f6')
                     
+                    const isRowExpanded = expandedMovementRow === tierName
+                    const insightText = generateMovementInsight(tierName, customerChange, daChange, matchDelta)
+                    
                     return (
-                      <tr
-                        key={tierName}
-                        style={{
-                          backgroundColor: index % 2 === 0 ? '#FFFFFF' : '#FAFAFA',
-                          borderBottom: '1px solid #E5E7EB',
-                          transition: 'background-color 0.2s ease',
-                          cursor: 'default'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = '#f3f4f6'
-                          e.currentTarget.style.boxShadow = 'inset 0 0 8px rgba(59, 130, 246, 0.1), 0 2px 4px rgba(0, 0, 0, 0.05)'
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#FFFFFF' : '#FAFAFA'
-                          e.currentTarget.style.boxShadow = 'none'
-                        }}
-                      >
+                      <React.Fragment key={tierName}>
+                        <tr
+                          style={{
+                            backgroundColor: index % 2 === 0 ? '#FFFFFF' : '#FAFAFA',
+                            borderBottom: isRowExpanded ? 'none' : '1px solid #E5E7EB',
+                            transition: 'background-color 0.2s ease',
+                            cursor: 'pointer'
+                          }}
+                          onClick={() => toggleMovementRow(tierName)}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#f3f4f6'
+                            e.currentTarget.style.boxShadow = 'inset 0 0 8px rgba(59, 130, 246, 0.1), 0 2px 4px rgba(0, 0, 0, 0.05)'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#FFFFFF' : '#FAFAFA'
+                            e.currentTarget.style.boxShadow = 'none'
+                          }}
+                        >
                         <td style={{
                           padding: '14px 16px',
                           fontWeight: 700,
@@ -1533,11 +1585,84 @@ export default function TierMetricsComparison({
                           padding: '12px',
                           textAlign: 'center',
                           color: matchColor,
-                          fontWeight: 600
+                          fontWeight: 600,
+                          position: 'relative'
                         }}>
-                          {matchStatus}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                              <span>{matchStatus}</span>
+                              {matchDelta > 5 && (
+                                <>
+                                  <span style={{ color: matchColor, fontSize: '14px' }}>⚠</span>
+                                  <span style={{ color: matchColor, fontSize: '12px' }}>Δ {matchDelta.toFixed(1)}%</span>
+                                </>
+                              )}
+                            </div>
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              style={{
+                                transform: isRowExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                                transition: 'transform 0.2s ease',
+                                color: '#6b7280',
+                                cursor: 'pointer',
+                                flexShrink: 0
+                              }}
+                            >
+                              <path d="M6 9l6 6 6-6" />
+                            </svg>
+                          </div>
                         </td>
                       </tr>
+                      {isRowExpanded && (
+                        <tr>
+                          <td colSpan={4} style={{
+                            padding: '16px',
+                            backgroundColor: '#FFF7ED',
+                            borderBottom: '1px solid #E5E7EB',
+                            borderLeft: '3px solid ' + (TIER_COLORS_WIREFRAME[tierName] || '#6b7280')
+                          }}>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              gap: '8px',
+                              padding: '12px',
+                              backgroundColor: '#FFEDD5',
+                              borderRadius: '6px',
+                              border: '1px solid #FED7AA'
+                            }}>
+                              <span style={{
+                                fontSize: '16px',
+                                color: '#F97316',
+                                fontWeight: 600,
+                                flexShrink: 0
+                              }}>⚠</span>
+                              <div style={{ flex: 1 }}>
+                                <div style={{
+                                  fontSize: '13px',
+                                  fontWeight: 700,
+                                  color: '#F97316',
+                                  marginBottom: '4px'
+                                }}>
+                                  Insight:
+                                </div>
+                                <div style={{
+                                  fontSize: '13px',
+                                  color: '#7C2D12',
+                                  lineHeight: '1.5'
+                                }}>
+                                  {insightText}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      </React.Fragment>
                     )
                   })}
                 </tbody>
