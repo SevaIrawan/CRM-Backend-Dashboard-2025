@@ -285,14 +285,25 @@ export default function BarChart({
       tooltip: {
         mode: 'index' as const,
         intersect: false,
-        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+        backgroundColor: 'rgba(0, 0, 0, 0.95)', // ✅ Professional: Slightly darker for better contrast
         titleColor: '#ffffff',
         bodyColor: '#ffffff',
         borderColor: '#3B82F6',
         borderWidth: 1,
         cornerRadius: 8,
-        padding: 12,
+        padding: {
+          top: 14,
+          right: 16,
+          bottom: 14,
+          left: 16
+        },
+        titleSpacing: 8, // ✅ Professional: Proper spacing between title and body
+        bodySpacing: 6, // ✅ Professional: Proper spacing between label items
+        titleMarginBottom: 10, // ✅ Professional: Spacing after title
         displayColors: true,
+        boxWidth: 12,
+        boxHeight: 12,
+        boxPadding: 6, // ✅ Professional: Spacing between color box and text
         callbacks: {
           title: function(context: any) {
             return `📅 ${context[0].label}`;
@@ -308,7 +319,7 @@ export default function BarChart({
               datasetLabel.toLowerCase().includes('trans automation') ||
               datasetLabel.toLowerCase().includes('automation')
             )) {
-              return `${datasetLabel}: ${formatIntegerKPI(value)} cases`;
+              return `${datasetLabel}:  ${formatIntegerKPI(value)} cases`; // ✅ Professional: Proper spacing
             }
             
             const isCasesType = datasetLabel && (
@@ -338,13 +349,13 @@ export default function BarChart({
             );
             
             if (isCasesType) {
-              return `${datasetLabel}: ${formatIntegerKPI(value)} cases`;
+              return `${datasetLabel}:  ${formatIntegerKPI(value)} cases`; // ✅ Professional: Proper spacing
             } else if (isCountType) {
-              return `${datasetLabel}: ${formatIntegerKPI(value)} members`;
+              return `${datasetLabel}:  ${formatIntegerKPI(value)} members`; // ✅ Professional: Proper spacing
             } else if (isRateType) {
-              return `${datasetLabel}: ${formatPercentageKPI(value)}`;
+              return `${datasetLabel}:  ${formatPercentageKPI(value)}`; // ✅ Professional: Proper spacing
             } else {
-              return `${datasetLabel}: ${formatCurrencyKPI(value, currency)}`;
+              return `${datasetLabel}:  ${formatCurrencyKPI(value, currency)}`; // ✅ Professional: Proper spacing
             }
           }
         }

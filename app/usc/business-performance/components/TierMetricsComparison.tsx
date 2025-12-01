@@ -28,6 +28,20 @@ const businessPerformanceChartStyle = `
   .bp-subheader-wrapper .usc-business-performance-chart-wrapper > div > div[style*="padding: '16px'"] {
     background-color: transparent !important;
   }
+  /* Professional Tooltip Styling - HANYA untuk Business Performance */
+  .bp-subheader-wrapper canvas ~ div[style*="position: absolute"][style*="background-color"] {
+    padding: 14px 16px !important;
+  }
+  .bp-subheader-wrapper canvas ~ div[style*="position: absolute"] ul {
+    margin-top: 8px !important;
+    margin-bottom: 0 !important;
+  }
+  .bp-subheader-wrapper canvas ~ div[style*="position: absolute"] li {
+    margin-bottom: 6px !important;
+  }
+  .bp-subheader-wrapper canvas ~ div[style*="position: absolute"] li:last-child {
+    margin-bottom: 0 !important;
+  }
 `
 
 // Dynamic import Chart.js components (SSR fix)

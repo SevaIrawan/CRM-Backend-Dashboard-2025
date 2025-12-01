@@ -80,29 +80,39 @@ export default function BusinessPerformancePieChart({
       tooltip: {
         mode: 'index' as const,
         intersect: false,
-        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+        backgroundColor: 'rgba(0, 0, 0, 0.95)', // ✅ Professional: Slightly darker for better contrast
         titleColor: '#ffffff',
         bodyColor: '#ffffff',
         borderColor: '#3B82F6',
         borderWidth: 1,
         cornerRadius: 8,
-        padding: 12,
+        padding: {
+          top: 14,
+          right: 16,
+          bottom: 14,
+          left: 16
+        },
+        titleSpacing: 8, // ✅ Professional: Proper spacing between title and body
+        bodySpacing: 6, // ✅ Professional: Proper spacing between label items
+        titleMarginBottom: 10, // ✅ Professional: Spacing after title
         displayColors: true,
+        boxWidth: 12,
+        boxHeight: 12,
+        boxPadding: 6, // ✅ Professional: Spacing between color box and text
         callbacks: {
           title: function(context: any) {
-            // ✅ BP STANDARD: Sama dengan BarChart - untuk PieChart, gunakan label dari context
             if (context && context.length > 0 && context[0].label) {
               return `📅 ${context[0].label}`
             }
             return ''
           },
           label: function(context: any) {
-            // ✅ BP STANDARD: Format label untuk PieChart - sama dengan BarChart format
             const label = context.label || ''
             const value = context.parsed || 0
             const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0)
             const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0'
-            return `${label}: ${formatIntegerKPI(value)} (${percentage}%)`
+            // ✅ Professional: Proper spacing between label, value, and percentage
+            return `${label}:  ${formatIntegerKPI(value)}  (${percentage}%)`
           }
         }
       },

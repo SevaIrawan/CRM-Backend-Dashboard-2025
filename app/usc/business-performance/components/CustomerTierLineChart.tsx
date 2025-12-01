@@ -228,17 +228,27 @@ export default function CustomerTierLineChart({
       tooltip: {
         mode: 'index' as const,
         intersect: false,
-        backgroundColor: 'rgba(0, 0, 0, 0.9)', // ✅ BP STANDARD: Sama dengan BarChart
+        backgroundColor: 'rgba(0, 0, 0, 0.95)', // ✅ Professional: Slightly darker for better contrast
         titleColor: '#ffffff',
         bodyColor: '#ffffff',
-        borderColor: '#3B82F6', // ✅ BP STANDARD: Sama dengan BarChart
+        borderColor: '#3B82F6',
         borderWidth: 1,
         cornerRadius: 8,
-        padding: 12, // ✅ BP STANDARD: Sama dengan BarChart
+        padding: {
+          top: 14,
+          right: 16,
+          bottom: 14,
+          left: 16
+        },
+        titleSpacing: 8, // ✅ Professional: Proper spacing between title and body
+        bodySpacing: 6, // ✅ Professional: Proper spacing between label items
+        titleMarginBottom: 10, // ✅ Professional: Spacing after title
         displayColors: true,
+        boxWidth: 12,
+        boxHeight: 12,
+        boxPadding: 6, // ✅ Professional: Spacing between color box and text
         callbacks: {
           title: function(context: any) {
-            // ✅ BP STANDARD: Sama dengan BarChart - simple format
             return `📅 ${context[0].label}`
           },
           label: function(context: any) {
@@ -254,7 +264,8 @@ export default function CustomerTierLineChart({
             const value = context.parsed.y || 0
             const percent = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0'
             
-            return `${tierName}: ${formatIntegerKPI(value)} (${percent}%)`
+            // ✅ Professional: Proper spacing between label, value, and percentage
+            return `${tierName}:  ${formatIntegerKPI(value)}  (${percent}%)`
           },
           afterBody: function(context: any) {
             if (context.length > 1) {
@@ -263,7 +274,7 @@ export default function CustomerTierLineChart({
               }, 0)
               
               if (total > 0) {
-                return ['', `Total: ${formatIntegerKPI(total)}`]
+                return ['', `Total:  ${formatIntegerKPI(total)}`] // ✅ Professional: Spacing before total
               }
             }
             return []
