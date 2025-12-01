@@ -148,6 +148,10 @@ export default function TierMetricsComparison({
   const [error, setError] = useState<string | null>(null)
   const [data, setData] = useState<TierMetricsResponse['data'] | null>(null)
   
+  // State untuk expand/collapse dropdown sections
+  const [isComparisonExpanded, setIsComparisonExpanded] = useState(false)
+  const [isMovementExpanded, setIsMovementExpanded] = useState(false)
+  
   const lastParamsRef = useRef<string>('')
   const isFetchingRef = useRef(false)
   
@@ -833,6 +837,710 @@ export default function TierMetricsComparison({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Period A vs B Detailed Comparison Section */}
+      <div style={{
+        marginTop: '32px',
+        backgroundColor: '#ffffff',
+        border: '1px solid #e5e7eb',
+        borderRadius: '12px',
+        padding: '20px',
+        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+      }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: isComparisonExpanded ? '20px' : '0'
+        }}>
+          <div style={{ flex: 1 }}>
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: 600,
+              color: '#1f2937',
+              margin: 0,
+              marginBottom: '4px',
+              textAlign: 'left'
+            }}>
+              Period A vs B Detailed Comparison
+            </h3>
+            <p style={{
+              fontSize: '14px',
+              color: '#6b7280',
+              margin: 0,
+              textAlign: 'left'
+            }}>
+              Side-by-side comparison of tier-level metrics between {formatDateRange(periodA.startDate, periodA.endDate)} and {formatDateRange(periodB.startDate, periodB.endDate)}
+            </p>
+          </div>
+          <div style={{ marginLeft: '16px' }}>
+            <button
+              onClick={() => setIsComparisonExpanded(!isComparisonExpanded)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 16px',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                backgroundColor: '#ffffff',
+                color: '#374151',
+                fontSize: '14px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#f9fafb'
+                e.currentTarget.style.borderColor = '#d1d5db'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#ffffff'
+                e.currentTarget.style.borderColor = '#e5e7eb'
+              }}
+            >
+              <span>{isComparisonExpanded ? 'Collapse' : 'Expand'}</span>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                style={{
+                  transform: isComparisonExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.2s ease'
+                }}
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {isComparisonExpanded && (() => {
+          // Prepare comparison data - Get all unique tier_name from both periods
+          const allTierNames = new Set<string>()
+          periodA.tierMetrics.forEach(tier => {
+            if (tier.tierName) allTierNames.add(tier.tierName)
+          })
+          periodB.tierMetrics.forEach(tier => {
+            if (tier.tierName) allTierNames.add(tier.tierName)
+          })
+          
+          // Sort by tier number (lower number = higher tier)
+          const sortedTiers = Array.from(allTierNames).sort((a, b) => getTierNumber(a) - getTierNumber(b))
+          
+          // Helper to get tier data or default
+          const getTierData = (tierName: string, metrics: TierMetricsData[]) => {
+            const tier = metrics.find(t => t.tierName === tierName)
+            return tier || { tierName, customerCount: 0, depositAmount: 0, ggr: 0 }
+          }
+
+          return (
+            <div style={{
+              overflowX: 'auto',
+              marginTop: '16px',
+              borderRadius: '8px',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), inset 0 2px 4px -2px rgba(255, 255, 255, 0.5), inset 0 -2px 4px -2px rgba(0, 0, 0, 0.1)',
+              border: '1px solid #d1d5db',
+              transition: 'all 0.3s ease',
+              backgroundColor: '#ffffff'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05), inset 0 2px 4px -2px rgba(255, 255, 255, 0.5), inset 0 -2px 4px -2px rgba(0, 0, 0, 0.1)'
+              e.currentTarget.style.borderColor = '#3b82f6'
+              e.currentTarget.style.transform = 'translateY(-2px)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), inset 0 2px 4px -2px rgba(255, 255, 255, 0.5), inset 0 -2px 4px -2px rgba(0, 0, 0, 0.1)'
+              e.currentTarget.style.borderColor = '#d1d5db'
+              e.currentTarget.style.transform = 'translateY(0)'
+            }}
+            >
+              <table style={{
+                width: '100%',
+                borderCollapse: 'separate',
+                borderSpacing: 0,
+                fontSize: '13px',
+                borderRadius: '8px',
+                overflow: 'hidden'
+              }}>
+                <thead>
+                  <tr style={{
+                    backgroundColor: '#F9FAFB',
+                    borderBottom: '2px solid #E5E7EB'
+                  }}>
+                    <th rowSpan={2} style={{
+                      padding: '16px 14px',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      color: '#111827',
+                      borderRight: '1px solid #E5E7EB',
+                      position: 'sticky',
+                      left: 0,
+                      backgroundColor: '#F9FAFB',
+                      zIndex: 10,
+                      boxShadow: '2px 0 4px rgba(0, 0, 0, 0.02)',
+                      fontSize: '14px',
+                      letterSpacing: '-0.01em'
+                    }}>Tier</th>
+                    <th colSpan={5} style={{
+                      padding: '16px 14px',
+                      textAlign: 'left',
+                      fontWeight: 700,
+                      color: '#111827',
+                      borderRight: '1px solid #E5E7EB',
+                      fontSize: '14px',
+                      letterSpacing: '-0.01em'
+                    }}>
+                      Period A
+                    </th>
+                    <th colSpan={5} style={{
+                      padding: '16px 14px',
+                      textAlign: 'left',
+                      fontWeight: 700,
+                      color: '#111827',
+                      fontSize: '14px',
+                      letterSpacing: '-0.01em'
+                    }}>
+                      Period B
+                    </th>
+                  </tr>
+                  <tr style={{
+                    backgroundColor: '#F9FAFB',
+                    borderBottom: '2px solid #E5E7EB'
+                  }}>
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      color: '#111827',
+                      fontSize: '13px',
+                      borderRight: '1px solid #E5E7EB',
+                      letterSpacing: '-0.01em'
+                    }}>Count</th>
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      color: '#111827',
+                      fontSize: '13px',
+                      borderRight: '1px solid #E5E7EB',
+                      letterSpacing: '-0.01em'
+                    }}>DA</th>
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      color: '#111827',
+                      fontSize: '13px',
+                      borderRight: '1px solid #E5E7EB',
+                      letterSpacing: '-0.01em'
+                    }}>DA/User</th>
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      color: '#111827',
+                      fontSize: '13px',
+                      borderRight: '1px solid #E5E7EB',
+                      letterSpacing: '-0.01em'
+                    }}>GGR</th>
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      color: '#111827',
+                      fontSize: '13px',
+                      borderRight: '1px solid #E5E7EB',
+                      letterSpacing: '-0.01em'
+                    }}>WR</th>
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      color: '#111827',
+                      fontSize: '13px',
+                      borderRight: '1px solid #E5E7EB',
+                      letterSpacing: '-0.01em'
+                    }}>Count</th>
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      color: '#111827',
+                      fontSize: '13px',
+                      borderRight: '1px solid #E5E7EB',
+                      letterSpacing: '-0.01em'
+                    }}>DA</th>
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      color: '#111827',
+                      fontSize: '13px',
+                      borderRight: '1px solid #E5E7EB',
+                      letterSpacing: '-0.01em'
+                    }}>DA/User</th>
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      color: '#111827',
+                      fontSize: '13px',
+                      borderRight: '1px solid #E5E7EB',
+                      letterSpacing: '-0.01em'
+                    }}>GGR</th>
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      color: '#111827',
+                      fontSize: '13px',
+                      letterSpacing: '-0.01em'
+                    }}>WR</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedTiers.map((tierName, index) => {
+                    const tierA = getTierData(tierName, periodA.tierMetrics)
+                    const tierB = getTierData(tierName, periodB.tierMetrics)
+                    
+                    const daPerUserA = tierA.customerCount > 0 ? tierA.depositAmount / tierA.customerCount : 0
+                    const daPerUserB = tierB.customerCount > 0 ? tierB.depositAmount / tierB.customerCount : 0
+                    const winRateA = tierA.depositAmount > 0 ? (tierA.ggr / tierA.depositAmount) * 100 : 0
+                    const winRateB = tierB.depositAmount > 0 ? (tierB.ggr / tierB.depositAmount) * 100 : 0
+                    
+                    const countChange = calculatePercentageChange(tierA.customerCount, tierB.customerCount)
+                    const daChange = calculatePercentageChange(tierA.depositAmount, tierB.depositAmount)
+                    const daPerUserChange = calculatePercentageChange(daPerUserA, daPerUserB)
+                    const ggrChange = calculatePercentageChange(tierA.ggr, tierB.ggr)
+                    const wrChange = calculatePercentageChange(winRateA, winRateB)
+                    
+                    return (
+                      <tr
+                        key={tierName}
+                        style={{
+                          backgroundColor: index % 2 === 0 ? '#FFFFFF' : '#FAFAFA',
+                          borderBottom: '1px solid #E5E7EB',
+                          transition: 'background-color 0.2s ease',
+                          cursor: 'default'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#f3f4f6'
+                          e.currentTarget.style.boxShadow = 'inset 0 0 8px rgba(59, 130, 246, 0.1), 0 2px 4px rgba(0, 0, 0, 0.05)'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#FFFFFF' : '#FAFAFA'
+                          e.currentTarget.style.boxShadow = 'none'
+                        }}
+                      >
+                        <td style={{
+                          padding: '14px 16px',
+                          fontWeight: 700,
+                          color: '#111827',
+                          borderRight: '1px solid #E5E7EB',
+                          borderBottom: '1px solid #E5E7EB',
+                          position: 'sticky',
+                          left: 0,
+                          backgroundColor: '#F9FAFB',
+                          zIndex: 5,
+                          boxShadow: '2px 0 4px rgba(0, 0, 0, 0.02)',
+                          fontSize: '13px',
+                          whiteSpace: 'nowrap',
+                          borderLeft: '3px solid ' + (TIER_COLORS_WIREFRAME[tierName] || '#6b7280')
+                        }}>
+                          {tierName}
+                        </td>
+                        <td style={{
+                          padding: '12px',
+                          textAlign: 'right',
+                          color: '#374151',
+                          borderRight: '1px solid #e5e7eb'
+                        }}>
+                          {formatIntegerKPI(tierA.customerCount)}
+                        </td>
+                        <td style={{
+                          padding: '12px',
+                          textAlign: 'right',
+                          color: '#374151',
+                          borderRight: '1px solid #e5e7eb'
+                        }}>
+                          {formatCurrencyKPI(tierA.depositAmount, 'USC')}
+                        </td>
+                        <td style={{
+                          padding: '12px',
+                          textAlign: 'right',
+                          color: '#374151',
+                          borderRight: '1px solid #e5e7eb'
+                        }}>
+                          {formatCurrencyKPI(daPerUserA, 'USC')}
+                        </td>
+                        <td style={{
+                          padding: '12px',
+                          textAlign: 'right',
+                          color: '#374151',
+                          borderRight: '1px solid #e5e7eb'
+                        }}>
+                          {formatCurrencyKPI(tierA.ggr, 'USC')}
+                        </td>
+                        <td style={{
+                          padding: '12px',
+                          textAlign: 'right',
+                          color: '#374151',
+                          borderRight: '1px solid #e5e7eb'
+                        }}>
+                          {formatPercentageKPI(winRateA)}
+                        </td>
+                        <td style={{
+                          padding: '12px',
+                          textAlign: 'right',
+                          color: '#374151',
+                          borderRight: '1px solid #e5e7eb'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+                            <span>{formatIntegerKPI(tierB.customerCount)}</span>
+                            {countChange !== 0 && (
+                              <span style={{
+                                fontSize: '11px',
+                                color: countChange >= 0 ? '#059669' : '#dc2626',
+                                fontWeight: 600
+                              }}>
+                                ({countChange >= 0 ? '↑' : '↓'} {Math.abs(countChange).toFixed(1)}%)
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td style={{
+                          padding: '12px',
+                          textAlign: 'right',
+                          color: '#374151',
+                          borderRight: '1px solid #e5e7eb'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+                            <span>{formatCurrencyKPI(tierB.depositAmount, 'USC')}</span>
+                            {daChange !== 0 && (
+                              <span style={{
+                                fontSize: '11px',
+                                color: daChange >= 0 ? '#059669' : '#dc2626',
+                                fontWeight: 600
+                              }}>
+                                ({daChange >= 0 ? '↑' : '↓'} {Math.abs(daChange).toFixed(1)}%)
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td style={{
+                          padding: '12px',
+                          textAlign: 'right',
+                          color: '#374151',
+                          borderRight: '1px solid #e5e7eb'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+                            <span>{formatCurrencyKPI(daPerUserB, 'USC')}</span>
+                            {daPerUserChange !== 0 && (
+                              <span style={{
+                                fontSize: '11px',
+                                color: daPerUserChange >= 0 ? '#059669' : '#dc2626',
+                                fontWeight: 600
+                              }}>
+                                ({daPerUserChange >= 0 ? '↑' : '↓'} {Math.abs(daPerUserChange).toFixed(1)}%)
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td style={{
+                          padding: '12px',
+                          textAlign: 'right',
+                          color: '#374151',
+                          borderRight: '1px solid #e5e7eb'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+                            <span>{formatCurrencyKPI(tierB.ggr, 'USC')}</span>
+                            {ggrChange !== 0 && (
+                              <span style={{
+                                fontSize: '11px',
+                                color: ggrChange >= 0 ? '#059669' : '#dc2626',
+                                fontWeight: 600
+                              }}>
+                                ({ggrChange >= 0 ? '↑' : '↓'} {Math.abs(ggrChange).toFixed(1)}%)
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td style={{
+                          padding: '12px',
+                          textAlign: 'right',
+                          color: '#374151'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+                            <span>{formatPercentageKPI(winRateB)}</span>
+                            {wrChange !== 0 && (
+                              <span style={{
+                                fontSize: '11px',
+                                color: wrChange >= 0 ? '#059669' : '#dc2626',
+                                fontWeight: 600
+                              }}>
+                                ({wrChange >= 0 ? '↑' : '↓'} {Math.abs(wrChange).toFixed(1)}%)
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )
+        })()}
+      </div>
+
+      {/* Tier Movement & Match Analysis Section */}
+      <div style={{
+        marginTop: '24px',
+        backgroundColor: '#ffffff',
+        border: '1px solid #e5e7eb',
+        borderRadius: '12px',
+        padding: '20px',
+        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+      }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: isMovementExpanded ? '20px' : '0'
+        }}>
+          <div>
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: 600,
+              color: '#1f2937',
+              margin: 0,
+              marginBottom: '4px',
+              textAlign: 'left'
+            }}>
+              Tier Movement & Match Analysis
+            </h3>
+            <p style={{
+              fontSize: '14px',
+              color: '#6b7280',
+              margin: 0,
+              textAlign: 'left'
+            }}>
+              Comparing customer growth rate vs DA growth rate to identify potential churn or value shifts
+            </p>
+          </div>
+          <button
+            onClick={() => setIsMovementExpanded(!isMovementExpanded)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              backgroundColor: '#ffffff',
+              color: '#374151',
+              fontSize: '14px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#f9fafb'
+              e.currentTarget.style.borderColor = '#d1d5db'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#ffffff'
+              e.currentTarget.style.borderColor = '#e5e7eb'
+            }}
+          >
+            <span>{isMovementExpanded ? 'Collapse' : 'Expand'}</span>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              style={{
+                transform: isMovementExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s ease'
+              }}
+            >
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+        </div>
+
+        {isMovementExpanded && (() => {
+          // Prepare movement analysis data
+          const allTierNames = new Set<string>()
+          periodA.tierMetrics.forEach(tier => {
+            if (tier.tierName) allTierNames.add(tier.tierName)
+          })
+          periodB.tierMetrics.forEach(tier => {
+            if (tier.tierName) allTierNames.add(tier.tierName)
+          })
+          
+          const sortedTiers = Array.from(allTierNames).sort((a, b) => getTierNumber(a) - getTierNumber(b))
+          
+          const getTierData = (tierName: string, metrics: TierMetricsData[]) => {
+            const tier = metrics.find(t => t.tierName === tierName)
+            return tier || { tierName, customerCount: 0, depositAmount: 0, ggr: 0 }
+          }
+
+          return (
+            <div style={{
+              overflowX: 'auto',
+              marginTop: '16px',
+              borderRadius: '8px',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), inset 0 2px 4px -2px rgba(255, 255, 255, 0.5), inset 0 -2px 4px -2px rgba(0, 0, 0, 0.1)',
+              border: '1px solid #d1d5db',
+              transition: 'all 0.3s ease',
+              backgroundColor: '#ffffff'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05), inset 0 2px 4px -2px rgba(255, 255, 255, 0.5), inset 0 -2px 4px -2px rgba(0, 0, 0, 0.1)'
+              e.currentTarget.style.borderColor = '#3b82f6'
+              e.currentTarget.style.transform = 'translateY(-2px)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), inset 0 2px 4px -2px rgba(255, 255, 255, 0.5), inset 0 -2px 4px -2px rgba(0, 0, 0, 0.1)'
+              e.currentTarget.style.borderColor = '#d1d5db'
+              e.currentTarget.style.transform = 'translateY(0)'
+            }}
+            >
+              <table style={{
+                width: '100%',
+                borderCollapse: 'separate',
+                borderSpacing: 0,
+                fontSize: '13px',
+                borderRadius: '8px',
+                overflow: 'hidden'
+              }}>
+                <thead>
+                  <tr style={{
+                    backgroundColor: '#F9FAFB',
+                    borderBottom: '2px solid #E5E7EB'
+                  }}>
+                    <th style={{
+                      padding: '16px 14px',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      color: '#111827',
+                      borderRight: '1px solid #E5E7EB',
+                      fontSize: '14px',
+                      letterSpacing: '-0.01em'
+                    }}>Tier</th>
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      color: '#111827',
+                      borderRight: '1px solid #E5E7EB',
+                      fontSize: '13px',
+                      letterSpacing: '-0.01em'
+                    }}>Customer Change</th>
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      color: '#111827',
+                      borderRight: '1px solid #E5E7EB',
+                      fontSize: '13px',
+                      letterSpacing: '-0.01em'
+                    }}>DA Change</th>
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      color: '#111827',
+                      fontSize: '13px',
+                      letterSpacing: '-0.01em'
+                    }}>Match Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedTiers.map((tierName, index) => {
+                    const tierA = getTierData(tierName, periodA.tierMetrics)
+                    const tierB = getTierData(tierName, periodB.tierMetrics)
+                    
+                    const customerChange = calculatePercentageChange(tierA.customerCount, tierB.customerCount)
+                    const daChange = calculatePercentageChange(tierA.depositAmount, tierB.depositAmount)
+                    
+                    // Match Status: delta antara Customer Change dan DA Change
+                    const matchDelta = Math.abs(customerChange - daChange)
+                    const matchStatus = matchDelta <= 5 ? 'Match' : (customerChange > daChange ? 'Churn Risk' : 'Value Up')
+                    const matchColor = matchDelta <= 5 ? '#059669' : (customerChange > daChange ? '#dc2626' : '#3b82f6')
+                    
+                    return (
+                      <tr
+                        key={tierName}
+                        style={{
+                          backgroundColor: index % 2 === 0 ? '#FFFFFF' : '#FAFAFA',
+                          borderBottom: '1px solid #E5E7EB',
+                          transition: 'background-color 0.2s ease',
+                          cursor: 'default'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#f3f4f6'
+                          e.currentTarget.style.boxShadow = 'inset 0 0 8px rgba(59, 130, 246, 0.1), 0 2px 4px rgba(0, 0, 0, 0.05)'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#FFFFFF' : '#FAFAFA'
+                          e.currentTarget.style.boxShadow = 'none'
+                        }}
+                      >
+                        <td style={{
+                          padding: '14px 16px',
+                          fontWeight: 700,
+                          color: '#111827',
+                          borderRight: '1px solid #E5E7EB',
+                          borderBottom: '1px solid #E5E7EB',
+                          fontSize: '13px',
+                          whiteSpace: 'nowrap',
+                          borderLeft: '3px solid ' + (TIER_COLORS_WIREFRAME[tierName] || '#6b7280')
+                        }}>
+                          {tierName}
+                        </td>
+                        <td style={{
+                          padding: '12px',
+                          textAlign: 'right',
+                          color: customerChange >= 0 ? '#059669' : '#dc2626',
+                          borderRight: '1px solid #e5e7eb',
+                          fontWeight: 600
+                        }}>
+                          {customerChange >= 0 ? '+' : ''}{customerChange.toFixed(1)}%
+                        </td>
+                        <td style={{
+                          padding: '12px',
+                          textAlign: 'right',
+                          color: daChange >= 0 ? '#059669' : '#dc2626',
+                          borderRight: '1px solid #e5e7eb',
+                          fontWeight: 600
+                        }}>
+                          {daChange >= 0 ? '+' : ''}{daChange.toFixed(1)}%
+                        </td>
+                        <td style={{
+                          padding: '12px',
+                          textAlign: 'center',
+                          color: matchColor,
+                          fontWeight: 600
+                        }}>
+                          {matchStatus}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )
+        })()}
       </div>
     </div>
   )
