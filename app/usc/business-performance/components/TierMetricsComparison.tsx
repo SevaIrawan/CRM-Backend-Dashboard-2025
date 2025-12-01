@@ -349,7 +349,7 @@ export default function TierMetricsComparison({
         alignItems: 'center',
         justifyContent: 'center'
       }}>
-        <StandardLoadingSpinner />
+        <StandardLoadingSpinner message="Loading Tier Metrics Comparison" />
       </div>
     )
   }
