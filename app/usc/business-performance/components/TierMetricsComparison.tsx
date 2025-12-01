@@ -150,21 +150,47 @@ export default function TierMetricsComparison({
   
   const lastParamsRef = useRef<string>('')
   const isFetchingRef = useRef(false)
+  
+  // ✅ Store slicer values in ref to always use latest values in fetchData without triggering auto reload
+  const brandRef = useRef(brand)
+  const squadLeadRef = useRef(squadLead)
+  const channelRef = useRef(channel)
+  const periodAStartRef = useRef(periodAStart)
+  const periodAEndRef = useRef(periodAEnd)
+  const periodBStartRef = useRef(periodBStart)
+  const periodBEndRef = useRef(periodBEnd)
+  
+  // Update refs when props change
+  useEffect(() => {
+    brandRef.current = brand
+    squadLeadRef.current = squadLead
+    channelRef.current = channel
+    periodAStartRef.current = periodAStart
+    periodAEndRef.current = periodAEnd
+    periodBStartRef.current = periodBStart
+    periodBEndRef.current = periodBEnd
+  }, [brand, squadLead, channel, periodAStart, periodAEnd, periodBStart, periodBEnd])
 
   // Fetch data
   const fetchData = React.useCallback(async () => {
-    if (!periodAStart || !periodAEnd || !periodBStart || !periodBEnd) {
+    // ✅ Use ref to get latest periods value without triggering auto reload
+    const currentPeriodAStart = periodAStartRef.current
+    const currentPeriodAEnd = periodAEndRef.current
+    const currentPeriodBStart = periodBStartRef.current
+    const currentPeriodBEnd = periodBEndRef.current
+    
+    if (!currentPeriodAStart || !currentPeriodAEnd || !currentPeriodBStart || !currentPeriodBEnd) {
       return
     }
 
     const paramsSignature = JSON.stringify({
-      periodAStart,
-      periodAEnd,
-      periodBStart,
-      periodBEnd,
-      brand,
-      squadLead,
-      channel,
+      periodAStart: currentPeriodAStart,
+      periodAEnd: currentPeriodAEnd,
+      periodBStart: currentPeriodBStart,
+      periodBEnd: currentPeriodBEnd,
+      brand: brandRef.current, // ✅ Use ref to always get latest value
+      squadLead: squadLeadRef.current, // ✅ Use ref to always get latest value
+      channel: channelRef.current, // ✅ Use ref to always get latest value
       searchTrigger
     })
 
@@ -192,13 +218,13 @@ export default function TierMetricsComparison({
       }
 
       const params = new URLSearchParams({
-        periodAStart: periodAStart!,
-        periodAEnd: periodAEnd!,
-        periodBStart: periodBStart!,
-        periodBEnd: periodBEnd!,
-        brand: brand || 'All',
-        squadLead: squadLead || 'All',
-        channel: channel || 'All'
+        periodAStart: currentPeriodAStart!,
+        periodAEnd: currentPeriodAEnd!,
+        periodBStart: currentPeriodBStart!,
+        periodBEnd: currentPeriodBEnd!,
+        brand: brandRef.current || 'All', // ✅ Use ref to always get latest value
+        squadLead: squadLeadRef.current || 'All', // ✅ Use ref to always get latest value
+        channel: channelRef.current || 'All' // ✅ Use ref to always get latest value
       })
 
       const response = await fetch(`/api/usc-business-performance/tier-metrics?${params}`, {
@@ -223,11 +249,37 @@ export default function TierMetricsComparison({
       setLoading(false)
       isFetchingRef.current = false
     }
-  }, [periodAStart, periodAEnd, periodBStart, periodBEnd, brand, squadLead, channel, searchTrigger])
+  }, [searchTrigger]) // ✅ Hanya searchTrigger yang trigger fetchData callback recreation. periods, brand, squadLead, channel tetap digunakan dalam fetchData tapi tidak trigger auto reload
 
+  const lastSearchTriggerRef = useRef(0)
+  const isInitialMountRef = useRef(true)
+  const fetchDataRef = useRef(fetchData)
+  
+  // Always keep fetchDataRef updated with latest fetchData function
   useEffect(() => {
-    fetchData()
+    fetchDataRef.current = fetchData
   }, [fetchData])
+  
+  // ✅ Initial load
+  useEffect(() => {
+    if (isInitialMountRef.current && periodAStartRef.current && periodAEndRef.current && periodBStartRef.current && periodBEndRef.current) {
+      isInitialMountRef.current = false
+      fetchDataRef.current()
+    }
+  }, [periodAStart, periodAEnd, periodBStart, periodBEnd]) // ✅ Only check periods for initial load, not trigger reload
+  
+  // ✅ Trigger fetch when search button clicked (only searchTrigger triggers reload for slicers)
+  useEffect(() => {
+    // Skip initial mount
+    if (isInitialMountRef.current) return
+    
+    if (searchTrigger && searchTrigger > 0 && searchTrigger !== lastSearchTriggerRef.current) {
+      lastSearchTriggerRef.current = searchTrigger
+      if (periodAStartRef.current && periodAEndRef.current && periodBStartRef.current && periodBEndRef.current) {
+        fetchDataRef.current()
+      }
+    }
+  }, [searchTrigger]) // ✅ Only searchTrigger triggers reload, not fetchData callback recreation
 
   // Inject CSS ke head untuk Business Performance chart styling
   useEffect(() => {

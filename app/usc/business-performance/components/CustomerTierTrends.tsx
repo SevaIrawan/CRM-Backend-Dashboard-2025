@@ -162,6 +162,12 @@ export default function CustomerTierTrends({
   const [isTierFilterOpen, setIsTierFilterOpen] = useState<boolean>(false)
   const tierFilterRef = useRef<HTMLDivElement | null>(null)
   
+  // ✅ Store slicer values in ref to always use latest values in fetchData without triggering auto reload
+  const brandRef = useRef(brand)
+  const squadLeadRef = useRef(squadLead)
+  const channelRef = useRef(channel)
+  const dateRangeRef = useRef(dateRange)
+  
   // Date range states for Period A and Period B
   // Use props if provided (from parent), otherwise use local state
   const [localPeriodAStart, setLocalPeriodAStart] = useState<string>('')
@@ -174,6 +180,24 @@ export default function CustomerTierTrends({
   const periodAEnd = propPeriodAEnd !== undefined ? propPeriodAEnd : localPeriodAEnd
   const periodBStart = propPeriodBStart !== undefined ? propPeriodBStart : localPeriodBStart
   const periodBEnd = propPeriodBEnd !== undefined ? propPeriodBEnd : localPeriodBEnd
+  
+  // ✅ Store periods in ref to always use latest values in fetchData without triggering auto reload
+  const periodAStartRef = useRef(periodAStart)
+  const periodAEndRef = useRef(periodAEnd)
+  const periodBStartRef = useRef(periodBStart)
+  const periodBEndRef = useRef(periodBEnd)
+  
+  // Update refs when props change
+  useEffect(() => {
+    brandRef.current = brand
+    squadLeadRef.current = squadLead
+    channelRef.current = channel
+    dateRangeRef.current = dateRange
+    periodAStartRef.current = periodAStart
+    periodAEndRef.current = periodAEnd
+    periodBStartRef.current = periodBStart
+    periodBEndRef.current = periodBEnd
+  }, [brand, squadLead, channel, dateRange, periodAStart, periodAEnd, periodBStart, periodBEnd])
   
   // Wrapper functions to update period (use callback if provided, otherwise update local state)
   const updatePeriodA = (start: string, end: string) => {
@@ -465,8 +489,17 @@ export default function CustomerTierTrends({
   
   // ✅ Fetch data function - optimized with proper dependencies
   const fetchData = React.useCallback(async (skipLoadingState = false) => {
+    // ✅ Use ref to get latest dateRange value without triggering auto reload
+    const currentDateRange = dateRangeRef.current
+    
+    // ✅ Use ref to get latest periods value without triggering auto reload
+    const currentPeriodAStart = periodAStartRef.current
+    const currentPeriodAEnd = periodAEndRef.current
+    const currentPeriodBStart = periodBStartRef.current
+    const currentPeriodBEnd = periodBEndRef.current
+    
     // Check jika Custom mode tapi dates belum dipilih - tidak fetch, chart tetap tampil data terakhir
-    if (dateRange === 'Custom' && (!periodAStart || !periodAEnd || !periodBStart || !periodBEnd)) {
+    if (currentDateRange === 'Custom' && (!currentPeriodAStart || !currentPeriodAEnd || !currentPeriodBStart || !currentPeriodBEnd)) {
       // Tidak fetch data baru, chart tetap tampil data terakhir (tidak set loading, tidak error)
       return
     }
@@ -487,9 +520,9 @@ export default function CustomerTierTrends({
       }
       
       const params = new URLSearchParams({
-        brand: brand || 'All',
-        squadLead: squadLead || 'All',
-        channel: channel || 'All'
+        brand: brandRef.current || 'All', // ✅ Use ref to always get latest value
+        squadLead: squadLeadRef.current || 'All', // ✅ Use ref to always get latest value
+        channel: channelRef.current || 'All' // ✅ Use ref to always get latest value
       })
       
       // Add tierNames filter ONLY if user has selected specific tiers
@@ -501,17 +534,17 @@ export default function CustomerTierTrends({
         console.log('🔍 [Tier Trends] Using tier_group (default mode)')
       }
       
-      // Calculate dates based on dateRange
+      // ✅ Calculate dates based on dateRange (use ref to get latest value)
       let datesToUse: { periodA: { start: string; end: string }; periodB: { start: string; end: string } } | null = null
       
-      if (dateRange === 'Last 7 Days' || dateRange === 'Last 30 Days') {
+      if (currentDateRange === 'Last 7 Days' || currentDateRange === 'Last 30 Days') {
         // Auto calculate dates for Last 7 Days or Last 30 Days
-        datesToUse = calculateDateRanges(dateRange)
-      } else if (dateRange === 'Custom') {
-        // For Custom mode, use dates from state (sudah di-check di atas)
+        datesToUse = calculateDateRanges(currentDateRange)
+      } else if (currentDateRange === 'Custom') {
+        // For Custom mode, use dates from ref (sudah di-check di atas)
         datesToUse = {
-          periodA: { start: periodAStart, end: periodAEnd },
-          periodB: { start: periodBStart, end: periodBEnd }
+          periodA: { start: currentPeriodAStart, end: currentPeriodAEnd },
+          periodB: { start: currentPeriodBStart, end: currentPeriodBEnd }
         }
       }
       
@@ -549,42 +582,36 @@ export default function CustomerTierTrends({
         setLoading(false)
       }
     }
-  }, [dateRange, brand, squadLead, channel, periodAStart, periodAEnd, periodBStart, periodBEnd, selectedTiers])
+  }, [selectedTiers]) // ✅ Hanya selectedTiers yang trigger auto reload (tier filter). dateRange, periods, brand, squadLead, channel tetap digunakan dalam fetchData tapi tidak trigger auto reload - hanya searchTrigger yang trigger reload untuk semua slicer
   
   // ✅ CONSOLIDATED useEffect: Handle all fetch triggers
   const isInitialMountRef = useRef(true)
   const lastSearchTriggerRef = useRef(0)
+  const fetchDataRef = useRef(fetchData)
+  
+  // Always keep fetchDataRef updated with latest fetchData function
+  useEffect(() => {
+    fetchDataRef.current = fetchData
+  }, [fetchData])
   
   useEffect(() => {
     // Initial mount: fetch once
     if (isInitialMountRef.current) {
       isInitialMountRef.current = false
-      fetchData()
+      fetchDataRef.current()
       return
     }
     
     // Search trigger from parent: fetch immediately when button clicked
     if (searchTrigger && searchTrigger > 0 && searchTrigger !== lastSearchTriggerRef.current) {
       lastSearchTriggerRef.current = searchTrigger
-      fetchData()
+      fetchDataRef.current()
       return
     }
-  }, [searchTrigger, fetchData])
+  }, [searchTrigger]) // ✅ Only searchTrigger triggers reload, not fetchData callback recreation
   
-  // ✅ Separate effect for date picker changes (custom mode only)
-  useEffect(() => {
-    // Only trigger on date picker changes, not on initial mount
-    if (isInitialMountRef.current) return
-    
-    if (dateRange === 'Custom' && periodAStart && periodAEnd && periodBStart && periodBEnd) {
-      // Debounce date picker changes too
-      const timeoutId = setTimeout(() => {
-        fetchData()
-      }, 300)
-      
-      return () => clearTimeout(timeoutId)
-    }
-  }, [periodAStart, periodAEnd, periodBStart, periodBEnd, dateRange, fetchData])
+  // ✅ Separate effect for date picker changes (custom mode only) - REMOVED: Date picker changes should also require Search button click
+  // Date picker changes will be handled by searchTrigger when user clicks Search button
   
   // ✅ Debounced tier filter changes (500ms delay)
   useEffect(() => {
@@ -600,7 +627,7 @@ export default function CustomerTierTrends({
     
     // Set new debounce
     tierFilterDebounceRef.current = setTimeout(() => {
-      fetchData(true) // Skip loading state for smoother UX
+      fetchDataRef.current(true) // Skip loading state for smoother UX
     }, 500)
     
     // Cleanup
@@ -609,7 +636,7 @@ export default function CustomerTierTrends({
         clearTimeout(tierFilterDebounceRef.current)
       }
     }
-  }, [selectedTiers, fetchData])
+  }, [selectedTiers]) // ✅ Only selectedTiers triggers tier filter reload, not fetchData callback recreation
 
   if (loading) {
     return (

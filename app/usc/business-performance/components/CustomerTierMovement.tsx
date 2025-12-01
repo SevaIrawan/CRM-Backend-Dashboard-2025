@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import StandardLoadingSpinner from '@/components/StandardLoadingSpinner'
 import TierMovementCustomerModal from './TierMovementCustomerModal'
 
@@ -69,6 +69,28 @@ export default function CustomerTierMovement({
   const [data, setData] = useState<TierMovementData | null>(null)
   const [error, setError] = useState<string | null>(null)
   
+  // ✅ Store slicer values in ref to always use latest values in fetchData without triggering auto reload
+  const brandRef = useRef(brand)
+  const squadLeadRef = useRef(squadLead)
+  const channelRef = useRef(channel)
+  const periodAStartRef = useRef(propPeriodAStart)
+  const periodAEndRef = useRef(propPeriodAEnd)
+  const periodBStartRef = useRef(propPeriodBStart)
+  const periodBEndRef = useRef(propPeriodBEnd)
+  const dateRangeRef = useRef(dateRange)
+  
+  // Update refs when props change
+  useEffect(() => {
+    brandRef.current = brand
+    squadLeadRef.current = squadLead
+    channelRef.current = channel
+    periodAStartRef.current = propPeriodAStart
+    periodAEndRef.current = propPeriodAEnd
+    periodBStartRef.current = propPeriodBStart
+    periodBEndRef.current = propPeriodBEnd
+    dateRangeRef.current = dateRange
+  }, [brand, squadLead, channel, propPeriodAStart, propPeriodAEnd, propPeriodBStart, propPeriodBEnd, dateRange])
+  
   // Modal state
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedFromTier, setSelectedFromTier] = useState<number | null>(null)
@@ -115,27 +137,33 @@ export default function CustomerTierMovement({
     setError(null)
 
     try {
-      // ✅ ALWAYS use periods from props (shared with CustomerTierTrends from parent)
+      // ✅ Use ref to get latest periods value without triggering auto reload
+      const currentPeriodAStart = periodAStartRef.current
+      const currentPeriodAEnd = periodAEndRef.current
+      const currentPeriodBStart = periodBStartRef.current
+      const currentPeriodBEnd = periodBEndRef.current
+      
+      // ✅ ALWAYS use periods from refs (shared with CustomerTierTrends from parent)
       // No duplicate calculation - single source of truth is in CustomerTierAnalytics
-      if (!propPeriodAStart || !propPeriodAEnd || !propPeriodBStart || !propPeriodBEnd) {
+      if (!currentPeriodAStart || !currentPeriodAEnd || !currentPeriodBStart || !currentPeriodBEnd) {
         // If periods not available yet, wait (they will be set by parent)
         setLoading(false)
         return
       }
 
       // Convert date ranges to year/month for API (tier_usc_v1 uses monthly aggregation)
-      const periodB = dateRangeToYearMonth(propPeriodBStart, propPeriodBEnd)
-      const periodA = dateRangeToYearMonth(propPeriodAStart, propPeriodAEnd)
+      const periodB = dateRangeToYearMonth(currentPeriodBStart, currentPeriodBEnd)
+      const periodA = dateRangeToYearMonth(currentPeriodAStart, currentPeriodAEnd)
       
       const periods = {
         currentMonth: periodB.month,
         currentYear: periodB.year,
         previousMonth: periodA.month,
         previousYear: periodA.year,
-        periodAStart: propPeriodAStart,
-        periodAEnd: propPeriodAEnd,
-        periodBStart: propPeriodBStart,
-        periodBEnd: propPeriodBEnd
+        periodAStart: currentPeriodAStart,
+        periodAEnd: currentPeriodAEnd,
+        periodBStart: currentPeriodBStart,
+        periodBEnd: currentPeriodBEnd
       }
       
       // Store periods in state for modal usage
@@ -151,9 +179,9 @@ export default function CustomerTierMovement({
       }
 
       const params = new URLSearchParams({
-        line: brand || 'All',
-        squadLead: squadLead || 'All',
-        channel: channel || 'All'
+        line: brandRef.current || 'All', // ✅ Use ref to always get latest value
+        squadLead: squadLeadRef.current || 'All', // ✅ Use ref to always get latest value
+        channel: channelRef.current || 'All' // ✅ Use ref to always get latest value
       })
       
       // Use date range format (same as Customer Tier Trends) if available
@@ -194,22 +222,40 @@ export default function CustomerTierMovement({
     } finally {
       setLoading(false)
     }
-  }, [brand, squadLead, channel, dateRange, propPeriodAStart, propPeriodAEnd, propPeriodBStart, propPeriodBEnd])
+  }, []) // ✅ Tidak ada dependencies - semua values menggunakan ref, hanya searchTrigger yang trigger reload
+
+  const fetchDataRef = useRef(fetchData)
+  const lastSearchTriggerRef = useRef(0)
+  const isInitialMountRef = useRef(true)
+  
+  // Always keep fetchDataRef updated with latest fetchData function
+  useEffect(() => {
+    fetchDataRef.current = fetchData
+  }, [fetchData])
 
   // ✅ Initial load and when periods from props change
   useEffect(() => {
-    // Only fetch if periods are available from props
-    if (propPeriodAStart && propPeriodAEnd && propPeriodBStart && propPeriodBEnd) {
-      fetchData()
+    // Only fetch if periods are available from refs
+    if (periodAStartRef.current && periodAEndRef.current && periodBStartRef.current && periodBEndRef.current) {
+      if (isInitialMountRef.current) {
+        isInitialMountRef.current = false
+        fetchDataRef.current()
+      }
     }
-  }, [propPeriodAStart, propPeriodAEnd, propPeriodBStart, propPeriodBEnd, fetchData])
+  }, [propPeriodAStart, propPeriodAEnd, propPeriodBStart, propPeriodBEnd]) // ✅ Only check periods for initial load, not trigger reload
 
-  // Trigger fetch when search button clicked
+  // ✅ Trigger fetch when search button clicked (only searchTrigger triggers reload for slicers)
   useEffect(() => {
-    if (searchTrigger && searchTrigger > 0) {
-      fetchData()
+    // Skip initial mount
+    if (isInitialMountRef.current) return
+    
+    if (searchTrigger && searchTrigger > 0 && searchTrigger !== lastSearchTriggerRef.current) {
+      lastSearchTriggerRef.current = searchTrigger
+      if (periodAStartRef.current && periodAEndRef.current && periodBStartRef.current && periodBEndRef.current) {
+        fetchDataRef.current()
+      }
     }
-  }, [searchTrigger, fetchData])
+  }, [searchTrigger]) // ✅ Only searchTrigger triggers reload, not fetchData callback recreation
 
   if (loading) {
     return (
