@@ -1,11 +1,19 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import Frame from '@/components/Frame'
 import CustomerTierTrends from './CustomerTierTrends'
 import CustomerTierMovement from './CustomerTierMovement'
 import TierMetricsComparison from './TierMetricsComparison'
 import ComingSoon from '@/components/ComingSoon'
+
+interface Alert {
+  id: string
+  title: string
+  message: string
+  type: 'warning' | 'info' | 'error'
+  priority?: 'high' | 'medium' | 'low'
+}
 
 interface CustomerTierAnalyticsProps {
   dateRange: string
@@ -29,6 +37,10 @@ export default function CustomerTierAnalytics({
   const [periodAEnd, setPeriodAEnd] = useState<string>('')
   const [periodBStart, setPeriodBStart] = useState<string>('')
   const [periodBEnd, setPeriodBEnd] = useState<string>('')
+  
+  // Alert system states
+  const [alerts, setAlerts] = useState<Alert[]>([])
+  const [loadingAlerts, setLoadingAlerts] = useState(false)
 
   // Helper function to calculate date ranges
   // Period B (current): Based on Date Range slicer
@@ -139,6 +151,131 @@ export default function CustomerTierAnalytics({
       }
     }
   }, [periodBStart, periodBEnd, dateRange])
+  
+  // Fetch alerts from API
+  const fetchAlerts = useCallback(async () => {
+    if (!periodAStart || !periodAEnd || !periodBStart || !periodBEnd) {
+      return
+    }
+
+    setLoadingAlerts(true)
+    try {
+      const userAllowedBrands = localStorage.getItem('user_allowed_brands')
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json'
+      }
+
+      if (userAllowedBrands) {
+        headers['x-user-allowed-brands'] = userAllowedBrands
+      }
+
+      const params = new URLSearchParams({
+        periodAStart,
+        periodAEnd,
+        periodBStart,
+        periodBEnd,
+        brand: brand || 'All',
+        squadLead: squadLead || 'All',
+        channel: channel || 'All'
+      })
+
+      const response = await fetch(`/api/usc-business-performance/tier-analytics-alerts?${params}`, {
+        headers
+      })
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`)
+      }
+
+      const result = await response.json()
+
+      if (result.success && result.data) {
+        setAlerts(result.data)
+        
+        // Save alerts to localStorage for Header dropdown (always save, even if empty)
+        try {
+          localStorage.setItem('tier_analytics_alerts', JSON.stringify(result.data))
+        } catch (e) {
+          console.error('Error saving alerts to localStorage:', e)
+        }
+        
+        // Update notification count in localStorage (use actual alerts length, not default)
+        try {
+          const existingNotification = localStorage.getItem('business_performance_notification')
+          const notificationData = existingNotification 
+            ? JSON.parse(existingNotification)
+            : { marketing: 0, tierAnalytics: 0 }
+          
+          // Always use actual alerts length (can be 0 if no alerts)
+          notificationData.tierAnalytics = result.data.length || 0
+          notificationData.tab = 'tier-analytics'
+          notificationData.count = result.data.length || 0
+          
+          localStorage.setItem('business_performance_notification', JSON.stringify(notificationData))
+          
+          // Trigger storage event for Header component to update
+          window.dispatchEvent(new Event('storage'))
+        } catch (e) {
+          console.error('Error updating notification count:', e)
+        }
+      } else {
+        // If no data or error, set alerts to empty array
+        setAlerts([])
+        try {
+          localStorage.setItem('tier_analytics_alerts', JSON.stringify([]))
+          
+          // Update notification count to 0
+          const existingNotification = localStorage.getItem('business_performance_notification')
+          const notificationData = existingNotification 
+            ? JSON.parse(existingNotification)
+            : { marketing: 0, tierAnalytics: 0 }
+          
+          notificationData.tierAnalytics = 0
+          notificationData.tab = 'tier-analytics'
+          notificationData.count = 0
+          
+          localStorage.setItem('business_performance_notification', JSON.stringify(notificationData))
+          window.dispatchEvent(new Event('storage'))
+        } catch (e) {
+          console.error('Error clearing alerts:', e)
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error fetching alerts:', error)
+      setAlerts([])
+      
+      // Clear alerts from localStorage on error
+      try {
+        localStorage.setItem('tier_analytics_alerts', JSON.stringify([]))
+        
+        // Update notification count to 0
+        const existingNotification = localStorage.getItem('business_performance_notification')
+        const notificationData = existingNotification 
+          ? JSON.parse(existingNotification)
+          : { marketing: 0, tierAnalytics: 0 }
+        
+        notificationData.tierAnalytics = 0
+        notificationData.tab = 'tier-analytics'
+        notificationData.count = 0
+        
+        localStorage.setItem('business_performance_notification', JSON.stringify(notificationData))
+        window.dispatchEvent(new Event('storage'))
+      } catch (e) {
+        console.error('Error clearing alerts on error:', e)
+      }
+    } finally {
+      setLoadingAlerts(false)
+    }
+  }, [periodAStart, periodAEnd, periodBStart, periodBEnd, brand, squadLead, channel])
+  
+  // Fetch alerts when periods or filters change
+  useEffect(() => {
+    if (periodAStart && periodAEnd && periodBStart && periodBEnd && searchTrigger !== undefined) {
+      fetchAlerts()
+    }
+  }, [periodAStart, periodAEnd, periodBStart, periodBEnd, brand, squadLead, channel, searchTrigger, fetchAlerts])
+  
+  // Alert modal trigger no longer needed - dropdown is handled in Header
   // Build footer info message
   const today = new Date()
   const year = today.getFullYear()

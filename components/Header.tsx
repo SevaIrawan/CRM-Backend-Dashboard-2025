@@ -1,11 +1,20 @@
 'use client'
 
 import { useRouter, usePathname } from 'next/navigation'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import Image from 'next/image'
 import { getRoleDisplayName } from '@/utils/rolePermissions'
 import RealtimeTimestamp from './RealtimeTimestamp'
 import { logActivityViaAPI, getStoredSessionId, clearStoredSessionId, calculateSessionDuration } from '@/lib/activityLogger'
+import TierAnalyticsAlertDropdown from './TierAnalyticsAlertDropdown'
+
+interface Alert {
+  id: string
+  title: string
+  message: string
+  type: 'warning' | 'info' | 'error'
+  priority?: 'high' | 'medium' | 'low'
+}
 
 interface HeaderProps {
   pageTitle?: string
@@ -30,6 +39,9 @@ export default function Header({
   const pathname = usePathname()
   const [userInfo, setUserInfo] = useState<{username: string, role: string} | null>(null)
   const [notificationCount, setNotificationCount] = useState(0)
+  const [isAlertDropdownOpen, setIsAlertDropdownOpen] = useState(false)
+  const [alerts, setAlerts] = useState<Alert[]>([])
+  const bellIconRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     // Get user info from session
@@ -55,26 +67,51 @@ export default function Header({
   useEffect(() => {
     if (pathname !== '/usc/business-performance') {
       setNotificationCount(0)
+      setIsAlertDropdownOpen(false)
       return
     }
 
     const updateNotification = () => {
       try {
+        // First, update alerts from localStorage
+        const alertsData = localStorage.getItem('tier_analytics_alerts')
+        if (alertsData) {
+          try {
+            const parsedAlerts = JSON.parse(alertsData)
+            setAlerts(parsedAlerts)
+            // Notification count = actual alerts length (not from localStorage count)
+            setNotificationCount(parsedAlerts.length || 0)
+          } catch (e) {
+            console.error('Error parsing alerts:', e)
+            setAlerts([])
+            setNotificationCount(0)
+          }
+        } else {
+          // No alerts data = no notifications
+          setAlerts([])
+          setNotificationCount(0)
+        }
+        
+        // Also check notification data for marketing tab count
         const notificationData = localStorage.getItem('business_performance_notification')
         if (notificationData) {
-          const data = JSON.parse(notificationData)
-          // Get count based on current tab
-          const currentTab = data.tab || 'marketing'
-          const count = currentTab === 'marketing' 
-            ? (data.marketing || data.count || 3)
-            : (data.tierAnalytics || data.count || 4)
-          setNotificationCount(count)
-        } else {
-          setNotificationCount(3) // Default for marketing tab
+          try {
+            const data = JSON.parse(notificationData)
+            const currentTab = data.tab || 'marketing'
+            // For marketing tab, use stored count. For tier-analytics, use alerts.length (already set above)
+            if (currentTab === 'marketing') {
+              const marketingCount = data.marketing || data.count || 0
+              setNotificationCount(marketingCount)
+            }
+            // For tier-analytics, count is already set from alerts.length above
+          } catch (e) {
+            console.error('Error parsing notification data:', e)
+          }
         }
       } catch (e) {
         console.error('Error reading notification count:', e)
         setNotificationCount(0)
+        setAlerts([])
       }
     }
     
@@ -324,40 +361,91 @@ export default function Header({
 
           {/* Notification Bell - Only show on Business Performance page */}
           {pathname === '/usc/business-performance' && (
-            <div style={{ position: 'relative', cursor: 'pointer' }}>
-              <svg 
-                width="24" 
-                height="24" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2"
-                style={{ color: '#ffffff' }}
-              >
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-              </svg>
-              {notificationCount > 0 && (
-                <div style={{
-                  position: 'absolute',
-                  top: '-5px',
-                  right: '-5px',
-                  backgroundColor: '#ef4444',
-                  color: 'white',
-                  borderRadius: '50%',
-                  width: '20px',
-                  height: '20px',
-                  display: 'flex',
+            <>
+              <div 
+                ref={bellIconRef}
+                style={{ 
+                  position: 'relative', 
+                  cursor: 'pointer',
+                  padding: '8px',
+                  borderRadius: '6px',
+                  transition: 'background-color 0.2s ease',
+                  zIndex: 10002,
+                  display: 'inline-flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '11px',
-                  fontWeight: 'bold',
-                  border: '2px solid #1f2937'
-                }}>
-                  {notificationCount > 9 ? '9+' : notificationCount}
-                </div>
-              )}
-            </div>
+                  justifyContent: 'center'
+                }}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  console.log('🔔 Bell icon clicked in Header, notificationCount:', notificationCount)
+                  
+                  // Fetch alerts from localStorage
+                  try {
+                    const alertsData = localStorage.getItem('tier_analytics_alerts')
+                    if (alertsData) {
+                      const parsedAlerts = JSON.parse(alertsData)
+                      setAlerts(parsedAlerts)
+                    }
+                  } catch (e) {
+                    console.error('Error reading alerts from localStorage:', e)
+                  }
+                  
+                  setIsAlertDropdownOpen(!isAlertDropdownOpen)
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent'
+                }}
+                title="View Alerts"
+              >
+                <svg 
+                  width="24" 
+                  height="24" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2"
+                  style={{ color: '#ffffff', pointerEvents: 'none' }}
+                >
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+                {notificationCount > 0 && (
+                  <div 
+                    style={{
+                      position: 'absolute',
+                      top: '4px',
+                      right: '4px',
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      borderRadius: '50%',
+                      width: '20px',
+                      height: '20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      border: '2px solid #1f2937',
+                      pointerEvents: 'none'
+                    }}
+                  >
+                    {notificationCount > 9 ? '9+' : notificationCount}
+                  </div>
+                )}
+              </div>
+              
+              {/* Alert Dropdown */}
+              <TierAnalyticsAlertDropdown
+                isOpen={isAlertDropdownOpen}
+                onClose={() => setIsAlertDropdownOpen(false)}
+                alerts={alerts}
+                triggerElement={bellIconRef.current}
+              />
+            </>
           )}
 
           {/* Malaysian Flag */}
