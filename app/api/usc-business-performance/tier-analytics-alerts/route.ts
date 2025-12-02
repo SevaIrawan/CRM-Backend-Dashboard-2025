@@ -353,11 +353,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Validate date ranges
-    const validationError = validatePeriodRanges(periodAStart, periodAEnd, periodBStart, periodBEnd)
-    if (validationError) {
+    const dateValidation = validatePeriodRanges(periodAStart, periodAEnd, periodBStart, periodBEnd)
+    if (!dateValidation.valid) {
       return NextResponse.json({
         success: false,
-        error: validationError
+        error: dateValidation.error || 'Invalid date ranges'
       } as AlertsResponse, { status: 400 })
     }
 
