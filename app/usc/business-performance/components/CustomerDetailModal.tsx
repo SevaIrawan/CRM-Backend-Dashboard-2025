@@ -273,7 +273,7 @@ export default function CustomerDetailModal({
               {userName || uniqueCode || 'Customer'}
             </h2>
             <div style={{ color: '#D1D5DB', fontSize: '14px' }}>
-              完整指标
+              Complete Metrics
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -335,7 +335,7 @@ export default function CustomerDetailModal({
               <thead>
                 <tr style={{ backgroundColor: '#1F2937', borderBottom: '2px solid #374151' }}>
                   <th style={{ padding: '12px', textAlign: 'left', color: '#FFFFFF', fontWeight: 600, fontSize: '14px' }}>
-                    指标
+                    Metrics
                   </th>
                   <th style={{ padding: '12px', textAlign: 'right', color: '#FFFFFF', fontWeight: 600, fontSize: '14px' }}>
                     Period A

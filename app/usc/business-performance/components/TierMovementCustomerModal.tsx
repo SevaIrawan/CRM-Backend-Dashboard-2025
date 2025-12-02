@@ -583,9 +583,9 @@ export default function TierMovementCustomerModal({
         'Unique Code',
         'User Name',
         'Handler',
-        'DA 变化',
-        'GGR 变化',
-        'ATV 变化',
+        'DA',
+        'GGR',
+        'ATV',
         'Assigne'
       ]
       
@@ -668,25 +668,27 @@ export default function TierMovementCustomerModal({
         onClick={(e) => e.stopPropagation()}
         style={{
           backgroundColor: '#FFFFFF',
-          borderRadius: '8px',
-          width: '95%',
-          maxWidth: '1200px',
-          maxHeight: '90vh', // ✅ Gunakan viewport height langsung tanpa offset
+          borderRadius: '16px', // ✅ Rounded corners yang lebih besar (lebih menarik)
+          width: '92%',
+          maxWidth: '1150px',
+          maxHeight: '88vh',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-          overflow: 'visible' // ✅ Ubah dari hidden jadi visible agar tidak memotong konten
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)', // ✅ Shadow lebih menarik dan modern
+          overflow: 'hidden', // ✅ Hidden untuk clean rounded corners
+          border: '1px solid rgba(0, 0, 0, 0.08)' // ✅ Subtle border untuk depth
         }}
       >
         {/* Header */}
         <div
           style={{
-            padding: '24px',
-            borderBottom: '1px solid #4B5563',
-            backgroundColor: '#374151', // ✅ Dark background seperti standard popup
+            padding: '18px 24px', // ✅ Compact padding
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+            backgroundColor: '#374151',
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'flex-start'
+            alignItems: 'flex-start',
+            borderRadius: '16px 16px 0 0' // ✅ Rounded top corners
           }}
         >
           {/* ✅ Left: Title & Subtitle (Gambar 2) */}
@@ -1012,7 +1014,7 @@ export default function TierMovementCustomerModal({
                         boxSizing: 'border-box' // ✅ Pastikan padding termasuk dalam height
                       }}
                     >
-                      DA 变化
+                      DA
                     </th>
                     <th
                       style={{
@@ -1035,7 +1037,7 @@ export default function TierMovementCustomerModal({
                         boxSizing: 'border-box' // ✅ Pastikan padding termasuk dalam height
                       }}
                     >
-                      GGR 变化
+                      GGR
                     </th>
                     <th
                       style={{
@@ -1058,7 +1060,7 @@ export default function TierMovementCustomerModal({
                         boxSizing: 'border-box' // ✅ Pastikan padding termasuk dalam height
                       }}
                     >
-                      ATV 变化
+                      ATV
                     </th>
                     <th
                       style={{
@@ -1408,7 +1410,8 @@ export default function TierMovementCustomerModal({
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  flexShrink: 0
+                  flexShrink: 0,
+                  borderRadius: '0 0 16px 16px' // ✅ Rounded bottom corners
                 }}
               >
                 {/* Left: Back Button, Showing Info & Limit Selector */}
