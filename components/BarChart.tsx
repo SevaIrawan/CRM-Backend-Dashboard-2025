@@ -47,6 +47,7 @@ interface BarChartProps {
   customLegend?: { label: string; color: string }[]; // Optional custom legend (rendered in header)
   onDoubleClick?: () => void; // For zoom functionality
   clickable?: boolean; // Enable hover effects
+  customTooltipCallback?: (context: any) => string[] | null; // Custom tooltip for specific pages
 }
 
 export default function BarChart({
@@ -61,7 +62,8 @@ export default function BarChart({
   showDataLabels = true, // ✅ DEFAULT TRUE - SHOW ALL LABELS!
   customLegend,
   onDoubleClick,
-  clickable = false
+  clickable = false,
+  customTooltipCallback
 }: BarChartProps) {
   // Error handling for empty data - prevent chartjs-plugin-datalabels error
   if (!series || series.length === 0 || !categories || categories.length === 0) {
@@ -361,7 +363,8 @@ export default function BarChart({
             } else {
               return `${datasetLabel}:  ${formatCurrencyKPI(value, currency)}`; // ✅ Professional: Proper spacing
             }
-          }
+          },
+          afterBody: customTooltipCallback ? customTooltipCallback : undefined
         }
       }
     },

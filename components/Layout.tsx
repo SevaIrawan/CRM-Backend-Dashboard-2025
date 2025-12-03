@@ -20,6 +20,7 @@ interface LayoutProps {
   onToggleDarkMode?: () => void
   onLogout?: () => void
   sidebarExpanded?: boolean
+  pageInsights?: any // For page-specific notification insights
 }
 
 export default function Layout({ 
@@ -30,7 +31,8 @@ export default function Layout({
   darkMode = false,
   onToggleDarkMode = () => {},
   onLogout = () => {},
-  sidebarExpanded = true
+  sidebarExpanded = true,
+  pageInsights
 }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(sidebarExpanded)
 
@@ -61,6 +63,7 @@ export default function Layout({
             darkMode={darkMode}
             onToggleDarkMode={onToggleDarkMode}
             onLogout={onLogout}
+            pageInsights={pageInsights}
           />
           
           {customSubHeader && (

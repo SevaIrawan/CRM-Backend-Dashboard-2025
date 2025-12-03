@@ -55,6 +55,7 @@ interface LineChartProps {
   onDoubleClick?: () => void; // For zoom functionality
   onClick?: () => void; // For view details (icon folder button)
   clickable?: boolean; // Enable hover effects
+  customTooltipCallback?: (context: any) => string[] | null; // Custom tooltip for specific pages
 }
 
 export default function LineChart({ 
@@ -73,7 +74,8 @@ export default function LineChart({
   peakHourData, // Peak hour data for detailed tooltip
   onDoubleClick,
   onClick, // For view details (icon folder button)
-  clickable = false
+  clickable = false,
+  customTooltipCallback
 }: LineChartProps) {
   
   console.log('📈 [LineChart] Rendering chart:', {
@@ -618,7 +620,8 @@ export default function LineChart({
             }
             
             return `  ${datasetLabel}: ${formatFullValue(value, datasetLabel)}`;
-          }
+          },
+          afterBody: customTooltipCallback ? customTooltipCallback : undefined
         }
       }
     },

@@ -24,6 +24,7 @@ interface HeaderProps {
   darkMode?: boolean
   onToggleDarkMode?: () => void
   onLogout?: () => void
+  pageInsights?: any // For page-specific insights
 }
 
 export default function Header({
@@ -33,7 +34,8 @@ export default function Header({
   setSidebarOpen,
   darkMode = false,
   onToggleDarkMode = () => {},
-  onLogout = () => {}
+  onLogout = () => {},
+  pageInsights
 }: HeaderProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -42,6 +44,29 @@ export default function Header({
   const [isAlertDropdownOpen, setIsAlertDropdownOpen] = useState(false)
   const [alerts, setAlerts] = useState<Alert[]>([])
   const bellIconRef = useRef<HTMLDivElement>(null)
+
+  // Auto-close dropdown when click outside
+  useEffect(() => {
+    if (!isAlertDropdownOpen) return
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      // Don't close if clicking the bell icon itself or inside dropdown
+      if (bellIconRef.current?.contains(target)) return
+      
+      setIsAlertDropdownOpen(false)
+    }
+
+    // Add slight delay to prevent immediate close
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside)
+    }, 100)
+
+    return () => {
+      clearTimeout(timer)
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isAlertDropdownOpen])
 
   useEffect(() => {
     // Get user info from session
@@ -63,8 +88,19 @@ export default function Header({
     }
   }, [])
 
-  // Update notification count when on business performance page
+  // Update notification count based on current page
   useEffect(() => {
+    // Brand Performance Trends page - use pageInsights
+    if (pathname === '/usc/brand-performance-trends') {
+      if (pageInsights) {
+        setNotificationCount(pageInsights.decliningBrands || 0)
+      } else {
+        setNotificationCount(0)
+      }
+      return
+    }
+    
+    // Business Performance page - use localStorage
     if (pathname !== '/usc/business-performance') {
       setNotificationCount(0)
       setIsAlertDropdownOpen(false)
@@ -119,7 +155,7 @@ export default function Header({
     // Listen for storage changes (when tab switches)
     const interval = setInterval(updateNotification, 100)
     return () => clearInterval(interval)
-  }, [pathname])
+  }, [pathname, pageInsights])
 
   // ✅ Memoize page title for instant update when pathname changes
   const currentPageTitle = useMemo(() => {
@@ -258,6 +294,7 @@ export default function Header({
   }
 
   return (
+    <>
     <header className="header">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -359,8 +396,8 @@ export default function Header({
             </span>
           </div>
 
-          {/* Notification Bell - Only show on Business Performance page */}
-          {pathname === '/usc/business-performance' && (
+          {/* Notification Bell - Show on specific pages */}
+          {(pathname === '/usc/business-performance' || pathname === '/usc/brand-performance-trends') && (
             <>
               <div 
                 ref={bellIconRef}
@@ -437,14 +474,6 @@ export default function Header({
                   </div>
                 )}
               </div>
-              
-              {/* Alert Dropdown */}
-              <TierAnalyticsAlertDropdown
-                isOpen={isAlertDropdownOpen}
-                onClose={() => setIsAlertDropdownOpen(false)}
-                alerts={alerts}
-                triggerElement={bellIconRef.current}
-              />
             </>
           )}
 
@@ -481,5 +510,187 @@ export default function Header({
         </div>
       </div>
     </header>
+    
+    {/* Business Performance Alert Dropdown */}
+    {pathname === '/usc/business-performance' && (
+      <TierAnalyticsAlertDropdown
+        isOpen={isAlertDropdownOpen}
+        onClose={() => setIsAlertDropdownOpen(false)}
+        alerts={alerts}
+        triggerElement={bellIconRef.current}
+      />
+    )}
+    
+    {/* Brand Performance Trends Insights Dropdown - RENDERED OUTSIDE HEADER */}
+    {pathname === '/usc/brand-performance-trends' && isAlertDropdownOpen && pageInsights && (
+      <>
+        {/* Backdrop overlay */}
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.2)',
+            zIndex: 999998,
+            backdropFilter: 'blur(2px)'
+          }}
+        />
+        
+        {/* Dropdown */}
+        <div 
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            position: 'fixed',
+            top: '80px',
+            right: '120px',
+            width: '380px',
+            background: 'white',
+            borderRadius: '12px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+            zIndex: 999999,
+            overflow: 'visible',
+            border: '2px solid #667eea',
+            animation: 'slideDown 0.2s ease-out'
+          }}
+        >
+                  {/* Header */}
+                  <div style={{
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    padding: '16px 20px',
+                    color: 'white'
+                  }}>
+                    <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '4px' }}>
+                      📊 Performance Insights
+                    </div>
+                    <div style={{ fontSize: '12px', opacity: 0.9 }}>
+                      Brand Performance Trends - Period B vs A
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div style={{ padding: '16px', maxHeight: '400px', overflowY: 'auto' }}>
+                    {/* Overview */}
+                    <div style={{
+                      padding: '12px',
+                      background: '#f9fafb',
+                      borderRadius: '8px',
+                      marginBottom: '12px',
+                      border: '1px solid #e5e7eb'
+                    }}>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
+                        📈 Overall Status
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#6b7280', lineHeight: '1.6' }}>
+                        • <strong>{pageInsights.totalBrands}</strong> brands tracked<br/>
+                        • <strong style={{ color: '#059669' }}>{pageInsights.growingBrands}</strong> brands growing<br/>
+                        • <strong style={{ color: '#dc2626' }}>{pageInsights.decliningBrands}</strong> brands declining<br/>
+                        • Average growth: <strong style={{ color: pageInsights.avgGrowth >= 0 ? '#059669' : '#dc2626' }}>
+                          {pageInsights.avgGrowth >= 0 ? '+' : ''}{pageInsights.avgGrowth.toFixed(1)}%
+                        </strong>
+                      </div>
+                    </div>
+
+                    {/* Best Performer */}
+                    <div style={{
+                      padding: '12px',
+                      background: '#d1fae5',
+                      borderRadius: '8px',
+                      marginBottom: '12px',
+                      border: '1px solid #a7f3d0'
+                    }}>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#065f46', marginBottom: '8px' }}>
+                        🏆 Best Performer
+                      </div>
+                      <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#047857', marginBottom: '4px' }}>
+                        {pageInsights.bestPerformer?.brand || 'N/A'}
+                      </div>
+                      <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#059669' }}>
+                        ↗ +{(pageInsights.bestPerformer?.percent?.activeMember || 0).toFixed(1)}%
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#065f46', marginTop: '4px' }}>
+                        Active Member Growth
+                      </div>
+                    </div>
+
+                    {/* Attention Needed */}
+                    <div style={{
+                      padding: '12px',
+                      background: '#fee2e2',
+                      borderRadius: '8px',
+                      marginBottom: '12px',
+                      border: '1px solid #fecaca'
+                    }}>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#991b1b', marginBottom: '8px' }}>
+                        ⚠️ Attention Needed
+                      </div>
+                      <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#b91c1c', marginBottom: '4px' }}>
+                        {pageInsights.worstPerformer?.brand || 'N/A'}
+                      </div>
+                      <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#dc2626' }}>
+                        ↘ {(pageInsights.worstPerformer?.percent?.activeMember || 0).toFixed(1)}%
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#991b1b', marginTop: '4px' }}>
+                        Active Member Change
+                      </div>
+                    </div>
+
+                    {/* Action Recommendation */}
+                    <div style={{
+                      padding: '12px',
+                      background: '#fef3c7',
+                      borderRadius: '8px',
+                      border: '1px solid #fde68a'
+                    }}>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#92400e', marginBottom: '8px' }}>
+                        💡 Quick Recommendation
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#78350f', lineHeight: '1.6' }}>
+                        {pageInsights.decliningBrands > pageInsights.growingBrands ? (
+                          <>⚠️ <strong>{pageInsights.decliningBrands}</strong> brands declining. Review marketing strategy and customer retention programs.</>
+                        ) : pageInsights.avgGrowth > 10 ? (
+                          <>✅ Strong performance! Average growth <strong>+{pageInsights.avgGrowth.toFixed(1)}%</strong>. Consider scaling successful strategies.</>
+                        ) : (
+                          <>📊 Moderate performance. Focus on replicating success from <strong>{pageInsights.bestPerformer?.brand}</strong>.</>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Footer */}
+                  <div style={{
+                    padding: '12px 20px',
+                    background: '#f9fafb',
+                    borderTop: '1px solid #e5e7eb',
+                    fontSize: '11px',
+                    color: '#6b7280',
+                    textAlign: 'center'
+                  }}>
+                    Last updated: {new Date().toLocaleString('en-US', { 
+                      month: 'short', 
+                      day: 'numeric', 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
+                  </div>
+                </div>
+      </>
+      )}
+      
+      {/* Animation keyframes */}
+      <style jsx>{`
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
+    </>
   )
 } 
