@@ -89,7 +89,7 @@ export default function BrandPerformanceTrendsPage() {
     atv: true,
     da: true,
     ggr: true,
-    winrate: true,
+    winrate: false,
     ggrUser: true,
     daUser: true
   })
@@ -816,18 +816,18 @@ export default function BrandPerformanceTrendsPage() {
           )}
         </div>
         {/* Search Button */}
-        <button 
-          onClick={handleApplyFilters}
-          disabled={loading}
-          style={{ 
+      <button 
+        onClick={handleApplyFilters}
+        disabled={loading}
+        style={{ 
             background: loading ? '#9ca3af' : '#10b981',
             padding: '6px 20px',
-            border: 'none',
+          border: 'none',
             borderRadius: '6px',
-            color: 'white',
+          color: 'white',
             fontSize: '13px',
             fontWeight: '600',
-            cursor: loading ? 'not-allowed' : 'pointer',
+          cursor: loading ? 'not-allowed' : 'pointer',
             transition: 'all 0.2s ease',
             minWidth: '100px',
             height: '32px'
@@ -841,10 +841,10 @@ export default function BrandPerformanceTrendsPage() {
             if (!loading) {
               e.currentTarget.style.background = '#10b981'
             }
-          }}
-        >
-          {loading ? 'Loading...' : 'Search'}
-        </button>
+        }}
+      >
+        {loading ? 'Loading...' : 'Search'}
+      </button>
       </div>
     </div>
   );
@@ -1082,11 +1082,11 @@ export default function BrandPerformanceTrendsPage() {
               <div className="grid grid-cols-1 gap-6 mb-6">
                 <div 
                   style={{
-                    background: '#ffffff',
+                  background: '#ffffff',
                     borderRadius: '12px',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
                     overflow: 'hidden',
-                    border: '1px solid #e5e7eb',
+                  border: '1px solid #e5e7eb',
                     transition: 'all 0.3s ease'
                   }}
                   onMouseEnter={(e) => {
@@ -1140,7 +1140,7 @@ export default function BrandPerformanceTrendsPage() {
                         borderBottom: '2px solid #D1D5DB'
                       }}>
                         <th rowSpan={2} style={{ 
-                          padding: '10px 14px',
+                          padding: '8px 12px',
                           textAlign: 'center',
                           fontSize: '13px',
                           fontWeight: 700,
@@ -1153,9 +1153,9 @@ export default function BrandPerformanceTrendsPage() {
                           verticalAlign: 'bottom',
                           borderRight: '1px solid #D1D5DB',
                           letterSpacing: '-0.01em',
-                          width: '140px',
-                          minWidth: '140px',
-                          maxWidth: '140px'
+                          width: '110px',
+                          minWidth: '110px',
+                          maxWidth: '110px'
                         }}>Brand</th>
                         <th colSpan={visibleColumnsCount} style={{ 
                           padding: '10px 14px',
@@ -1183,7 +1183,7 @@ export default function BrandPerformanceTrendsPage() {
                       }}>
                         {/* Period A headers */}
                         {visibleColumns.count && <th style={{ 
-                            padding: '10px',
+                            padding: '8px',
                             textAlign: 'center',
                             fontSize: '12px',
                           fontWeight: 700,
@@ -1191,11 +1191,11 @@ export default function BrandPerformanceTrendsPage() {
                             whiteSpace: 'nowrap',
                             borderRight: '1px solid #D1D5DB',
                             letterSpacing: '-0.01em',
-                            width: '100px',
-                            minWidth: '100px'
+                            width: '85px',
+                            minWidth: '85px'
                           }}>Count</th>}
                         {visibleColumns.atv && <th style={{ 
-                          padding: '10px',
+                          padding: '8px',
                           textAlign: 'center',
                           fontSize: '12px',
                           fontWeight: 700,
@@ -1203,11 +1203,11 @@ export default function BrandPerformanceTrendsPage() {
                           whiteSpace: 'nowrap',
                           borderRight: '1px solid #D1D5DB',
                           letterSpacing: '-0.01em',
-                          width: '110px',
-                          minWidth: '110px'
+                          width: '95px',
+                          minWidth: '95px'
                         }}>ATV</th>}
                         {visibleColumns.da && <th style={{ 
-                          padding: '10px',
+                          padding: '8px',
                           textAlign: 'center',
                           fontSize: '12px',
                           fontWeight: 700,
@@ -1215,11 +1215,11 @@ export default function BrandPerformanceTrendsPage() {
                           whiteSpace: 'nowrap',
                           borderRight: '1px solid #D1D5DB',
                           letterSpacing: '-0.01em',
-                          width: '130px',
-                          minWidth: '130px'
+                          width: '100px',
+                          minWidth: '100px'
                         }}>DA</th>}
                         {visibleColumns.ggr && <th style={{ 
-                          padding: '12px',
+                          padding: '8px',
                           textAlign: 'center',
                           fontSize: '12px',
                           fontWeight: 700,
@@ -1227,8 +1227,8 @@ export default function BrandPerformanceTrendsPage() {
                           whiteSpace: 'nowrap',
                           borderRight: '1px solid #D1D5DB',
                           letterSpacing: '-0.01em',
-                          width: '130px',
-                          minWidth: '130px'
+                          width: '100px',
+                          minWidth: '100px'
                         }}>GGR</th>}
                         {visibleColumns.winrate && <th style={{ 
                           padding: '10px',
@@ -1243,7 +1243,7 @@ export default function BrandPerformanceTrendsPage() {
                           minWidth: '100px'
                         }}>Winrate</th>}
                         {visibleColumns.ggrUser && <th style={{ 
-                          padding: '10px',
+                          padding: '8px',
                           textAlign: 'center',
                           fontSize: '12px',
                           fontWeight: 700,
@@ -1251,11 +1251,11 @@ export default function BrandPerformanceTrendsPage() {
                           whiteSpace: 'nowrap',
                           borderRight: '1px solid #D1D5DB',
                           letterSpacing: '-0.01em',
-                          width: '110px',
-                          minWidth: '110px'
+                          width: '95px',
+                          minWidth: '95px'
                         }}>GGR User</th>}
                         {visibleColumns.daUser && <th style={{ 
-                          padding: '10px',
+                          padding: '8px',
                           textAlign: 'center',
                           fontSize: '12px',
                           fontWeight: 700,
@@ -1263,12 +1263,12 @@ export default function BrandPerformanceTrendsPage() {
                           whiteSpace: 'nowrap',
                           borderRight: '1px solid #D1D5DB',
                           letterSpacing: '-0.01em',
-                          width: '120px',
-                          minWidth: '120px'
+                          width: '100px',
+                          minWidth: '100px'
                         }}>DA User</th>}
                         {/* Period B headers */}
                         {visibleColumns.count && <th style={{ 
-                            padding: '12px',
+                            padding: '8px',
                             textAlign: 'center',
                             fontSize: '12px',
                           fontWeight: 700,
@@ -1276,11 +1276,11 @@ export default function BrandPerformanceTrendsPage() {
                             whiteSpace: 'nowrap',
                             borderRight: '1px solid #D1D5DB',
                             letterSpacing: '-0.01em',
-                            width: '100px',
-                            minWidth: '100px'
+                            width: '85px',
+                            minWidth: '85px'
                           }}>Count</th>}
                         {visibleColumns.atv && <th style={{ 
-                          padding: '10px',
+                          padding: '8px',
                           textAlign: 'center',
                           fontSize: '12px',
                           fontWeight: 700,
@@ -1288,11 +1288,11 @@ export default function BrandPerformanceTrendsPage() {
                           whiteSpace: 'nowrap',
                           borderRight: '1px solid #D1D5DB',
                           letterSpacing: '-0.01em',
-                          width: '110px',
-                          minWidth: '110px'
+                          width: '95px',
+                          minWidth: '95px'
                         }}>ATV</th>}
                         {visibleColumns.da && <th style={{ 
-                          padding: '10px',
+                          padding: '8px',
                           textAlign: 'center',
                           fontSize: '12px',
                           fontWeight: 700,
@@ -1300,13 +1300,13 @@ export default function BrandPerformanceTrendsPage() {
                           whiteSpace: 'nowrap',
                           borderRight: '1px solid #D1D5DB',
                           letterSpacing: '-0.01em',
-                          width: '130px',
-                          minWidth: '130px'
+                          width: '100px',
+                          minWidth: '100px'
                         }}>DA</th>}
                         {visibleColumns.ggr && <th 
                           onClick={() => handleSort('ggrB')}
                           style={{ 
-                            padding: '12px',
+                            padding: '8px',
                             textAlign: 'center',
                             fontSize: '12px',
                           fontWeight: 700,
@@ -1316,8 +1316,8 @@ export default function BrandPerformanceTrendsPage() {
                             userSelect: 'none',
                             borderRight: '1px solid #D1D5DB',
                             letterSpacing: '-0.01em',
-                            width: '130px',
-                            minWidth: '130px',
+                            width: '100px',
+                            minWidth: '100px',
                             transition: 'background 0.2s ease'
                           }}
                           title="Click to sort by GGR"
@@ -1339,7 +1339,7 @@ export default function BrandPerformanceTrendsPage() {
                           minWidth: '100px'
                         }}>Winrate</th>}
                         {visibleColumns.ggrUser && <th style={{ 
-                          padding: '10px',
+                          padding: '8px',
                           textAlign: 'center',
                           fontSize: '12px',
                           fontWeight: 700,
@@ -1347,19 +1347,19 @@ export default function BrandPerformanceTrendsPage() {
                           whiteSpace: 'nowrap',
                           borderRight: '1px solid #D1D5DB',
                           letterSpacing: '-0.01em',
-                          width: '110px',
-                          minWidth: '110px'
+                          width: '95px',
+                          minWidth: '95px'
                         }}>GGR User</th>}
                         {visibleColumns.daUser && <th style={{ 
-                          padding: '12px',
+                          padding: '8px',
                           textAlign: 'center',
                           fontSize: '12px',
                           fontWeight: 700,
                           color: '#111827',
                           whiteSpace: 'nowrap',
                           letterSpacing: '-0.01em',
-                          width: '120px',
-                          minWidth: '120px'
+                          width: '100px',
+                          minWidth: '100px'
                         }}>DA User</th>}
                       </tr>
                     </thead>
@@ -1383,20 +1383,20 @@ export default function BrandPerformanceTrendsPage() {
                         }}>
                           <td 
                             style={{ 
-                              padding: '10px 16px',
+                              padding: '8px 12px',
                               fontSize: '13px',
                               fontWeight: row.brand === 'TOTAL' ? '700' : '500',
                               color: '#1f2937',
-                              position: 'sticky',
-                              left: 0,
+                            position: 'sticky',
+                            left: 0,
                               background: 'inherit',
                             zIndex: 10,
                               boxShadow: '2px 0 4px rgba(0,0,0,0.04)',
                               borderRight: '1px solid #E5E7EB',
                               borderBottom: '1px solid #E5E7EB',
-                              width: '140px',
-                              minWidth: '140px',
-                              maxWidth: '140px',
+                              width: '110px',
+                              minWidth: '110px',
+                              maxWidth: '110px',
                               whiteSpace: 'nowrap',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis'
@@ -1406,7 +1406,7 @@ export default function BrandPerformanceTrendsPage() {
                           {/* Period A data */}
                           {visibleColumns.count && <td 
                             style={{ 
-                              padding: '10px 12px', 
+                              padding: '8px 10px', 
                               textAlign: 'right',
                               fontSize: '13px',
                               color: '#2563eb',
@@ -1424,14 +1424,14 @@ export default function BrandPerformanceTrendsPage() {
                           >
                             {formatInteger(row.periodA?.activeMember || 0)}
                           </td>}
-                          {visibleColumns.atv && <td style={{ padding: '10px 12px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: '1px solid #E5E7EB', borderBottom: '1px solid #E5E7EB' }}>
+                          {visibleColumns.atv && <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: '1px solid #E5E7EB', borderBottom: '1px solid #E5E7EB' }}>
                             {formatNumeric(row.periodA?.avgTransactionValue || 0)}
                           </td>}
-                          {visibleColumns.da && <td style={{ padding: '10px 12px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: '1px solid #E5E7EB', borderBottom: '1px solid #E5E7EB' }}>
+                          {visibleColumns.da && <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: '1px solid #E5E7EB', borderBottom: '1px solid #E5E7EB' }}>
                             {formatNumeric(row.periodA?.depositAmount || 0)}
                           </td>}
                           {visibleColumns.ggr && <td style={{ 
-                            padding: '10px 12px', 
+                            padding: '8px 10px', 
                             textAlign: 'right', 
                             fontSize: '13px', 
                             color: (row.periodA?.ggr || 0) >= 0 ? '#059669' : '#dc2626',
@@ -1441,13 +1441,13 @@ export default function BrandPerformanceTrendsPage() {
                           }}>
                             {formatNumeric(row.periodA?.ggr || 0)}
                           </td>}
-                          {visibleColumns.winrate && <td style={{ padding: '10px 12px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: '1px solid #E5E7EB', borderBottom: '1px solid #E5E7EB' }}>
+                          {visibleColumns.winrate && <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: '1px solid #E5E7EB', borderBottom: '1px solid #E5E7EB' }}>
                             {formatPF(row.periodA?.winrate || 0)}
                           </td>}
-                          {visibleColumns.ggrUser && <td style={{ padding: '10px 12px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: '1px solid #E5E7EB', borderBottom: '1px solid #E5E7EB' }}>
+                          {visibleColumns.ggrUser && <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: '1px solid #E5E7EB', borderBottom: '1px solid #E5E7EB' }}>
                             {formatNumeric(row.periodA?.ggrPerUser || 0)}
                           </td>}
-                          {visibleColumns.daUser && <td style={{ padding: '10px 12px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: '1px solid #E5E7EB', borderBottom: '1px solid #E5E7EB' }}>
+                          {visibleColumns.daUser && <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: '1px solid #E5E7EB', borderBottom: '1px solid #E5E7EB' }}>
                             {formatNumeric(row.periodA?.depositAmountPerUser || 0)}
                           </td>}
                           {/* Period B data with % comparison */}
@@ -1534,7 +1534,7 @@ export default function BrandPerformanceTrendsPage() {
                         borderTop: '2px solid #94a3b8'
                       }}>
                         <td style={{ 
-                          padding: '12px 16px',
+                          padding: '10px 12px',
                           fontSize: '14px',
                           fontWeight: 700,
                           color: '#111827',
