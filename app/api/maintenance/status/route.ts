@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
+// ✅ CRITICAL: Disable caching untuk real-time maintenance status
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET(request: NextRequest) {
   try {
     console.log('🔍 [Maintenance Status] Checking maintenance mode...')
@@ -17,7 +21,7 @@ export async function GET(request: NextRequest) {
       // If table doesn't exist, return default (maintenance OFF)
       if (error.code === 'PGRST116' || error.message.includes('does not exist')) {
         console.log('⚠️ [Maintenance Status] Table not found, returning default (OFF)')
-        return NextResponse.json({
+        const response = NextResponse.json({
           success: true,
           data: {
             is_maintenance_mode: false,
@@ -33,6 +37,8 @@ export async function GET(request: NextRequest) {
             custom_html: null
           }
         })
+        response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')
+        return response
       }
       
       return NextResponse.json({
@@ -43,7 +49,7 @@ export async function GET(request: NextRequest) {
     
     if (!data) {
       console.log('⚠️ [Maintenance Status] No data found, returning default (OFF)')
-      return NextResponse.json({
+      const response = NextResponse.json({
         success: true,
         data: {
           is_maintenance_mode: false,
@@ -59,11 +65,14 @@ export async function GET(request: NextRequest) {
           custom_html: null
         }
       })
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')
+      return response
     }
     
     console.log('✅ [Maintenance Status] Maintenance mode:', data.is_maintenance_mode ? 'ON' : 'OFF')
     
-    return NextResponse.json({
+    // ✅ Create response with no-cache headers
+    const response = NextResponse.json({
       success: true,
       data: {
         is_maintenance_mode: data.is_maintenance_mode || false,
@@ -79,6 +88,13 @@ export async function GET(request: NextRequest) {
         custom_html: data.custom_html || null
       }
     })
+    
+    // ✅ Set headers to prevent caching
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    response.headers.set('Pragma', 'no-cache')
+    response.headers.set('Expires', '0')
+    
+    return response
   } catch (error) {
     console.error('❌ [Maintenance Status] Unexpected error:', error)
     return NextResponse.json({

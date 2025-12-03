@@ -70,7 +70,11 @@ export default function AccessControl({ children }: AccessControlProps) {
       // This runs in background and doesn't affect page navigation speed
       Promise.resolve().then(() => {
         return fetch('/api/maintenance/status', {
-          signal: controller.signal
+          signal: controller.signal,
+          cache: 'no-store', // ✅ CRITICAL: No cache untuk real-time status
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate'
+          }
         })
       })
       .then(response => response.json())
@@ -78,8 +82,27 @@ export default function AccessControl({ children }: AccessControlProps) {
         clearTimeout(timeoutId)
         if (result.success && result.data.is_maintenance_mode) {
           // Maintenance mode is ON, redirect to maintenance page
-          console.log('🔧 [AccessControl] Maintenance mode ON, redirecting to maintenance page')
-          router.push('/maintenance')
+          console.log('🔧 [AccessControl] Maintenance mode ON, logging out user and redirecting to maintenance page')
+          
+          // ✅ CRITICAL: Logout user (clear session) jika bukan admin
+          const session = localStorage.getItem('nexmax_session')
+          if (session) {
+            try {
+              const sessionData = JSON.parse(session)
+              if (sessionData?.role !== 'admin') {
+                console.log('🚪 [AccessControl] Logging out non-admin user:', sessionData.username)
+                // Clear all session data
+                localStorage.removeItem('nexmax_session')
+                localStorage.removeItem('nexmax_user')
+                sessionStorage.clear()
+              }
+            } catch (err) {
+              console.error('Error parsing session for logout:', err)
+            }
+          }
+          
+          // Force reload to maintenance page
+          window.location.href = '/maintenance'
           setIsAuthorized(false)
           setHasChecked(true)
         } else {

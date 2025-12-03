@@ -34,6 +34,14 @@ export default function MaintenancePage() {
     
     // Check if user is admin (bypass maintenance)
     checkAdminAccess()
+    
+    // ✅ Auto-check maintenance status setiap 3 detik untuk auto-redirect jika OFF
+    const statusCheckInterval = setInterval(() => {
+      console.log('🔄 [Maintenance Page] Auto-checking maintenance status...')
+      fetchMaintenanceConfig()
+    }, 3000) // Check every 3 seconds for faster response
+    
+    return () => clearInterval(statusCheckInterval)
   }, [])
   
   useEffect(() => {
@@ -49,10 +57,23 @@ export default function MaintenancePage() {
   
   const fetchMaintenanceConfig = async () => {
     try {
-      const response = await fetch('/api/maintenance/status')
+      const response = await fetch('/api/maintenance/status', {
+        cache: 'no-store', // ✅ Force no cache
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      })
       const result = await response.json()
       
       if (result.success) {
+        // ✅ If maintenance mode is OFF, redirect to login page
+        if (!result.data.is_maintenance_mode) {
+          console.log('🔄 [Maintenance Page] Maintenance mode is OFF, redirecting to login')
+          // ✅ Force full page reload ke login untuk clear semua cache
+          window.location.href = '/login'
+          return
+        }
+        
         setConfig(result.data)
         
         // Initialize countdown if enabled
@@ -219,7 +240,7 @@ export default function MaintenancePage() {
           marginBottom: '1rem',
           lineHeight: '1.2'
         }}>
-          {maintenanceConfig.maintenance_message_id || maintenanceConfig.maintenance_message}
+          {maintenanceConfig.maintenance_message}
         </h1>
         
         {/* Countdown Timer */}
@@ -292,14 +313,6 @@ export default function MaintenancePage() {
           </div>
         )}
         
-        {/* Custom HTML */}
-        {maintenanceConfig.custom_html && (
-          <div
-            dangerouslySetInnerHTML={{ __html: maintenanceConfig.custom_html }}
-            style={{ marginTop: '2rem' }}
-          />
-        )}
-        
         {/* Additional Message */}
         <p style={{
           fontSize: '1.125rem',
@@ -309,6 +322,40 @@ export default function MaintenancePage() {
         }}>
           Terima kasih atas kesabaran Anda. Kami akan segera kembali.
         </p>
+        
+        {/* Back to Home Button */}
+        <button
+          onClick={() => {
+            console.log('🔄 [Maintenance Page] User clicked Back to Home, redirecting to login...')
+            // ✅ Force reload ke login page (clear session dan cache)
+            window.location.href = '/login'
+          }}
+          style={{
+            marginTop: '2rem',
+            padding: '12px 32px',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            color: maintenanceConfig.text_color || '#ffffff',
+            border: `2px solid ${maintenanceConfig.text_color || '#ffffff'}`,
+            borderRadius: '8px',
+            fontSize: '1rem',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'all 0.3s ease',
+            backdropFilter: 'blur(10px)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+            e.currentTarget.style.transform = 'translateY(-2px)'
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(255, 255, 255, 0.2)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'
+            e.currentTarget.style.transform = 'translateY(0)'
+            e.currentTarget.style.boxShadow = 'none'
+          }}
+        >
+          ← Back to Home
+        </button>
       </div>
     </div>
   )

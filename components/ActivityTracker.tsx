@@ -92,6 +92,25 @@ export default function ActivityTracker({ children }: ActivityTrackerProps) {
           return
         }
 
+        // ✅ CRITICAL: Check maintenance mode first
+        try {
+          const maintenanceRes = await fetch('/api/maintenance/status', {
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache' }
+          })
+          if (maintenanceRes.ok) {
+            const maintenanceData = await maintenanceRes.json()
+            if (maintenanceData.success && maintenanceData.data.is_maintenance_mode) {
+              console.log('🔧 [ActivityTracker] Maintenance mode ON detected, forcing logout')
+              cleanupSession()
+              window.location.href = '/maintenance'
+              return
+            }
+          }
+        } catch (maintenanceErr) {
+          console.error('⚠️ [ActivityTracker] Maintenance check error:', maintenanceErr)
+        }
+
         const loginAt = Number(session?.loginAt || 0)
         const userId = session?.id
 

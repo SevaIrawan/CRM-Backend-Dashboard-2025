@@ -416,53 +416,6 @@ export default function MaintenancePage() {
                 />
               </div>
 
-              {/* Maintenance Message (Indonesian) */}
-              <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: '#374151',
-                  marginBottom: '8px'
-                }}>
-                  Maintenance Message (Indonesian)
-                </label>
-                <textarea
-                  value={config.maintenance_message_id}
-                  onChange={(e) => {
-                    setConfig(prev => ({ ...prev, maintenance_message_id: e.target.value }))
-                    // Auto-resize textarea
-                    e.target.style.height = 'auto'
-                    e.target.style.height = e.target.scrollHeight + 'px'
-                  }}
-                  onInput={(e) => {
-                    // Auto-resize on input
-                    const target = e.target as HTMLTextAreaElement
-                    target.style.height = 'auto'
-                    target.style.height = target.scrollHeight + 'px'
-                  }}
-                  ref={(el) => {
-                    if (el) {
-                      el.style.height = 'auto'
-                      el.style.height = el.scrollHeight + 'px'
-                    }
-                  }}
-                  style={{
-                    width: '100%',
-                    minHeight: '60px',
-                    maxHeight: '200px',
-                    padding: '12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    fontFamily: 'inherit',
-                    resize: 'none',
-                    overflow: 'hidden'
-                  }}
-                  placeholder="Enter maintenance message in Indonesian..."
-                />
-              </div>
-
               {/* Countdown Settings */}
               <div style={{
                 display: 'grid',
@@ -654,53 +607,6 @@ export default function MaintenancePage() {
                     />
                   </div>
                 )}
-              </div>
-
-              {/* Custom HTML */}
-              <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: '#374151',
-                  marginBottom: '8px'
-                }}>
-                  Custom HTML (Optional)
-                </label>
-                <textarea
-                  value={config.custom_html || ''}
-                  onChange={(e) => {
-                    setConfig(prev => ({ ...prev, custom_html: e.target.value || null }))
-                    // Auto-resize textarea
-                    e.target.style.height = 'auto'
-                    e.target.style.height = e.target.scrollHeight + 'px'
-                  }}
-                  onInput={(e) => {
-                    // Auto-resize on input
-                    const target = e.target as HTMLTextAreaElement
-                    target.style.height = 'auto'
-                    target.style.height = target.scrollHeight + 'px'
-                  }}
-                  ref={(el) => {
-                    if (el) {
-                      el.style.height = 'auto'
-                      el.style.height = el.scrollHeight + 'px'
-                    }
-                  }}
-                  style={{
-                    width: '100%',
-                    minHeight: '80px',
-                    maxHeight: '200px',
-                    padding: '12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    fontFamily: 'monospace',
-                    resize: 'none',
-                    overflow: 'hidden'
-                  }}
-                  placeholder="Enter custom HTML content..."
-                />
               </div>
 
               {/* Save Button */}

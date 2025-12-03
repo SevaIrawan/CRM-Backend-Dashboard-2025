@@ -21,7 +21,12 @@ export default function HomePage() {
   const checkMaintenanceMode = async () => {
     try {
       // Check maintenance mode from API
-      const response = await fetch('/api/maintenance/status')
+      const response = await fetch('/api/maintenance/status', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate'
+        }
+      })
       const result = await response.json()
 
       if (result.success && result.data.is_maintenance_mode) {
@@ -39,6 +44,12 @@ export default function HomePage() {
               router.push(defaultPage)
               setIsLoading(false)
               return
+            } else {
+              // ✅ Non-admin user: Logout and redirect to maintenance
+              console.log('🚪 [HomePage] Maintenance ON, logging out non-admin user:', sessionData.username)
+              localStorage.removeItem('nexmax_session')
+              localStorage.removeItem('nexmax_user')
+              sessionStorage.clear()
             }
           } catch (error) {
             console.error('Error parsing session:', error)
@@ -47,7 +58,7 @@ export default function HomePage() {
 
         // Non-admin user, redirect to maintenance page
         console.log('🔧 [HomePage] Maintenance mode ON, redirecting to maintenance page')
-        router.push('/maintenance')
+        window.location.href = '/maintenance' // Force reload
         setIsLoading(false)
         return
       }

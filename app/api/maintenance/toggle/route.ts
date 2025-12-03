@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { revalidatePath } from 'next/cache'
 
 export async function POST(request: NextRequest) {
   try {
@@ -88,6 +89,41 @@ export async function POST(request: NextRequest) {
     }
     
     console.log('✅ [Maintenance Toggle] Maintenance mode toggled:', is_maintenance_mode ? 'ON' : 'OFF')
+    
+    // ✅ CRITICAL: If turning ON maintenance, force logout ALL users (except admin)
+    if (is_maintenance_mode) {
+      try {
+        console.log('🚪 [Maintenance Toggle] Maintenance ON, forcing logout all users...')
+        const logoutTimestamp = Date.now()
+        
+        const { error: logoutError } = await supabase
+          .from('force_logout')
+          .upsert({
+            id: 'global',
+            force_logout_at: logoutTimestamp,
+            updated_by: user_id || 'system',
+            updated_at: new Date().toISOString()
+          })
+        
+        if (logoutError) {
+          console.error('⚠️ [Maintenance Toggle] Failed to set force logout flag:', logoutError)
+        } else {
+          console.log('✅ [Maintenance Toggle] Force logout flag set successfully')
+        }
+      } catch (logoutErr) {
+        console.error('⚠️ [Maintenance Toggle] Error setting force logout:', logoutErr)
+      }
+    }
+    
+    // ✅ CRITICAL: Revalidate all pages untuk force refresh cache
+    try {
+      revalidatePath('/', 'layout') // Revalidate semua pages
+      revalidatePath('/maintenance')
+      revalidatePath('/login')
+      console.log('✅ [Maintenance Toggle] Cache revalidated for all pages')
+    } catch (revalidateError) {
+      console.error('⚠️ [Maintenance Toggle] Revalidation error (non-critical):', revalidateError)
+    }
     
     return NextResponse.json({
       success: true,
