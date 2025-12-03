@@ -170,7 +170,7 @@ export default function BrandPerformanceTrendsPage() {
   }
 
   // ✅ CUSTOM TOOLTIP CALLBACK for Brand Performance Trends (Period A vs B comparison)
-  const brandPerformanceTooltipCallback = (context: any) => {
+  const brandPerformanceTooltipCallback = (context: any): string[] => {
     // Only add comparison details if there are 2 datasets (Period A vs B)
     if (context.length === 2) {
       const periodA = context[0].parsed.y || context[0].parsed.x || 0
@@ -189,7 +189,7 @@ export default function BrandPerformanceTrendsPage() {
         `${indicator} Change: ${diffSymbol}${percentChange.toFixed(2)}%`
       ]
     }
-    return null
+    return []
   }
 
   // 📅 HELPER: Format date untuk display (DD MMM YYYY)

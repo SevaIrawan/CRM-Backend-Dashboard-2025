@@ -55,7 +55,7 @@ interface LineChartProps {
   onDoubleClick?: () => void; // For zoom functionality
   onClick?: () => void; // For view details (icon folder button)
   clickable?: boolean; // Enable hover effects
-  customTooltipCallback?: (context: any) => string[] | null; // Custom tooltip for specific pages
+  customTooltipCallback?: (context: any) => string[]; // Custom tooltip for specific pages
 }
 
 export default function LineChart({ 

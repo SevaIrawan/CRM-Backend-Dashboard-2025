@@ -47,7 +47,7 @@ interface BarChartProps {
   customLegend?: { label: string; color: string }[]; // Optional custom legend (rendered in header)
   onDoubleClick?: () => void; // For zoom functionality
   clickable?: boolean; // Enable hover effects
-  customTooltipCallback?: (context: any) => string[] | null; // Custom tooltip for specific pages
+  customTooltipCallback?: (context: any) => string[]; // Custom tooltip for specific pages
 }
 
 export default function BarChart({
