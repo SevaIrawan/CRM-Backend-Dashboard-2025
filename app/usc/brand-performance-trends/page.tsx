@@ -1136,8 +1136,8 @@ export default function BrandPerformanceTrendsPage() {
                     <thead className="sticky top-0" style={{ zIndex: 10 }}>
                       {/* Row 1: Period Headers */}
                       <tr style={{
-                        backgroundColor: '#F3F4F6',
-                        borderBottom: '2px solid #E5E7EB'
+                        backgroundColor: '#E5E7EB',
+                        borderBottom: '2px solid #D1D5DB'
                       }}>
                         <th rowSpan={2} style={{ 
                           padding: '10px 14px',
@@ -1147,12 +1147,15 @@ export default function BrandPerformanceTrendsPage() {
                           color: '#111827',
                           position: 'sticky',
                           left: 0,
-                          backgroundColor: '#F3F4F6',
+                          backgroundColor: '#E5E7EB',
                           zIndex: 20,
                           boxShadow: '2px 0 4px rgba(0, 0, 0, 0.02)',
                           verticalAlign: 'bottom',
-                          borderRight: '1px solid #E5E7EB',
-                          letterSpacing: '-0.01em'
+                          borderRight: '1px solid #D1D5DB',
+                          letterSpacing: '-0.01em',
+                          width: '140px',
+                          minWidth: '140px',
+                          maxWidth: '140px'
                         }}>Brand</th>
                         <th colSpan={visibleColumnsCount} style={{ 
                           padding: '10px 14px',
@@ -1160,7 +1163,7 @@ export default function BrandPerformanceTrendsPage() {
                           fontSize: '13px',
                           fontWeight: 700,
                           color: '#111827',
-                          borderRight: '1px solid #E5E7EB',
+                          borderRight: '1px solid #D1D5DB',
                           letterSpacing: '-0.01em'
                         }}>Period A</th>
                         <th colSpan={visibleColumnsCount} style={{ 
@@ -1175,8 +1178,8 @@ export default function BrandPerformanceTrendsPage() {
                       
                       {/* Row 2: Column Headers */}
                       <tr style={{
-                        backgroundColor: '#F3F4F6',
-                        borderBottom: '2px solid #E5E7EB'
+                        backgroundColor: '#E5E7EB',
+                        borderBottom: '2px solid #D1D5DB'
                       }}>
                         {/* Period A headers */}
                         {visibleColumns.count && <th style={{ 
@@ -1186,7 +1189,7 @@ export default function BrandPerformanceTrendsPage() {
                           fontWeight: 700,
                             color: '#111827',
                             whiteSpace: 'nowrap',
-                            borderRight: '1px solid #E5E7EB',
+                            borderRight: '1px solid #D1D5DB',
                             letterSpacing: '-0.01em',
                             width: '100px',
                             minWidth: '100px'
@@ -1198,7 +1201,7 @@ export default function BrandPerformanceTrendsPage() {
                           fontWeight: 700,
                           color: '#111827',
                           whiteSpace: 'nowrap',
-                          borderRight: '1px solid #E5E7EB',
+                          borderRight: '1px solid #D1D5DB',
                           letterSpacing: '-0.01em',
                           width: '110px',
                           minWidth: '110px'
@@ -1210,7 +1213,7 @@ export default function BrandPerformanceTrendsPage() {
                           fontWeight: 700,
                           color: '#111827',
                           whiteSpace: 'nowrap',
-                          borderRight: '1px solid #E5E7EB',
+                          borderRight: '1px solid #D1D5DB',
                           letterSpacing: '-0.01em',
                           width: '130px',
                           minWidth: '130px'
@@ -1222,7 +1225,7 @@ export default function BrandPerformanceTrendsPage() {
                           fontWeight: 700,
                             color: '#111827',
                           whiteSpace: 'nowrap',
-                          borderRight: '1px solid #E5E7EB',
+                          borderRight: '1px solid #D1D5DB',
                           letterSpacing: '-0.01em',
                           width: '130px',
                           minWidth: '130px'
@@ -1234,7 +1237,7 @@ export default function BrandPerformanceTrendsPage() {
                           fontWeight: 700,
                           color: '#111827',
                           whiteSpace: 'nowrap',
-                          borderRight: '1px solid #E5E7EB',
+                          borderRight: '1px solid #D1D5DB',
                           letterSpacing: '-0.01em',
                           width: '100px',
                           minWidth: '100px'
@@ -1246,7 +1249,7 @@ export default function BrandPerformanceTrendsPage() {
                           fontWeight: 700,
                           color: '#111827',
                           whiteSpace: 'nowrap',
-                          borderRight: '1px solid #E5E7EB',
+                          borderRight: '1px solid #D1D5DB',
                           letterSpacing: '-0.01em',
                           width: '110px',
                           minWidth: '110px'
@@ -1258,7 +1261,7 @@ export default function BrandPerformanceTrendsPage() {
                           fontWeight: 700,
                           color: '#111827',
                           whiteSpace: 'nowrap',
-                          borderRight: '1px solid #E5E7EB',
+                          borderRight: '1px solid #D1D5DB',
                           letterSpacing: '-0.01em',
                           width: '120px',
                           minWidth: '120px'
@@ -1271,7 +1274,7 @@ export default function BrandPerformanceTrendsPage() {
                           fontWeight: 700,
                             color: '#111827',
                             whiteSpace: 'nowrap',
-                            borderRight: '1px solid #E5E7EB',
+                            borderRight: '1px solid #D1D5DB',
                             letterSpacing: '-0.01em',
                             width: '100px',
                             minWidth: '100px'
@@ -1283,7 +1286,7 @@ export default function BrandPerformanceTrendsPage() {
                           fontWeight: 700,
                           color: '#111827',
                           whiteSpace: 'nowrap',
-                          borderRight: '1px solid #E5E7EB',
+                          borderRight: '1px solid #D1D5DB',
                           letterSpacing: '-0.01em',
                           width: '110px',
                           minWidth: '110px'
@@ -1295,7 +1298,7 @@ export default function BrandPerformanceTrendsPage() {
                           fontWeight: 700,
                           color: '#111827',
                           whiteSpace: 'nowrap',
-                          borderRight: '1px solid #E5E7EB',
+                          borderRight: '1px solid #D1D5DB',
                           letterSpacing: '-0.01em',
                           width: '130px',
                           minWidth: '130px'
@@ -1311,14 +1314,14 @@ export default function BrandPerformanceTrendsPage() {
                             whiteSpace: 'nowrap',
                             cursor: 'pointer',
                             userSelect: 'none',
-                            borderRight: '1px solid #E5E7EB',
+                            borderRight: '1px solid #D1D5DB',
                             letterSpacing: '-0.01em',
                             width: '130px',
                             minWidth: '130px',
                             transition: 'background 0.2s ease'
                           }}
                           title="Click to sort by GGR"
-                          onMouseEnter={(e) => e.currentTarget.style.background = '#E5E7EB'}
+                          onMouseEnter={(e) => e.currentTarget.style.background = '#D1D5DB'}
                           onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                         >
                           GGR {sortColumn === 'ggrB' && (sortDirection === 'asc' ? '↑' : '↓')}
@@ -1330,7 +1333,7 @@ export default function BrandPerformanceTrendsPage() {
                           fontWeight: 700,
                           color: '#111827',
                           whiteSpace: 'nowrap',
-                          borderRight: '1px solid #E5E7EB',
+                          borderRight: '1px solid #D1D5DB',
                           letterSpacing: '-0.01em',
                           width: '100px',
                           minWidth: '100px'
@@ -1342,7 +1345,7 @@ export default function BrandPerformanceTrendsPage() {
                           fontWeight: 700,
                           color: '#111827',
                           whiteSpace: 'nowrap',
-                          borderRight: '1px solid #E5E7EB',
+                          borderRight: '1px solid #D1D5DB',
                           letterSpacing: '-0.01em',
                           width: '110px',
                           minWidth: '110px'
@@ -1378,19 +1381,28 @@ export default function BrandPerformanceTrendsPage() {
                           e.currentTarget.style.boxShadow = 'none'
                           e.currentTarget.style.transform = 'translateY(0)'
                         }}>
-                          <td style={{ 
-                            padding: '10px 16px',
-                            fontSize: '13px',
-                            fontWeight: row.brand === 'TOTAL' ? '700' : '500',
-                            color: '#1f2937',
-                            position: 'sticky',
-                            left: 0,
-                            background: 'inherit',
-                          zIndex: 10,
-                            boxShadow: '2px 0 4px rgba(0,0,0,0.04)',
-                            borderRight: '1px solid #E5E7EB',
-                            borderBottom: '1px solid #E5E7EB'
-                          }}>{row.brand}</td>
+                          <td 
+                            style={{ 
+                              padding: '10px 16px',
+                              fontSize: '13px',
+                              fontWeight: row.brand === 'TOTAL' ? '700' : '500',
+                              color: '#1f2937',
+                              position: 'sticky',
+                              left: 0,
+                              background: 'inherit',
+                            zIndex: 10,
+                              boxShadow: '2px 0 4px rgba(0,0,0,0.04)',
+                              borderRight: '1px solid #E5E7EB',
+                              borderBottom: '1px solid #E5E7EB',
+                              width: '140px',
+                              minWidth: '140px',
+                              maxWidth: '140px',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }}
+                            title={row.brand}
+                          >{row.brand}</td>
                           {/* Period A data */}
                           {visibleColumns.count && <td 
                             style={{ 

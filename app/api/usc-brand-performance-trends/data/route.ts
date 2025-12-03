@@ -185,21 +185,36 @@ export async function GET(request: NextRequest) {
       purchaseFrequency: periodBKPIs.purchaseFrequency - periodAKPIs.purchaseFrequency
     }
 
+    // ✅ HELPER FUNCTION: Calculate percentage change with proper handling for negative values
+    const calculatePercentageChangeGlobal = (valueA: number, valueB: number): number => {
+      // If Period A is 0, handle special cases
+      if (valueA === 0) {
+        if (valueB === 0) return 0
+        // If A=0 and B is not zero, return +/-100% based on B's sign
+        return valueB > 0 ? 100 : -100
+      }
+      
+      // For all other cases (including negative Period A):
+      // Use absolute value of Period A as denominator to get meaningful percentage
+      const difference = valueB - valueA
+      return (difference / Math.abs(valueA)) * 100
+    }
+
     const percentageChange = {
-      activeMember: periodAKPIs.activeMember !== 0 ? ((periodBKPIs.activeMember - periodAKPIs.activeMember) / periodAKPIs.activeMember) * 100 : 0,
-      pureUser: periodAKPIs.pureUser !== 0 ? ((periodBKPIs.pureUser - periodAKPIs.pureUser) / periodAKPIs.pureUser) * 100 : 0,
-      depositAmount: periodAKPIs.depositAmount !== 0 ? ((periodBKPIs.depositAmount - periodAKPIs.depositAmount) / periodAKPIs.depositAmount) * 100 : 0,
-      depositCases: periodAKPIs.depositCases !== 0 ? ((periodBKPIs.depositCases - periodAKPIs.depositCases) / periodAKPIs.depositCases) * 100 : 0,
-      withdrawCases: periodAKPIs.withdrawCases !== 0 ? ((periodBKPIs.withdrawCases - periodAKPIs.withdrawCases) / periodAKPIs.withdrawCases) * 100 : 0,
-      withdrawAmount: periodAKPIs.withdrawAmount !== 0 ? ((periodBKPIs.withdrawAmount - periodAKPIs.withdrawAmount) / periodAKPIs.withdrawAmount) * 100 : 0,
-      addTransaction: periodAKPIs.addTransaction !== 0 ? ((periodBKPIs.addTransaction - periodAKPIs.addTransaction) / periodAKPIs.addTransaction) * 100 : 0,
-      deductTransaction: periodAKPIs.deductTransaction !== 0 ? ((periodBKPIs.deductTransaction - periodAKPIs.deductTransaction) / periodAKPIs.deductTransaction) * 100 : 0,
-      grossGamingRevenue: periodAKPIs.grossGamingRevenue !== 0 ? ((periodBKPIs.grossGamingRevenue - periodAKPIs.grossGamingRevenue) / periodAKPIs.grossGamingRevenue) * 100 : 0,
-      netProfit: periodAKPIs.netProfit !== 0 ? ((periodBKPIs.netProfit - periodAKPIs.netProfit) / periodAKPIs.netProfit) * 100 : 0,
-      atv: periodAKPIs.atv !== 0 ? ((periodBKPIs.atv - periodAKPIs.atv) / periodAKPIs.atv) * 100 : 0,
-      ggrUser: periodAKPIs.ggrUser !== 0 ? ((periodBKPIs.ggrUser - periodAKPIs.ggrUser) / periodAKPIs.ggrUser) * 100 : 0,
-      daUser: periodAKPIs.daUser !== 0 ? ((periodBKPIs.daUser - periodAKPIs.daUser) / periodAKPIs.daUser) * 100 : 0,
-      purchaseFrequency: periodAKPIs.purchaseFrequency !== 0 ? ((periodBKPIs.purchaseFrequency - periodAKPIs.purchaseFrequency) / periodAKPIs.purchaseFrequency) * 100 : 0
+      activeMember: calculatePercentageChangeGlobal(periodAKPIs.activeMember, periodBKPIs.activeMember),
+      pureUser: calculatePercentageChangeGlobal(periodAKPIs.pureUser, periodBKPIs.pureUser),
+      depositAmount: calculatePercentageChangeGlobal(periodAKPIs.depositAmount, periodBKPIs.depositAmount),
+      depositCases: calculatePercentageChangeGlobal(periodAKPIs.depositCases, periodBKPIs.depositCases),
+      withdrawCases: calculatePercentageChangeGlobal(periodAKPIs.withdrawCases, periodBKPIs.withdrawCases),
+      withdrawAmount: calculatePercentageChangeGlobal(periodAKPIs.withdrawAmount, periodBKPIs.withdrawAmount),
+      addTransaction: calculatePercentageChangeGlobal(periodAKPIs.addTransaction, periodBKPIs.addTransaction),
+      deductTransaction: calculatePercentageChangeGlobal(periodAKPIs.deductTransaction, periodBKPIs.deductTransaction),
+      grossGamingRevenue: calculatePercentageChangeGlobal(periodAKPIs.grossGamingRevenue, periodBKPIs.grossGamingRevenue),
+      netProfit: calculatePercentageChangeGlobal(periodAKPIs.netProfit, periodBKPIs.netProfit),
+      atv: calculatePercentageChangeGlobal(periodAKPIs.atv, periodBKPIs.atv),
+      ggrUser: calculatePercentageChangeGlobal(periodAKPIs.ggrUser, periodBKPIs.ggrUser),
+      daUser: calculatePercentageChangeGlobal(periodAKPIs.daUser, periodBKPIs.daUser),
+      purchaseFrequency: calculatePercentageChangeGlobal(periodAKPIs.purchaseFrequency, periodBKPIs.purchaseFrequency)
     }
 
     // Get brand-specific data for charts - only for available brands
@@ -498,6 +513,25 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // ✅ HELPER FUNCTION: Calculate percentage change with proper handling for negative values
+    const calculatePercentageChange = (valueA: number, valueB: number): number => {
+      // If Period A is 0, handle special cases
+      if (valueA === 0) {
+        if (valueB === 0) return 0
+        // If A=0 and B is not zero, return +/-100% based on B's sign
+        return valueB > 0 ? 100 : -100
+      }
+      
+      // For all other cases (including negative Period A):
+      // Use absolute value of Period A as denominator to get meaningful percentage
+      // Example 1: A=-100, B=50 → diff=150, %=(150/100)*100=150% ✅ (improved from loss to profit)
+      // Example 2: A=-100, B=-50 → diff=50, %=(50/100)*100=50% ✅ (loss reduced by 50%)
+      // Example 3: A=-100, B=-150 → diff=-50, %=(-50/100)*100=-50% ✅ (loss increased by 50%)
+      // Example 4: A=100, B=50 → diff=-50, %=(-50/100)*100=-50% ✅ (decreased by 50%)
+      const difference = valueB - valueA
+      return (difference / Math.abs(valueA)) * 100
+    }
+
     // Prepare table data (same format as brand comparison) - FILTERED like charts
     // Only show brands that have active members in at least one period
     const availableBrandsForTable = Array.from(new Set([...periodAAvailableBrands, ...periodBAvailableBrands]))
@@ -527,18 +561,18 @@ export async function GET(request: NextRequest) {
         depositAmountPerUser: (periodB?.daUser || 0) - (periodA?.daUser || 0)
       }
       
-      // ✅ CALCULATE PERCENTAGE CHANGE (%) FOR EACH LINE
+      // ✅ CALCULATE PERCENTAGE CHANGE (%) FOR EACH LINE USING HELPER FUNCTION
       const percentageChange = {
-        activeMember: (periodA?.activeMember || 0) !== 0 ? (difference.activeMember / (periodA?.activeMember || 1)) * 100 : 0,
-        avgTransactionValue: (periodA?.atv || 0) !== 0 ? (difference.avgTransactionValue / (periodA?.atv || 1)) * 100 : 0,
-        purchaseFrequency: (periodA?.purchaseFrequency || 0) !== 0 ? (difference.purchaseFrequency / (periodA?.purchaseFrequency || 1)) * 100 : 0,
-        depositCases: (periodA?.depositCases || 0) !== 0 ? (difference.depositCases / (periodA?.depositCases || 1)) * 100 : 0,
-        depositAmount: (periodA?.depositAmount || 0) !== 0 ? (difference.depositAmount / (periodA?.depositAmount || 1)) * 100 : 0,
-        withdrawAmount: (periodA?.withdrawAmount || 0) !== 0 ? (difference.withdrawAmount / (periodA?.withdrawAmount || 1)) * 100 : 0,
-        ggr: (periodA?.grossGamingRevenue || 0) !== 0 ? (difference.ggr / (periodA?.grossGamingRevenue || 1)) * 100 : 0,
-        winrate: periodAWinrate !== 0 ? (difference.winrate / periodAWinrate) * 100 : 0,
-        ggrPerUser: (periodA?.ggrUser || 0) !== 0 ? (difference.ggrPerUser / (periodA?.ggrUser || 1)) * 100 : 0,
-        depositAmountPerUser: (periodA?.daUser || 0) !== 0 ? (difference.depositAmountPerUser / (periodA?.daUser || 1)) * 100 : 0
+        activeMember: calculatePercentageChange(periodA?.activeMember || 0, periodB?.activeMember || 0),
+        avgTransactionValue: calculatePercentageChange(periodA?.atv || 0, periodB?.atv || 0),
+        purchaseFrequency: calculatePercentageChange(periodA?.purchaseFrequency || 0, periodB?.purchaseFrequency || 0),
+        depositCases: calculatePercentageChange(periodA?.depositCases || 0, periodB?.depositCases || 0),
+        depositAmount: calculatePercentageChange(periodA?.depositAmount || 0, periodB?.depositAmount || 0),
+        withdrawAmount: calculatePercentageChange(periodA?.withdrawAmount || 0, periodB?.withdrawAmount || 0),
+        ggr: calculatePercentageChange(periodA?.grossGamingRevenue || 0, periodB?.grossGamingRevenue || 0),
+        winrate: calculatePercentageChange(periodAWinrate, periodBWinrate),
+        ggrPerUser: calculatePercentageChange(periodA?.ggrUser || 0, periodB?.ggrUser || 0),
+        depositAmountPerUser: calculatePercentageChange(periodA?.daUser || 0, periodB?.daUser || 0)
       }
       
       return {
