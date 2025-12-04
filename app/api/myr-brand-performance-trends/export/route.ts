@@ -19,10 +19,9 @@ export async function GET(request: NextRequest) {
       periodBEnd,
     })
 
-    // ✅ Pass user's allowed brands to data API
+    // ✅ NEW: Pass user's allowed brands to data API
     const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
-
-    // Reuse existing data logic to ensure exact same rows as table
+    
     const dataRes = await fetch(`${origin}/api/myr-brand-performance-trends/data?${params.toString()}`, { 
       cache: 'no-store',
       headers: {
@@ -93,7 +92,7 @@ export async function GET(request: NextRequest) {
     }
 
     const csvContent = csvLines.join('\n')
-    const fileName = `brand_performance_trends_myr_${periodBEnd}.csv`
+    const fileName = `brand_performance_trends_usc_${periodBEnd}.csv`
     return new Response(csvContent, {
       status: 200,
       headers: {
@@ -103,7 +102,7 @@ export async function GET(request: NextRequest) {
       }
     })
   } catch (error) {
-    console.error('❌ [MYR Brand Export] Error:', error)
+    console.error('❌ [USC Brand Export] Error:', error)
     return new Response('Internal server error', { status: 500 })
   }
 }

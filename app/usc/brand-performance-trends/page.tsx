@@ -185,8 +185,8 @@ export default function BrandPerformanceTrendsPage() {
       
       return [
         '\n─────────────────────',
-        `${indicator} Difference (B-A): ${diffSymbol}${formattedDiff}`,
-        `${indicator} Change: ${diffSymbol}${percentChange.toFixed(2)}%`
+        `${indicator} Compare (B-A): ${diffSymbol}${formattedDiff}`,
+        `${indicator} Percentage: ${diffSymbol}${percentChange.toFixed(2)}%`
       ]
     }
     return []

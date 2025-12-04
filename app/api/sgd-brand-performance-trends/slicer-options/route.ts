@@ -3,6 +3,8 @@ import { supabase } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('📊 [SGD Brand Performance Trends] Fetching slicer options...')
+    
     // Ambil min dan max date dari table blue_whale_sgd (real-time data)
     const { data: minRecord, error: minErr } = await supabase
       .from('blue_whale_sgd')
@@ -10,7 +12,10 @@ export async function GET(request: NextRequest) {
       .eq('currency', 'SGD')
       .order('date', { ascending: true })
       .limit(1)
-    if (minErr) throw minErr
+    if (minErr) {
+      console.error('❌ [SGD Brand Performance Trends] Error fetching min date:', minErr)
+      throw minErr
+    }
 
     const { data: maxRecord, error: maxErr } = await supabase
       .from('blue_whale_sgd')
@@ -18,10 +23,15 @@ export async function GET(request: NextRequest) {
       .eq('currency', 'SGD')
       .order('date', { ascending: false })
       .limit(1)
-    if (maxErr) throw maxErr
+    if (maxErr) {
+      console.error('❌ [SGD Brand Performance Trends] Error fetching max date:', maxErr)
+      throw maxErr
+    }
 
     const minDate = minRecord?.[0]?.date || '2021-01-01'
     const maxDate = maxRecord?.[0]?.date || new Date().toISOString().split('T')[0]
+
+    console.log('✅ [SGD Brand Performance Trends] Slicer options loaded:', { minDate, maxDate })
 
     return NextResponse.json({
       success: true,
@@ -31,6 +41,12 @@ export async function GET(request: NextRequest) {
       }
     })
   } catch (error) {
-    return NextResponse.json({ success: false, error: 'Failed to load slicer options' }, { status: 500 })
+    console.error('❌ [SGD Brand Performance Trends] Error:', error)
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Failed to load slicer options',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 }
+
