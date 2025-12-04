@@ -118,7 +118,33 @@ export default function MaintenancePage() {
       
       setTimeRemaining({ days, hours, minutes, seconds })
     } else {
+      // ✅ Countdown HABIS → Auto-turn OFF maintenance mode
       setTimeRemaining({ days: 0, hours: 0, minutes: 0, seconds: 0 })
+      
+      console.log('⏰ [Maintenance Page] Countdown reached zero, auto-turning OFF maintenance...')
+      
+      // ✅ Call API to turn OFF maintenance automatically
+      fetch('/api/maintenance/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          is_maintenance_mode: false,
+          user_id: 'system_countdown'
+        })
+      })
+      .then(res => res.json())
+      .then(result => {
+        if (result.success) {
+          console.log('✅ [Maintenance Page] Maintenance auto-turned OFF by countdown')
+          // Redirect to login page
+          window.location.href = '/login'
+        }
+      })
+      .catch(err => {
+        console.error('❌ [Maintenance Page] Error auto-turning OFF:', err)
+        // Fallback: just check status
+        fetchMaintenanceConfig()
+      })
     }
   }
   
