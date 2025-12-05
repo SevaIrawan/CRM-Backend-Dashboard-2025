@@ -343,6 +343,7 @@ export default function Sidebar({
         { title: 'KPI Comparison', path: '/usc/kpi-comparison' },
         { title: 'Auto-Approval Monitor', path: '/usc/auto-approval-monitor' },
         { title: 'Member Analytic', path: '/usc/member-analytic' },
+        { title: 'Pure Member Analysis', path: '/usc/pure-member-analysis' },
         { title: 'Customer Retention', path: '/usc/customer-retention' },
           { title: 'Churned Members', path: '/usc/churn-member' },
           { title: 'Member Report', path: '/usc/member-report' }
