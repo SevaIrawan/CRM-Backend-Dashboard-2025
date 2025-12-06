@@ -289,7 +289,7 @@ export function getTierBadge(tier: number): { bg: string, text: string, label: s
 // TIER MOVEMENT TRACKING
 // ============================================================================
 
-export type TierMovementType = 'UPGRADE' | 'DOWNGRADE' | 'STABLE' | 'NEW' | 'CHURNED'
+export type TierMovementType = 'UPGRADE' | 'DOWNGRADE' | 'STABLE' | 'NEW' | 'CHURNED' | 'REACTIVATION'
 
 export interface TierMovement {
   userkey: string
