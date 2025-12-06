@@ -190,6 +190,7 @@ function aggregateUserData(
   // Second pass: determine tier (highest tier number in period)
   // Tier hierarchy: Tier 1 (highest) > Tier 2 > ... > Tier 7 > Regular (lowest)
   const result = new Map<string, {
+    user_unique: string
     unique_code: string | null
     user_name: string | null
     line: string | null
