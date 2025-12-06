@@ -340,10 +340,19 @@ export default function CustomerTierMovement({
     return `${num.toFixed(1)}%`
   }
 
-  // Render CentralIcon with forced currentColor so stroke/fill inherit
+  // Render CentralIcon with forced currentColor; override MoM arrows with double chevron SVGs
   const renderIcon = (iconName: string, color: string, size: string = '20px') => {
     try {
-      const raw = getKpiIcon(iconName) || ''
+      const customMoM: Record<string, string> = {
+        arrowUp: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path fill="currentColor" d="M342.6 105.4C330.1 92.9 309.8 92.9 297.3 105.4L137.3 265.4C124.8 277.9 124.8 298.2 137.3 310.7C149.8 323.2 170.1 323.2 182.6 310.7L320 173.3L457.4 310.6C469.9 323.1 490.2 323.1 502.7 310.6C515.2 298.1 515.2 277.8 502.7 265.3L342.7 105.3zM502.6 457.4L342.6 297.4C330.1 284.9 309.8 284.9 297.3 297.4L137.3 457.4C124.8 469.9 124.8 490.2 137.3 502.7C149.8 515.2 170.1 515.2 182.6 502.7L320 365.3L457.4 502.6C469.9 515.1 490.2 515.1 502.7 502.6C515.2 490.1 515.2 469.8 502.7 457.3z"/></svg>`,
+        arrowDown: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path fill="currentColor" d="M342.6 534.6C330.1 547.1 309.8 547.1 297.3 534.6L137.3 374.6C124.8 362.1 124.8 341.8 137.3 329.3C149.8 316.8 170.1 316.8 182.6 329.3L320 466.7L457.4 329.4C469.9 316.9 490.2 316.9 502.7 329.4C515.2 341.9 515.2 362.2 502.7 374.7L342.7 534.7zM502.6 182.6L342.6 342.6C330.1 355.1 309.8 355.1 297.3 342.6L137.3 182.6C124.8 170.1 124.8 149.8 137.3 137.3C149.8 124.8 170.1 124.8 182.6 137.3L320 274.7L457.4 137.4C469.9 124.9 490.2 124.9 502.7 137.4C515.2 149.9 515.2 170.2 502.7 182.7z"/></svg>`,
+        activeMember: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M320 576C178.6 576 64 461.4 64 320C64 178.6 178.6 64 320 64C461.4 64 576 178.6 576 320C576 461.4 461.4 576 320 576zM438 209.7C427.3 201.9 412.3 204.3 404.5 215L285.1 379.2L233 327.1C223.6 317.7 208.4 317.7 199.1 327.1C189.8 336.5 189.7 351.7 199.1 361L271.1 433C276.1 438 282.9 440.5 289.9 440C296.9 439.5 303.3 435.9 307.4 430.2L443.3 243.2C451.1 232.5 448.7 217.5 438 209.7z"/></svg>`,
+        newCustomers: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M136 192C136 125.7 189.7 72 256 72C322.3 72 376 125.7 376 192C376 258.3 322.3 312 256 312C189.7 312 136 258.3 136 192zM48 546.3C48 447.8 127.8 368 226.3 368L285.7 368C384.2 368 464 447.8 464 546.3C464 562.7 450.7 576 434.3 576L77.7 576C61.3 576 48 562.7 48 546.3zM544 160C557.3 160 568 170.7 568 184L568 232L616 232C629.3 232 640 242.7 640 256C640 269.3 629.3 280 616 280L568 280L568 328C568 341.3 557.3 352 544 352C530.7 352 520 341.3 520 328L520 280L472 280C458.7 280 448 269.3 448 256C448 242.7 458.7 232 472 232L520 232L520 184C520 170.7 530.7 160 544 160z"/></svg>`,
+        pureMember: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M286 368C384.5 368 464.3 447.8 464.3 546.3C464.3 562.7 451 576 434.6 576L78 576C61.6 576 48.3 562.7 48.3 546.3C48.3 447.8 128.1 368 226.6 368L286 368zM585.7 169.9C593.5 159.2 608.5 156.8 619.2 164.6C629.9 172.4 632.3 187.4 624.5 198.1L522.1 338.9C517.9 344.6 511.4 348.3 504.4 348.7C497.4 349.1 490.4 346.5 485.5 341.4L439.1 293.4C429.9 283.9 430.1 268.7 439.7 259.5C449.2 250.3 464.4 250.6 473.6 260.1L500.1 287.5L585.7 169.8zM256.3 312C190 312 136.3 258.3 136.3 192C136.3 125.7 190 72 256.3 72C322.6 72 376.3 125.7 376.3 192C376.3 258.3 322.6 312 256.3 312z"/></svg>`,
+        churnRate: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M136 192C136 125.7 189.7 72 256 72C322.3 72 376 125.7 376 192C376 258.3 322.3 312 256 312C189.7 312 136 258.3 136 192zM48 546.3C48 447.8 127.8 368 226.3 368L285.7 368C384.2 368 464 447.8 464 546.3C464 562.7 450.7 576 434.3 576L77.7 576C61.3 576 48 562.7 48 546.3zM472 232L616 232C629.3 232 640 242.7 640 256C640 269.3 629.3 280 616 280L472 280C458.7 280 448 269.3 448 256C448 242.7 458.7 232 472 232z"/></svg>`
+      }
+
+      const raw = customMoM[iconName] || getKpiIcon(iconName) || ''
       const svg = raw
         .replace(/fill="[^"]*"/g, 'fill="currentColor"')
         .replace(/stroke="[^"]*"/g, 'stroke="currentColor"')
@@ -540,9 +549,9 @@ export default function CustomerTierMovement({
             { label: data.summary.upgradesCard.label, count: data.summary.upgradesCard.count, percentage: data.summary.upgradesCard.percentage, icon: 'arrowUp' },
             { label: data.summary.downgradesCard.label, count: data.summary.downgradesCard.count, percentage: data.summary.downgradesCard.percentage, icon: 'arrowDown' },
             { label: data.summary.stableCard.label, count: data.summary.stableCard.count, percentage: data.summary.stableCard.percentage, icon: 'activeMember' },
-            data.summary.newMemberCard && { label: data.summary.newMemberCard.label, count: data.summary.newMemberCard.count, percentage: data.summary.newMemberCard.percentage, icon: 'newCustomers' },
-            data.summary.reactivationCard && { label: data.summary.reactivationCard.label, count: data.summary.reactivationCard.count, percentage: data.summary.reactivationCard.percentage, icon: 'pureMember' },
-            data.summary.churnedCard && { label: data.summary.churnedCard.label, count: data.summary.churnedCard.count, percentage: data.summary.churnedCard.percentage, icon: 'churnRate' }
+            data.summary.newMemberCard && { label: 'ND TIER', count: data.summary.newMemberCard.count, percentage: data.summary.newMemberCard.percentage, icon: 'newCustomers' },
+            data.summary.reactivationCard && { label: 'REACT TIER', count: data.summary.reactivationCard.count, percentage: data.summary.reactivationCard.percentage, icon: 'pureMember' },
+            data.summary.churnedCard && { label: 'CHURNED TIER', count: data.summary.churnedCard.count, percentage: data.summary.churnedCard.percentage, icon: 'churnRate' }
           ].filter(Boolean).map((card, idx) => (
             <div
               key={idx}
@@ -566,7 +575,17 @@ export default function CustomerTierMovement({
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                 <span style={{ fontSize: '12px', fontWeight: 600, color: '#111827' }}>{(card as any).label}</span>
-                {renderIcon((card as any).icon, '#111827', '20px')}
+                {renderIcon(
+                  (card as any).icon,
+                  (card as any).icon === 'arrowUp'
+                    ? '#16a34a'
+                    : (card as any).icon === 'arrowDown'
+                      ? '#dc2626'
+                      : (card as any).icon === 'activeMember'
+                        ? '#2563eb'
+                        : '#111827',
+                  '20px'
+                )}
               </div>
               <div style={{ fontSize: '32px', fontWeight: 700, color: '#111827' }}>
                 {formatNumber((card as any).count)}
