@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import StandardLoadingSpinner from '@/components/StandardLoadingSpinner'
 import TierMovementCustomerModal from './TierMovementCustomerModal'
+import { getKpiIcon } from '@/lib/CentralIcon'
 
 interface MovementSummary {
   totalUpgrades: number
@@ -29,6 +30,9 @@ interface TierMovementData {
     upgradesCard: { count: number; percentage: number; label: string }
     downgradesCard: { count: number; percentage: number; label: string }
     stableCard: { count: number; percentage: number; label: string }
+    newMemberCard?: { count: number; percentage: number; label: string }
+    reactivationCard?: { count: number; percentage: number; label: string }
+    churnedCard?: { count: number; percentage: number; label: string }
   }
   matrix: {
     rows: MatrixRow[]
@@ -336,6 +340,24 @@ export default function CustomerTierMovement({
     return `${num.toFixed(1)}%`
   }
 
+  // Render CentralIcon with forced currentColor so stroke/fill inherit
+  const renderIcon = (iconName: string, color: string, size: string = '20px') => {
+    try {
+      const raw = getKpiIcon(iconName) || ''
+      const svg = raw
+        .replace(/fill="[^"]*"/g, 'fill="currentColor"')
+        .replace(/stroke="[^"]*"/g, 'stroke="currentColor"')
+      return (
+        <div
+          style={{ width: size, height: size, color }}
+          dangerouslySetInnerHTML={{ __html: svg }}
+        />
+      )
+    } catch {
+      return null
+    }
+  }
+
   // ✅ Get cell color based on movement type with enhanced modern styling
   // Tier numbering: Tier 1 = Super VIP (highest), Tier 7 = Regular (lowest)
   // Logic: 
@@ -513,148 +535,47 @@ export default function CustomerTierMovement({
           </p>
         </div>
 
-        {/* Summary Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-          {/* Upgrades Card */}
-          <div
-            style={{
-              backgroundColor: '#D1FAE5',
-              borderRadius: '12px',
-              padding: '16px',
-              position: 'relative',
-              border: '1px solid #A7F3D0',
-              boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.08), 0 1px 4px 0 rgba(0, 0, 0, 0.04)',
-              transition: 'all 0.3s ease',
-              cursor: 'pointer'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-3px)'
-              e.currentTarget.style.boxShadow = '0 8px 25px 0 rgba(0, 0, 0, 0.12), 0 4px 10px 0 rgba(0, 0, 0, 0.08)'
-              e.currentTarget.style.borderColor = '#6EE7B7'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)'
-              e.currentTarget.style.boxShadow = '0 2px 8px 0 rgba(0, 0, 0, 0.08), 0 1px 4px 0 rgba(0, 0, 0, 0.04)'
-              e.currentTarget.style.borderColor = '#A7F3D0'
-            }}
-          >
-            <div style={{ fontSize: '12px', fontWeight: 600, color: '#065F46', marginBottom: '8px' }}>
-              Upgrades
-            </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-              <div style={{ fontSize: '32px', fontWeight: 700, color: '#047857' }}>
-                {formatNumber(data.summary.upgradesCard.count)}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+          {[
+            { label: data.summary.upgradesCard.label, count: data.summary.upgradesCard.count, percentage: data.summary.upgradesCard.percentage, icon: 'arrowUp' },
+            { label: data.summary.downgradesCard.label, count: data.summary.downgradesCard.count, percentage: data.summary.downgradesCard.percentage, icon: 'arrowDown' },
+            { label: data.summary.stableCard.label, count: data.summary.stableCard.count, percentage: data.summary.stableCard.percentage, icon: 'activeMember' },
+            data.summary.newMemberCard && { label: data.summary.newMemberCard.label, count: data.summary.newMemberCard.count, percentage: data.summary.newMemberCard.percentage, icon: 'newCustomers' },
+            data.summary.reactivationCard && { label: data.summary.reactivationCard.label, count: data.summary.reactivationCard.count, percentage: data.summary.reactivationCard.percentage, icon: 'pureMember' },
+            data.summary.churnedCard && { label: data.summary.churnedCard.label, count: data.summary.churnedCard.count, percentage: data.summary.churnedCard.percentage, icon: 'churnRate' }
+          ].filter(Boolean).map((card, idx) => (
+            <div
+              key={idx}
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                padding: '16px',
+                position: 'relative',
+                border: '1px solid #e5e7eb',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04)',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)'
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.12)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04)'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#111827' }}>{(card as any).label}</span>
+                {renderIcon((card as any).icon, '#111827', '20px')}
               </div>
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#10B981"
-                strokeWidth="2"
-                style={{ position: 'absolute', top: '16px', right: '16px' }}
-              >
-                <path d="M13 7l5 5m0 0l-5 5m5-5H6" />
-              </svg>
-            </div>
-            <div style={{ fontSize: '13px', color: '#065F46', marginTop: '4px' }}>
-              {formatPercentage(data.summary.upgradesCard.percentage)} of total
-            </div>
-          </div>
-
-          {/* Downgrades Card - Pink */}
-          <div
-            style={{
-              backgroundColor: '#FCE7F3', // ✅ Pink background
-              borderRadius: '12px',
-              padding: '16px',
-              position: 'relative',
-              border: '1px solid #F9A8D4', // ✅ Pink border
-              boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.08), 0 1px 4px 0 rgba(0, 0, 0, 0.04)',
-              transition: 'all 0.3s ease',
-              cursor: 'pointer'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-3px)'
-              e.currentTarget.style.boxShadow = '0 8px 25px 0 rgba(0, 0, 0, 0.12), 0 4px 10px 0 rgba(0, 0, 0, 0.08)'
-              e.currentTarget.style.borderColor = '#F472B6'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)'
-              e.currentTarget.style.boxShadow = '0 2px 8px 0 rgba(0, 0, 0, 0.08), 0 1px 4px 0 rgba(0, 0, 0, 0.04)'
-              e.currentTarget.style.borderColor = '#F9A8D4'
-            }}
-          >
-            <div style={{ fontSize: '12px', fontWeight: 600, color: '#9F1239', marginBottom: '8px' }}>
-              Downgrades
-            </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-              <div style={{ fontSize: '32px', fontWeight: 700, color: '#BE185D' }}>
-                {formatNumber(data.summary.downgradesCard.count)}
+              <div style={{ fontSize: '32px', fontWeight: 700, color: '#111827' }}>
+                {formatNumber((card as any).count)}
               </div>
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#EC4899"
-                strokeWidth="2"
-                style={{ position: 'absolute', top: '16px', right: '16px' }}
-              >
-                <path d="M13 17l5-5m0 0l-5-5m5 5H6" transform="rotate(180 12 12)" />
-              </svg>
-            </div>
-            <div style={{ fontSize: '13px', color: '#9F1239', marginTop: '4px' }}>
-              {formatPercentage(data.summary.downgradesCard.percentage)} of total
-            </div>
-          </div>
-
-          {/* Stable Card */}
-          <div
-            style={{
-              backgroundColor: '#DBEAFE',
-              borderRadius: '12px',
-              padding: '16px',
-              position: 'relative',
-              border: '1px solid #BFDBFE',
-              boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.08), 0 1px 4px 0 rgba(0, 0, 0, 0.04)',
-              transition: 'all 0.3s ease',
-              cursor: 'pointer'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-3px)'
-              e.currentTarget.style.boxShadow = '0 8px 25px 0 rgba(0, 0, 0, 0.12), 0 4px 10px 0 rgba(0, 0, 0, 0.08)'
-              e.currentTarget.style.borderColor = '#93C5FD'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)'
-              e.currentTarget.style.boxShadow = '0 2px 8px 0 rgba(0, 0, 0, 0.08), 0 1px 4px 0 rgba(0, 0, 0, 0.04)'
-              e.currentTarget.style.borderColor = '#BFDBFE'
-            }}
-          >
-            <div style={{ fontSize: '12px', fontWeight: 600, color: '#1E40AF', marginBottom: '8px' }}>
-              Stable
-            </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-              <div style={{ fontSize: '32px', fontWeight: 700, color: '#2563EB' }}>
-                {formatNumber(data.summary.stableCard.count)}
+              <div style={{ fontSize: '12px', color: '#4B5563' }}>
+                {formatPercentage((card as any).percentage)} of total
               </div>
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#3B82F6"
-                strokeWidth="2"
-                style={{ position: 'absolute', top: '16px', right: '16px' }}
-              >
-                <path d="M5 13l4 4L19 7" />
-              </svg>
             </div>
-            <div style={{ fontSize: '13px', color: '#1E40AF', marginTop: '4px' }}>
-              {formatPercentage(data.summary.stableCard.percentage)} of total
-            </div>
-          </div>
+          ))}
         </div>
 
         {/* Tier Movement Matrix */}

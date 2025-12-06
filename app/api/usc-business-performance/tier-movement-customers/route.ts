@@ -9,11 +9,12 @@ import { TIER_NAMES } from '@/lib/uscTierClassification'
 async function aggregateUserDataByDateRange(
   startDate: string,
   endDate: string,
-  userkeys?: string[],
+  userUniques?: string[],
   line?: string,
   squadLead?: string,
   channel?: string
 ): Promise<Map<string, {
+  user_unique: string
   unique_code: string | null
   user_name: string | null
   line: string | null
@@ -25,20 +26,20 @@ async function aggregateUserDataByDateRange(
 }>> {
   let query = supabase
     .from('blue_whale_usc')
-    .select('userkey, unique_code, user_name, line, tier_name, tier_group, deposit_amount, withdraw_amount, deposit_cases, date')
+    .select('user_unique, unique_code, user_name, line, tier_name, tier_group, deposit_amount, withdraw_amount, deposit_cases, date')
     .eq('currency', 'USC')
     .gte('date', startDate)
     .lte('date', endDate)
     .not('tier_name', 'is', null) // Only users with tier
 
-  if (userkeys && userkeys.length > 0) {
+  if (userUniques && userUniques.length > 0) {
     // Use batch processing for large arrays
     const BATCH_SIZE = 500
     const results: any[] = []
     
-    for (let i = 0; i < userkeys.length; i += BATCH_SIZE) {
-      const batch = userkeys.slice(i, i + BATCH_SIZE)
-      const batchQuery = query.in('userkey', batch)
+    for (let i = 0; i < userUniques.length; i += BATCH_SIZE) {
+      const batch = userUniques.slice(i, i + BATCH_SIZE)
+      const batchQuery = query.in('user_unique', batch)
       const { data, error } = await batchQuery
       
       if (error) {
@@ -54,7 +55,7 @@ async function aggregateUserDataByDateRange(
     // Process results
     return aggregateUserData(results, line, squadLead, channel)
   } else {
-    // No userkey filter - get all data (with other filters)
+    // No user_unique filter - get all data (with other filters)
     if (line && line !== 'All' && line !== 'ALL') {
       query = query.eq('line', line)
     }
@@ -108,6 +109,7 @@ function aggregateUserData(
   squadLead?: string,
   channel?: string
 ): Map<string, {
+  user_unique: string
   unique_code: string | null
   user_name: string | null
   line: string | null
@@ -118,6 +120,7 @@ function aggregateUserData(
   avgTransactionValue: number
 }> {
   const userMap = new Map<string, {
+    user_unique: string
     unique_code: string | null
     user_name: string | null
     line: string | null
@@ -131,15 +134,16 @@ function aggregateUserData(
   
   // First pass: aggregate all metrics and track all tier numbers
   rawData.forEach(row => {
-    if (!row.userkey) return
+    if (!row.user_unique) return
     
     // Apply filters in memory (if not already filtered)
     if (line && line !== 'All' && line !== 'ALL' && row.line !== line) return
     if (squadLead && squadLead !== 'All' && squadLead !== 'ALL' && row.squad_lead !== squadLead) return
     if (channel && channel !== 'All' && channel !== 'ALL' && row.traffic !== channel) return
     
-    if (!userMap.has(row.userkey)) {
-      userMap.set(row.userkey, {
+    if (!userMap.has(row.user_unique)) {
+      userMap.set(row.user_unique, {
+        user_unique: row.user_unique,
         unique_code: row.unique_code || null,
         user_name: row.user_name || null,
         line: row.line || null,
@@ -152,7 +156,7 @@ function aggregateUserData(
       })
     }
     
-    const user = userMap.get(row.userkey)!
+    const user = userMap.get(row.user_unique)!
     
     // Aggregate metrics
     user.depositAmount += Number(row.deposit_amount) || 0
@@ -196,7 +200,7 @@ function aggregateUserData(
     avgTransactionValue: number
   }>()
   
-  userMap.forEach((user, userkey) => {
+  userMap.forEach((user, userUnique) => {
     // Determine tier: highest tier number in period
     // Tier 1 = highest, Tier 7 = lower, Regular = lowest (usually tier 0 or high number)
     let highestTier: number | null = null
@@ -212,7 +216,8 @@ function aggregateUserData(
       ? user.depositAmount / user.depositCases
       : 0
     
-    result.set(userkey, {
+    result.set(userUnique, {
+      user_unique: user.user_unique,
       unique_code: user.unique_code,
       user_name: user.user_name,
       line: user.line,
@@ -380,182 +385,184 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log(`📊 [Tier Movement Customers API] Fetching Period A data (${periodAStartDate} to ${periodAEndDate}) for tier ${fromTierNum}`)
-
-    // ✅ Query Period A data from blue_whale_usc with date range
-    // Aggregate per user and filter by fromTier
+    // ------------------------------------------------------------------
+    // ALIGN DATASET WITH MATRIX: REBUILD MOVEMENTS USING user_unique
+    // ------------------------------------------------------------------
+    console.log(`📊 [Tier Movement Customers API] Fetching Period A data (${periodAStartDate} to ${periodAEndDate})`)
     const periodADataMap = await aggregateUserDataByDateRange(
       periodAStartDate!,
       periodAEndDate!,
-      undefined, // Get all users first
-      line || undefined,  // Convert null to undefined
-      squadLead || undefined,  // Convert null to undefined
-      channel || undefined  // Convert null to undefined
+      undefined,
+      line || undefined,
+      squadLead || undefined,
+      channel || undefined
     )
 
-    // Filter users with fromTier in Period A
-    const periodAUserkeys: string[] = []
-    const periodAUserData = new Map<string, typeof periodADataMap extends Map<string, infer V> ? V : never>()
-    
-    periodADataMap.forEach((userData, userkey) => {
-      if (userData.tier === fromTierNum) {
-        periodAUserkeys.push(userkey)
-        periodAUserData.set(userkey, userData)
-      }
-    })
-
-    console.log(`📊 [Tier Movement Customers API] Period A: Found ${periodAUserkeys.length} users with tier ${fromTierNum} out of ${periodADataMap.size} total users`)
-    
-    // ✅ DEBUG: Log tier distribution in Period A
-    const tierDistributionA = new Map<number, number>()
-    periodADataMap.forEach((userData) => {
-      const tier = userData.tier || 0
-      tierDistributionA.set(tier, (tierDistributionA.get(tier) || 0) + 1)
-    })
-    console.log(`🔍 [Tier Movement Customers API] Period A tier distribution:`, Object.fromEntries(tierDistributionA))
-
-    if (periodAUserkeys.length === 0) {
-      console.warn(`⚠️ [Tier Movement Customers API] No users found in Period A for tier ${fromTierNum}. This might indicate a data mismatch with the chart.`)
-      console.warn(`⚠️ Available tiers in Period A:`, Array.from(tierDistributionA.keys()).sort((a, b) => a - b))
-      return NextResponse.json({
-        customers: [],
-        fromTierName: TIER_NAMES[fromTierNum] || `Tier ${fromTierNum}`,
-        toTierName: TIER_NAMES[toTierNum] || `Tier ${toTierNum}`,
-        movementType: fromTierNum === toTierNum ? 'STABLE' : (fromTierNum > toTierNum ? 'UPGRADE' : 'DOWNGRADE'),
-        count: 0
-      })
-    }
-
-    console.log(`📊 [Tier Movement Customers API] Fetching Period B data (${periodBStartDate} to ${periodBEndDate}) for ${periodAUserkeys.length} userkeys with tier ${toTierNum}`)
-
-    // ✅ Query Period B data from blue_whale_usc with date range
-    // Only query for userkeys from Period A (more efficient)
+    console.log(`📊 [Tier Movement Customers API] Fetching Period B data (${periodBStartDate} to ${periodBEndDate})`)
     const periodBDataMap = await aggregateUserDataByDateRange(
       periodBStartDate!,
       periodBEndDate!,
-      periodAUserkeys, // Only query for these userkeys
-      line || undefined,  // Convert null to undefined
-      squadLead || undefined,  // Convert null to undefined
-      channel || undefined  // Convert null to undefined
+      undefined,
+      line || undefined,
+      squadLead || undefined,
+      channel || undefined
     )
 
-    // Filter users with toTier in Period B
-    const periodBUserData: Array<{
-      userkey: string
-      unique_code: string | null
-      user_name: string | null
-      line: string | null
-      tier: number | null
-      depositAmount: number
-      withdrawAmount: number
-      depositCases: number
-      avgTransactionValue: number
-    }> = []
-    
-    periodBDataMap.forEach((userData, userkey) => {
-      if (userData.tier === toTierNum) {
-        periodBUserData.push({
-          userkey,
-          ...userData
+    const currentMapped = Array.from(periodBDataMap.entries()).map(([userUnique, data]) => ({
+      user_unique: userUnique,
+      uniqueCode: data.unique_code || userUnique,
+      line: data.line || 'All',
+      tier: data.tier || 7,
+      score: 0
+    }))
+
+    const previousMapped = Array.from(periodADataMap.entries()).map(([userUnique, data]) => ({
+      user_unique: userUnique,
+      uniqueCode: data.unique_code || userUnique,
+      line: data.line || 'All',
+      tier: data.tier || 7,
+      score: 0
+    }))
+
+    // History before A for NEW vs REACTIVATION
+    const historyBeforeAQuery = supabase
+      .from('blue_whale_usc')
+      .select('user_unique')
+      .eq('currency', 'USC')
+      .lt('date', periodAStartDate!)
+      .not('tier_name', 'is', null)
+    if (line && line !== 'All' && line !== 'ALL') historyBeforeAQuery.eq('line', line)
+    if (squadLead && squadLead !== 'All' && squadLead !== 'ALL') historyBeforeAQuery.eq('squad_lead', squadLead)
+    if (channel && channel !== 'All' && channel !== 'ALL') historyBeforeAQuery.eq('traffic', channel)
+
+    const historyBeforeASet = new Set<string>()
+    const BATCH_HISTORY = 5000
+    let offsetHist = 0
+    let moreHist = true
+    while (moreHist) {
+      const { data: histData, error: histErr } = await historyBeforeAQuery.range(offsetHist, offsetHist + BATCH_HISTORY - 1)
+      if (histErr) break
+      if (!histData || histData.length === 0) {
+        moreHist = false
+      } else {
+        histData.forEach(row => {
+          if (row.user_unique) historyBeforeASet.add(String(row.user_unique))
         })
+        moreHist = histData.length === BATCH_HISTORY
+        offsetHist += BATCH_HISTORY
+      }
+    }
+
+    const prevMap = new Map(previousMapped.map(p => [p.user_unique, p]))
+    const movements: Array<{
+      user_unique: string
+      uniqueCode: string
+      line: string
+      movementType: 'UPGRADE' | 'DOWNGRADE' | 'STABLE' | 'NEW' | 'CHURNED' | 'REACTIVATION'
+      fromTier: number | null
+      toTier: number | null
+      tierChange: number
+    }> = []
+
+    currentMapped.forEach(current => {
+      const previous = prevMap.get(current.user_unique)
+      if (!previous) {
+        const hasHistoryBeforeA = historyBeforeASet.has(current.user_unique)
+        const movementType: 'NEW' | 'REACTIVATION' = hasHistoryBeforeA ? 'REACTIVATION' : 'NEW'
+        movements.push({
+          user_unique: current.user_unique,
+          uniqueCode: current.uniqueCode,
+          line: current.line,
+          movementType,
+          fromTier: null,
+          toTier: current.tier,
+          tierChange: 0
+        })
+      } else {
+        const tierChange = previous.tier - current.tier
+        let movementType: 'UPGRADE' | 'DOWNGRADE' | 'STABLE' = 'STABLE'
+        if (tierChange > 0) movementType = 'UPGRADE'
+        else if (tierChange < 0) movementType = 'DOWNGRADE'
+
+        movements.push({
+          user_unique: current.user_unique,
+          uniqueCode: current.uniqueCode,
+          line: current.line,
+          movementType,
+          fromTier: previous.tier,
+          toTier: current.tier,
+          tierChange
+        })
+        prevMap.delete(current.user_unique)
       }
     })
 
-    console.log(`📊 [Tier Movement Customers API] Period B: Found ${periodBUserData.length} users with tier ${toTierNum} out of ${periodBDataMap.size} queried users`)
-    
-    // ✅ DEBUG: Log tier distribution in Period B for the queried users
-    const tierDistributionB = new Map<number, number>()
-    periodBDataMap.forEach((userData) => {
-      const tier = userData.tier || 0
-      tierDistributionB.set(tier, (tierDistributionB.get(tier) || 0) + 1)
-    })
-    console.log(`🔍 [Tier Movement Customers API] Period B tier distribution for ${periodAUserkeys.length} queried users:`, Object.fromEntries(tierDistributionB))
-
-    // ✅ Handle empty result gracefully (this is normal - customers might have moved or churned)
-    if (periodBUserData.length === 0) {
-      console.warn(`⚠️ [Tier Movement Customers] No customers found for movement ${fromTierNum} → ${toTierNum}.`)
-      console.warn(`⚠️ This might indicate:`)
-      console.warn(`   - Customers moved to other tiers:`, Array.from(tierDistributionB.keys()).filter(t => t !== toTierNum).sort((a, b) => a - b))
-      console.warn(`   - Customers churned (no data in Period B)`)
-      console.warn(`   - Data mismatch with chart (chart shows value > 0 but API finds 0 customers)`)
-      return NextResponse.json({
-        customers: [],
-        fromTierName: TIER_NAMES[fromTierNum] || `Tier ${fromTierNum}`,
-        toTierName: TIER_NAMES[toTierNum] || `Tier ${toTierNum}`,
-        movementType: fromTierNum === toTierNum ? 'STABLE' : (fromTierNum > toTierNum ? 'UPGRADE' : 'DOWNGRADE'),
-        count: 0
+    prevMap.forEach(previous => {
+      movements.push({
+        user_unique: previous.user_unique,
+        uniqueCode: previous.uniqueCode,
+        line: previous.line,
+        movementType: 'CHURNED',
+        fromTier: previous.tier,
+        toTier: null,
+        tierChange: 0
       })
-    }
-
-    // ✅ Sort customers by line/brand (alphabetically)
-    const sortedPeriodBData = [...periodBUserData].sort((a, b) => {
-      const lineA = (a.line || '').toLowerCase()
-      const lineB = (b.line || '').toLowerCase()
-      return lineA.localeCompare(lineB)
     })
 
-    // ✅ Format customer data with comparison percentage (Period B vs Period A)
-    const customers = sortedPeriodBData.map(customer => {
-      // ✅ Period B values (current period) - already aggregated
-      const depositAmount = customer.depositAmount
-      const withdrawAmount = customer.withdrawAmount
-      const ggr = depositAmount - withdrawAmount  // ✅ Period B GGR
-      const atv = customer.avgTransactionValue  // ✅ Period B ATV
+    // Filter movements for requested from/to tier
+    const filtered = movements.filter(m => m.fromTier === fromTierNum && m.toTier === toTierNum)
 
-      // ✅ Get Period A data for comparison
-      const prevData = periodAUserData.get(customer.userkey)
-      const prevDA = prevData?.depositAmount || 0    // ✅ Period A DA
-      const prevWithdraw = prevData?.withdrawAmount || 0
-      const prevGGR = prevDA - prevWithdraw  // ✅ Period A GGR
-      const prevATV = prevData?.avgTransactionValue || 0  // ✅ Period A ATV
+    const customers = filtered.map(m => {
+      const curr = periodBDataMap.get(m.user_unique)
+      const prev = periodADataMap.get(m.user_unique)
 
-      // ✅ Calculate comparison percentage: ((Period B - Period A) / Period A) * 100
-      const daChangePercent = prevDA !== 0 
-        ? ((depositAmount - prevDA) / Math.abs(prevDA)) * 100
-        : null
-      
-      const ggrChangePercent = prevGGR !== 0 
-        ? ((ggr - prevGGR) / Math.abs(prevGGR)) * 100
-        : null
-      
-      const atvChangePercent = prevATV !== 0 
-        ? ((atv - prevATV) / Math.abs(prevATV)) * 100
-        : null
+      const depositAmount = curr?.depositAmount || 0
+      const withdrawAmount = curr?.withdrawAmount || 0
+      const ggr = depositAmount - withdrawAmount
+      const atv = curr?.avgTransactionValue || 0
+
+      const prevDA = prev?.depositAmount || 0
+      const prevWithdraw = prev?.withdrawAmount || 0
+      const prevGGR = prevDA - prevWithdraw
+      const prevATV = prev?.avgTransactionValue || 0
+
+      const daChangePercent = prevDA !== 0 ? ((depositAmount - prevDA) / Math.abs(prevDA)) * 100 : null
+      const ggrChangePercent = prevGGR !== 0 ? ((ggr - prevGGR) / Math.abs(prevGGR)) * 100 : null
+      const atvChangePercent = prevATV !== 0 ? ((atv - prevATV) / Math.abs(prevATV)) * 100 : null
 
       return {
-        unique_code: customer.unique_code || null,
-        user_name: customer.user_name || null,
-        line: customer.line || null,
-        handler: null, // Will be null until handler column is added to blue_whale_usc
+        user_unique: m.user_unique,
+        unique_code: curr?.unique_code || m.uniqueCode || null,
+        user_name: curr?.user_name || null,
+        line: curr?.line || m.line || null,
+        handler: null,
         daChangePercent: daChangePercent !== null ? Number(daChangePercent.toFixed(2)) : null,
         ggrChangePercent: ggrChangePercent !== null ? Number(ggrChangePercent.toFixed(2)) : null,
         atvChangePercent: atvChangePercent !== null ? Number(atvChangePercent.toFixed(2)) : null,
-        assigne: null // For dropdown/assignment (will be populated when handler column is added)
+        assigne: null
       }
     })
 
-    // Determine movement type
-    let movementType = 'STABLE'
-    if (fromTierNum > toTierNum) {
-      movementType = 'UPGRADE' // Lower tier number = higher tier (e.g., 7->1)
-    } else if (fromTierNum < toTierNum) {
-      movementType = 'DOWNGRADE' // Higher tier number = lower tier (e.g., 1->7)
-    }
-
-    // ✅ DEBUG: Log sebelum return
-    console.log('🔍 [Tier Movement Customers API] Returning response:', {
-      customersLength: customers.length,
-      customersArraySample: customers.slice(0, 3), // Sample first 3
-      count: customers.length,
-      movementType
+    // Sort by line then unique_code for consistency
+    const sortedCustomers = customers.sort((a, b) => {
+      const lineA = (a.line || '').toLowerCase()
+      const lineB = (b.line || '').toLowerCase()
+      if (lineA !== lineB) return lineA.localeCompare(lineB)
+      const codeA = (a.unique_code || '').toLowerCase()
+      const codeB = (b.unique_code || '').toLowerCase()
+      return codeA.localeCompare(codeB)
     })
-    
+
+    const movementType = fromTierNum === toTierNum
+      ? 'STABLE'
+      : (fromTierNum > toTierNum ? 'UPGRADE' : 'DOWNGRADE')
+
     return NextResponse.json({
-      customers,
+      customers: sortedCustomers,
       fromTierName: TIER_NAMES[fromTierNum] || `Tier ${fromTierNum}`,
       toTierName: TIER_NAMES[toTierNum] || `Tier ${toTierNum}`,
       movementType,
-      count: customers.length
+      count: sortedCustomers.length
     })
 
   } catch (error: any) {

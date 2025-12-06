@@ -19,7 +19,7 @@ async function aggregateUserDataByDateRange(
   squadLead?: string,
   channel?: string
 ): Promise<Map<string, {
-  userkey: string
+  user_unique: string
   unique_code: string | null
   user_name: string | null
   line: string | null
@@ -27,7 +27,7 @@ async function aggregateUserDataByDateRange(
 }>> {
   let query = supabase
     .from('blue_whale_usc')
-    .select('userkey, unique_code, user_name, line, tier_name, date')
+    .select('user_unique, unique_code, user_name, line, tier_name, date')
     .eq('currency', 'USC')
     .gte('date', startDate)
     .lte('date', endDate)
@@ -75,7 +75,7 @@ async function aggregateUserDataByDateRange(
 
   // Aggregate per userkey (NOT userkey_line) and determine tier
   const userMap = new Map<string, {
-    userkey: string
+    user_unique: string
     unique_code: string | null
     user_name: string | null
     line: string | null
@@ -84,13 +84,13 @@ async function aggregateUserDataByDateRange(
 
   // First pass: track all tier numbers for each userkey
   allData.forEach(row => {
-    if (!row.userkey) return
+    if (!row.user_unique) return
 
-    const userkey = String(row.userkey)
+    const userUnique = String(row.user_unique)
 
-    if (!userMap.has(userkey)) {
-      userMap.set(userkey, {
-        userkey: userkey,
+    if (!userMap.has(userUnique)) {
+      userMap.set(userUnique, {
+        user_unique: userUnique,
         unique_code: row.unique_code || null,
         user_name: row.user_name || null,
         line: row.line || null,
@@ -98,7 +98,7 @@ async function aggregateUserDataByDateRange(
       })
     }
 
-    const user = userMap.get(userkey)!
+    const user = userMap.get(userUnique)!
 
     // Track tier number for determination
     if (row.tier_name) {
@@ -119,14 +119,14 @@ async function aggregateUserDataByDateRange(
 
   // Second pass: determine tier (highest tier = lowest tier number)
   const result = new Map<string, {
-    userkey: string
+    user_unique: string
     unique_code: string | null
     user_name: string | null
     line: string | null
     tier: number | null
   }>()
 
-  userMap.forEach((user, userkey) => {
+  userMap.forEach((user, userUnique) => {
     let highestTier: number | null = null
 
     if (user.tierNumbers.size > 0) {
@@ -134,8 +134,8 @@ async function aggregateUserDataByDateRange(
       highestTier = Math.min(...Array.from(user.tierNumbers))
     }
 
-    result.set(userkey, {
-      userkey: user.userkey,
+    result.set(userUnique, {
+      user_unique: user.user_unique,
       unique_code: user.unique_code,
       user_name: user.user_name,
       line: user.line,
@@ -292,24 +292,56 @@ export async function GET(request: NextRequest) {
       channel || undefined
     )
 
+    // ✅ History sebelum period A untuk deteksi Reactivation
+    const historyBeforeAQuery = supabase
+      .from('blue_whale_usc')
+      .select('user_unique')
+      .eq('currency', 'USC')
+      .lt('date', periodAStartDate)
+      .not('tier_name', 'is', null)
+    if (line && line !== 'All' && line !== 'ALL') historyBeforeAQuery.eq('line', line)
+    if (squadLead && squadLead !== 'All' && squadLead !== 'ALL') historyBeforeAQuery.eq('squad_lead', squadLead)
+    if (channel && channel !== 'All' && channel !== 'ALL') historyBeforeAQuery.eq('traffic', channel)
+
+    const historyBeforeASet = new Set<string>()
+    const BATCH_HISTORY = 5000
+    let offsetHist = 0
+    let moreHist = true
+    while (moreHist) {
+      const { data: histData, error: histErr } = await historyBeforeAQuery.range(offsetHist, offsetHist + BATCH_HISTORY - 1)
+      if (histErr) {
+        console.error('❌ History fetch error:', histErr)
+        break
+      }
+      if (!histData || histData.length === 0) {
+        moreHist = false
+      } else {
+        histData.forEach(row => {
+          if (row.user_unique) historyBeforeASet.add(String(row.user_unique))
+        })
+        moreHist = histData.length === BATCH_HISTORY
+        offsetHist += BATCH_HISTORY
+      }
+    }
+
     console.log(`📊 [Tier Movement API] Period A: ${periodADataMap.size} users, Period B: ${periodBDataMap.size} users`)
 
     // Map to format expected by calculateTierMovement
     // Key is userkey (NOT userkey_line)
     // calculateTierMovement uses userkey_line internally, but since we aggregate by userkey only,
     // we'll use the same userkey for both userkey and line to match correctly
-    const currentMapped = Array.from(periodBDataMap.entries()).map(([userkey, data]) => ({
-      userkey: data.userkey,
-      uniqueCode: data.unique_code || data.userkey,
-      line: data.userkey, // Use userkey as line to match userkey_line logic in calculateTierMovement
+    const currentMapped = Array.from(periodBDataMap.entries()).map(([userUnique, data]) => ({
+      userkey: userUnique,
+      uniqueCode: data.unique_code || userUnique,
+      line: data.line || 'All',
       tier: data.tier || 7, // Default to Regular if no tier
       score: 0 // Score not used for movement calculation, only tier
     }))
     
-    const previousMapped = Array.from(periodADataMap.entries()).map(([userkey, data]) => ({
-      userkey: data.userkey,
-      uniqueCode: data.unique_code || data.userkey,
-      line: data.userkey, // Use userkey as line to match userkey_line logic in calculateTierMovement
+    const previousMapped = Array.from(periodADataMap.entries()).map(([userUnique, data]) => ({
+      userkey: userUnique,
+      uniqueCode: data.unique_code || userUnique,
+      line: data.line || 'All',
       tier: data.tier || 7, // Default to Regular if no tier
       score: 0 // Score not used for movement calculation, only tier
     }))
@@ -322,7 +354,7 @@ export async function GET(request: NextRequest) {
       userkey: string
       uniqueCode: string
       line: string
-      movementType: 'UPGRADE' | 'DOWNGRADE' | 'STABLE' | 'NEW' | 'CHURNED'
+      movementType: 'UPGRADE' | 'DOWNGRADE' | 'STABLE' | 'NEW' | 'CHURNED' | 'REACTIVATION'
       fromTier: number | null
       toTier: number | null
       tierChange: number
@@ -335,12 +367,14 @@ export async function GET(request: NextRequest) {
       const previous = prevMap.get(current.userkey)
       
       if (!previous) {
-        // NEW customer in current period
+        // NEW atau REACTIVATION
+        const hasHistoryBeforeA = historyBeforeASet.has(current.userkey)
+        const movementType: 'NEW' | 'REACTIVATION' = hasHistoryBeforeA ? 'REACTIVATION' : 'NEW'
         movements.push({
           userkey: current.userkey,
           uniqueCode: current.uniqueCode,
           line: current.line,
-          movementType: 'NEW',
+          movementType,
           fromTier: null,
           toTier: current.tier,
           tierChange: 0,
@@ -350,7 +384,7 @@ export async function GET(request: NextRequest) {
         const tierChange = previous.tier - current.tier // Positive = upgrade (tier decreased)
         const scoreChange = current.score - previous.score
         
-        let movementType: 'UPGRADE' | 'DOWNGRADE' | 'STABLE' | 'NEW' | 'CHURNED' = 'STABLE'
+        let movementType: 'UPGRADE' | 'DOWNGRADE' | 'STABLE' | 'NEW' | 'CHURNED' | 'REACTIVATION' = 'STABLE'
         
         if (tierChange > 0) {
           movementType = 'UPGRADE'
@@ -389,6 +423,9 @@ export async function GET(request: NextRequest) {
     })
     const summary = getTierMovementSummary(movements)
     const matrixData = generateTierMovementMatrix(movements)
+    const newCount = movements.filter(m => m.movementType === 'NEW').length
+    const reactivationCount = movements.filter(m => m.movementType === 'REACTIVATION').length
+    const churnedCount = movements.filter(m => m.movementType === 'CHURNED').length
     
     // ✅ Reverse tierOrder: Display from lowest (Regular/Tier 7) to highest (Super VIP/Tier 1)
     // tierOrder from generateTierMovementMatrix is [1,2,3,4,5,6,7] (low to high numbers)
@@ -454,6 +491,21 @@ export async function GET(request: NextRequest) {
             count: summary.totalStable,
             percentage: summary.stablePercentage,
             label: 'Stable'
+          },
+          newMemberCard: {
+            count: newCount,
+            percentage: summary.totalUsers > 0 ? (newCount / summary.totalUsers) * 100 : 0,
+            label: 'New Member'
+          },
+          reactivationCard: {
+            count: reactivationCount,
+            percentage: summary.totalUsers > 0 ? (reactivationCount / summary.totalUsers) * 100 : 0,
+            label: 'Reactivation'
+          },
+          churnedCard: {
+            count: churnedCount,
+            percentage: summary.totalUsers > 0 ? (churnedCount / summary.totalUsers) * 100 : 0,
+            label: 'Churned'
           }
         },
         matrix: {
