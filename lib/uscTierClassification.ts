@@ -383,6 +383,7 @@ export function getTierMovementSummary(movements: TierMovement[]): {
   totalNew: number
   totalChurned: number
   totalCustomers: number
+  totalUsers: number
   upgradesByTier: Record<number, number>  // To Tier
   downgradesByTier: Record<number, number>  // To Tier
   upgradesPercentage: number
@@ -396,6 +397,7 @@ export function getTierMovementSummary(movements: TierMovement[]): {
     totalNew: 0,
     totalChurned: 0,
     totalCustomers: 0,
+    totalUsers: 0,
     upgradesByTier: {} as Record<number, number>,
     downgradesByTier: {} as Record<number, number>,
     upgradesPercentage: 0,
@@ -431,6 +433,8 @@ export function getTierMovementSummary(movements: TierMovement[]): {
   
   // Calculate total customers (excluding NEW and CHURNED for percentage base)
   summary.totalCustomers = summary.totalUpgrades + summary.totalDowngrades + summary.totalStable
+  // Total users including new and churned
+  summary.totalUsers = summary.totalCustomers + summary.totalNew + summary.totalChurned
   
   // Calculate percentages
   if (summary.totalCustomers > 0) {
