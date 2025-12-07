@@ -301,7 +301,11 @@ async function getMaxAvailableDate(
     console.error('❌ [Tier Trends] Error fetching max available date:', error)
     return null
   }
-  return data && data.length > 0 ? data[0].date : null
+  if (data && data.length > 0) {
+    const first = data[0] as { date?: string | null }
+    return first?.date ?? null
+  }
+  return null
 }
 
 /**
