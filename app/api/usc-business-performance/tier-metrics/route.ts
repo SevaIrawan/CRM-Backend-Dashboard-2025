@@ -136,6 +136,7 @@ async function aggregateTierMetricsByDateRange(
       .gte('date', queryStartDate) // CRITICAL: Use queryStartDate constant
       .lte('date', queryEndDate)   // CRITICAL: Use queryEndDate constant
       .not('tier_name', 'is', null)
+      .gt('deposit_cases', 0) // Only active users (consistency with movement logic)
     
     if (line && line !== 'All' && line !== 'ALL') {
       batchQuery = batchQuery.eq('line', line)

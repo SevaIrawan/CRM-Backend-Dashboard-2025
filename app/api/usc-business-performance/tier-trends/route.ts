@@ -258,6 +258,52 @@ function formatDateLabel(dateString: string): string {
   return `${day} ${month}`
 }
 
+function addDays(base: string, delta: number): string {
+  const d = new Date(base)
+  d.setDate(d.getDate() + delta)
+  return d.toISOString().slice(0, 10)
+}
+
+function diffDays(start: string, end: string): number {
+  const s = new Date(start)
+  const e = new Date(end)
+  return Math.max(1, Math.round((e.getTime() - s.getTime()) / 86400000) + 1)
+}
+
+/**
+ * Get max available date (active rows only) respecting filters
+ */
+async function getMaxAvailableDate(
+  brand: string,
+  squadLead: string,
+  channel: string,
+  userAllowedBrands: string[] | null
+): Promise<string | null> {
+  let q = supabase
+    .from('blue_whale_usc')
+    .select('date')
+    .eq('currency', 'USC')
+    .gt('deposit_cases', 0)
+    .order('date', { ascending: false })
+    .limit(1)
+  
+  if (brand && brand !== 'All' && brand !== 'ALL') {
+    q = q.eq('line', brand)
+  }
+  q = applySquadLeadFilter(q, squadLead || 'All')
+  q = applyChannelFilter(q, channel || 'All')
+  if (userAllowedBrands && userAllowedBrands.length > 0) {
+    q = q.in('line', userAllowedBrands)
+  }
+
+  const { data, error } = await q
+  if (error) {
+    console.error('❌ [Tier Trends] Error fetching max available date:', error)
+    return null
+  }
+  return data && data.length > 0 ? data[0].date : null
+}
+
 /**
  * Generate all dates in a range (YYYY-MM-DD format)
  * CRITICAL: This ensures chart shows ALL dates in period, even if no data exists
@@ -629,6 +675,9 @@ export async function GET(request: NextRequest) {
     let periodA: PeriodInfo
     let periodB: PeriodInfo
     
+    // Get max available data date with filters (active rows)
+    const maxDataDate = await getMaxAvailableDate(brand, squadLead, channel, userAllowedBrands)
+
     if (useCustomDates) {
       // Use custom dates provided
       periodA = {
@@ -685,6 +734,37 @@ export async function GET(request: NextRequest) {
         periodA: periodA.label,
         periodB: periodB.label
       })
+    }
+
+    // ✅ Cap periods to max available data date to avoid showing future dates with zero data
+    if (maxDataDate) {
+      const durationB = diffDays(periodB.startDate, periodB.endDate)
+      if (periodB.endDate > maxDataDate) {
+        const newEndB = maxDataDate
+        const newStartB = addDays(newEndB, -(durationB - 1))
+        const newEndA = addDays(newStartB, -1)
+        const newStartA = addDays(newEndA, -(durationB - 1))
+
+        periodB = {
+          ...periodB,
+          startDate: newStartB,
+          endDate: newEndB,
+          label: `${newStartB} ~ ${newEndB}`
+        }
+        periodA = {
+          ...periodA,
+          startDate: newStartA,
+          endDate: newEndA,
+          label: `${newStartA} ~ ${newEndA}`
+        }
+
+        console.log('📊 [Tier Trends] Capped to max data date:', {
+          maxDataDate,
+          durationDays: durationB,
+          periodA: periodA.label,
+          periodB: periodB.label
+        })
+      }
     }
     
     // Determine which function to use based on tierNameFilter
