@@ -547,12 +547,12 @@ export default function CustomerTierMovement({
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
           {[ 
-            { label: data.summary.upgradesCard.label, count: data.summary.upgradesCard.count, percentage: data.summary.upgradesCard.percentage, icon: 'arrowUp' },
-            { label: data.summary.downgradesCard.label, count: data.summary.downgradesCard.count, percentage: data.summary.downgradesCard.percentage, icon: 'arrowDown' },
-            { label: data.summary.stableCard.label, count: data.summary.stableCard.count, percentage: data.summary.stableCard.percentage, icon: 'activeMember' },
-            data.summary.newMemberCard && { label: 'ND TIER', count: data.summary.newMemberCard.count, percentage: data.summary.newMemberCard.percentage, icon: 'newCustomers', movementType: 'NEW' as const },
-            data.summary.reactivationCard && { label: 'REACT TIER', count: data.summary.reactivationCard.count, percentage: data.summary.reactivationCard.percentage, icon: 'pureMember', movementType: 'REACTIVATION' as const },
-            data.summary.churnedCard && { label: 'CHURNED TIER', count: data.summary.churnedCard.count, percentage: data.summary.churnedCard.percentage, icon: 'churnRate', movementType: 'CHURNED' as const }
+            { label: data.summary.upgradesCard.label, count: data.summary.upgradesCard.count, percentage: data.summary.upgradesCard.percentage, icon: 'arrowUp', accent: '#16a34a' },
+            { label: data.summary.downgradesCard.label, count: data.summary.downgradesCard.count, percentage: data.summary.downgradesCard.percentage, icon: 'arrowDown', accent: '#dc2626' },
+            { label: data.summary.stableCard.label, count: data.summary.stableCard.count, percentage: data.summary.stableCard.percentage, icon: 'activeMember', accent: '#2563eb' },
+            data.summary.newMemberCard && { label: 'ND TIER', count: data.summary.newMemberCard.count, percentage: data.summary.newMemberCard.percentage, icon: 'newCustomers', movementType: 'NEW' as const, accent: '#2563eb' },
+            data.summary.reactivationCard && { label: 'REACT TIER', count: data.summary.reactivationCard.count, percentage: data.summary.reactivationCard.percentage, icon: 'pureMember', movementType: 'REACTIVATION' as const, accent: '#16a34a' },
+            data.summary.churnedCard && { label: 'CHURNED TIER', count: data.summary.churnedCard.count, percentage: data.summary.churnedCard.percentage, icon: 'churnRate', movementType: 'CHURNED' as const, accent: '#dc2626' }
           ].filter(Boolean).map((card, idx) => (
             <div
               key={idx}
@@ -562,6 +562,7 @@ export default function CustomerTierMovement({
                 padding: '16px',
                 position: 'relative',
                 border: '1px solid #e5e7eb',
+                borderLeft: `4px solid ${(card as any).accent || '#e5e7eb'}`,
                 boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04)',
                 transition: 'all 0.2s ease'
               }}
@@ -588,17 +589,31 @@ export default function CustomerTierMovement({
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                 <span style={{ fontSize: '12px', fontWeight: 600, color: '#111827' }}>{(card as any).label}</span>
-                {renderIcon(
-                  (card as any).icon,
-                  (card as any).icon === 'arrowUp'
-                    ? '#16a34a'
-                    : (card as any).icon === 'arrowDown'
-                      ? '#dc2626'
-                      : (card as any).icon === 'activeMember'
-                        ? '#2563eb'
-                        : '#111827',
-                  '20px'
-                )}
+                {(() => {
+                  const accent = (card as any).accent || '#111827'
+                  const accentBg =
+                    accent === '#16a34a'
+                      ? 'rgba(22,163,74,0.12)'
+                      : accent === '#dc2626'
+                        ? 'rgba(220,38,38,0.12)'
+                        : accent === '#2563eb'
+                          ? 'rgba(37,99,235,0.12)'
+                          : 'rgba(17,24,39,0.08)'
+                  return (
+                    <div
+                      style={{
+                        backgroundColor: accentBg,
+                        borderRadius: '8px',
+                        padding: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      {renderIcon((card as any).icon, accent, '20px')}
+                    </div>
+                  )
+                })()}
               </div>
               <div style={{ fontSize: '32px', fontWeight: 700, color: '#111827' }}>
                 {formatNumber((card as any).count)}
