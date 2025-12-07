@@ -81,64 +81,44 @@ export async function GET(request: NextRequest) {
         query = query.filter('year', 'eq', parseInt(year))
       }
       
-      // Fetch ALL data for aggregation (no limit - get all records)
-      console.log('📊 [AGGREGATED MODE] Executing query with filters:', {
-        line: line || 'ALL (no filter)',
-        year: year || 'ALL (no filter)',
-        month: month || 'ALL (no filter)',
-        filterMode,
-        isDateRangeMode,
-        isMonthMode,
-        userAllowedBrands: userAllowedBrands ? userAllowedBrands.length + ' brands' : 'Admin (all brands)',
-        query_has_filters: !!(line && line !== 'ALL') || !!(year && year !== 'ALL') || !!(month && month !== 'ALL')
-      })
-      
-      // ✅ Fetch ALL data without limit - use batch fetching (same as export route)
-      let allData: any[] = []
-      let batchOffset = 0
-      const batchSize = 5000 // Process 5000 records at a time
-      let hasMoreData = true
-      
-      console.log('📊 [AGGREGATED MODE] Fetching all data in batches (no limit)...')
-      
-      while (hasMoreData) {
-        // Build new query for each batch with same filters
-        let batchQuery = supabase
-          .from('blue_whale_sgd')
-          .select('*')
-        
-        // Re-apply all filters for this batch
+      const applyFilters = (q: any) => {
         if (isDateRangeMode) {
-          batchQuery = batchQuery
-            .filter('date', 'gte', startDate)
-            .filter('date', 'lte', endDate)
+          q = q.filter('date', 'gte', startDate).filter('date', 'lte', endDate)
         }
         if (filterMode === 'month' && month && month !== 'ALL') {
-          batchQuery = batchQuery.filter('month', 'eq', month)
+          q = q.filter('month', 'eq', month)
         }
         if (line && line !== 'ALL') {
           if (userAllowedBrands && userAllowedBrands.length > 0 && !userAllowedBrands.includes(line)) {
-            return NextResponse.json({
-              success: false,
-              error: 'Unauthorized',
-              message: `You do not have access to brand "${line}"`
-            }, { status: 403 })
+            return { error: `Unauthorized line ${line}` }
           }
-          batchQuery = batchQuery.filter('line', 'eq', line)
+          q = q.filter('line', 'eq', line)
         } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
-          batchQuery = batchQuery.in('line', userAllowedBrands)
+          q = q.in('line', userAllowedBrands)
         }
         if (year && year !== 'ALL') {
-          batchQuery = batchQuery.filter('year', 'eq', parseInt(year))
+          q = q.filter('year', 'eq', parseInt(year))
         }
-        
-        // Execute batch query
-        const batchResult = await batchQuery
+        return q
+      }
+
+      let allData: any[] = []
+      let batchOffset = 0
+      const batchSize = 5000
+      let hasMoreData = true
+
+      while (hasMoreData) {
+        const base = supabase.from('blue_whale_sgd').select('*').eq('currency', 'SGD')
+        const filtered = applyFilters(base)
+        if ((filtered as any).error) {
+          return NextResponse.json({ success: false, error: (filtered as any).error }, { status: 403 })
+        }
+        const batchResult = await (filtered as any)
           .order('date', { ascending: false })
           .order('year', { ascending: false })
           .order('month', { ascending: false })
           .range(batchOffset, batchOffset + batchSize - 1)
-        
+
         if (batchResult.error) {
           console.error('❌ Supabase batch query error:', batchResult.error)
           return NextResponse.json({ 
@@ -147,36 +127,18 @@ export async function GET(request: NextRequest) {
             message: batchResult.error.message 
           }, { status: 500 })
         }
-        
+
         const batchData = batchResult.data || []
         allData = [...allData, ...batchData]
-        
-        const batchNumber = Math.floor(batchOffset / batchSize) + 1
-        console.log(`📊 [AGGREGATED MODE] Batch ${batchNumber}: ${batchData.length} records (Total: ${allData.length})`)
-        
-        // Check if there's more data
         hasMoreData = batchData.length === batchSize
         batchOffset += batchSize
-        
-        // Log sample data from first batch to verify structure
-        if (batchNumber === 1 && batchData.length > 0) {
-          console.log(`📊 [AGGREGATED MODE] Sample from first batch:`, {
-            userkey: batchData[0]?.userkey,
-            date: batchData[0]?.date,
-            deposit_cases: batchData[0]?.deposit_cases,
-            total_unique_dates_in_batch: new Set(batchData.map((r: any) => r.date)).size
-          })
-        }
-        
-        // Safety limit to prevent infinite loops (but allow large datasets)
-        if (allData.length > 1000000) {
-          console.log('⚠️ [AGGREGATED MODE] Safety limit reached: 1,000,000 records')
+
+        if (allData.length > 1500000) {
+          console.log('⚠️ [AGGREGATED MODE] Safety cap reached: 1,500,000 records')
           break
         }
       }
-      
-      console.log(`📊 [AGGREGATED MODE] Total records fetched: ${allData.length}`)
-      
+
       const rawData = allData
       console.log(`📊 Raw blue_whale_sgd records found: ${rawData.length}`)
       

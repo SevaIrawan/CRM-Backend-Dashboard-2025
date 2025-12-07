@@ -14,43 +14,52 @@ export async function POST(request: NextRequest) {
       user_allowed_brands: userAllowedBrands
     })
 
-    // Build query with same filters as data endpoint (no currency filter needed)
-    let query = supabase.from('blue_whale_sgd').select('userkey, user_name, unique_code, date, line, year, month, vip_level, operator, traffic, register_date, first_deposit_date, first_deposit_amount, last_deposit_date, days_inactive, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, add_transaction, deduct_transaction, cases_adjustment, cases_bets, bets_amount, valid_amount, ggr, net_profit, last_activity_days')
+    const isDateRangeMode = filterMode === 'daterange' && startDate && endDate
+    const isMonthMode = filterMode === 'month'
+    const isSingleDayMode = isDateRangeMode && startDate === endDate
 
-    // ✅ NEW: Apply brand filter with user permission check
-    if (line && line !== 'ALL') {
-      if (userAllowedBrands && userAllowedBrands.length > 0 && !userAllowedBrands.includes(line)) {
-        return NextResponse.json({
-          error: 'Unauthorized',
-          message: `You do not have access to brand "${line}"`
-        }, { status: 403 })
+    const applyFilters = (q: any) => {
+      if (isDateRangeMode) {
+        q = q.filter('date', 'gte', startDate).filter('date', 'lte', endDate)
       }
-      query = query.filter('line', 'eq', line)
-    } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
-      query = query.in('line', userAllowedBrands)
+      if (isMonthMode && month && month !== 'ALL') {
+        q = q.filter('month', 'eq', month)
+      }
+      if (line && line !== 'ALL') {
+        if (userAllowedBrands && userAllowedBrands.length > 0 && !userAllowedBrands.includes(line)) {
+          return { error: `Unauthorized line ${line}` }
+        }
+        q = q.filter('line', 'eq', line)
+      } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
+        q = q.in('line', userAllowedBrands)
+      }
+      if (year && year !== 'ALL') {
+        q = q.filter('year', 'eq', parseInt(year))
+      }
+      return q
     }
 
-    if (year && year !== 'ALL') {
-      query = query.filter('year', 'eq', parseInt(year))
-    }
-
-    if (filterMode === 'month' && month && month !== 'ALL') {
-      query = query.filter('month', 'eq', month)
-    } else if (filterMode === 'daterange' && startDate && endDate) {
-      query = query.filter('date', 'gte', startDate).filter('date', 'lte', endDate)
-    }
-
-    // For large datasets, we need to fetch in batches
-    const batchSize = 5000 // Process 5000 records at a time
+    const batchSize = 5000
     let allData: any[] = []
     let offset = 0
     let hasMore = true
 
-    console.log('📊 Starting batch export for large dataset...')
+    console.log('📊 Starting batch export (SGD)...')
 
     while (hasMore) {
-      const batchQuery = query.range(offset, offset + batchSize - 1)
-      const result = await batchQuery.order('date', { ascending: false })
+      const base = supabase
+        .from('blue_whale_sgd')
+        .select('userkey, user_name, unique_code, date, line, year, month, vip_level, operator, traffic, register_date, first_deposit_date, first_deposit_amount, last_deposit_date, days_inactive, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, add_transaction, deduct_transaction, cases_adjustment, cases_bets, bets_amount, valid_amount, ggr, net_profit, last_activity_days')
+        .eq('currency', 'SGD')
+      const filtered = applyFilters(base)
+      if ((filtered as any).error) {
+        return NextResponse.json({ error: 'Unauthorized', message: (filtered as any).error }, { status: 403 })
+      }
+      const result = await (filtered as any)
+        .order('date', { ascending: false })
+        .order('year', { ascending: false })
+        .order('month', { ascending: false })
+        .range(offset, offset + batchSize - 1)
 
       if (result.error) {
         console.error('❌ Export batch query error:', result.error)
@@ -65,13 +74,11 @@ export async function POST(request: NextRequest) {
       
       console.log(`📊 Batch ${Math.floor(offset / batchSize) + 1}: ${batchData.length} records (Total: ${allData.length})`)
       
-      // If we got less than batchSize, we've reached the end
       hasMore = batchData.length === batchSize
       offset += batchSize
 
-      // Safety limit to prevent infinite loops
-      if (allData.length > 100000) {
-        console.log('⚠️ Export limit reached: 100,000 records')
+      if (allData.length > 1500000) {
+        console.log('⚠️ Export limit reached: 1,500,000 records')
         break
       }
     }
@@ -85,92 +92,93 @@ export async function POST(request: NextRequest) {
       }, { status: 404 })
     }
 
-    // ✅ AGGREGATE BY USERKEY (same as data endpoint)
-    const userMap = new Map<string, any>()
-    
-    rawData?.forEach((row: any) => {
-      const key = row.userkey
+    let aggregatedData: any[] = []
+    if (!isSingleDayMode && (isDateRangeMode || isMonthMode)) {
+      const userMap = new Map<string, any>()
       
-      if (!userMap.has(key)) {
-        // Initialize user record
-        const dateRangeValue = filterMode === 'daterange' && startDate && endDate
-          ? `${startDate} to ${endDate}`
-          : (month && month !== 'ALL')
-          ? `Month: ${month} ${year !== 'ALL' ? year : ''}`.trim()
-          : (year && year !== 'ALL')
-          ? `Year: ${year}`
-          : 'All Time'
+      rawData?.forEach((row: any) => {
+        const key = row.userkey
         
-        userMap.set(key, {
-          userkey: key,
-          date_range: dateRangeValue,
-          line: row.line,
-          user_name: row.user_name,
-          unique_code: row.unique_code,
-          vip_level: row.vip_level,
-          operator: row.operator,
-          traffic: row.traffic,
-          register_date: row.register_date,
-          first_deposit_date: row.first_deposit_date,
-          first_deposit_amount: row.first_deposit_amount,
-          last_deposit_date: row.last_deposit_date,
-          days_inactive: row.days_inactive,
-          activeDates: new Set(),
-          deposit_cases: 0,
-          deposit_amount: 0,
-          withdraw_cases: 0,
-          withdraw_amount: 0,
-          bonus: 0,
-          add_bonus: 0,
-          deduct_bonus: 0,
-          add_transaction: 0,
-          deduct_transaction: 0,
-          cases_adjustment: 0,
-          cases_bets: 0,
-          bets_amount: 0,
-          valid_amount: 0,
-          ggr: 0,
-          net_profit: 0,
-          last_activity_days: row.last_activity_days
-        })
-      }
+        if (!userMap.has(key)) {
+          const dateRangeValue = isDateRangeMode && startDate && endDate
+            ? `${startDate} to ${endDate}`
+            : (month && month !== 'ALL')
+              ? `Month: ${month} ${year !== 'ALL' ? year : ''}`.trim()
+              : (year && year !== 'ALL')
+                ? `Year: ${year}`
+                : 'All Time'
+          
+          userMap.set(key, {
+            userkey: key,
+            date_range: dateRangeValue,
+            line: row.line,
+            user_name: row.user_name,
+            unique_code: row.unique_code,
+            vip_level: row.vip_level,
+            operator: row.operator,
+            traffic: row.traffic,
+            register_date: row.register_date,
+            first_deposit_date: row.first_deposit_date,
+            first_deposit_amount: row.first_deposit_amount,
+            last_deposit_date: row.last_deposit_date,
+            days_inactive: row.days_inactive,
+            activeDates: new Set(),
+            deposit_cases: 0,
+            deposit_amount: 0,
+            withdraw_cases: 0,
+            withdraw_amount: 0,
+            bonus: 0,
+            add_bonus: 0,
+            deduct_bonus: 0,
+            add_transaction: 0,
+            deduct_transaction: 0,
+            cases_adjustment: 0,
+            cases_bets: 0,
+            bets_amount: 0,
+            valid_amount: 0,
+            ggr: 0,
+            net_profit: 0,
+            last_activity_days: row.last_activity_days
+          })
+        }
+        
+        const userRecord = userMap.get(key)
+        
+        if ((row.deposit_cases || 0) > 0 && row.date) {
+          userRecord.activeDates.add(row.date)
+        }
+        
+        userRecord.deposit_cases += (row.deposit_cases || 0)
+        userRecord.deposit_amount += (row.deposit_amount || 0)
+        userRecord.withdraw_cases += (row.withdraw_cases || 0)
+        userRecord.withdraw_amount += (row.withdraw_amount || 0)
+        userRecord.bonus += (row.bonus || 0)
+        userRecord.add_bonus += (row.add_bonus || 0)
+        userRecord.deduct_bonus += (row.deduct_bonus || 0)
+        userRecord.add_transaction += (row.add_transaction || 0)
+        userRecord.deduct_transaction += (row.deduct_transaction || 0)
+        userRecord.cases_adjustment += (row.cases_adjustment || 0)
+        userRecord.cases_bets += (row.cases_bets || 0)
+        userRecord.bets_amount += (row.bets_amount || 0)
+        userRecord.valid_amount += (row.valid_amount || 0)
+        userRecord.ggr += (row.ggr || 0)
+        userRecord.net_profit += (row.net_profit || 0)
+      })
       
-      const userRecord = userMap.get(key)
+      aggregatedData = Array.from(userMap.values()).map((user: any) => {
+        const daysActive = user.activeDates ? user.activeDates.size : 0
+        return {
+          ...user,
+          days_active: daysActive,
+          activeDates: undefined
+        }
+      })
       
-      // COUNT Days Active (unique dates where deposit_cases > 0)
-      if ((row.deposit_cases || 0) > 0 && row.date) {
-        userRecord.activeDates.add(row.date)
-      }
-      
-      // SUM all numeric metrics
-      userRecord.deposit_cases += (row.deposit_cases || 0)
-      userRecord.deposit_amount += (row.deposit_amount || 0)
-      userRecord.withdraw_cases += (row.withdraw_cases || 0)
-      userRecord.withdraw_amount += (row.withdraw_amount || 0)
-      userRecord.bonus += (row.bonus || 0)
-      userRecord.add_bonus += (row.add_bonus || 0)
-      userRecord.deduct_bonus += (row.deduct_bonus || 0)
-      userRecord.add_transaction += (row.add_transaction || 0)
-      userRecord.deduct_transaction += (row.deduct_transaction || 0)
-      userRecord.cases_adjustment += (row.cases_adjustment || 0)
-      userRecord.cases_bets += (row.cases_bets || 0)
-      userRecord.bets_amount += (row.bets_amount || 0)
-      userRecord.valid_amount += (row.valid_amount || 0)
-      userRecord.ggr += (row.ggr || 0)
-      userRecord.net_profit += (row.net_profit || 0)
-    })
-    
-    // Convert Map to Array and calculate days_active from activeDates
-    const aggregatedData = Array.from(userMap.values()).map((user: any) => {
-      const daysActive = user.activeDates ? user.activeDates.size : 0
-      return {
-        ...user,
-        days_active: daysActive,
-        activeDates: undefined // Remove from final data
-      }
-    })
-    
-    console.log(`📊 Aggregated export data: ${aggregatedData.length} unique users`)
+      console.log(`📊 Aggregated export data: ${aggregatedData.length} unique users`)
+    } else {
+      aggregatedData = rawData
+      console.log(`📊 Single-day export rows: ${aggregatedData.length}`)
+    }
 
     // Convert aggregated data to CSV - use custom column order and exclude hidden columns
     const hiddenColumns = ['ABSENT', 'YEAR', 'MONTH', 'USERKEY', 'UNIQUEKEY', 'WINRATE', 'CURRENCY', 'DATE', 'VIP_LEVEL', 'OPERATOR', 'REGISTER_DATE', 'LAST_ACTIVITY_DAYS', 'DATE_RANGE']
