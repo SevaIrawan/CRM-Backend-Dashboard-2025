@@ -6,6 +6,7 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
     const userkey = searchParams.get('userkey')
+    const userUnique = searchParams.get('user_unique')
     const uniqueCode = searchParams.get('uniqueCode')
     
     // Date range format (same as Customer Tier Trends)
@@ -19,9 +20,9 @@ export async function GET(request: NextRequest) {
     const channel = searchParams.get('channel')
 
     // Validation
-    if (!userkey && !uniqueCode) {
+    if (!userkey && !userUnique && !uniqueCode) {
       return NextResponse.json(
-        { error: 'Missing required parameter: userkey or uniqueCode' },
+        { error: 'Missing required parameter: userkey or user_unique or uniqueCode' },
         { status: 400 }
       )
     }
@@ -63,6 +64,8 @@ export async function GET(request: NextRequest) {
 
     if (userkey) {
       periodAQuery = periodAQuery.eq('userkey', userkey)
+    } else if (userUnique) {
+      periodAQuery = periodAQuery.eq('user_unique', userUnique)
     } else if (uniqueCode) {
       periodAQuery = periodAQuery.eq('unique_code', uniqueCode)
     }
@@ -98,6 +101,8 @@ export async function GET(request: NextRequest) {
 
     if (userkey) {
       periodBQuery = periodBQuery.eq('userkey', userkey)
+    } else if (userUnique) {
+      periodBQuery = periodBQuery.eq('user_unique', userUnique)
     } else if (uniqueCode) {
       periodBQuery = periodBQuery.eq('unique_code', uniqueCode)
     }

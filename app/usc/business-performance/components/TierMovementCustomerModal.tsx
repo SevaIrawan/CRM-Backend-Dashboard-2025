@@ -50,6 +50,7 @@ const useSidebarState = () => {
 }
 
 interface Customer {
+  user_unique?: string | null
   unique_code: string | null
   user_name: string | null
   line: string | null // ✅ Add line/brand field
@@ -67,6 +68,7 @@ interface TierMovementCustomerModalProps {
   toTier: number
   fromTierName: string
   toTierName: string
+  movementTypeOverride?: 'UPGRADE' | 'DOWNGRADE' | 'STABLE' | 'NEW' | 'REACTIVATION' | 'CHURNED'
   currentYear: string
   currentMonth: string
   previousYear: string
@@ -87,6 +89,7 @@ export default function TierMovementCustomerModal({
   toTier,
   fromTierName,
   toTierName,
+  movementTypeOverride,
   currentYear,
   currentMonth,
   previousYear,
@@ -106,7 +109,7 @@ export default function TierMovementCustomerModal({
   const [customers, setCustomers] = useState<Customer[]>([])
   const [totalRecords, setTotalRecords] = useState(0) // ✅ WAJIB: Total count dari API (data.count), bukan customers.length
   const [error, setError] = useState<string | null>(null)
-  const [movementType, setMovementType] = useState<'UPGRADE' | 'DOWNGRADE' | 'STABLE'>('STABLE')
+  const [movementType, setMovementType] = useState<'UPGRADE' | 'DOWNGRADE' | 'STABLE' | 'NEW' | 'REACTIVATION' | 'CHURNED'>(movementTypeOverride || 'STABLE')
   const [assignments, setAssignments] = useState<Record<number, string>>({}) // customer index -> handler
   
   // ✅ Pagination state
@@ -140,7 +143,7 @@ export default function TierMovementCustomerModal({
 
   // ✅ Fetch customer detail data BEFORE opening modal
   const handleCustomerDetailClick = async (customer: Customer) => {
-    if (!customer.unique_code || !periodAStart || !periodAEnd || !periodBStart || !periodBEnd) {
+    if ((!customer.user_unique && !customer.unique_code) || !periodAStart || !periodAEnd || !periodBStart || !periodBEnd) {
       return
     }
 
@@ -153,7 +156,6 @@ export default function TierMovementCustomerModal({
     try {
       // Fetch data first
       const params = new URLSearchParams({
-        uniqueCode: customer.unique_code,
         periodAStart: periodAStart,
         periodAEnd: periodAEnd,
         periodBStart: periodBStart,
@@ -162,6 +164,13 @@ export default function TierMovementCustomerModal({
         squadLead: squadLead || 'All',
         channel: channel || 'All'
       })
+
+      // Prefer user_unique for exact match; fallback to unique_code if missing
+      if (customer.user_unique) {
+        params.append('user_unique', customer.user_unique)
+      } else if (customer.unique_code) {
+        params.append('uniqueCode', customer.unique_code)
+      }
 
       const response = await fetch(`/api/usc-business-performance/customer-detail?${params}`)
 
@@ -295,6 +304,13 @@ export default function TierMovementCustomerModal({
     setPage(1)
   }, [limit, customers.length])
 
+  // ✅ Sync movement type with override when modal opens
+  useEffect(() => {
+    if (isOpen && movementTypeOverride) {
+      setMovementType(movementTypeOverride)
+    }
+  }, [isOpen, movementTypeOverride])
+
   // Format number with thousand separator
   const formatNumber = (num: number): string => {
     return new Intl.NumberFormat('en-US', {
@@ -347,13 +363,17 @@ export default function TierMovementCustomerModal({
           throw new Error('Period data is missing. Please refresh the page and try again.')
         }
 
-        const params = new URLSearchParams({
-          fromTier: fromTier.toString(),
-          toTier: toTier.toString(),
-          line: line || 'All',
-          squadLead: squadLead || 'All',
-          channel: channel || 'All'
-        })
+      const params = new URLSearchParams({
+        fromTier: fromTier.toString(),
+        toTier: toTier.toString(),
+        line: line || 'All',
+        squadLead: squadLead || 'All',
+        channel: channel || 'All'
+      })
+
+      if (movementTypeOverride) {
+        params.append('movementType', movementTypeOverride)
+      }
         
         // Use date range format if available (same as Customer Tier Trends)
         if (periodAStart && periodAEnd && periodBStart && periodBEnd) {
@@ -483,7 +503,7 @@ export default function TierMovementCustomerModal({
         // ✅ WAJIB: Set totalRecords dari API count (bukan dari customers.length)
         setTotalRecords(data.count || 0)
         setCustomers(data.customers || [])
-        setMovementType(data.movementType || 'STABLE')
+        setMovementType(data.movementType || movementTypeOverride || 'STABLE')
         
         // ✅ DEBUG: Log setelah set state (akan muncul di render berikutnya)
         console.log('🔍 [Tier Movement Customer Modal] STATE SET - will appear in next render')
@@ -521,7 +541,7 @@ export default function TierMovementCustomerModal({
     }
 
     fetchCustomers()
-  }, [isOpen, fromTier, toTier, currentYear, currentMonth, previousYear, previousMonth, periodAStart, periodAEnd, periodBStart, periodBEnd, line, squadLead, channel])
+  }, [isOpen, fromTier, toTier, currentYear, currentMonth, previousYear, previousMonth, periodAStart, periodAEnd, periodBStart, periodBEnd, line, squadLead, channel, movementTypeOverride])
 
   // Handle ESC key to close
   useEffect(() => {
@@ -633,14 +653,35 @@ export default function TierMovementCustomerModal({
   const getMovementTypeColor = () => {
     if (movementType === 'UPGRADE') return '#10B981' // Green
     if (movementType === 'DOWNGRADE') return '#EC4899' // Pink
-    return '#3B82F6' // Blue
+    if (movementType === 'NEW') return '#2563EB' // Blue for ND
+    if (movementType === 'REACTIVATION') return '#16A34A' // Green for Reactivation
+    if (movementType === 'CHURNED') return '#DC2626' // Red for Churned
+    return '#3B82F6' // Default blue
   }
 
   // Get movement type label
   const getMovementTypeLabel = () => {
     if (movementType === 'UPGRADE') return 'Upgrade'
     if (movementType === 'DOWNGRADE') return 'Downgrade'
+    if (movementType === 'NEW') return 'ND Tier'
+    if (movementType === 'REACTIVATION') return 'Reactivation'
+    if (movementType === 'CHURNED') return 'Churned'
     return 'Stable'
+  }
+
+  const isSpecialMovement = movementType === 'NEW' || movementType === 'REACTIVATION' || movementType === 'CHURNED'
+
+  const getInsightSubtitle = () => {
+    if (movementType === 'NEW') {
+      return `${totalRecords} customers joined in Period B with no activity in Period A (ND Tier).`
+    }
+    if (movementType === 'REACTIVATION') {
+      return `${totalRecords} customers became active again in Period B after being inactive since before Period A (Reactivation).`
+    }
+    if (movementType === 'CHURNED') {
+      return `${totalRecords} customers were active in Period A but absent in Period B (Churned).`
+    }
+    return 'View detailed customer information for this tier movement'
   }
 
   if (!isOpen || typeof document === 'undefined') return null
@@ -691,7 +732,7 @@ export default function TierMovementCustomerModal({
             borderRadius: '16px 16px 0 0' // ✅ Rounded top corners
           }}
         >
-          {/* ✅ Left: Title & Subtitle (Gambar 2) */}
+          {/* ✅ Left: Title & Subtitle */}
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
             <h2
               style={{
@@ -711,40 +752,44 @@ export default function TierMovementCustomerModal({
                 margin: 0
               }}
             >
-              View detailed customer information for this tier movement
+              {getInsightSubtitle()}
             </p>
           </div>
           
-          {/* ✅ Right: Period A → Period B (Gambar 1) - Sejajar dengan Title */}
+          {/* ✅ Right: Badge block (no period labels for special movements) */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '16px',
+              gap: '12px',
               padding: '12px',
-              backgroundColor: '#4B5563', // ✅ Darker background untuk kontras dengan header dark
+              backgroundColor: '#4B5563',
               borderRadius: '8px',
               border: '1px solid #6B7280',
-              alignSelf: 'flex-start' // Align to top to match title
+              alignSelf: 'flex-start'
             }}
           >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '100px' }}>
-              <span style={{ fontSize: '11px', color: '#D1D5DB', fontWeight: 500 }}>
-                Period A
-              </span>
-              <span style={{ fontSize: '16px', fontWeight: 600, color: '#FFFFFF' }}>
-                {fromTierName}
-              </span>
-            </div>
-            <span style={{ fontSize: '18px', color: '#D1D5DB', fontWeight: 300 }}>→</span>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '100px' }}>
-              <span style={{ fontSize: '11px', color: '#D1D5DB', fontWeight: 500 }}>
-                Period B
-              </span>
-              <span style={{ fontSize: '16px', fontWeight: 600, color: '#FFFFFF' }}>
-                {toTierName}
-              </span>
-            </div>
+            {!isSpecialMovement && (
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '100px' }}>
+                  <span style={{ fontSize: '11px', color: '#D1D5DB', fontWeight: 500 }}>
+                    Period A
+                  </span>
+                  <span style={{ fontSize: '16px', fontWeight: 600, color: '#FFFFFF' }}>
+                    {fromTierName}
+                  </span>
+                </div>
+                <span style={{ fontSize: '18px', color: '#D1D5DB', fontWeight: 300 }}>→</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '100px' }}>
+                  <span style={{ fontSize: '11px', color: '#D1D5DB', fontWeight: 500 }}>
+                    Period B
+                  </span>
+                  <span style={{ fontSize: '16px', fontWeight: 600, color: '#FFFFFF' }}>
+                    {toTierName}
+                  </span>
+                </div>
+              </>
+            )}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span
                 style={{
@@ -757,7 +802,7 @@ export default function TierMovementCustomerModal({
                   border: '1px solid #E5E7EB'
                 }}
               >
-                {customers.length} customers
+                {totalRecords} customers
               </span>
               <span
                 style={{

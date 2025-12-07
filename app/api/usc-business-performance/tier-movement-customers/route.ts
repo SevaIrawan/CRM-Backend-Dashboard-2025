@@ -31,6 +31,9 @@ async function aggregateUserDataByDateRange(
     .gte('date', startDate)
     .lte('date', endDate)
     .not('tier_name', 'is', null) // Only users with tier
+    .gt('deposit_cases', 0) // Only active users (follow retention pattern)
+    .order('user_unique', { ascending: true })
+    .order('date', { ascending: true })
 
   if (userUniques && userUniques.length > 0) {
     // Use batch processing for large arrays
@@ -238,6 +241,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const fromTier = searchParams.get('fromTier')
     const toTier = searchParams.get('toTier')
+    const movementTypeParam = searchParams.get('movementType') // NEW | REACTIVATION | CHURNED | UPGRADE | DOWNGRADE | STABLE
     
     console.log('📊 [Tier Movement Customers API] Request received:', {
       fromTier,
@@ -362,11 +366,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Validation
-    if (!fromTier || !toTier) {
-      return NextResponse.json(
-        { error: 'Missing required parameters: fromTier and toTier' },
-        { status: 400 }
-      )
+    const specialMovement = movementTypeParam === 'NEW' || movementTypeParam === 'REACTIVATION' || movementTypeParam === 'CHURNED'
+
+    if (!specialMovement) {
+      if (!fromTier || !toTier) {
+        return NextResponse.json(
+          { error: 'Missing required parameters: fromTier and toTier' },
+          { status: 400 }
+        )
+      }
     }
     
     if (useDateRange && (!periodAStartDate || !periodAEndDate || !periodBStartDate || !periodBEndDate)) {
@@ -376,10 +384,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const fromTierNum = parseInt(fromTier)
-    const toTierNum = parseInt(toTier)
+    const fromTierNum = specialMovement ? null : parseInt(fromTier || '')
+    const toTierNum = specialMovement ? null : parseInt(toTier || '')
 
-    if (isNaN(fromTierNum) || isNaN(toTierNum)) {
+    if (!specialMovement && (isNaN(fromTierNum!) || isNaN(toTierNum!))) {
       return NextResponse.json(
         { error: 'Invalid tier parameters' },
         { status: 400 }
@@ -426,12 +434,13 @@ export async function GET(request: NextRequest) {
     }))
 
     // History before A for NEW vs REACTIVATION
+    // ✅ History: gunakan semua aktivitas sebelum Period A (tanpa filter tier_name) tapi hanya user aktif (deposit_cases > 0)
     const historyBeforeAQuery = supabase
       .from('blue_whale_usc')
       .select('user_unique')
       .eq('currency', 'USC')
       .lt('date', periodAStartDate!)
-      .not('tier_name', 'is', null)
+      .gt('deposit_cases', 0)
     if (line && line !== 'All' && line !== 'ALL') historyBeforeAQuery.eq('line', line)
     if (squadLead && squadLead !== 'All' && squadLead !== 'ALL') historyBeforeAQuery.eq('squad_lead', squadLead)
     if (channel && channel !== 'All' && channel !== 'ALL') historyBeforeAQuery.eq('traffic', channel)
@@ -464,7 +473,7 @@ export async function GET(request: NextRequest) {
       toTier: number | null
       tierChange: number
     }> = []
-
+    
     currentMapped.forEach(current => {
       const previous = prevMap.get(current.user_unique)
       if (!previous) {
@@ -511,31 +520,37 @@ export async function GET(request: NextRequest) {
     })
 
     // Filter movements for requested from/to tier
-    const filtered = movements.filter(m => m.fromTier === fromTierNum && m.toTier === toTierNum)
+    const filtered = specialMovement
+      ? movements.filter(m => m.movementType === (movementTypeParam as any))
+      : movements.filter(m => m.fromTier === fromTierNum && m.toTier === toTierNum)
 
     const customers = filtered.map(m => {
       const curr = periodBDataMap.get(m.user_unique)
       const prev = periodADataMap.get(m.user_unique)
 
-      const depositAmount = curr?.depositAmount || 0
-      const withdrawAmount = curr?.withdrawAmount || 0
+      // Spending source: for NEW/REACTIVATION use Period B only; for CHURNED use Period A only; others compare both
+      const useCurrentOnly = m.movementType === 'NEW' || m.movementType === 'REACTIVATION'
+      const usePreviousOnly = m.movementType === 'CHURNED'
+
+      const depositAmount = usePreviousOnly ? (prev?.depositAmount || 0) : (curr?.depositAmount || 0)
+      const withdrawAmount = usePreviousOnly ? (prev?.withdrawAmount || 0) : (curr?.withdrawAmount || 0)
       const ggr = depositAmount - withdrawAmount
-      const atv = curr?.avgTransactionValue || 0
+      const atv = usePreviousOnly ? (prev?.avgTransactionValue || 0) : (curr?.avgTransactionValue || 0)
 
-      const prevDA = prev?.depositAmount || 0
-      const prevWithdraw = prev?.withdrawAmount || 0
+      const prevDA = useCurrentOnly ? 0 : (prev?.depositAmount || 0)
+      const prevWithdraw = useCurrentOnly ? 0 : (prev?.withdrawAmount || 0)
       const prevGGR = prevDA - prevWithdraw
-      const prevATV = prev?.avgTransactionValue || 0
+      const prevATV = useCurrentOnly ? 0 : (prev?.avgTransactionValue || 0)
 
-      const daChangePercent = prevDA !== 0 ? ((depositAmount - prevDA) / Math.abs(prevDA)) * 100 : null
-      const ggrChangePercent = prevGGR !== 0 ? ((ggr - prevGGR) / Math.abs(prevGGR)) * 100 : null
-      const atvChangePercent = prevATV !== 0 ? ((atv - prevATV) / Math.abs(prevATV)) * 100 : null
+      const daChangePercent = (!useCurrentOnly && prevDA !== 0) ? ((depositAmount - prevDA) / Math.abs(prevDA)) * 100 : null
+      const ggrChangePercent = (!useCurrentOnly && prevGGR !== 0) ? ((ggr - prevGGR) / Math.abs(prevGGR)) * 100 : null
+      const atvChangePercent = (!useCurrentOnly && prevATV !== 0) ? ((atv - prevATV) / Math.abs(prevATV)) * 100 : null
 
       return {
         user_unique: m.user_unique,
-        unique_code: curr?.unique_code || m.uniqueCode || null,
-        user_name: curr?.user_name || null,
-        line: curr?.line || m.line || null,
+        unique_code: curr?.unique_code || prev?.unique_code || m.uniqueCode || null,
+        user_name: curr?.user_name || prev?.user_name || null,
+        line: curr?.line || prev?.line || m.line || null,
         handler: null,
         daChangePercent: daChangePercent !== null ? Number(daChangePercent.toFixed(2)) : null,
         ggrChangePercent: ggrChangePercent !== null ? Number(ggrChangePercent.toFixed(2)) : null,
@@ -554,14 +569,16 @@ export async function GET(request: NextRequest) {
       return codeA.localeCompare(codeB)
     })
 
-    const movementType = fromTierNum === toTierNum
-      ? 'STABLE'
-      : (fromTierNum > toTierNum ? 'UPGRADE' : 'DOWNGRADE')
-
+    const movementType = specialMovement
+      ? (movementTypeParam as any)
+      : (fromTierNum === toTierNum
+        ? 'STABLE'
+        : (fromTierNum! > toTierNum! ? 'UPGRADE' : 'DOWNGRADE'))
+    
     return NextResponse.json({
       customers: sortedCustomers,
-      fromTierName: TIER_NAMES[fromTierNum] || `Tier ${fromTierNum}`,
-      toTierName: TIER_NAMES[toTierNum] || `Tier ${toTierNum}`,
+      fromTierName: specialMovement ? movementType : (TIER_NAMES[fromTierNum!] || `Tier ${fromTierNum}`),
+      toTierName: specialMovement ? movementType : (TIER_NAMES[toTierNum!] || `Tier ${toTierNum}`),
       movementType,
       count: sortedCustomers.length
     })

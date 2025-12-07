@@ -27,11 +27,14 @@ async function aggregateUserDataByDateRange(
 }>> {
   let query = supabase
     .from('blue_whale_usc')
-    .select('user_unique, unique_code, user_name, line, tier_name, date')
+    .select('user_unique, unique_code, user_name, line, tier_name, date, deposit_cases')
     .eq('currency', 'USC')
     .gte('date', startDate)
     .lte('date', endDate)
     .not('tier_name', 'is', null) // Only users with tier
+    .gt('deposit_cases', 0) // Only active users (follow retention pattern)
+    .order('user_unique', { ascending: true })
+    .order('date', { ascending: true })
 
   if (line && line !== 'All' && line !== 'ALL') {
     query = query.eq('line', line)
@@ -293,12 +296,13 @@ export async function GET(request: NextRequest) {
     )
 
     // ✅ History sebelum period A untuk deteksi Reactivation
+    // ✅ History: gunakan semua aktivitas sebelum Period A (tanpa filter tier_name) tapi hanya user yang benar-benar aktif (deposit_cases > 0)
     const historyBeforeAQuery = supabase
       .from('blue_whale_usc')
       .select('user_unique')
       .eq('currency', 'USC')
       .lt('date', periodAStartDate)
-      .not('tier_name', 'is', null)
+      .gt('deposit_cases', 0)
     if (line && line !== 'All' && line !== 'ALL') historyBeforeAQuery.eq('line', line)
     if (squadLead && squadLead !== 'All' && squadLead !== 'ALL') historyBeforeAQuery.eq('squad_lead', squadLead)
     if (channel && channel !== 'All' && channel !== 'ALL') historyBeforeAQuery.eq('traffic', channel)

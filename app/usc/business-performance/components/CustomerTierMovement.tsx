@@ -101,6 +101,7 @@ export default function CustomerTierMovement({
   const [selectedToTier, setSelectedToTier] = useState<number | null>(null)
   const [selectedFromTierName, setSelectedFromTierName] = useState<string>('')
   const [selectedToTierName, setSelectedToTierName] = useState<string>('')
+  const [movementTypeState, setMovementTypeState] = useState<'UPGRADE' | 'DOWNGRADE' | 'STABLE' | 'NEW' | 'REACTIVATION' | 'CHURNED' | null>(null)
   const [periods, setPeriods] = useState<{
     currentMonth: string
     currentYear: string
@@ -545,13 +546,13 @@ export default function CustomerTierMovement({
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
-          {[
+          {[ 
             { label: data.summary.upgradesCard.label, count: data.summary.upgradesCard.count, percentage: data.summary.upgradesCard.percentage, icon: 'arrowUp' },
             { label: data.summary.downgradesCard.label, count: data.summary.downgradesCard.count, percentage: data.summary.downgradesCard.percentage, icon: 'arrowDown' },
             { label: data.summary.stableCard.label, count: data.summary.stableCard.count, percentage: data.summary.stableCard.percentage, icon: 'activeMember' },
-            data.summary.newMemberCard && { label: 'ND TIER', count: data.summary.newMemberCard.count, percentage: data.summary.newMemberCard.percentage, icon: 'newCustomers' },
-            data.summary.reactivationCard && { label: 'REACT TIER', count: data.summary.reactivationCard.count, percentage: data.summary.reactivationCard.percentage, icon: 'pureMember' },
-            data.summary.churnedCard && { label: 'CHURNED TIER', count: data.summary.churnedCard.count, percentage: data.summary.churnedCard.percentage, icon: 'churnRate' }
+            data.summary.newMemberCard && { label: 'ND TIER', count: data.summary.newMemberCard.count, percentage: data.summary.newMemberCard.percentage, icon: 'newCustomers', movementType: 'NEW' as const },
+            data.summary.reactivationCard && { label: 'REACT TIER', count: data.summary.reactivationCard.count, percentage: data.summary.reactivationCard.percentage, icon: 'pureMember', movementType: 'REACTIVATION' as const },
+            data.summary.churnedCard && { label: 'CHURNED TIER', count: data.summary.churnedCard.count, percentage: data.summary.churnedCard.percentage, icon: 'churnRate', movementType: 'CHURNED' as const }
           ].filter(Boolean).map((card, idx) => (
             <div
               key={idx}
@@ -571,6 +572,18 @@ export default function CustomerTierMovement({
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)'
                 e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04)'
+              }}
+              onClick={() => {
+                if ((card as any).movementType) {
+                  const movementType = (card as any).movementType as 'NEW' | 'REACTIVATION' | 'CHURNED'
+                  setSelectedFromTier(0)
+                  setSelectedToTier(0)
+                  setSelectedFromTierName((card as any).label)
+                  setSelectedToTierName((card as any).label)
+                  setError(null)
+                  setMovementTypeState(movementType) // set first
+                  setModalOpen(true) // open after movement type set
+                }
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
@@ -986,11 +999,15 @@ export default function CustomerTierMovement({
       {modalOpen && selectedFromTier !== null && selectedToTier !== null && periods && (
         <TierMovementCustomerModal
           isOpen={modalOpen}
-          onClose={handleCloseModal}
+          onClose={() => {
+            handleCloseModal()
+            setMovementTypeState(null)
+          }}
           fromTier={selectedFromTier}
           toTier={selectedToTier}
           fromTierName={selectedFromTierName}
           toTierName={selectedToTierName}
+          movementTypeOverride={movementTypeState || undefined}
           currentYear={periods.currentYear}
           currentMonth={periods.currentMonth}
           previousYear={periods.previousYear}
