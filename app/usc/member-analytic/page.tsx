@@ -80,14 +80,14 @@ export default function USCMemberAnalyticPage() {
               animation: 'pulse 2s ease-in-out infinite'
             }}></div>
           </div>
-        </div>
+            </div>
       </Frame>
 
-      <style jsx>{`
+          <style jsx>{`
         @keyframes pulse {
           0%, 100% {
             opacity: 1;
-          }
+        }
           50% {
             opacity: 0.5;
           }

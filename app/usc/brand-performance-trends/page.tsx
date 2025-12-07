@@ -1106,7 +1106,7 @@ export default function BrandPerformanceTrendsPage() {
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center'
-                  }}>
+                }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', color: '#111827', letterSpacing: '-0.01em' }}>
                         <span 
@@ -1383,7 +1383,7 @@ export default function BrandPerformanceTrendsPage() {
                         }}>
                           <td 
                             style={{ 
-                              padding: '8px 12px',
+                            padding: '8px 12px',
                               fontSize: '13px',
                               fontWeight: row.brand === 'TOTAL' ? '700' : '500',
                               color: '#1f2937',
