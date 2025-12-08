@@ -174,13 +174,35 @@ export default function CustomerTierMovement({
       // Store periods in state for modal usage
       setPeriods(periods)
       
-      const userAllowedBrands = localStorage.getItem('user_allowed_brands')
+      // Normalize allowed brands header (avoid missing/undefined on refresh)
+      const rawAllowed = localStorage.getItem('user_allowed_brands')
+      let normalizedAllowed: string | null = null
+      if (rawAllowed) {
+        normalizedAllowed = rawAllowed
+      } else {
+        // Fallback: try nexmax_user payload
+        const userStr = localStorage.getItem('nexmax_user')
+        if (userStr) {
+          try {
+            const parsed = JSON.parse(userStr)
+            if (parsed?.allowed_brands) {
+              normalizedAllowed = JSON.stringify(parsed.allowed_brands)
+            }
+          } catch {
+            normalizedAllowed = null
+          }
+        }
+      }
+
       const headers: HeadersInit = {
         'Content-Type': 'application/json'
       }
 
-      if (userAllowedBrands) {
-        headers['x-user-allowed-brands'] = userAllowedBrands
+      if (normalizedAllowed) {
+        headers['x-user-allowed-brands'] = normalizedAllowed
+      } else {
+        // send empty array to keep behavior consistent (no brand filter) but stable across refresh
+        headers['x-user-allowed-brands'] = '[]'
       }
 
       const params = new URLSearchParams({

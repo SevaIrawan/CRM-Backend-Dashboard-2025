@@ -17,6 +17,7 @@ async function aggregateUserDataByDateRange(
   user_unique: string
   unique_code: string | null
   user_name: string | null
+  tier_name: string | null
   line: string | null
   tier: number | null
   depositAmount: number
@@ -115,6 +116,7 @@ function aggregateUserData(
   user_unique: string
   unique_code: string | null
   user_name: string | null
+  tier_name: string | null
   line: string | null
   tier: number | null
   depositAmount: number
@@ -150,7 +152,10 @@ function aggregateUserData(
         unique_code: row.unique_code || null,
         user_name: row.user_name || null,
         line: row.line || null,
-        tier: null,
+      tier_name: typeof row.tier_name === 'string' && row.tier_name.trim().length > 0
+        ? row.tier_name.trim()
+        : null,
+      tier: null,
         tierNumbers: new Set(),
         depositAmount: 0,
         withdrawAmount: 0,
@@ -167,21 +172,32 @@ function aggregateUserData(
     user.depositCases += Number(row.deposit_cases) || 0
     
     // Track tier number for determination (use tier_name to get tier number)
+      let parsedTier: number | null = null
+    
     if (row.tier_name) {
-      // Find tier number from tier_name using TIER_NAMES (case-insensitive)
       const tierNameLower = (row.tier_name as string).trim()
+      // Try lookup against TIER_NAMES (case-insensitive)
       const tierEntry = Object.entries(TIER_NAMES).find(([_, name]) => 
         name.toLowerCase() === tierNameLower.toLowerCase()
       )
       
       if (tierEntry) {
         const tierNum = tierEntry[0]
-        const tier = parseInt(tierNum)
-        if (!isNaN(tier) && tier >= 1 && tier <= 7) {
-          // Track all tier numbers that appear (to determine highest tier)
-          user.tierNumbers.add(tier)
+        parsedTier = parseInt(tierNum)
+      } else {
+        // Fallback: try parse numeric from tier_name (e.g., "Tier 3" or "3")
+        const numericMatch = tierNameLower.match(/(\d+)/)
+        if (numericMatch && numericMatch[1]) {
+          const n = parseInt(numericMatch[1], 10)
+          if (!isNaN(n)) {
+            parsedTier = n
+          }
         }
       }
+    }
+
+    if (parsedTier !== null && !isNaN(parsedTier) && parsedTier >= 1 && parsedTier <= 7) {
+      user.tierNumbers.add(parsedTier)
     }
     
     // Track dates
@@ -224,6 +240,7 @@ function aggregateUserData(
       user_unique: user.user_unique,
       unique_code: user.unique_code,
       user_name: user.user_name,
+      tier_name: user.tier_name || null,
       line: user.line,
       tier: highestTier,  // ✅ Use highestTier (tier tertinggi dalam period)
       depositAmount: user.depositAmount,
@@ -369,11 +386,11 @@ export async function GET(request: NextRequest) {
     const specialMovement = movementTypeParam === 'NEW' || movementTypeParam === 'REACTIVATION' || movementTypeParam === 'CHURNED'
 
     if (!specialMovement) {
-      if (!fromTier || !toTier) {
-        return NextResponse.json(
-          { error: 'Missing required parameters: fromTier and toTier' },
-          { status: 400 }
-        )
+    if (!fromTier || !toTier) {
+      return NextResponse.json(
+        { error: 'Missing required parameters: fromTier and toTier' },
+        { status: 400 }
+      )
       }
     }
     
@@ -534,8 +551,9 @@ export async function GET(request: NextRequest) {
 
       const depositAmount = usePreviousOnly ? (prev?.depositAmount || 0) : (curr?.depositAmount || 0)
       const withdrawAmount = usePreviousOnly ? (prev?.withdrawAmount || 0) : (curr?.withdrawAmount || 0)
+      const depositCases = usePreviousOnly ? (prev?.depositCases || 0) : (curr?.depositCases || 0)
       const ggr = depositAmount - withdrawAmount
-      const atv = usePreviousOnly ? (prev?.avgTransactionValue || 0) : (curr?.avgTransactionValue || 0)
+      const atv = depositCases > 0 ? depositAmount / depositCases : 0
 
       const prevDA = useCurrentOnly ? 0 : (prev?.depositAmount || 0)
       const prevWithdraw = useCurrentOnly ? 0 : (prev?.withdrawAmount || 0)
@@ -550,8 +568,14 @@ export async function GET(request: NextRequest) {
         user_unique: m.user_unique,
         unique_code: curr?.unique_code || prev?.unique_code || m.uniqueCode || null,
         user_name: curr?.user_name || prev?.user_name || null,
+        tier: curr?.tier ?? prev?.tier ?? null,
+        tier_name: curr?.tier_name || prev?.tier_name || null,
         line: curr?.line || prev?.line || m.line || null,
         handler: null,
+        depositAmount,
+        withdrawAmount,
+        depositCases,
+        avgTransactionValue: atv,
         daChangePercent: daChangePercent !== null ? Number(daChangePercent.toFixed(2)) : null,
         ggrChangePercent: ggrChangePercent !== null ? Number(ggrChangePercent.toFixed(2)) : null,
         atvChangePercent: atvChangePercent !== null ? Number(atvChangePercent.toFixed(2)) : null,

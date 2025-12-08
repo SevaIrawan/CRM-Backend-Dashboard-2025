@@ -430,6 +430,7 @@ export async function GET(request: NextRequest) {
     const newCount = movements.filter(m => m.movementType === 'NEW').length
     const reactivationCount = movements.filter(m => m.movementType === 'REACTIVATION').length
     const churnedCount = movements.filter(m => m.movementType === 'CHURNED').length
+    const totalAllMovements = movements.length
     
     // ✅ Reverse tierOrder: Display from lowest (Regular/Tier 7) to highest (Super VIP/Tier 1)
     // tierOrder from generateTierMovementMatrix is [1,2,3,4,5,6,7] (low to high numbers)
@@ -483,32 +484,32 @@ export async function GET(request: NextRequest) {
           // Format for summary cards
           upgradesCard: {
             count: summary.totalUpgrades,
-            percentage: summary.upgradesPercentage,
+            percentage: totalAllMovements > 0 ? (summary.totalUpgrades / totalAllMovements) * 100 : 0,
             label: 'Upgrades'
           },
           downgradesCard: {
             count: summary.totalDowngrades,
-            percentage: summary.downgradesPercentage,
+            percentage: totalAllMovements > 0 ? (summary.totalDowngrades / totalAllMovements) * 100 : 0,
             label: 'Downgrades'
           },
           stableCard: {
             count: summary.totalStable,
-            percentage: summary.stablePercentage,
+            percentage: totalAllMovements > 0 ? (summary.totalStable / totalAllMovements) * 100 : 0,
             label: 'Stable'
           },
           newMemberCard: {
             count: newCount,
-            percentage: summary.totalUsers > 0 ? (newCount / summary.totalUsers) * 100 : 0,
+            percentage: totalAllMovements > 0 ? (newCount / totalAllMovements) * 100 : 0,
             label: 'New Member'
           },
           reactivationCard: {
             count: reactivationCount,
-            percentage: summary.totalUsers > 0 ? (reactivationCount / summary.totalUsers) * 100 : 0,
+            percentage: totalAllMovements > 0 ? (reactivationCount / totalAllMovements) * 100 : 0,
             label: 'Reactivation'
           },
           churnedCard: {
             count: churnedCount,
-            percentage: summary.totalUsers > 0 ? (churnedCount / summary.totalUsers) * 100 : 0,
+            percentage: totalAllMovements > 0 ? (churnedCount / totalAllMovements) * 100 : 0,
             label: 'Churned'
           }
         },

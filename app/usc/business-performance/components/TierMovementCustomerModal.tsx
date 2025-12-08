@@ -53,12 +53,18 @@ interface Customer {
   user_unique?: string | null
   unique_code: string | null
   user_name: string | null
+  tier_name?: string | null
+  tier?: number | null
   line: string | null // ✅ Add line/brand field
   handler: string | null
   daChangePercent: number | null
   ggrChangePercent: number | null
   atvChangePercent: number | null
   assigne: string | null
+  depositAmount?: number
+  withdrawAmount?: number
+  depositCases?: number
+  avgTransactionValue?: number
 }
 
 interface TierMovementCustomerModalProps {
@@ -602,6 +608,7 @@ export default function TierMovementCustomerModal({
         'Line/Brand',
         'Unique Code',
         'User Name',
+        'Tier',
         'Handler',
         'DA',
         'GGR',
@@ -618,9 +625,12 @@ export default function TierMovementCustomerModal({
         const atvChange = formatComparisonPercent(customer.atvChangePercent)
         
         csvContent += [
-          customer.line || '-',
-          customer.unique_code || '-',
-          customer.user_name || '-',
+        customer.line || '-',
+        customer.unique_code || '-',
+        customer.user_name || '-',
+        (customer.tier_name && customer.tier_name.trim().length > 0)
+          ? customer.tier_name.trim()
+          : '-',
           customer.handler || '-',
           daChange.text,
           ggrChange.text,
@@ -661,25 +671,32 @@ export default function TierMovementCustomerModal({
 
   // Get movement type label
   const getMovementTypeLabel = () => {
-    if (movementType === 'UPGRADE') return 'Upgrade'
-    if (movementType === 'DOWNGRADE') return 'Downgrade'
-    if (movementType === 'NEW') return 'ND Tier'
-    if (movementType === 'REACTIVATION') return 'Reactivation'
-    if (movementType === 'CHURNED') return 'Churned'
+    if (movementTypeUpper === 'UPGRADE') return 'Upgrade'
+    if (movementTypeUpper === 'DOWNGRADE') return 'Downgrade'
+    if (movementTypeUpper === 'NEW') return 'ND Tier'
+    if (movementTypeUpper === 'REACTIVATION') return 'Reactivation'
+    if (movementTypeUpper === 'CHURNED') return 'Churned'
     return 'Stable'
   }
 
-  const isSpecialMovement = movementType === 'NEW' || movementType === 'REACTIVATION' || movementType === 'CHURNED'
+  const movementTypeUpper = movementType ? movementType.toUpperCase() as typeof movementType : movementType
+  const isSpecialMovement =
+    movementTypeUpper === 'NEW' ||
+    movementTypeUpper === 'REACTIVATION' ||
+    movementTypeUpper === 'CHURNED'
 
   const getInsightSubtitle = () => {
     if (movementType === 'NEW') {
-      return `${totalRecords} customers joined in Period B with no activity in Period A (ND Tier).`
+      const periodTxt = periodBStart && periodBEnd ? `Period B: ${periodBStart} to ${periodBEnd}` : 'Period B'
+      return `${totalRecords} customers joined in Period B with no activity in Period A (ND Tier). ${periodTxt}.`
     }
     if (movementType === 'REACTIVATION') {
-      return `${totalRecords} customers became active again in Period B after being inactive since before Period A (Reactivation).`
+      const periodTxt = periodBStart && periodBEnd ? `Period B: ${periodBStart} to ${periodBEnd}` : 'Period B'
+      return `${totalRecords} customers became active again in Period B after being inactive before Period A (Reactivation). ${periodTxt}.`
     }
     if (movementType === 'CHURNED') {
-      return `${totalRecords} customers were active in Period A but absent in Period B (Churned).`
+      const periodTxt = periodAStart && periodAEnd ? `Period A: ${periodAStart} to ${periodAEnd}` : 'Period A'
+      return `${totalRecords} customers were active in Period A but absent in Period B (Churned). ${periodTxt}.`
     }
     return 'View detailed customer information for this tier movement'
   }
@@ -1036,6 +1053,29 @@ export default function TierMovementCustomerModal({
                         boxSizing: 'border-box' // ✅ Pastikan padding termasuk dalam height
                       }}
                     >
+                      Tier
+                    </th>
+                    <th
+                      style={{
+                        padding: CELL_PADDING,
+                        textAlign: 'center', // ✅ Semua header rata tengah
+                        backgroundColor: '#374151', // ✅ Dark background
+                        borderBottom: '1px solid #4B5563',
+                        borderRight: '1px solid #4B5563',
+                        fontWeight: 600,
+                        color: '#FFFFFF', // ✅ White text
+                        position: 'sticky',
+                        top: 0,
+                        zIndex: 1000, // ✅ Higher z-index untuk freeze
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                        height: `${CELL_HEIGHT}px`, // ✅ Semua cell = 28px
+                        minHeight: `${CELL_HEIGHT}px`, // ✅ Paksa min height
+                        maxHeight: `${CELL_HEIGHT}px`, // ✅ Paksa max height
+                        lineHeight: CELL_LINE_HEIGHT,
+                        verticalAlign: 'middle',
+                        boxSizing: 'border-box' // ✅ Pastikan padding termasuk dalam height
+                      }}
+                    >
                       Handler
                     </th>
                     <th
@@ -1211,86 +1251,105 @@ export default function TierMovementCustomerModal({
                           boxSizing: 'border-box' // ✅ Pastikan padding termasuk dalam height
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <span>{customer.user_name || '-'}</span>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleCustomerDetailClick(customer)
-                            }}
-                            disabled={detailLoading && detailLoadingCustomer === customer.unique_code}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              cursor: detailLoading && detailLoadingCustomer === customer.unique_code ? 'wait' : 'pointer',
-                              padding: '4px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: detailLoading && detailLoadingCustomer === customer.unique_code ? '#9CA3AF' : '#6B7280',
-                              transition: 'color 0.2s',
-                              opacity: detailLoading && detailLoadingCustomer === customer.unique_code ? 0.6 : 1
-                            }}
-                            onMouseEnter={(e) => {
-                              if (!(detailLoading && detailLoadingCustomer === customer.unique_code)) {
-                                e.currentTarget.style.color = '#1F2937'
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (!(detailLoading && detailLoadingCustomer === customer.unique_code)) {
-                                e.currentTarget.style.color = '#6B7280'
-                              }
-                            }}
-                            title={detailLoading && detailLoadingCustomer === customer.unique_code ? 'Loading...' : 'View customer details'}
-                          >
-                            {detailLoading && detailLoadingCustomer === customer.unique_code ? (
-                              <svg
-                                width="16"
-                                height="16"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <circle 
-                                  cx="12" 
-                                  cy="12" 
-                                  r="10" 
-                                  strokeDasharray="32" 
-                                  strokeDashoffset="8"
-                                  style={{
-                                    transformOrigin: 'center',
-                                    animation: 'spin 1s linear infinite'
-                                  }}
+                          {/* Disable nested detail popup for special movements */}
+                          {!isSpecialMovement && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleCustomerDetailClick(customer)
+                              }}
+                              disabled={detailLoading && detailLoadingCustomer === customer.unique_code}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                cursor: detailLoading && detailLoadingCustomer === customer.unique_code ? 'wait' : 'pointer',
+                                padding: '4px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: detailLoading && detailLoadingCustomer === customer.unique_code ? '#9CA3AF' : '#6B7280',
+                                transition: 'color 0.2s',
+                                opacity: detailLoading && detailLoadingCustomer === customer.unique_code ? 0.6 : 1
+                              }}
+                              onMouseEnter={(e) => {
+                                if (!(detailLoading && detailLoadingCustomer === customer.unique_code)) {
+                                  e.currentTarget.style.color = '#1F2937'
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (!(detailLoading && detailLoadingCustomer === customer.unique_code)) {
+                                  e.currentTarget.style.color = '#6B7280'
+                                }
+                              }}
+                              title={detailLoading && detailLoadingCustomer === customer.unique_code ? 'Loading...' : 'View customer details'}
+                            >
+                              {detailLoading && detailLoadingCustomer === customer.unique_code ? (
+                                <svg
+                                  width="16"
+                                  height="16"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
                                 >
-                                  <animateTransform
-                                    attributeName="transform"
-                                    type="rotate"
-                                    from="0 12 12"
-                                    to="360 12 12"
-                                    dur="1s"
-                                    repeatCount="indefinite"
-                                  />
-                                </circle>
-                              </svg>
-                            ) : (
-                              <svg
-                                width="16"
-                                height="16"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <polyline points="6 9 12 15 18 9"></polyline>
-                              </svg>
-                            )}
-                          </button>
+                                  <circle 
+                                    cx="12" 
+                                    cy="12" 
+                                    r="10" 
+                                    strokeDasharray="32" 
+                                    strokeDashoffset="8"
+                                    style={{
+                                      transformOrigin: 'center',
+                                      animation: 'spin 1s linear infinite'
+                                    }}
+                                  >
+                                    <animateTransform
+                                      attributeName="transform"
+                                      type="rotate"
+                                      from="0 12 12"
+                                      to="360 12 12"
+                                      dur="1s"
+                                      repeatCount="indefinite"
+                                    />
+                                  </circle>
+                                </svg>
+                              ) : (
+                                <svg
+                                  width="16"
+                                  height="16"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                              )}
+                            </button>
+                          )}
                         </div>
+                      </td>
+                      <td
+                        style={{
+                          padding: CELL_PADDING,
+                          color: '#1F2937',
+                          textAlign: 'center',
+                          borderRight: '1px solid #E5E7EB',
+                          height: `${CELL_HEIGHT}px`,
+                          lineHeight: CELL_LINE_HEIGHT,
+                          verticalAlign: 'middle',
+                          boxSizing: 'border-box'
+                        }}
+                      >
+                        {(customer.tier_name && customer.tier_name.trim().length > 0)
+                          ? customer.tier_name.trim()
+                          : '-'}
                       </td>
                       <td
                         style={{
@@ -1317,14 +1376,16 @@ export default function TierMovementCustomerModal({
                           boxSizing: 'border-box' // ✅ Pastikan padding termasuk dalam height
                         }}
                       >
-                        {(() => {
-                          const { text, color } = formatComparisonPercent(customer.daChangePercent)
-                          return (
-                            <span style={{ color, fontWeight: 500 }}>
-                              {text}
-                            </span>
-                          )
-                        })()}
+                        {isSpecialMovement
+                          ? (Number(customer.depositAmount || 0)).toFixed(2)
+                          : (() => {
+                              const { text, color } = formatComparisonPercent(customer.daChangePercent)
+                              return (
+                                <span style={{ color, fontWeight: 500 }}>
+                                  {text}
+                                </span>
+                              )
+                            })()}
                       </td>
                       <td
                         style={{
@@ -1337,14 +1398,12 @@ export default function TierMovementCustomerModal({
                           boxSizing: 'border-box' // ✅ Pastikan padding termasuk dalam height
                         }}
                       >
-                        {(() => {
-                          const { text, color } = formatComparisonPercent(customer.ggrChangePercent)
-                          return (
-                            <span style={{ color, fontWeight: 500 }}>
-                              {text}
-                            </span>
-                          )
-                        })()}
+                        {isSpecialMovement
+                          ? (Number(customer.depositAmount || 0) - Number(customer.withdrawAmount || 0)).toFixed(2)
+                          : (() => {
+                              const { text, color } = formatComparisonPercent(customer.ggrChangePercent)
+                              return <span style={{ color, fontWeight: 500 }}>{text}</span>
+                            })()}
                       </td>
                       <td
                         style={{
@@ -1358,14 +1417,16 @@ export default function TierMovementCustomerModal({
                           boxSizing: 'border-box' // ✅ Pastikan padding termasuk dalam height
                         }}
                       >
-                        {(() => {
-                          const { text, color } = formatComparisonPercent(customer.atvChangePercent)
-                          return (
-                            <span style={{ color, fontWeight: 500 }}>
-                              {text}
-                            </span>
-                          )
-                        })()}
+                        {isSpecialMovement
+                          ? (() => {
+                              const dc = customer.depositCases || 0
+                              const da = customer.depositAmount || 0
+                              return dc > 0 ? (da / dc).toFixed(2) : '0.00'
+                            })()
+                          : (() => {
+                              const { text, color } = formatComparisonPercent(customer.atvChangePercent)
+                              return <span style={{ color, fontWeight: 500 }}>{text}</span>
+                            })()}
                       </td>
                       <td
                         style={{
