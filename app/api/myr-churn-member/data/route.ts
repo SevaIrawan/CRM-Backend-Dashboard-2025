@@ -89,6 +89,7 @@ export async function GET(request: NextRequest) {
     let prevQuery = supabase
       .from('blue_whale_myr')
       .select('userkey')
+      .eq('currency', 'MYR')
       .eq('year', prevYearInt)
       .eq('month', prevMonth)
       .gt('deposit_cases', 0)
@@ -125,6 +126,7 @@ export async function GET(request: NextRequest) {
     let currentQuery = supabase
       .from('blue_whale_myr')
       .select('userkey')
+      .eq('currency', 'MYR')
       .eq('year', yearInt)
       .eq('month', month)
       .gt('deposit_cases', 0)
@@ -184,6 +186,7 @@ export async function GET(request: NextRequest) {
     let detailQuery = supabase
       .from('blue_whale_myr')
       .select('*')
+      .eq('currency', 'MYR')
       .eq('year', prevYearInt)
       .eq('month', prevMonth)
       .gt('deposit_cases', 0) // ✅ Only users yang active (deposit_cases > 0)
@@ -415,6 +418,7 @@ async function fetchUserMinDates(rawData: any[], line: string | null, userAllowe
     let minDateQuery = supabase
       .from('blue_whale_myr')
       .select('userkey, date')
+      .eq('currency', 'MYR')
       .in('userkey', uniqueUsers)
       .gt('deposit_cases', 0)
       .order('date', { ascending: true })

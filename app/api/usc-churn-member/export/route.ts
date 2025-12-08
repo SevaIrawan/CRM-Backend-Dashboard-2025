@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
     let prevQuery = supabase
       .from('blue_whale_usc')
       .select('userkey')
+      .eq('currency', 'USC')
       .eq('year', prevYearInt)
       .eq('month', prevMonth)
       .gt('deposit_cases', 0)
@@ -93,6 +94,7 @@ export async function POST(request: NextRequest) {
     let currentQuery = supabase
       .from('blue_whale_usc')
       .select('userkey')
+      .eq('currency', 'USC')
       .eq('year', parseInt(year))
       .eq('month', month)
       .gt('deposit_cases', 0)
@@ -145,8 +147,10 @@ export async function POST(request: NextRequest) {
       let detailQuery = supabase
         .from('blue_whale_usc')
         .select('*')
+        .eq('currency', 'USC')
         .eq('year', prevYearInt)
         .eq('month', prevMonth)
+        .gt('deposit_cases', 0)
         .in('userkey', batchUserKeys)
 
       // Apply brand filter with user permission check
@@ -398,6 +402,7 @@ async function fetchUserMinDates(rawData: any[], line: string | null, userAllowe
     let minDateQuery = supabase
       .from('blue_whale_usc')
       .select('userkey, date')
+      .eq('currency', 'USC')
       .in('userkey', uniqueUsers)
       .gt('deposit_cases', 0)
       .order('date', { ascending: true })
