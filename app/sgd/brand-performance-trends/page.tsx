@@ -11,7 +11,6 @@ import CustomerDetailModal from '@/components/CustomerDetailModal'
 import StandardLoadingSpinner from '@/components/StandardLoadingSpinner'
 import { formatKPIValue } from '@/lib/brandPerformanceTrendsLogic'
 import { getChartIcon } from '@/lib/CentralIcon'
-import ComparisonIcon from '@/components/ComparisonIcon'
 
 
 interface SlicerOptions {
@@ -1464,66 +1463,121 @@ export default function BrandPerformanceTrendsPage() {
                             }}
                             onClick={() => handleCountClick(row.brand, 'B')}
                             title="Click to view customer details"
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(59,130,246,0.08)'
+                              e.currentTarget.style.boxShadow = '0 6px 18px rgba(59,130,246,0.25)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = getPerformanceColor(row.percent?.activeMember || 0)
+                              e.currentTarget.style.boxShadow = 'none'
+                            }}
                           >
                             <div style={{ textAlign: 'right', fontSize: '13px', color: '#2563eb', fontWeight: '500', marginBottom: '4px' }}>
                             {formatInteger(row.periodB?.activeMember || 0)}
                             </div>
-                            <div style={{ fontSize: '11px', color: (row.percent?.activeMember || 0) >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px' }}>
-                              <ComparisonIcon isPositive={(row.percent?.activeMember || 0) >= 0} size="11px" />
+                            <div style={{ fontSize: '11px', color: (row.percent?.activeMember || 0) >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
                               <span>{((row.percent?.activeMember || 0) >= 0 ? '+' : '') + (row.percent?.activeMember || 0).toFixed(2)}%</span>
                             </div>
                           </td>}
-                          {visibleColumns.atv && <td style={{ padding: '10px 12px', backgroundColor: getPerformanceColor(row.percent?.avgTransactionValue || 0), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)', transition: 'all 0.2s ease' }}>
+                          {visibleColumns.atv && <td style={{ padding: '10px 12px', backgroundColor: getPerformanceColor(row.percent?.avgTransactionValue || 0), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)', transition: 'all 0.2s ease' }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(59,130,246,0.08)'
+                              e.currentTarget.style.boxShadow = '0 6px 18px rgba(59,130,246,0.25)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = getPerformanceColor(row.percent?.avgTransactionValue || 0)
+                              e.currentTarget.style.boxShadow = 'none'
+                            }}
+                          >
                             <div style={{ textAlign: 'right', fontSize: '13px', color: '#374151', fontWeight: '500', marginBottom: '4px' }}>
                             {formatNumeric(row.periodB?.avgTransactionValue || 0)}
                             </div>
-                            <div style={{ fontSize: '11px', color: (row.percent?.avgTransactionValue || 0) >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px' }}>
-                              <ComparisonIcon isPositive={(row.percent?.avgTransactionValue || 0) >= 0} size="11px" />
+                            <div style={{ fontSize: '11px', color: (row.percent?.avgTransactionValue || 0) >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
                               <span>{((row.percent?.avgTransactionValue || 0) >= 0 ? '+' : '') + (row.percent?.avgTransactionValue || 0).toFixed(2)}%</span>
                             </div>
                           </td>}
-                          {visibleColumns.da && <td style={{ padding: '10px 12px', backgroundColor: getPerformanceColor(row.percent?.depositAmount || 0), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)', transition: 'all 0.2s ease' }}>
+                          {visibleColumns.da && <td style={{ padding: '10px 12px', backgroundColor: getPerformanceColor(row.percent?.depositAmount || 0), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)', transition: 'all 0.2s ease' }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(59,130,246,0.08)'
+                              e.currentTarget.style.boxShadow = '0 6px 18px rgba(59,130,246,0.25)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = getPerformanceColor(row.percent?.depositAmount || 0)
+                              e.currentTarget.style.boxShadow = 'none'
+                            }}
+                          >
                             <div style={{ textAlign: 'right', fontSize: '13px', color: '#374151', fontWeight: '500', marginBottom: '4px' }}>
                             {formatNumeric(row.periodB?.depositAmount || 0)}
                             </div>
-                            <div style={{ fontSize: '11px', color: (row.percent?.depositAmount || 0) >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px' }}>
-                              <ComparisonIcon isPositive={(row.percent?.depositAmount || 0) >= 0} size="11px" />
+                            <div style={{ fontSize: '11px', color: (row.percent?.depositAmount || 0) >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
                               <span>{((row.percent?.depositAmount || 0) >= 0 ? '+' : '') + (row.percent?.depositAmount || 0).toFixed(2)}%</span>
                             </div>
                           </td>}
-                          {visibleColumns.ggr && <td style={{ padding: '10px 12px', backgroundColor: getPerformanceColor(row.percent?.ggr || 0), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)', transition: 'all 0.2s ease' }}>
+                          {visibleColumns.ggr && <td style={{ padding: '10px 12px', backgroundColor: getPerformanceColor(row.percent?.ggr || 0), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)', transition: 'all 0.2s ease' }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(59,130,246,0.08)'
+                              e.currentTarget.style.boxShadow = '0 6px 18px rgba(59,130,246,0.25)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = getPerformanceColor(row.percent?.ggr || 0)
+                              e.currentTarget.style.boxShadow = 'none'
+                            }}
+                          >
                             <div style={{ textAlign: 'right', fontSize: '13px', color: (row.periodB?.ggr || 0) >= 0 ? '#059669' : '#dc2626', fontWeight: '600', marginBottom: '4px' }}>
                             {formatNumeric(row.periodB?.ggr || 0)}
                             </div>
-                            <div style={{ fontSize: '11px', color: (row.percent?.ggr || 0) >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px' }}>
-                              <ComparisonIcon isPositive={(row.percent?.ggr || 0) >= 0} size="11px" />
+                            <div style={{ fontSize: '11px', color: (row.percent?.ggr || 0) >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
                               <span>{((row.percent?.ggr || 0) >= 0 ? '+' : '') + (row.percent?.ggr || 0).toFixed(2)}%</span>
                             </div>
                           </td>}
-                          {visibleColumns.winrate && <td style={{ padding: '10px 12px', backgroundColor: getPerformanceColor(row.percent?.winrate || 0), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)', transition: 'all 0.2s ease' }}>
+                          {visibleColumns.winrate && <td style={{ padding: '10px 12px', backgroundColor: getPerformanceColor(row.percent?.winrate || 0), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)', transition: 'all 0.2s ease' }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(59,130,246,0.08)'
+                              e.currentTarget.style.boxShadow = '0 6px 18px rgba(59,130,246,0.25)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = getPerformanceColor(row.percent?.winrate || 0)
+                              e.currentTarget.style.boxShadow = 'none'
+                            }}
+                          >
                             <div style={{ textAlign: 'right', fontSize: '13px', color: '#374151', fontWeight: '500', marginBottom: '4px' }}>
                             {formatPF(row.periodB?.winrate || 0)}
                             </div>
-                            <div style={{ fontSize: '11px', color: (row.percent?.winrate || 0) >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px' }}>
-                              <ComparisonIcon isPositive={(row.percent?.winrate || 0) >= 0} size="11px" />
+                            <div style={{ fontSize: '11px', color: (row.percent?.winrate || 0) >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
                               <span>{((row.percent?.winrate || 0) >= 0 ? '+' : '') + (row.percent?.winrate || 0).toFixed(2)}%</span>
                             </div>
                           </td>}
-                          {visibleColumns.ggrUser && <td style={{ padding: '10px 12px', backgroundColor: getPerformanceColor(row.percent?.ggrPerUser || 0), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)', transition: 'all 0.2s ease' }}>
+                          {visibleColumns.ggrUser && <td style={{ padding: '10px 12px', backgroundColor: getPerformanceColor(row.percent?.ggrPerUser || 0), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)', transition: 'all 0.2s ease' }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(59,130,246,0.08)'
+                              e.currentTarget.style.boxShadow = '0 6px 18px rgba(59,130,246,0.25)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = getPerformanceColor(row.percent?.ggrPerUser || 0)
+                              e.currentTarget.style.boxShadow = 'none'
+                            }}
+                          >
                             <div style={{ textAlign: 'right', fontSize: '13px', color: '#374151', fontWeight: '500', marginBottom: '4px' }}>
                             {formatNumeric(row.periodB?.ggrPerUser || 0)}
                             </div>
-                            <div style={{ fontSize: '11px', color: (row.percent?.ggrPerUser || 0) >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px' }}>
-                              <ComparisonIcon isPositive={(row.percent?.ggrPerUser || 0) >= 0} size="11px" />
+                            <div style={{ fontSize: '11px', color: (row.percent?.ggrPerUser || 0) >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
                               <span>{((row.percent?.ggrPerUser || 0) >= 0 ? '+' : '') + (row.percent?.ggrPerUser || 0).toFixed(2)}%</span>
                             </div>
                           </td>}
-                          {visibleColumns.daUser && <td style={{ padding: '10px 12px', backgroundColor: getPerformanceColor(row.percent?.depositAmountPerUser || 0), borderBottom: '1px solid rgba(148,163,184,0.22)', transition: 'all 0.2s ease' }}>
+                          {visibleColumns.daUser && <td style={{ padding: '10px 12px', backgroundColor: getPerformanceColor(row.percent?.depositAmountPerUser || 0), borderBottom: '1px solid rgba(148,163,184,0.22)', transition: 'all 0.2s ease' }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(59,130,246,0.08)'
+                              e.currentTarget.style.boxShadow = '0 6px 18px rgba(59,130,246,0.25)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = getPerformanceColor(row.percent?.depositAmountPerUser || 0)
+                              e.currentTarget.style.boxShadow = 'none'
+                            }}
+                          >
                             <div style={{ textAlign: 'right', fontSize: '13px', color: '#374151', fontWeight: '500', marginBottom: '4px' }}>
                             {formatNumeric(row.periodB?.depositAmountPerUser || 0)}
                             </div>
-                            <div style={{ fontSize: '11px', color: (row.percent?.depositAmountPerUser || 0) >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px' }}>
-                              <ComparisonIcon isPositive={(row.percent?.depositAmountPerUser || 0) >= 0} size="11px" />
+                            <div style={{ fontSize: '11px', color: (row.percent?.depositAmountPerUser || 0) >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
                               <span>{((row.percent?.depositAmountPerUser || 0) >= 0 ? '+' : '') + (row.percent?.depositAmountPerUser || 0).toFixed(2)}%</span>
                             </div>
                           </td>}
@@ -1608,8 +1662,7 @@ export default function BrandPerformanceTrendsPage() {
                           <div style={{ textAlign: 'right', fontSize: '13px', color: '#2563eb', fontWeight: '600', marginBottom: '4px' }}>
                           {formatInteger(totalPeriodB.activeMember)}
                           </div>
-                          <div style={{ fontSize: '11px', color: totalPercent.activeMember >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px' }}>
-                            <ComparisonIcon isPositive={totalPercent.activeMember >= 0} size="11px" />
+                          <div style={{ fontSize: '11px', color: totalPercent.activeMember >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
                             <span>{(totalPercent.activeMember >= 0 ? '+' : '') + totalPercent.activeMember.toFixed(2)}%</span>
                           </div>
                         </td>}
@@ -1617,8 +1670,7 @@ export default function BrandPerformanceTrendsPage() {
                           <div style={{ textAlign: 'right', fontSize: '13px', color: '#374151', fontWeight: '600', marginBottom: '4px' }}>
                           {formatNumeric(totalPeriodB.avgTransactionValue)}
                           </div>
-                          <div style={{ fontSize: '11px', color: totalPercent.avgTransactionValue >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px' }}>
-                            <ComparisonIcon isPositive={totalPercent.avgTransactionValue >= 0} size="11px" />
+                          <div style={{ fontSize: '11px', color: totalPercent.avgTransactionValue >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
                             <span>{(totalPercent.avgTransactionValue >= 0 ? '+' : '') + totalPercent.avgTransactionValue.toFixed(2)}%</span>
                           </div>
                         </td>}
@@ -1626,8 +1678,7 @@ export default function BrandPerformanceTrendsPage() {
                           <div style={{ textAlign: 'right', fontSize: '13px', color: '#374151', fontWeight: '600', marginBottom: '4px' }}>
                           {formatNumeric(totalPeriodB.depositAmount)}
                           </div>
-                          <div style={{ fontSize: '11px', color: totalPercent.depositAmount >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px' }}>
-                            <ComparisonIcon isPositive={totalPercent.depositAmount >= 0} size="11px" />
+                          <div style={{ fontSize: '11px', color: totalPercent.depositAmount >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
                             <span>{(totalPercent.depositAmount >= 0 ? '+' : '') + totalPercent.depositAmount.toFixed(2)}%</span>
                           </div>
                         </td>}
@@ -1635,8 +1686,7 @@ export default function BrandPerformanceTrendsPage() {
                           <div style={{ textAlign: 'right', fontSize: '13px', color: totalPeriodB.ggr >= 0 ? '#059669' : '#dc2626', fontWeight: '700', marginBottom: '4px' }}>
                           {formatNumeric(totalPeriodB.ggr)}
                           </div>
-                          <div style={{ fontSize: '11px', color: totalPercent.ggr >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px' }}>
-                            <ComparisonIcon isPositive={totalPercent.ggr >= 0} size="11px" />
+                          <div style={{ fontSize: '11px', color: totalPercent.ggr >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
                             <span>{(totalPercent.ggr >= 0 ? '+' : '') + totalPercent.ggr.toFixed(2)}%</span>
                           </div>
                         </td>}
@@ -1644,8 +1694,7 @@ export default function BrandPerformanceTrendsPage() {
                           <div style={{ textAlign: 'right', fontSize: '13px', color: '#374151', fontWeight: '600', marginBottom: '4px' }}>
                           {formatPF(totalPeriodB.winrate)}
                           </div>
-                          <div style={{ fontSize: '11px', color: totalPercent.winrate >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px' }}>
-                            <ComparisonIcon isPositive={totalPercent.winrate >= 0} size="11px" />
+                          <div style={{ fontSize: '11px', color: totalPercent.winrate >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
                             <span>{(totalPercent.winrate >= 0 ? '+' : '') + totalPercent.winrate.toFixed(2)}%</span>
                           </div>
                         </td>}
@@ -1653,8 +1702,7 @@ export default function BrandPerformanceTrendsPage() {
                           <div style={{ textAlign: 'right', fontSize: '13px', color: '#374151', fontWeight: '600', marginBottom: '4px' }}>
                           {formatNumeric(totalPeriodB.ggrPerUser)}
                           </div>
-                          <div style={{ fontSize: '11px', color: totalPercent.ggrPerUser >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px' }}>
-                            <ComparisonIcon isPositive={totalPercent.ggrPerUser >= 0} size="11px" />
+                          <div style={{ fontSize: '11px', color: totalPercent.ggrPerUser >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
                             <span>{(totalPercent.ggrPerUser >= 0 ? '+' : '') + totalPercent.ggrPerUser.toFixed(2)}%</span>
                           </div>
                         </td>}
@@ -1662,8 +1710,7 @@ export default function BrandPerformanceTrendsPage() {
                           <div style={{ textAlign: 'right', fontSize: '13px', color: '#374151', fontWeight: '600', marginBottom: '4px' }}>
                           {formatNumeric(totalPeriodB.depositAmountPerUser)}
                           </div>
-                          <div style={{ fontSize: '11px', color: totalPercent.depositAmountPerUser >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px' }}>
-                            <ComparisonIcon isPositive={totalPercent.depositAmountPerUser >= 0} size="11px" />
+                          <div style={{ fontSize: '11px', color: totalPercent.depositAmountPerUser >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
                             <span>{(totalPercent.depositAmountPerUser >= 0 ? '+' : '') + totalPercent.depositAmountPerUser.toFixed(2)}%</span>
                           </div>
                         </td>}

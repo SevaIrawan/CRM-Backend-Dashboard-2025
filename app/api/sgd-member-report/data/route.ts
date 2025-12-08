@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
       let query = supabase
         .from('blue_whale_sgd')
         .select('*')
+        .eq('currency', 'SGD')
       
       // ✅ Apply date/month filter based on mode - SAME AS CUSTOMER RETENTION
       if (isDateRangeMode) {
@@ -81,6 +82,7 @@ export async function GET(request: NextRequest) {
         query = query.filter('year', 'eq', parseInt(year))
       }
       
+      // Reuse helper apply filters + batch fetch (no limit)
       const applyFilters = (q: any) => {
         if (isDateRangeMode) {
           q = q.filter('date', 'gte', startDate).filter('date', 'lte', endDate)
@@ -134,7 +136,7 @@ export async function GET(request: NextRequest) {
         batchOffset += batchSize
 
         if (allData.length > 1500000) {
-          console.log('⚠️ [AGGREGATED MODE] Safety cap reached: 1,500,000 records')
+          console.log('⚠️ Safety cap reached: 1,500,000 records')
           break
         }
       }
@@ -308,7 +310,8 @@ export async function GET(request: NextRequest) {
     // Build base query for filtering - using blue_whale_sgd table
     let baseQuery = supabase.from('blue_whale_sgd').select('userkey, user_name, unique_code, date, line, year, month, vip_level, operator, traffic, register_date, first_deposit_date, first_deposit_amount, last_deposit_date, days_inactive, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, add_transaction, deduct_transaction, cases_adjustment, cases_bets, bets_amount, valid_amount, ggr, net_profit, last_activity_days')
 
-    // No currency filter needed since table is blue_whale_sgd
+    // Currency lock to SGD table
+    baseQuery = baseQuery.eq('currency', 'SGD')
 
     // ✅ NEW: Apply brand filter with user permission check
     if (line && line !== 'ALL') {
@@ -336,9 +339,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Get total count first (separate query) - Build count query with same filters
-    let countQuery = supabase.from('blue_whale_sgd').select('*', { count: 'exact', head: true })
+    let countQuery = supabase.from('blue_whale_sgd').select('*', { count: 'exact', head: true }).eq('currency', 'SGD')
     
-    // Apply same filters to count query (no currency filter needed)
     // ✅ NEW: Apply brand filter with user permission check
     if (line && line !== 'ALL') {
       // Validate Squad Lead access (same check as baseQuery)
@@ -405,7 +407,7 @@ export async function GET(request: NextRequest) {
         pf
       }
     })
-    
+
     return NextResponse.json({
       success: true,
       data: enrichedData,

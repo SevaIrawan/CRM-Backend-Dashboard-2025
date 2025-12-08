@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
     }
 
     const csvContent = csvLines.join('\n')
-    const fileName = `brand_performance_trends_usc_${periodBEnd}.csv`
+    const fileName = `brand_performance_trends_myr_${periodBEnd}.csv`
     return new Response(csvContent, {
       status: 200,
       headers: {
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
       }
     })
   } catch (error) {
-    console.error('❌ [USC Brand Export] Error:', error)
+    console.error('❌ [MYR Brand Export] Error:', error)
     return new Response('Internal server error', { status: 500 })
   }
 }

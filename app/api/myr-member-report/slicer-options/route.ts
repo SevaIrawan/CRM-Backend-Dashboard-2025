@@ -10,10 +10,11 @@ export async function GET(request: NextRequest) {
     const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
     const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
 
-    // Get unique lines (no currency filter needed since table is blue_whale_myr)
+    // Get unique lines (lock to MYR table)
     const { data: lineData, error: lineError } = await supabase
       .from('blue_whale_myr')
       .select('line')
+      .eq('currency', 'MYR')
       .not('line', 'is', null)
       .order('line')
 
@@ -30,6 +31,7 @@ export async function GET(request: NextRequest) {
     const { data: yearData, error: yearError } = await supabase
       .from('blue_whale_myr')
       .select('year')
+      .eq('currency', 'MYR')
       .not('year', 'is', null)
       .order('year', { ascending: false })
 
@@ -46,6 +48,7 @@ export async function GET(request: NextRequest) {
     const { data: monthData, error: monthError } = await supabase
       .from('blue_whale_myr')
       .select('month')
+      .eq('currency', 'MYR')
       .not('month', 'is', null)
       .order('month')
 
@@ -62,6 +65,7 @@ export async function GET(request: NextRequest) {
     const { data: dateRangeData, error: dateRangeError } = await supabase
       .from('blue_whale_myr')
       .select('date')
+      .eq('currency', 'MYR')
       .not('date', 'is', null)
       .order('date', { ascending: true })
       .limit(1)
@@ -69,6 +73,7 @@ export async function GET(request: NextRequest) {
     const { data: maxDateData, error: maxDateError } = await supabase
       .from('blue_whale_myr')
       .select('date')
+      .eq('currency', 'MYR')
       .not('date', 'is', null)
       .order('date', { ascending: false })
       .limit(1)
@@ -134,7 +139,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    console.log('✅ Blue_whale_usc slicer options processed:', {
+    console.log('✅ Blue_whale_myr slicer options processed:', {
       lines_count: finalLines.length,
       years: years.length,
       months: months.length,

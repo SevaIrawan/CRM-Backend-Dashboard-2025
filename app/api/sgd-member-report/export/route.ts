@@ -14,10 +14,12 @@ export async function POST(request: NextRequest) {
       user_allowed_brands: userAllowedBrands
     })
 
+    // Mode detection (mirror data endpoint)
     const isDateRangeMode = filterMode === 'daterange' && startDate && endDate
     const isMonthMode = filterMode === 'month'
     const isSingleDayMode = isDateRangeMode && startDate === endDate
 
+    // Helper to apply filters to a query (mirror data endpoint)
     const applyFilters = (q: any) => {
       if (isDateRangeMode) {
         q = q.filter('date', 'gte', startDate).filter('date', 'lte', endDate)
@@ -39,48 +41,58 @@ export async function POST(request: NextRequest) {
       return q
     }
 
+    // Batch fetch all data (no limit)
     const batchSize = 5000
     let allData: any[] = []
     let offset = 0
     let hasMore = true
 
-    console.log('📊 Starting batch export (SGD)...')
+    console.log('📊 Starting batch export (mirror data logic)...')
 
-    while (hasMore) {
-      const base = supabase
-        .from('blue_whale_sgd')
-        .select('userkey, user_name, unique_code, date, line, year, month, vip_level, operator, traffic, register_date, first_deposit_date, first_deposit_amount, last_deposit_date, days_inactive, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, add_transaction, deduct_transaction, cases_adjustment, cases_bets, bets_amount, valid_amount, ggr, net_profit, last_activity_days')
-        .eq('currency', 'SGD')
-      const filtered = applyFilters(base)
-      if ((filtered as any).error) {
-        return NextResponse.json({ error: 'Unauthorized', message: (filtered as any).error }, { status: 403 })
+    try {
+      while (hasMore) {
+        const base = supabase
+          .from('blue_whale_sgd')
+          .select('userkey, user_name, unique_code, date, line, year, month, vip_level, operator, traffic, register_date, first_deposit_date, first_deposit_amount, last_deposit_date, days_inactive, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, add_transaction, deduct_transaction, cases_adjustment, cases_bets, bets_amount, valid_amount, ggr, net_profit, last_activity_days')
+          .eq('currency', 'SGD')
+        const filtered = applyFilters(base)
+        if ((filtered as any).error) {
+          return NextResponse.json({ error: 'Unauthorized', message: (filtered as any).error }, { status: 403 })
+        }
+        const batchQuery = (filtered as any)
+          .order('date', { ascending: false })
+          .order('year', { ascending: false })
+          .order('month', { ascending: false })
+          .range(offset, offset + batchSize - 1)
+
+        const result = await batchQuery
+        if (result.error) {
+          console.error('❌ Export batch query error:', result.error)
+          return NextResponse.json({ 
+            error: 'Database error during export',
+            message: result.error.message 
+          }, { status: 500 })
+        }
+
+        const batchData = result.data || []
+        allData = [...allData, ...batchData]
+        
+        console.log(`📊 Batch ${Math.floor(offset / batchSize) + 1}: ${batchData.length} records (Total: ${allData.length})`)
+        
+        hasMore = batchData.length === batchSize
+        offset += batchSize
+
+        if (allData.length > 1500000) {
+          console.log('⚠️ Export limit reached: 1,500,000 records')
+          break
+        }
       }
-      const result = await (filtered as any)
-        .order('date', { ascending: false })
-        .order('year', { ascending: false })
-        .order('month', { ascending: false })
-        .range(offset, offset + batchSize - 1)
-
-      if (result.error) {
-        console.error('❌ Export batch query error:', result.error)
-        return NextResponse.json({ 
-          error: 'Database error during export',
-          message: result.error.message 
-        }, { status: 500 })
+    } catch (err: any) {
+      if (err.message?.startsWith('Unauthorized line')) {
+        return NextResponse.json({ error: 'Unauthorized', message: err.message }, { status: 403 })
       }
-
-      const batchData = result.data || []
-      allData = [...allData, ...batchData]
-      
-      console.log(`📊 Batch ${Math.floor(offset / batchSize) + 1}: ${batchData.length} records (Total: ${allData.length})`)
-      
-      hasMore = batchData.length === batchSize
-      offset += batchSize
-
-      if (allData.length > 1500000) {
-        console.log('⚠️ Export limit reached: 1,500,000 records')
-        break
-      }
+      console.error('❌ Export batch error:', err)
+      return NextResponse.json({ error: 'Database error during export', message: err.message || 'Unknown error' }, { status: 500 })
     }
 
     const rawData = allData
@@ -92,6 +104,7 @@ export async function POST(request: NextRequest) {
       }, { status: 404 })
     }
 
+    // AGGREGATED MODE (same as data) when not single-day
     let aggregatedData: any[] = []
     if (!isSingleDayMode && (isDateRangeMode || isMonthMode)) {
       const userMap = new Map<string, any>()
@@ -176,6 +189,7 @@ export async function POST(request: NextRequest) {
       
       console.log(`📊 Aggregated export data: ${aggregatedData.length} unique users`)
     } else {
+      // Single-day mode → no aggregation, keep raw rows (sorted as fetched)
       aggregatedData = rawData
       console.log(`📊 Single-day export rows: ${aggregatedData.length}`)
     }
@@ -185,7 +199,7 @@ export async function POST(request: NextRequest) {
     
     // Custom column order - same as frontend
     const columnOrder = [
-      'line',
+      'line', 
       'user_name',
       'unique_code',
       'traffic',
@@ -245,22 +259,22 @@ export async function POST(request: NextRequest) {
     
     // Calculate ATV and PF for aggregated data
     const enrichedData = aggregatedData.map(row => {
-      const depositAmount = row.deposit_amount || 0
-      const depositCases = row.deposit_cases || 0
+        const depositAmount = row.deposit_amount || 0
+        const depositCases = row.deposit_cases || 0
       const daysActive = row.days_active || 0
-      
-      // ATV = Average Transaction Value = deposit_amount / deposit_cases
-      const atv = depositCases > 0 ? depositAmount / depositCases : 0
-      
-      // PF = Purchase Frequency = deposit_cases / days_active
-      const pf = daysActive > 0 ? depositCases / daysActive : 0
-      
-      return {
-        ...row,
-        atv,
-        pf
-      }
-    })
+        
+        // ATV = Average Transaction Value = deposit_amount / deposit_cases
+        const atv = depositCases > 0 ? depositAmount / depositCases : 0
+        
+        // PF = Purchase Frequency = deposit_cases / days_active
+        const pf = daysActive > 0 ? depositCases / daysActive : 0
+        
+        return {
+          ...row,
+          atv,
+          pf
+        }
+      })
     
     // Function to get sorted columns according to custom order (same as frontend)
     const getSortedColumns = (dataKeys: string[]): string[] => {
@@ -304,7 +318,7 @@ export async function POST(request: NextRequest) {
     // Generate filename
     const timestamp = new Date().toISOString().slice(0, 10)
     const filterStr = [line, year, month].filter(f => f && f !== 'ALL').join('_') || 'all'
-    const filename = `sgd_member_report_data_${filterStr}_${timestamp}.csv`
+    const filename = `SGD_member_report_data_${filterStr}_${timestamp}.csv`
 
     return new NextResponse(csvContent, {
       status: 200,
