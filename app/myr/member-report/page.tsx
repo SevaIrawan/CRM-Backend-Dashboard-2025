@@ -227,7 +227,7 @@ export default function MYRMemberReportPage() {
       const userStr = localStorage.getItem('nexmax_user')
       const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
       
-      const response = await fetch('/api/myr-member-report/slicer-options', {
+      const response = await fetch('/api/usc-member-report/slicer-options', {
         headers: {
           'x-user-allowed-brands': JSON.stringify(allowedBrands)
         },
@@ -252,7 +252,7 @@ export default function MYRMemberReportPage() {
         }
       }
     } catch (error) {
-      console.error('Error fetching myr-member-report slicer options:', error)
+      console.error('Error fetching usc-member-report slicer options:', error)
     } finally {
       setSlicerLoading(false)
     }
@@ -282,7 +282,7 @@ export default function MYRMemberReportPage() {
       const userStr = localStorage.getItem('nexmax_user')
       const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
 
-      const response = await fetch(`/api/myr-member-report/data?${params}`, {
+      const response = await fetch(`/api/usc-member-report/data?${params}`, {
         headers: {
           'x-user-allowed-brands': JSON.stringify(allowedBrands)
         }
@@ -339,7 +339,7 @@ export default function MYRMemberReportPage() {
         setLoading(false)
       }
     } catch (error) {
-      console.error('❌ Error fetching myr-member-report data:', error)
+      console.error('❌ Error fetching usc-member-report data:', error)
       setMemberReportData([])
       setPagination(prev => ({ 
         ...prev, 
@@ -438,7 +438,7 @@ export default function MYRMemberReportPage() {
         const contentDisposition = response.headers.get('content-disposition')
         const filename = contentDisposition 
           ? contentDisposition.split('filename=')[1].replace(/"/g, '')
-          : 'myr_member_report_export.csv'
+          : 'usc_member_report_export.csv'
         
         a.download = filename
         document.body.appendChild(a)
@@ -778,7 +778,7 @@ function DaysActiveDetailsModal({
         headers['x-user-allowed-brands'] = JSON.stringify(allowedBrands)
       }
 
-      const response = await fetch(`/api/myr-member-report/days-active-report?${params}`, { headers })
+      const response = await fetch(`/api/usc-member-report/days-active-details?${params}`, { headers })
       
       if (!response.ok) {
         throw new Error('Failed to fetch days active details')
@@ -845,7 +845,7 @@ function DaysActiveDetailsModal({
           fetchHeaders['x-user-allowed-brands'] = JSON.stringify(allowedBrands)
         }
 
-        const res = await fetch(`/api/myr-member-report/days-active-report?${params}`, { headers: fetchHeaders })
+        const res = await fetch(`/api/usc-member-report/days-active-details?${params}`, { headers: fetchHeaders })
         const json = await res.json()
         const rows: any[] = json?.data || []
         
@@ -869,7 +869,7 @@ function DaysActiveDetailsModal({
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `days-active-report-${userName}-${line}-${year}-${month}-${new Date().toISOString().split('T')[0]}.csv`
+      a.download = `days-active-details-${userName}-${line}-${year}-${month}-${new Date().toISOString().split('T')[0]}.csv`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)

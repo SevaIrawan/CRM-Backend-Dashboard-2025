@@ -252,7 +252,7 @@ export default function SGDMemberReportPage() {
         }
       }
     } catch (error) {
-      console.error('Error fetching sgd-member-report slicer options:', error)
+      console.error('Error fetching usc-member-report slicer options:', error)
     } finally {
       setSlicerLoading(false)
     }
@@ -339,7 +339,7 @@ export default function SGDMemberReportPage() {
         setLoading(false)
       }
     } catch (error) {
-      console.error('❌ Error fetching sgd-member-report data:', error)
+      console.error('❌ Error fetching usc-member-report data:', error)
       setMemberReportData([])
       setPagination(prev => ({ 
         ...prev, 
@@ -438,7 +438,7 @@ export default function SGDMemberReportPage() {
         const contentDisposition = response.headers.get('content-disposition')
         const filename = contentDisposition 
           ? contentDisposition.split('filename=')[1].replace(/"/g, '')
-          : 'sgd_member_report_export.csv'
+          : 'usc_member_report_export.csv'
         
         a.download = filename
         document.body.appendChild(a)
@@ -778,7 +778,7 @@ function DaysActiveDetailsModal({
         headers['x-user-allowed-brands'] = JSON.stringify(allowedBrands)
       }
 
-      const response = await fetch(`/api/sgd-member-report/days-active-details?${params}`, { headers })
+      const response = await fetch(`/api/usc-member-report/days-active-details?${params}`, { headers })
       
       if (!response.ok) {
         throw new Error('Failed to fetch days active details')
@@ -845,7 +845,7 @@ function DaysActiveDetailsModal({
           fetchHeaders['x-user-allowed-brands'] = JSON.stringify(allowedBrands)
         }
 
-        const res = await fetch(`/api/sgd-member-report/days-active-details?${params}`, { headers: fetchHeaders })
+        const res = await fetch(`/api/usc-member-report/days-active-details?${params}`, { headers: fetchHeaders })
         const json = await res.json()
         const rows: any[] = json?.data || []
         
