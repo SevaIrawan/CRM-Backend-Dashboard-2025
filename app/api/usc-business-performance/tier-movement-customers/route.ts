@@ -128,6 +128,7 @@ function aggregateUserData(
     user_unique: string
     unique_code: string | null
     user_name: string | null
+    tier_name: string | null
     line: string | null
     tier: number | null
     tierNumbers: Set<number> // Track all tier numbers that appear in period
@@ -212,6 +213,7 @@ function aggregateUserData(
     user_unique: string
     unique_code: string | null
     user_name: string | null
+    tier_name: string | null
     line: string | null
     tier: number | null
     depositAmount: number
