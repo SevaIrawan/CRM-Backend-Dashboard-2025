@@ -1044,31 +1044,34 @@ export default function TierMetricsComparison({
               }}>
                 <thead>
                   <tr style={{
-                    backgroundColor: '#F9FAFB',
-                    borderBottom: '2px solid #E5E7EB'
+                    backgroundColor: '#1F2937',
+                    borderBottom: '2px solid #374151'
                   }}>
                     <th rowSpan={2} style={{
                       padding: '16px 14px',
                       textAlign: 'center',
                       fontWeight: 700,
-                      color: '#111827',
-                      borderRight: '1px solid #E5E7EB',
+                      color: '#FFFFFF',
+                      borderRight: '1px solid #374151',
                       position: 'sticky',
                       left: 0,
-                      backgroundColor: '#F9FAFB',
+                      backgroundColor: '#1F2937',
                       zIndex: 10,
-                      boxShadow: '2px 0 4px rgba(0, 0, 0, 0.02)',
+                      boxShadow: '2px 0 4px rgba(0, 0, 0, 0.1)',
                       fontSize: '14px',
-                      letterSpacing: '-0.01em'
+                      letterSpacing: '-0.01em',
+                      minWidth: '120px',
+                      width: '120px'
                     }}>Tier</th>
                     <th colSpan={5} style={{
                       padding: '16px 14px',
                       textAlign: 'left',
                       fontWeight: 700,
-                      color: '#111827',
-                      borderRight: '1px solid #E5E7EB',
+                      color: '#FFFFFF',
+                      borderRight: '1px solid #374151',
                       fontSize: '14px',
-                      letterSpacing: '-0.01em'
+                      letterSpacing: '-0.01em',
+                      backgroundColor: '#1F2937'
                     }}>
                       Period A
                     </th>
@@ -1076,105 +1079,126 @@ export default function TierMetricsComparison({
                       padding: '16px 14px',
                       textAlign: 'left',
                       fontWeight: 700,
-                      color: '#111827',
+                      color: '#FFFFFF',
                       fontSize: '14px',
-                      letterSpacing: '-0.01em'
+                      letterSpacing: '-0.01em',
+                      backgroundColor: '#1F2937'
                     }}>
                       Period B
                     </th>
                   </tr>
                   <tr style={{
-                    backgroundColor: '#F9FAFB',
-                    borderBottom: '2px solid #E5E7EB'
+                    backgroundColor: '#1F2937',
+                    borderBottom: '2px solid #374151'
                   }}>
                     <th style={{
                       padding: '16px 12px',
                       textAlign: 'center',
                       fontWeight: 700,
-                      color: '#111827',
+                      color: '#FFFFFF',
                       fontSize: '13px',
-                      borderRight: '1px solid #E5E7EB',
-                      letterSpacing: '-0.01em'
+                      borderRight: '1px solid #374151',
+                      letterSpacing: '-0.01em',
+                      minWidth: '100px',
+                      width: '100px'
                     }}>Count</th>
                     <th style={{
                       padding: '16px 12px',
                       textAlign: 'center',
                       fontWeight: 700,
-                      color: '#111827',
+                      color: '#FFFFFF',
                       fontSize: '13px',
-                      borderRight: '1px solid #E5E7EB',
-                      letterSpacing: '-0.01em'
+                      borderRight: '1px solid #374151',
+                      letterSpacing: '-0.01em',
+                      minWidth: '130px',
+                      width: '130px'
                     }}>DA</th>
                     <th style={{
                       padding: '16px 12px',
                       textAlign: 'center',
                       fontWeight: 700,
-                      color: '#111827',
+                      color: '#FFFFFF',
                       fontSize: '13px',
-                      borderRight: '1px solid #E5E7EB',
-                      letterSpacing: '-0.01em'
+                      borderRight: '1px solid #374151',
+                      letterSpacing: '-0.01em',
+                      minWidth: '120px',
+                      width: '120px'
                     }}>DA/User</th>
                     <th style={{
                       padding: '16px 12px',
                       textAlign: 'center',
                       fontWeight: 700,
-                      color: '#111827',
+                      color: '#FFFFFF',
                       fontSize: '13px',
-                      borderRight: '1px solid #E5E7EB',
-                      letterSpacing: '-0.01em'
+                      borderRight: '1px solid #374151',
+                      letterSpacing: '-0.01em',
+                      minWidth: '130px',
+                      width: '130px'
                     }}>GGR</th>
                     <th style={{
                       padding: '16px 12px',
                       textAlign: 'center',
                       fontWeight: 700,
-                      color: '#111827',
+                      color: '#FFFFFF',
                       fontSize: '13px',
-                      borderRight: '1px solid #E5E7EB',
-                      letterSpacing: '-0.01em'
+                      borderRight: '1px solid #374151',
+                      letterSpacing: '-0.01em',
+                      minWidth: '100px',
+                      width: '100px'
                     }}>WR</th>
                     <th style={{
                       padding: '16px 12px',
                       textAlign: 'center',
                       fontWeight: 700,
-                      color: '#111827',
+                      color: '#FFFFFF',
                       fontSize: '13px',
-                      borderRight: '1px solid #E5E7EB',
-                      letterSpacing: '-0.01em'
+                      borderRight: '1px solid #374151',
+                      letterSpacing: '-0.01em',
+                      minWidth: '100px',
+                      width: '100px'
                     }}>Count</th>
                     <th style={{
                       padding: '16px 12px',
                       textAlign: 'center',
                       fontWeight: 700,
-                      color: '#111827',
+                      color: '#FFFFFF',
                       fontSize: '13px',
-                      borderRight: '1px solid #E5E7EB',
-                      letterSpacing: '-0.01em'
+                      borderRight: '1px solid #374151',
+                      letterSpacing: '-0.01em',
+                      minWidth: '130px',
+                      width: '130px'
                     }}>DA</th>
                     <th style={{
                       padding: '16px 12px',
                       textAlign: 'center',
                       fontWeight: 700,
-                      color: '#111827',
+                      color: '#FFFFFF',
                       fontSize: '13px',
-                      borderRight: '1px solid #E5E7EB',
-                      letterSpacing: '-0.01em'
+                      borderRight: '1px solid #374151',
+                      letterSpacing: '-0.01em',
+                      minWidth: '120px',
+                      width: '120px'
                     }}>DA/User</th>
                     <th style={{
                       padding: '16px 12px',
                       textAlign: 'center',
                       fontWeight: 700,
-                      color: '#111827',
+                      color: '#FFFFFF',
                       fontSize: '13px',
-                      borderRight: '1px solid #E5E7EB',
-                      letterSpacing: '-0.01em'
+                      borderRight: '1px solid #374151',
+                      letterSpacing: '-0.01em',
+                      minWidth: '130px',
+                      width: '130px'
                     }}>GGR</th>
                     <th style={{
                       padding: '16px 12px',
                       textAlign: 'center',
                       fontWeight: 700,
-                      color: '#111827',
+                      color: '#FFFFFF',
                       fontSize: '13px',
-                      letterSpacing: '-0.01em'
+                      letterSpacing: '-0.01em',
+                      minWidth: '100px',
+                      width: '100px'
                     }}>WR</th>
                   </tr>
                 </thead>
@@ -1200,16 +1224,39 @@ export default function TierMetricsComparison({
                         style={{
                           backgroundColor: index % 2 === 0 ? '#FFFFFF' : '#FAFAFA',
                           borderBottom: '1px solid #E5E7EB',
-                          transition: 'background-color 0.2s ease',
+                          transition: 'all 0.2s ease',
                           cursor: 'default'
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = '#f3f4f6'
-                          e.currentTarget.style.boxShadow = 'inset 0 0 8px rgba(59, 130, 246, 0.1), 0 2px 4px rgba(0, 0, 0, 0.05)'
+                          const row = e.currentTarget
+                          row.style.backgroundColor = '#F3F4F6'
+                          // Update all cells in the row
+                          Array.from(row.children).forEach((cell: any) => {
+                            if (cell.tagName === 'TD') {
+                              cell.style.backgroundColor = '#F3F4F6'
+                            }
+                          })
+                          // Update sticky tier column
+                          const tierCell = row.querySelector('td:first-child') as HTMLElement
+                          if (tierCell) {
+                            tierCell.style.backgroundColor = '#F3F4F6'
+                          }
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#FFFFFF' : '#FAFAFA'
-                          e.currentTarget.style.boxShadow = 'none'
+                          const row = e.currentTarget
+                          const baseColor = index % 2 === 0 ? '#FFFFFF' : '#FAFAFA'
+                          row.style.backgroundColor = baseColor
+                          // Update all cells in the row
+                          Array.from(row.children).forEach((cell: any) => {
+                            if (cell.tagName === 'TD') {
+                              cell.style.backgroundColor = baseColor
+                            }
+                          })
+                          // Update sticky tier column
+                          const tierCell = row.querySelector('td:first-child') as HTMLElement
+                          if (tierCell) {
+                            tierCell.style.backgroundColor = baseColor
+                          }
                         }}
                       >
                         <td style={{
@@ -1220,12 +1267,15 @@ export default function TierMetricsComparison({
                           borderBottom: '1px solid #E5E7EB',
                           position: 'sticky',
                           left: 0,
-                          backgroundColor: '#F9FAFB',
+                          backgroundColor: index % 2 === 0 ? '#FFFFFF' : '#FAFAFA',
                           zIndex: 5,
-                          boxShadow: '2px 0 4px rgba(0, 0, 0, 0.02)',
+                          boxShadow: '2px 0 4px rgba(0, 0, 0, 0.05)',
                           fontSize: '13px',
                           whiteSpace: 'nowrap',
-                          borderLeft: '3px solid ' + (TIER_COLORS_WIREFRAME[tierName] || '#6b7280')
+                          borderLeft: '3px solid ' + (TIER_COLORS_WIREFRAME[tierName] || '#6b7280'),
+                          minWidth: '120px',
+                          width: '120px',
+                          transition: 'background-color 0.2s ease'
                         }}>
                           {tierName}
                         </td>
@@ -1233,7 +1283,11 @@ export default function TierMetricsComparison({
                           padding: '12px',
                           textAlign: 'right',
                           color: '#374151',
-                          borderRight: '1px solid #e5e7eb'
+                          borderRight: '1px solid #E5E7EB',
+                          borderBottom: '1px solid #E5E7EB',
+                          minWidth: '100px',
+                          width: '100px',
+                          transition: 'background-color 0.2s ease'
                         }}>
                           {formatIntegerKPI(tierA.customerCount)}
                         </td>
@@ -1241,7 +1295,11 @@ export default function TierMetricsComparison({
                           padding: '12px',
                           textAlign: 'right',
                           color: '#374151',
-                          borderRight: '1px solid #e5e7eb'
+                          borderRight: '1px solid #E5E7EB',
+                          borderBottom: '1px solid #E5E7EB',
+                          minWidth: '130px',
+                          width: '130px',
+                          transition: 'background-color 0.2s ease'
                         }}>
                           {formatCurrencyKPI(tierA.depositAmount, 'USC')}
                         </td>
@@ -1249,7 +1307,11 @@ export default function TierMetricsComparison({
                           padding: '12px',
                           textAlign: 'right',
                           color: '#374151',
-                          borderRight: '1px solid #e5e7eb'
+                          borderRight: '1px solid #E5E7EB',
+                          borderBottom: '1px solid #E5E7EB',
+                          minWidth: '120px',
+                          width: '120px',
+                          transition: 'background-color 0.2s ease'
                         }}>
                           {formatCurrencyKPI(daPerUserA, 'USC')}
                         </td>
@@ -1258,7 +1320,11 @@ export default function TierMetricsComparison({
                           textAlign: 'right',
                           color: tierA.ggr >= 0 ? '#059669' : '#dc2626',
                           fontWeight: 600,
-                          borderRight: '1px solid #e5e7eb'
+                          borderRight: '1px solid #E5E7EB',
+                          borderBottom: '1px solid #E5E7EB',
+                          minWidth: '130px',
+                          width: '130px',
+                          transition: 'background-color 0.2s ease'
                         }}>
                           {formatCurrencyKPI(tierA.ggr, 'USC')}
                         </td>
@@ -1266,7 +1332,11 @@ export default function TierMetricsComparison({
                           padding: '12px',
                           textAlign: 'right',
                           color: '#374151',
-                          borderRight: '1px solid #e5e7eb'
+                          borderRight: '1px solid #E5E7EB',
+                          borderBottom: '1px solid #E5E7EB',
+                          minWidth: '100px',
+                          width: '100px',
+                          transition: 'background-color 0.2s ease'
                         }}>
                           {formatPercentageKPI(winRateA)}
                         </td>
@@ -1274,17 +1344,22 @@ export default function TierMetricsComparison({
                           padding: '12px',
                           textAlign: 'right',
                           color: '#374151',
-                          borderRight: '1px solid #e5e7eb'
+                          borderRight: '1px solid #E5E7EB',
+                          borderBottom: '1px solid #E5E7EB',
+                          minWidth: '100px',
+                          width: '100px',
+                          transition: 'background-color 0.2s ease'
                         }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
                             <span>{formatIntegerKPI(tierB.customerCount)}</span>
                             {countChange !== 0 && (
                               <span style={{
                                 fontSize: '11px',
                                 color: countChange >= 0 ? '#059669' : '#dc2626',
-                                fontWeight: 600
+                                fontWeight: 600,
+                                lineHeight: '1.2'
                               }}>
-                                ({countChange >= 0 ? '↑' : '↓'} {Math.abs(countChange).toFixed(1)}%)
+                                {countChange >= 0 ? '↑' : '↓'} {Math.abs(countChange).toFixed(1)}%
                               </span>
                             )}
                           </div>
@@ -1293,17 +1368,22 @@ export default function TierMetricsComparison({
                           padding: '12px',
                           textAlign: 'right',
                           color: '#374151',
-                          borderRight: '1px solid #e5e7eb'
+                          borderRight: '1px solid #E5E7EB',
+                          borderBottom: '1px solid #E5E7EB',
+                          minWidth: '130px',
+                          width: '130px',
+                          transition: 'background-color 0.2s ease'
                         }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
                             <span>{formatCurrencyKPI(tierB.depositAmount, 'USC')}</span>
                             {daChange !== 0 && (
                               <span style={{
                                 fontSize: '11px',
                                 color: daChange >= 0 ? '#059669' : '#dc2626',
-                                fontWeight: 600
+                                fontWeight: 600,
+                                lineHeight: '1.2'
                               }}>
-                                ({daChange >= 0 ? '↑' : '↓'} {Math.abs(daChange).toFixed(1)}%)
+                                {daChange >= 0 ? '↑' : '↓'} {Math.abs(daChange).toFixed(1)}%
                               </span>
                             )}
                           </div>
@@ -1312,17 +1392,22 @@ export default function TierMetricsComparison({
                           padding: '12px',
                           textAlign: 'right',
                           color: '#374151',
-                          borderRight: '1px solid #e5e7eb'
+                          borderRight: '1px solid #E5E7EB',
+                          borderBottom: '1px solid #E5E7EB',
+                          minWidth: '120px',
+                          width: '120px',
+                          transition: 'background-color 0.2s ease'
                         }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
                             <span>{formatCurrencyKPI(daPerUserB, 'USC')}</span>
                             {daPerUserChange !== 0 && (
                               <span style={{
                                 fontSize: '11px',
                                 color: daPerUserChange >= 0 ? '#059669' : '#dc2626',
-                                fontWeight: 600
+                                fontWeight: 600,
+                                lineHeight: '1.2'
                               }}>
-                                ({daPerUserChange >= 0 ? '↑' : '↓'} {Math.abs(daPerUserChange).toFixed(1)}%)
+                                {daPerUserChange >= 0 ? '↑' : '↓'} {Math.abs(daPerUserChange).toFixed(1)}%
                               </span>
                             )}
                           </div>
@@ -1330,9 +1415,13 @@ export default function TierMetricsComparison({
                         <td style={{
                           padding: '12px',
                           textAlign: 'right',
-                          borderRight: '1px solid #e5e7eb'
+                          borderRight: '1px solid #E5E7EB',
+                          borderBottom: '1px solid #E5E7EB',
+                          minWidth: '130px',
+                          width: '130px',
+                          transition: 'background-color 0.2s ease'
                         }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
                             <span style={{
                               color: tierB.ggr >= 0 ? '#059669' : '#dc2626',
                               fontWeight: 600
@@ -1341,18 +1430,23 @@ export default function TierMetricsComparison({
                               <span style={{
                                 fontSize: '11px',
                                 color: ggrChange >= 0 ? '#059669' : '#dc2626',
-                                fontWeight: 600
+                                fontWeight: 600,
+                                lineHeight: '1.2'
                               }}>
-                                ({ggrChange >= 0 ? '↑' : '↓'} {Math.abs(ggrChange).toFixed(1)}%)
+                                {ggrChange >= 0 ? '↑' : '↓'} {Math.abs(ggrChange).toFixed(1)}%
                               </span>
                             )}
                           </div>
                         </td>
                         <td style={{
                           padding: '12px',
-                          textAlign: 'right'
+                          textAlign: 'right',
+                          borderBottom: '1px solid #E5E7EB',
+                          minWidth: '100px',
+                          width: '100px',
+                          transition: 'background-color 0.2s ease'
                         }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
                             <span style={{
                               color: '#374151'
                             }}>{formatPercentageKPI(winRateB)}</span>
@@ -1360,9 +1454,10 @@ export default function TierMetricsComparison({
                               <span style={{
                                 fontSize: '11px',
                                 color: wrChange >= 0 ? '#059669' : '#dc2626',
-                                fontWeight: 600
+                                fontWeight: 600,
+                                lineHeight: '1.2'
                               }}>
-                                ({wrChange >= 0 ? '↑' : '↓'} {Math.abs(wrChange).toFixed(1)}%)
+                                {wrChange >= 0 ? '↑' : '↓'} {Math.abs(wrChange).toFixed(1)}%
                               </span>
                             )}
                           </div>
