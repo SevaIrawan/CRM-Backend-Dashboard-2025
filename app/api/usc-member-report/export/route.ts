@@ -41,8 +41,8 @@ export async function POST(request: NextRequest) {
       return q
     }
 
-    // Batch fetch all data (no limit)
-    const batchSize = 5000
+    // Batch fetch all data (no limit) - same optimization as data API
+    const batchSize = 10000 // ✅ Increased batch size for better performance
     let allData: any[] = []
     let offset = 0
     let hasMore = true
@@ -53,16 +53,21 @@ export async function POST(request: NextRequest) {
       while (hasMore) {
         const base = supabase
           .from('blue_whale_usc')
-          .select('userkey, user_name, unique_code, date, line, year, month, vip_level, operator, traffic, register_date, first_deposit_date, first_deposit_amount, last_deposit_date, days_inactive, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, add_transaction, deduct_transaction, cases_adjustment, cases_bets, bets_amount, valid_amount, ggr, net_profit, last_activity_days')
+          .select('userkey, user_unique, user_name, unique_code, date, line, year, month, vip_level, operator, traffic, register_date, first_deposit_date, first_deposit_amount, last_deposit_date, days_inactive, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, add_transaction, deduct_transaction, cases_adjustment, cases_bets, bets_amount, valid_amount, ggr, net_profit, last_activity_days')
           .eq('currency', 'USC')
         const filtered = applyFilters(base)
         if ((filtered as any).error) {
           return NextResponse.json({ error: 'Unauthorized', message: (filtered as any).error }, { status: 403 })
         }
+        // ✅ CRITICAL: Use deterministic ordering to ensure consistent batch fetching
+        // Without this, rows with same date can be fetched in different order, causing inconsistent results
         const batchQuery = (filtered as any)
           .order('date', { ascending: false })
           .order('year', { ascending: false })
           .order('month', { ascending: false })
+          .order('user_unique', { ascending: true })
+          .order('unique_code', { ascending: true })
+          .order('userkey', { ascending: true }) // ✅ Additional tie-breaker for 100% deterministic ordering
           .range(offset, offset + batchSize - 1)
 
         const result = await batchQuery
@@ -75,7 +80,8 @@ export async function POST(request: NextRequest) {
         }
 
         const batchData = result.data || []
-        allData = [...allData, ...batchData]
+        // ✅ Use push with spread for better performance than array spread
+        allData.push(...batchData)
         
         console.log(`📊 Batch ${Math.floor(offset / batchSize) + 1}: ${batchData.length} records (Total: ${allData.length})`)
         
@@ -87,6 +93,18 @@ export async function POST(request: NextRequest) {
           break
         }
       }
+      
+      // ✅ Final sorting in JavaScript (more efficient than multiple DB sorts, match data API)
+      console.log('📊 Sorting export data...')
+      allData.sort((a, b) => {
+        // Primary: date (desc), year (desc), month (desc)
+        if (a.date !== b.date) return b.date.localeCompare(a.date)
+        if (a.year !== b.year) return (b.year || 0) - (a.year || 0)
+        if (a.month !== b.month) return (b.month || 0) - (a.month || 0)
+        // Secondary: user_unique (asc), unique_code (asc) for consistency
+        if (a.user_unique !== b.user_unique) return (a.user_unique || '').localeCompare(b.user_unique || '')
+        return (a.unique_code || '').localeCompare(b.unique_code || '')
+      })
     } catch (err: any) {
       if (err.message?.startsWith('Unauthorized line')) {
         return NextResponse.json({ error: 'Unauthorized', message: err.message }, { status: 403 })
@@ -110,7 +128,7 @@ export async function POST(request: NextRequest) {
       const userMap = new Map<string, any>()
       
       rawData?.forEach((row: any) => {
-        const key = row.userkey
+        const key = row.userkey // ✅ Use userkey as aggregation key (unique identifier)
         
         if (!userMap.has(key)) {
           const dateRangeValue = isDateRangeMode && startDate && endDate
@@ -123,6 +141,7 @@ export async function POST(request: NextRequest) {
           
           userMap.set(key, {
             userkey: key,
+            user_unique: row.user_unique || key, // ✅ Include user_unique for sorting consistency
             date_range: dateRangeValue,
             line: row.line,
             user_name: row.user_name,
@@ -195,7 +214,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Convert aggregated data to CSV - use custom column order and exclude hidden columns
-    const hiddenColumns = ['ABSENT', 'YEAR', 'MONTH', 'USERKEY', 'UNIQUEKEY', 'WINRATE', 'CURRENCY', 'DATE', 'VIP_LEVEL', 'OPERATOR', 'REGISTER_DATE', 'LAST_ACTIVITY_DAYS', 'DATE_RANGE']
+    const hiddenColumns = ['ABSENT', 'YEAR', 'MONTH', 'USERKEY', 'UNIQUEKEY', 'WINRATE', 'CURRENCY', 'DATE', 'VIP_LEVEL', 'OPERATOR', 'REGISTER_DATE', 'LAST_ACTIVITY_DAYS', 'DATE_RANGE', 'USER_UNIQUE']
     
     // Custom column order - same as frontend
     const columnOrder = [
@@ -275,6 +294,25 @@ export async function POST(request: NextRequest) {
           pf
         }
       })
+    
+    // ✅ Sort by Line (ascending), Days Active (descending), then user_unique and unique_code for consistency (match data API)
+    if (!isSingleDayMode && (isDateRangeMode || isMonthMode)) {
+      enrichedData.sort((a, b) => {
+        // First sort by line (ascending)
+        if (a.line !== b.line) {
+          return (a.line || '').localeCompare(b.line || '')
+        }
+        // Then sort by days_active (descending - more active first)
+        if ((b.days_active || 0) !== (a.days_active || 0)) {
+          return (b.days_active || 0) - (a.days_active || 0)
+        }
+        // ✅ Additional sorting for consistency
+        if (a.user_unique !== b.user_unique) {
+          return (a.user_unique || '').localeCompare(b.user_unique || '')
+        }
+        return (a.unique_code || '').localeCompare(b.unique_code || '')
+      })
+    }
     
     // Function to get sorted columns according to custom order (same as frontend)
     const getSortedColumns = (dataKeys: string[]): string[] => {

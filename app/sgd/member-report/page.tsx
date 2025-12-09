@@ -59,7 +59,7 @@ export default function SGDMemberReportPage() {
   const [selectedUser, setSelectedUser] = useState<{ userkey: string; userName: string; daysActive: number } | null>(null)
 
   // Columns to hide
-  const hiddenColumns = ['ABSENT', 'YEAR', 'MONTH', 'USERKEY', 'UNIQUEKEY', 'WINRATE', 'CURRENCY', 'DATE', 'VIP_LEVEL', 'OPERATOR', 'REGISTER_DATE', 'LAST_ACTIVITY_DAYS', 'DATE_RANGE']
+  const hiddenColumns = ['ABSENT', 'YEAR', 'MONTH', 'USERKEY', 'UNIQUEKEY', 'WINRATE', 'CURRENCY', 'DATE', 'VIP_LEVEL', 'OPERATOR', 'REGISTER_DATE', 'LAST_ACTIVITY_DAYS', 'DATE_RANGE', 'USER_UNIQUE']
   
   // Custom column order for better organization - based on actual column names from database
   const columnOrder = [

@@ -59,7 +59,7 @@ export default function MYRMemberReportPage() {
   const [selectedUser, setSelectedUser] = useState<{ userkey: string; userName: string; daysActive: number } | null>(null)
 
   // Columns to hide
-  const hiddenColumns = ['ABSENT', 'YEAR', 'MONTH', 'USERKEY', 'UNIQUEKEY', 'WINRATE', 'CURRENCY', 'DATE', 'VIP_LEVEL', 'OPERATOR', 'REGISTER_DATE', 'LAST_ACTIVITY_DAYS', 'DATE_RANGE']
+  const hiddenColumns = ['ABSENT', 'YEAR', 'MONTH', 'USERKEY', 'UNIQUEKEY', 'WINRATE', 'CURRENCY', 'DATE', 'VIP_LEVEL', 'OPERATOR', 'REGISTER_DATE', 'LAST_ACTIVITY_DAYS', 'DATE_RANGE', 'USER_UNIQUE']
   
   // Custom column order for better organization - based on actual column names from database
   const columnOrder = [
@@ -282,7 +282,7 @@ export default function MYRMemberReportPage() {
       const userStr = localStorage.getItem('nexmax_user')
       const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
 
-      const response = await fetch(`/api/usc-member-report/data?${params}`, {
+      const response = await fetch(`/api/myr-member-report/data?${params}`, {
         headers: {
           'x-user-allowed-brands': JSON.stringify(allowedBrands)
         }

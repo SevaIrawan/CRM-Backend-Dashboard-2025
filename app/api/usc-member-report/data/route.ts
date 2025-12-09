@@ -106,19 +106,27 @@ export async function GET(request: NextRequest) {
 
       let allData: any[] = []
       let batchOffset = 0
-      const batchSize = 5000
+      const batchSize = 10000 // ✅ Increased batch size for better performance
       let hasMoreData = true
 
       while (hasMoreData) {
-        const base = supabase.from('blue_whale_usc').select('*').eq('currency', 'USC')
+        // ✅ Select only needed columns instead of '*' for better performance
+        const base = supabase.from('blue_whale_usc')
+          .select('userkey, user_unique, user_name, unique_code, date, line, year, month, vip_level, operator, traffic, register_date, first_deposit_date, first_deposit_amount, last_deposit_date, days_inactive, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, add_transaction, deduct_transaction, cases_adjustment, cases_bets, bets_amount, valid_amount, ggr, net_profit, last_activity_days')
+          .eq('currency', 'USC')
         const filtered = applyFilters(base)
         if ((filtered as any).error) {
           return NextResponse.json({ success: false, error: (filtered as any).error }, { status: 403 })
         }
+        // ✅ CRITICAL: Use deterministic ordering to ensure consistent batch fetching
+        // Without this, rows with same date can be fetched in different order, causing inconsistent results
         const batchResult = await (filtered as any)
           .order('date', { ascending: false })
           .order('year', { ascending: false })
           .order('month', { ascending: false })
+          .order('user_unique', { ascending: true })
+          .order('unique_code', { ascending: true })
+          .order('userkey', { ascending: true }) // ✅ Additional tie-breaker for 100% deterministic ordering
           .range(batchOffset, batchOffset + batchSize - 1)
 
         if (batchResult.error) {
@@ -131,7 +139,8 @@ export async function GET(request: NextRequest) {
         }
 
         const batchData = batchResult.data || []
-        allData = [...allData, ...batchData]
+        // ✅ Use push with spread for better performance than array spread
+        allData.push(...batchData)
         hasMoreData = batchData.length === batchSize
         batchOffset += batchSize
 
@@ -140,6 +149,18 @@ export async function GET(request: NextRequest) {
           break
         }
       }
+      
+      // ✅ Final sorting in JavaScript (more efficient than multiple DB sorts)
+      console.log('📊 Sorting aggregated data...')
+      allData.sort((a, b) => {
+        // Primary: date (desc), year (desc), month (desc)
+        if (a.date !== b.date) return b.date.localeCompare(a.date)
+        if (a.year !== b.year) return (b.year || 0) - (a.year || 0)
+        if (a.month !== b.month) return (b.month || 0) - (a.month || 0)
+        // Secondary: user_unique (asc), unique_code (asc) for consistency
+        if (a.user_unique !== b.user_unique) return (a.user_unique || '').localeCompare(b.user_unique || '')
+        return (a.unique_code || '').localeCompare(b.unique_code || '')
+      })
 
       const rawData = allData
       console.log(`📊 Raw blue_whale_usc records found: ${rawData.length}`)
@@ -160,7 +181,7 @@ export async function GET(request: NextRequest) {
       const userMap = new Map<string, any>()
       
       rawData?.forEach((row: any) => {
-        const key = row.userkey
+        const key = row.userkey // ✅ Use userkey as aggregation key (unique identifier)
         
         if (!userMap.has(key)) {
           // Initialize user record
@@ -175,6 +196,7 @@ export async function GET(request: NextRequest) {
           
           userMap.set(key, {
             userkey: key,
+            user_unique: row.user_unique || key, // ✅ Include user_unique for sorting consistency
             date_range: dateRangeValue,
             line: row.line,
             user_name: row.user_name,
@@ -264,14 +286,21 @@ export async function GET(request: NextRequest) {
         }
       })
       
-      // ✅ Sort by Line (ascending) and Days Active (descending)
+      // ✅ Sort by Line (ascending), Days Active (descending), then user_unique and unique_code for consistency
       enrichedData.sort((a, b) => {
         // First sort by line (ascending)
         if (a.line !== b.line) {
           return (a.line || '').localeCompare(b.line || '')
         }
         // Then sort by days_active (descending - more active first)
-        return (b.days_active || 0) - (a.days_active || 0)
+        if ((b.days_active || 0) !== (a.days_active || 0)) {
+          return (b.days_active || 0) - (a.days_active || 0)
+        }
+        // ✅ Additional sorting for consistency
+        if (a.user_unique !== b.user_unique) {
+          return (a.user_unique || '').localeCompare(b.user_unique || '')
+        }
+        return (a.unique_code || '').localeCompare(b.unique_code || '')
       })
       
       // ✅ Apply pagination to aggregated data
@@ -368,11 +397,14 @@ export async function GET(request: NextRequest) {
     console.log(`📊 Total blue_whale_usc records found: ${totalRecords}`)
 
     // Get data with pagination and sorting - SAME AS MYR/SGD
+    // ✅ CRITICAL: Add deterministic ordering to ensure data consistency on refresh
     const offset = (page - 1) * limit
     const result = await baseQuery
       .order('date', { ascending: false })
       .order('year', { ascending: false })
       .order('month', { ascending: false })
+      .order('user_unique', { ascending: true }) // ✅ Additional ordering for consistency
+      .order('unique_code', { ascending: true }) // ✅ Additional ordering for consistency
       .range(offset, offset + limit - 1)
 
     if (result.error) {
