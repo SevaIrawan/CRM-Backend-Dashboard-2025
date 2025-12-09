@@ -276,7 +276,7 @@ function calculateDistribution(records: any[]) {
       avgDA: count > 0 ? tierRecords.reduce((sum, r) => sum + (r.total_deposit_amount || 0), 0) / count : 0,
       avgGGR: count > 0 ? tierRecords.reduce((sum, r) => sum + (r.total_ggr || 0), 0) / count : 0
     }
-  }
+  })
   
   return distribution
 }
