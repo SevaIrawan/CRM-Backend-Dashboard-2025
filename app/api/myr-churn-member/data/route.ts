@@ -199,7 +199,14 @@ export async function GET(request: NextRequest) {
     }
     // If line === 'ALL' and no userAllowedBrands (Admin), no line filter = get all data
 
-    const { data: allPrevMonthData, error: detailError } = await detailQuery.range(0, 999999) // ✅ Fetch all data
+    // ✅ CRITICAL: Use deterministic ordering to ensure consistent batch fetching
+    // Without this, rows with same date can be fetched in different order, causing inconsistent results
+    const { data: allPrevMonthData, error: detailError } = await detailQuery
+      .order('date', { ascending: false })
+      .order('year', { ascending: false })
+      .order('month', { ascending: false })
+      .order('userkey', { ascending: true }) // ✅ Additional tie-breaker for 100% deterministic ordering
+      .range(0, 999999) // ✅ Fetch all data
 
     if (detailError) {
       console.error('❌ Error fetching previous month data:', detailError)
@@ -358,6 +365,19 @@ export async function GET(request: NextRequest) {
       : aggregatedData.filter(user => user.status === statusFilter)
     
     console.log(`📊 After status filter (${statusFilter}): ${filteredData.length} users`)
+
+    // ✅ STEP 9.6: Sort data for deterministic ordering (match Customer Retention pattern)
+    // Sort by days_active DESC, net_profit DESC, then userkey ASC for consistency
+    filteredData.sort((a, b) => {
+      if (b.days_active !== a.days_active) {
+        return b.days_active - a.days_active
+      }
+      if (b.net_profit !== a.net_profit) {
+        return b.net_profit - a.net_profit
+      }
+      // ✅ Additional sorting for consistency (match Member Report pattern)
+      return (a.userkey || '').localeCompare(b.userkey || '')
+    })
 
     // ✅ STEP 10: Apply Pagination
     const totalRecords = filteredData.length

@@ -166,7 +166,13 @@ export async function POST(request: NextRequest) {
         detailQuery = detailQuery.in('line', userAllowedBrands)
       }
 
+      // ✅ CRITICAL: Use deterministic ordering to ensure consistent batch fetching
+      // Without this, rows with same date can be fetched in different order, causing inconsistent results
       const { data: batchData, error: batchError } = await detailQuery
+        .order('date', { ascending: false })
+        .order('year', { ascending: false })
+        .order('month', { ascending: false })
+        .order('userkey', { ascending: true }) // ✅ Additional tie-breaker for 100% deterministic ordering
 
       if (batchError) {
         console.error('❌ Export batch query error:', batchError)
@@ -200,6 +206,7 @@ export async function POST(request: NextRequest) {
 
       if (!userMap.has(key)) {
         userMap.set(key, {
+          userkey: row.userkey, // ✅ Store userkey for consistency with data route
           line: row.line,
           user_name: row.user_name,
           unique_code: row.unique_code,
@@ -294,12 +301,26 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // ✅ STEP 6.5: Apply Status Filter (if provided)
-    const filteredData = statusFilter && statusFilter !== 'ALL'
-      ? aggregatedData.filter(user => user.status === statusFilter)
-      : aggregatedData
+    // ✅ STEP 6.5: Apply Status Filter (consistent with data route)
+    const finalStatusFilter = statusFilter || 'ALL'
+    const filteredData = finalStatusFilter === 'ALL' 
+      ? aggregatedData 
+      : aggregatedData.filter(user => user.status === finalStatusFilter)
     
-    console.log(`📊 Export completed: ${filteredData.length} MYR churn member records${statusFilter && statusFilter !== 'ALL' ? ` (filtered by: ${statusFilter})` : ''}`)
+    console.log(`📊 Export completed: ${filteredData.length} MYR churn member records${finalStatusFilter !== 'ALL' ? ` (filtered by: ${finalStatusFilter})` : ''}`)
+
+    // ✅ STEP 6.6: Sort data for deterministic ordering (match data route pattern)
+    // Sort by days_active DESC, net_profit DESC, then userkey ASC for consistency
+    filteredData.sort((a, b) => {
+      if (b.days_active !== a.days_active) {
+        return b.days_active - a.days_active
+      }
+      if (b.net_profit !== a.net_profit) {
+        return b.net_profit - a.net_profit
+      }
+      // ✅ Additional sorting for consistency (match Member Report pattern)
+      return (a.userkey || '').localeCompare(b.userkey || '')
+    })
 
     // ✅ STEP 7: Convert to CSV
     const columnOrder = [
