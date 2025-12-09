@@ -388,9 +388,11 @@ async function getDailyActiveCountByTierGroup(
       batchQuery = batchQuery.in('line', userAllowedBrands)
     }
     
+    // CRITICAL: Ordering must be set BEFORE range for consistency
+    batchQuery = batchQuery.order('date', { ascending: true })
+    batchQuery = batchQuery.order('userkey', { ascending: true }) // Secondary ordering for consistency
     // Apply pagination
-    batchQuery = batchQuery.range(offset, offset + batchSize - 1)
-    const batchResult = await batchQuery.order('date', { ascending: true })
+    const batchResult = await batchQuery.range(offset, offset + batchSize - 1)
     
     if (batchResult.error) {
       console.error('❌ [Tier Trends] Error fetching batch data:', batchResult.error)
@@ -505,9 +507,11 @@ async function getDailyActiveCountByTierName(
       batchQuery = batchQuery.in('tier_name', tierNameFilter)
     }
     
+    // CRITICAL: Ordering must be set BEFORE range for consistency
+    batchQuery = batchQuery.order('date', { ascending: true })
+    batchQuery = batchQuery.order('userkey', { ascending: true }) // Secondary ordering for consistency
     // Apply pagination
-    batchQuery = batchQuery.range(offset, offset + batchSize - 1)
-    const batchResult = await batchQuery.order('date', { ascending: true })
+    const batchResult = await batchQuery.range(offset, offset + batchSize - 1)
     
     if (batchResult.error) {
       console.error('❌ [Tier Trends] Error fetching batch data:', batchResult.error)

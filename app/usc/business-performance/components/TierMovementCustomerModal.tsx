@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import StandardLoadingSpinner from '@/components/StandardLoadingSpinner'
 import CustomerDetailModal from './CustomerDetailModal'
 
 // Sidebar width constants
@@ -310,7 +309,8 @@ export default function TierMovementCustomerModal({
     setPage(1)
   }, [limit, customers.length])
 
-  // ✅ Sync movement type with override when modal opens
+  // ✅ CRITICAL: Sync movement type with override when modal opens
+  // Tapi hanya jika override ada - ini memastikan template konsisten dari awal
   useEffect(() => {
     if (isOpen && movementTypeOverride) {
       setMovementType(movementTypeOverride)
@@ -509,7 +509,11 @@ export default function TierMovementCustomerModal({
         // ✅ WAJIB: Set totalRecords dari API count (bukan dari customers.length)
         setTotalRecords(data.count || 0)
         setCustomers(data.customers || [])
-        setMovementType(data.movementType || movementTypeOverride || 'STABLE')
+        // ✅ CRITICAL: Hanya update movementType jika TIDAK ada override (untuk konsistensi template)
+        // Jika ada override, tetap pakai override (template tidak berubah dari awal)
+        if (!movementTypeOverride) {
+          setMovementType(data.movementType || 'STABLE')
+        }
         
         // ✅ DEBUG: Log setelah set state (akan muncul di render berikutnya)
         console.log('🔍 [Tier Movement Customer Modal] STATE SET - will appear in next render')
@@ -659,44 +663,159 @@ export default function TierMovementCustomerModal({
     }
   }
 
-  // Get movement type color
+  // ✅ CRITICAL: Use movementTypeOverride as PRIMARY source for template (konsisten dari awal)
+  // Fallback ke movementType state hanya jika override tidak ada
+  // Ini memastikan template TIDAK BERUBAH dari loading sampai data tampil
+  const effectiveMovementType = movementTypeOverride || movementType || 'STABLE'
+  const movementTypeUpper = effectiveMovementType ? effectiveMovementType.toUpperCase() as typeof effectiveMovementType : effectiveMovementType
+  
+  // ✅ TEMPLATE CONFIGURATION: Get template properties based on movement type
+  // CRITICAL: Template ditentukan dari effectiveMovementType (override atau state) - KONSISTEN DARI AWAL
+  // CRITICAL: Header background STANDARD DARK untuk semua movement type (bukan warna-warni)
+  const getMovementTypeTemplate = () => {
+    const type = movementTypeUpper
+    
+    // ✅ STANDARD DARK HEADER BACKGROUND untuk semua movement type
+    const STANDARD_HEADER_BG = '#374151' // Standard dark gray
+    
+    if (type === 'UPGRADE') {
+      return {
+        headerBg: STANDARD_HEADER_BG, // ✅ Standard dark, bukan hijau
+        headerText: '#FFFFFF',
+        badgeColor: '#10B981', // ✅ Hanya badge dan border yang hijau
+        borderAccent: '#10B981',
+        icon: (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M18 15l-6-6-6 6" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        ),
+        label: 'Upgrade',
+        loadingMessage: 'Loading upgrade customers...',
+        title: 'Upgrade Customer List'
+      }
+    }
+    
+    if (type === 'DOWNGRADE') {
+      return {
+        headerBg: STANDARD_HEADER_BG, // ✅ Standard dark, bukan pink
+        headerText: '#FFFFFF',
+        badgeColor: '#EC4899', // ✅ Hanya badge dan border yang pink
+        borderAccent: '#EC4899',
+        icon: (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        ),
+        label: 'Downgrade',
+        loadingMessage: 'Loading downgrade customers...',
+        title: 'Downgrade Customer List'
+      }
+    }
+    
+    if (type === 'NEW') {
+      return {
+        headerBg: STANDARD_HEADER_BG, // ✅ Standard dark, bukan biru
+        headerText: '#FFFFFF',
+        badgeColor: '#2563EB', // ✅ Hanya badge dan border yang biru
+        borderAccent: '#2563EB',
+        icon: (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 8v8M8 12h8" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        ),
+        label: 'ND Tier',
+        loadingMessage: 'Loading ND Tier customers...',
+        title: 'ND Tier Customer List'
+      }
+    }
+    
+    if (type === 'REACTIVATION') {
+      return {
+        headerBg: STANDARD_HEADER_BG, // ✅ Standard dark, bukan hijau
+        headerText: '#FFFFFF',
+        badgeColor: '#16A34A', // ✅ Hanya badge dan border yang hijau
+        borderAccent: '#16A34A',
+        icon: (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M21 3v5h-5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M3 21v-5h5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        ),
+        label: 'Reactivation',
+        loadingMessage: 'Loading reactivation customers...',
+        title: 'Reactivation Customer List'
+      }
+    }
+    
+    if (type === 'CHURNED') {
+      return {
+        headerBg: STANDARD_HEADER_BG, // ✅ Standard dark, bukan merah
+        headerText: '#FFFFFF',
+        badgeColor: '#DC2626', // ✅ Hanya badge dan border yang merah
+        borderAccent: '#DC2626',
+        icon: (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        ),
+        label: 'Churned',
+        loadingMessage: 'Loading churned customers...',
+        title: 'Churned Customer List'
+      }
+    }
+    
+    // Default: STABLE
+    return {
+      headerBg: STANDARD_HEADER_BG, // ✅ Standard dark, bukan biru
+      headerText: '#FFFFFF',
+      badgeColor: '#3B82F6', // ✅ Hanya badge dan border yang biru
+      borderAccent: '#3B82F6',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      label: 'Stable',
+      loadingMessage: 'Loading stable customers...',
+      title: 'Stable Customer List'
+    }
+  }
+
+  // Get movement type color (for backward compatibility)
   const getMovementTypeColor = () => {
-    if (movementType === 'UPGRADE') return '#10B981' // Green
-    if (movementType === 'DOWNGRADE') return '#EC4899' // Pink
-    if (movementType === 'NEW') return '#2563EB' // Blue for ND
-    if (movementType === 'REACTIVATION') return '#16A34A' // Green for Reactivation
-    if (movementType === 'CHURNED') return '#DC2626' // Red for Churned
-    return '#3B82F6' // Default blue
+    return getMovementTypeTemplate().badgeColor
   }
 
-  // Get movement type label
+  // Get movement type label (for backward compatibility)
   const getMovementTypeLabel = () => {
-    if (movementTypeUpper === 'UPGRADE') return 'Upgrade'
-    if (movementTypeUpper === 'DOWNGRADE') return 'Downgrade'
-    if (movementTypeUpper === 'NEW') return 'ND Tier'
-    if (movementTypeUpper === 'REACTIVATION') return 'Reactivation'
-    if (movementTypeUpper === 'CHURNED') return 'Churned'
-    return 'Stable'
+    return getMovementTypeTemplate().label
   }
+  
+  // Get template configuration
+  const template = getMovementTypeTemplate()
 
-  const movementTypeUpper = movementType ? movementType.toUpperCase() as typeof movementType : movementType
   const isSpecialMovement =
     movementTypeUpper === 'NEW' ||
     movementTypeUpper === 'REACTIVATION' ||
     movementTypeUpper === 'CHURNED'
 
   const getInsightSubtitle = () => {
-    if (movementType === 'NEW') {
-      const periodTxt = periodBStart && periodBEnd ? `Period B: ${periodBStart} to ${periodBEnd}` : 'Period B'
-      return `${totalRecords} customers joined in Period B with no activity in Period A (ND Tier). ${periodTxt}.`
+    // ✅ CRITICAL: Pakai effectiveMovementType untuk konsistensi dengan template
+    const type = effectiveMovementType
+    if (type === 'NEW') {
+      const periodTxt = periodBStart && periodBEnd ? `${periodBStart} to ${periodBEnd}` : 'Period B'
+      return `${totalRecords} customers joined in Period B with no activity in Period A (ND Tier). Spending data shown is from Period B (${periodTxt}).`
     }
-    if (movementType === 'REACTIVATION') {
-      const periodTxt = periodBStart && periodBEnd ? `Period B: ${periodBStart} to ${periodBEnd}` : 'Period B'
-      return `${totalRecords} customers became active again in Period B after being inactive before Period A (Reactivation). ${periodTxt}.`
+    if (type === 'REACTIVATION') {
+      const periodTxt = periodBStart && periodBEnd ? `${periodBStart} to ${periodBEnd}` : 'Period B'
+      return `${totalRecords} customers became active again in Period B after being inactive before Period A (Reactivation). Spending data shown is from Period B (${periodTxt}).`
     }
-    if (movementType === 'CHURNED') {
-      const periodTxt = periodAStart && periodAEnd ? `Period A: ${periodAStart} to ${periodAEnd}` : 'Period A'
-      return `${totalRecords} customers were active in Period A but absent in Period B (Churned). ${periodTxt}.`
+    if (type === 'CHURNED') {
+      const periodTxt = periodAStart && periodAEnd ? `${periodAStart} to ${periodAEnd}` : 'Period A'
+      return `${totalRecords} customers were active in Period A but absent in Period B (Churned). Spending data shown is from Period A (${periodTxt}).`
     }
     return 'View detailed customer information for this tier movement'
   }
@@ -727,78 +846,116 @@ export default function TierMovementCustomerModal({
         style={{
           backgroundColor: '#FFFFFF',
           borderRadius: '16px', // ✅ Rounded corners yang lebih besar (lebih menarik)
-          width: '92%',
-          maxWidth: '1150px',
+          width: '95%',
+          maxWidth: '1500px', // ✅ Increased width untuk accommodate longer subtitle
           maxHeight: '88vh',
           display: 'flex',
           flexDirection: 'column',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)', // ✅ Shadow lebih menarik dan modern
           overflow: 'hidden', // ✅ Hidden untuk clean rounded corners
-          border: '1px solid rgba(0, 0, 0, 0.08)' // ✅ Subtle border untuk depth
+          border: `2px solid ${template.borderAccent}`, // ✅ Border accent sesuai movement type
+          borderTop: `4px solid ${template.borderAccent}` // ✅ Top border accent lebih tebal
         }}
       >
-        {/* Header */}
+        {/* ✅ Header dengan template sesuai movement type */}
         <div
           style={{
             padding: '18px 24px', // ✅ Compact padding
-            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-            backgroundColor: '#374151',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)', // ✅ Standard dark border
+            backgroundColor: template.headerBg, // ✅ Standard dark background untuk semua movement type
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'flex-start',
-            borderRadius: '16px 16px 0 0' // ✅ Rounded top corners
+            borderRadius: '16px 16px 0 0', // ✅ Rounded top corners
+            position: 'relative',
+            overflow: 'hidden'
           }}
         >
-          {/* ✅ Left: Title & Subtitle */}
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
-            <h2
-              style={{
-                fontSize: '18px',
-                fontWeight: 600,
-                color: '#FFFFFF', // ✅ White text untuk contrast dengan dark background
-                margin: 0,
-                marginBottom: '4px'
-              }}
-            >
-              Customer List
-            </h2>
-            <p
-              style={{
-                fontSize: '12px',
-                color: '#D1D5DB', // ✅ Light gray text untuk subtitle
-                margin: 0
-              }}
-            >
-              {getInsightSubtitle()}
-            </p>
+          {/* ✅ Decorative background pattern - menggunakan standard dark */}
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            width: '200px',
+            height: '200px',
+            background: `radial-gradient(circle, rgba(55, 65, 81, 0.2) 0%, transparent 70%)`, // ✅ Standard dark dengan opacity
+            transform: 'translate(30%, -30%)',
+            pointerEvents: 'none'
+          }} />
+          
+          {/* ✅ Left: Title & Subtitle dengan Icon */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', position: 'relative', zIndex: 1 }}>
+            {/* ✅ Icon sesuai movement type */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '40px',
+              height: '40px',
+              borderRadius: '10px',
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              color: template.headerText,
+              flexShrink: 0
+            }}>
+              {template.icon}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
+              <h2
+                style={{
+                  fontSize: '18px',
+                  fontWeight: 700,
+                  color: template.headerText, // ✅ Text color sesuai movement type
+                  margin: 0,
+                  marginBottom: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                {template.title}
+              </h2>
+              <p
+                style={{
+                  fontSize: '12px',
+                  color: 'rgba(255, 255, 255, 0.9)', // ✅ Light white text untuk subtitle
+                  margin: 0,
+                  fontWeight: 400
+                }}
+              >
+                {getInsightSubtitle()}
+              </p>
+            </div>
           </div>
           
-          {/* ✅ Right: Badge block (no period labels for special movements) */}
+          {/* ✅ Right: Badge block dengan template sesuai movement type */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '12px',
               padding: '12px',
-              backgroundColor: '#4B5563',
+              backgroundColor: 'rgba(255, 255, 255, 0.15)', // ✅ Semi-transparent white
               borderRadius: '8px',
-              border: '1px solid #6B7280',
-              alignSelf: 'flex-start'
+              border: `1px solid rgba(255, 255, 255, 0.3)`, // ✅ Subtle white border
+              alignSelf: 'flex-start',
+              position: 'relative',
+              zIndex: 1,
+              backdropFilter: 'blur(10px)' // ✅ Glass effect
             }}
           >
             {!isSpecialMovement && (
               <>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '100px' }}>
-                  <span style={{ fontSize: '11px', color: '#D1D5DB', fontWeight: 500 }}>
+                  <span style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.8)', fontWeight: 500 }}>
                     Period A
                   </span>
                   <span style={{ fontSize: '16px', fontWeight: 600, color: '#FFFFFF' }}>
                     {fromTierName}
                   </span>
                 </div>
-                <span style={{ fontSize: '18px', color: '#D1D5DB', fontWeight: 300 }}>→</span>
+                <span style={{ fontSize: '18px', color: 'rgba(255, 255, 255, 0.8)', fontWeight: 300 }}>→</span>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '100px' }}>
-                  <span style={{ fontSize: '11px', color: '#D1D5DB', fontWeight: 500 }}>
+                  <span style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.8)', fontWeight: 500 }}>
                     Period B
                   </span>
                   <span style={{ fontSize: '16px', fontWeight: 600, color: '#FFFFFF' }}>
@@ -812,11 +969,11 @@ export default function TierMovementCustomerModal({
                 style={{
                   fontSize: '12px',
                   fontWeight: 600,
-                  color: '#374151',
+                  color: template.headerBg,
                   backgroundColor: '#FFFFFF',
                   padding: '4px 8px',
                   borderRadius: '4px',
-                  border: '1px solid #E5E7EB'
+                  border: '1px solid rgba(255, 255, 255, 0.3)'
                 }}
               >
                 {totalRecords} customers
@@ -826,12 +983,17 @@ export default function TierMovementCustomerModal({
                   fontSize: '12px',
                   fontWeight: 600,
                   color: '#FFFFFF',
-                  backgroundColor: getMovementTypeColor(),
+                  backgroundColor: template.badgeColor, // ✅ Warna sesuai movement type (hijau/pink/biru/merah)
                   padding: '4px 8px',
-                  borderRadius: '4px'
+                  borderRadius: '4px',
+                  border: `1px solid ${template.badgeColor}`, // ✅ Border sesuai badge color
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
                 }}
               >
-                {getMovementTypeLabel()}
+                {template.icon}
+                {template.label}
               </span>
             </div>
           </div>
@@ -855,31 +1017,64 @@ export default function TierMovementCustomerModal({
               flexDirection: 'column',
               height: '100%'
             }}>
-              {/* ✅ Table Container dengan ukuran yang sama seperti ketika data loaded */}
+              {/* ✅ Table Container dengan template sesuai movement type */}
               <div style={{
                 overflowX: 'auto',
                 overflowY: 'hidden',
                 height: `${MAX_TABLE_HEIGHT}px`, // ✅ Gunakan tinggi yang sama seperti table loaded
                 position: 'relative',
                 borderRadius: '8px',
-                border: '1px solid #E5E7EB',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)',
+                border: `2px solid ${template.borderAccent}40`, // ✅ Border dengan accent color (40% opacity)
+                boxShadow: `0 4px 6px -1px ${template.borderAccent}20, 0 2px 4px -1px ${template.borderAccent}10, inset 0 1px 0 0 rgba(255, 255, 255, 0.1)`,
                 boxSizing: 'border-box',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'center',
                 alignItems: 'center',
-                backgroundColor: '#F9FAFB'
+                backgroundColor: '#F9FAFB',
+                background: `linear-gradient(135deg, #F9FAFB 0%, ${template.borderAccent}05 100%)` // ✅ Subtle gradient dengan accent color
               }}>
-                <StandardLoadingSpinner message="Loading customer data..." />
-                <p style={{ 
-                  marginTop: '16px', 
-                  fontSize: '13px', 
-                  color: '#6B7280',
-                  textAlign: 'center'
+                {/* ✅ Loading Spinner dengan accent color */}
+                <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center',
+                  gap: '16px'
                 }}>
-                  Fetching real-time data from database...
-                </p>
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    border: `4px solid ${template.borderAccent}20`,
+                    borderTop: `4px solid ${template.borderAccent}`,
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }} />
+                  <p style={{ 
+                    fontSize: '14px', 
+                    fontWeight: 600,
+                    color: template.borderAccent,
+                    margin: 0,
+                    textAlign: 'center'
+                  }}>
+                    {template.loadingMessage}
+                  </p>
+                  <p style={{ 
+                    marginTop: '4px', 
+                    fontSize: '12px', 
+                    color: '#6B7280',
+                    textAlign: 'center',
+                    margin: 0
+                  }}>
+                    Fetching real-time data from database...
+                  </p>
+                </div>
+                {/* ✅ CSS Animation untuk spinner */}
+                <style jsx>{`
+                  @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                  }
+                `}</style>
               </div>
               
               {/* ✅ Footer placeholder untuk maintain layout */}
@@ -1099,7 +1294,7 @@ export default function TierMovementCustomerModal({
                         boxSizing: 'border-box' // ✅ Pastikan padding termasuk dalam height
                       }}
                     >
-                      DA
+                      {isSpecialMovement ? 'DA' : 'DA %'}
                     </th>
                     <th
                       style={{
@@ -1122,7 +1317,7 @@ export default function TierMovementCustomerModal({
                         boxSizing: 'border-box' // ✅ Pastikan padding termasuk dalam height
                       }}
                     >
-                      GGR
+                      {isSpecialMovement ? 'GGR' : 'GGR %'}
                     </th>
                     <th
                       style={{
@@ -1145,7 +1340,7 @@ export default function TierMovementCustomerModal({
                         boxSizing: 'border-box' // ✅ Pastikan padding termasuk dalam height
                       }}
                     >
-                      ATV
+                      {isSpecialMovement ? 'ATV' : 'ATV %'}
                     </th>
                     <th
                       style={{

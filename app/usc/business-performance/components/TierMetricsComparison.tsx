@@ -306,6 +306,12 @@ export default function TierMetricsComparison({
   const lastSearchTriggerRef = useRef(0)
   const isInitialMountRef = useRef(true)
   const fetchDataRef = useRef(fetchData)
+  const prevPeriodsRef = useRef<{ aStart: string; aEnd: string; bStart: string; bEnd: string }>({
+    aStart: '',
+    aEnd: '',
+    bStart: '',
+    bEnd: ''
+  })
   
   // Always keep fetchDataRef updated with latest fetchData function
   useEffect(() => {
@@ -332,6 +338,27 @@ export default function TierMetricsComparison({
       }
     }
   }, [searchTrigger]) // ✅ Only searchTrigger triggers reload, not fetchData callback recreation
+
+  // Fetch again when parent-provided periods change (e.g., after maxDate loaded)
+  useEffect(() => {
+    if (isInitialMountRef.current) return
+    if (!periodAStart || !periodAEnd || !periodBStart || !periodBEnd) return
+    const prev = prevPeriodsRef.current
+    if (
+      prev.aStart !== periodAStart ||
+      prev.aEnd !== periodAEnd ||
+      prev.bStart !== periodBStart ||
+      prev.bEnd !== periodBEnd
+    ) {
+      prevPeriodsRef.current = {
+        aStart: periodAStart,
+        aEnd: periodAEnd,
+        bStart: periodBStart,
+        bEnd: periodBEnd
+      }
+      fetchDataRef.current()
+    }
+  }, [periodAStart, periodAEnd, periodBStart, periodBEnd])
 
   // Inject CSS ke head untuk Business Performance chart styling
   useEffect(() => {

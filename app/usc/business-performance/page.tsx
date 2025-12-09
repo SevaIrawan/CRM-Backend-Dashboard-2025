@@ -116,6 +116,7 @@ export default function USCBusinessPerformancePage() {
   const [squadLeadOptions, setSquadLeadOptions] = useState<string[]>([])
   const [channelOptions, setChannelOptions] = useState<string[]>([])
   const [tierNameOptions, setTierNameOptions] = useState<Array<{ name: string; group: string | null }>>([])
+  const [maxDate, setMaxDate] = useState<string>('')
   const [loadingSlicers, setLoadingSlicers] = useState(false)
   const [searchTrigger, setSearchTrigger] = useState<number>(0) // Counter untuk trigger search
   
@@ -176,6 +177,11 @@ export default function USCBusinessPerformancePage() {
             if (result.data.tierNames) {
               setTierNameOptions(result.data.tierNames)
               console.log('✅ [BP Page] Tier Names loaded from database:', result.data.tierNames)
+            }
+            
+            // Set maxDate (latest data date) for date range anchoring
+            if (result.data.maxDate) {
+              setMaxDate(result.data.maxDate)
             }
           } else {
             console.error('❌ [BP Page] Invalid API response structure:', result)
@@ -602,6 +608,8 @@ export default function USCBusinessPerformancePage() {
             channel={channel}
             searchTrigger={searchTrigger}
             tierNameOptions={tierNameOptions}
+            maxDate={maxDate}
+            loadingSlicers={loadingSlicers}
           />
         )
       default:

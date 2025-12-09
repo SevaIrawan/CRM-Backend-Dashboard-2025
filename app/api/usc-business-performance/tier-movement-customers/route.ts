@@ -1,6 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { TIER_NAMES } from '@/lib/uscTierClassification'
+// Mapping tier lokal (tidak bergantung ke file KMeans)
+const TIER_DEFINITIONS = [
+  { num: 1, name: 'Regular' },
+  { num: 2, name: 'Tier 1' },
+  { num: 3, name: 'Tier 2' },
+  { num: 4, name: 'Tier P1' },
+  { num: 5, name: 'Tier P2' },
+  { num: 6, name: 'Tier ND_P' },
+  { num: 7, name: 'Tier 3' },
+  { num: 8, name: 'Tier 4' },
+  { num: 9, name: 'Tier 5' },
+  { num: 10, name: 'Super VIP' }
+]
+
+const TIER_NAMES: Record<number, string> = TIER_DEFINITIONS.reduce((acc, cur) => {
+  acc[cur.num] = cur.name
+  return acc
+}, {} as Record<number, string>)
+
+// Tier name mapping helper
+function buildTierNameMap() {
+  const map = new Map<string, number>()
+  const add = (label: string, num: number) => {
+    const norm = label.toLowerCase()
+    map.set(norm, num)
+    map.set(norm.replace(/\s|_/g, ''), num)
+  }
+
+  Object.entries(TIER_NAMES).forEach(([numStr, name]) => {
+    const num = parseInt(numStr, 10)
+    add(name, num)
+    if (name.toLowerCase().startsWith('tier ')) {
+      add(name.substring(5), num)
+    }
+  })
+
+  add('p1', 4) // Tier P1
+  add('p2', 5) // Tier P2
+  add('nd_p', 6) // Tier ND_P
+  add('ndp', 6)
+  add('nd p', 6)
+  add('supervip', 10)
+  add('regular', 1)
+
+  return map
+}
 
 /**
  * Helper: Aggregate blue_whale_usc data per user within a date range
@@ -27,7 +72,7 @@ async function aggregateUserDataByDateRange(
 }>> {
   let query = supabase
     .from('blue_whale_usc')
-    .select('user_unique, unique_code, user_name, line, tier_name, tier_group, deposit_amount, withdraw_amount, deposit_cases, date')
+    .select('user_unique, unique_code, user_name, line, tier_name, tier_group, deposit_amount, withdraw_amount, deposit_cases, date, first_deposit_date')
     .eq('currency', 'USC')
     .gte('date', startDate)
     .lte('date', endDate)
@@ -71,34 +116,76 @@ async function aggregateUserDataByDateRange(
     }
     
     // Batch fetch for large datasets
-    const BATCH_SIZE = 5000
+    // CRITICAL: Increase batch size and ensure consistent ordering for data consistency
+    const BATCH_SIZE = 10000
     let allData: any[] = []
     let offset = 0
     let hasMore = true
     
     while (hasMore) {
-      const batchQuery = query.range(offset, offset + BATCH_SIZE - 1)
+      // CRITICAL: Rebuild query for each batch to ensure ordering is preserved
+      // This prevents data inconsistency across batches
+      let batchQuery = supabase
+        .from('blue_whale_usc')
+        .select('user_unique, unique_code, user_name, line, tier_name, tier_group, deposit_amount, withdraw_amount, deposit_cases, date, first_deposit_date')
+        .eq('currency', 'USC')
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .not('tier_name', 'is', null)
+        .gt('deposit_cases', 0)
+        .order('user_unique', { ascending: true })
+        .order('date', { ascending: true })
+        .range(offset, offset + BATCH_SIZE - 1)
+
+      // Re-apply filters for each batch
+      if (line && line !== 'All' && line !== 'ALL') {
+        batchQuery = batchQuery.eq('line', line)
+      }
+      if (squadLead && squadLead !== 'All' && squadLead !== 'ALL') {
+        batchQuery = batchQuery.eq('squad_lead', squadLead)
+      }
+      if (channel && channel !== 'All' && channel !== 'ALL') {
+        batchQuery = batchQuery.eq('traffic', channel)
+      }
+      
       const { data, error } = await batchQuery
       
       if (error) {
-        console.error(`❌ Error fetching batch at offset ${offset}:`, error)
+        console.error(`❌ [Tier Movement Customers] Error fetching batch at offset ${offset}:`, error)
         break
       }
       
       if (!data || data.length === 0) {
         hasMore = false
       } else {
-        allData.push(...data)
+        // CRITICAL: Validate data is within date range before adding
+        const validData = data.filter((row: any) => {
+          const rowDate = row.date
+          return rowDate && rowDate >= startDate && rowDate <= endDate
+        })
+        
+        if (validData.length !== data.length) {
+          console.warn(`⚠️ [Tier Movement Customers] Filtered ${data.length - validData.length} records outside date range in batch at offset ${offset}`)
+        }
+        
+        allData.push(...validData)
         hasMore = data.length === BATCH_SIZE
         offset += BATCH_SIZE
+        
+        // Log progress for first batch
+        if (offset === BATCH_SIZE) {
+          console.log(`📊 [Tier Movement Customers] First batch: ${validData.length} valid records (date range: ${startDate} to ${endDate})`)
+        }
       }
       
       // Safety limit
-      if (allData.length > 100000) {
-        console.warn('⚠️ Safety limit reached: 100,000 records')
+      if (allData.length > 200000) {
+        console.warn('⚠️ [Tier Movement Customers] Safety limit reached: 200,000 records')
         break
       }
     }
+    
+    console.log(`📊 [Tier Movement Customers] Total records fetched: ${allData.length} for date range ${startDate} to ${endDate}`)
     
     return aggregateUserData(allData, line, squadLead, channel)
   }
@@ -124,6 +211,16 @@ function aggregateUserData(
   depositCases: number
   avgTransactionValue: number
 }> {
+  const nameToNumber = new Map<string, number>()
+  Object.entries(TIER_NAMES).forEach(([num, name]) => {
+    const n = parseInt(num, 10)
+    const norm = name.toLowerCase()
+    nameToNumber.set(norm, n)
+    nameToNumber.set(norm.replace(/\s|_/g, ''), n)
+  })
+
+  const nameToTierNumber = buildTierNameMap()
+
   const userMap = new Map<string, {
     user_unique: string
     unique_code: string | null
@@ -136,6 +233,7 @@ function aggregateUserData(
     withdrawAmount: number
     depositCases: number
     dates: Set<string> // Track dates
+    first_deposit_date: string | null // ✅ Track first_deposit_date for ND tier validation
   }>()
   
   // First pass: aggregate all metrics and track all tier numbers
@@ -161,11 +259,19 @@ function aggregateUserData(
         depositAmount: 0,
         withdrawAmount: 0,
         depositCases: 0,
-        dates: new Set()
+        dates: new Set(),
+        first_deposit_date: row.first_deposit_date || null // ✅ Store first_deposit_date
       })
     }
     
     const user = userMap.get(row.user_unique)!
+    
+    // ✅ Track first_deposit_date (use earliest date if multiple)
+    if (row.first_deposit_date) {
+      if (!user.first_deposit_date || row.first_deposit_date < user.first_deposit_date) {
+        user.first_deposit_date = row.first_deposit_date
+      }
+    }
     
     // Aggregate metrics
     user.depositAmount += Number(row.deposit_amount) || 0
@@ -176,28 +282,14 @@ function aggregateUserData(
       let parsedTier: number | null = null
     
     if (row.tier_name) {
-      const tierNameLower = (row.tier_name as string).trim()
-      // Try lookup against TIER_NAMES (case-insensitive)
-      const tierEntry = Object.entries(TIER_NAMES).find(([_, name]) => 
-        name.toLowerCase() === tierNameLower.toLowerCase()
-      )
-      
-      if (tierEntry) {
-        const tierNum = tierEntry[0]
-        parsedTier = parseInt(tierNum)
-      } else {
-        // Fallback: try parse numeric from tier_name (e.g., "Tier 3" or "3")
-        const numericMatch = tierNameLower.match(/(\d+)/)
-        if (numericMatch && numericMatch[1]) {
-          const n = parseInt(numericMatch[1], 10)
-          if (!isNaN(n)) {
-            parsedTier = n
-          }
-        }
+      const norm = String(row.tier_name).trim().toLowerCase()
+      const tierNum = nameToTierNumber.get(norm) ?? nameToTierNumber.get(norm.replace(/\s|_/g, ''))
+      if (tierNum !== undefined) {
+        parsedTier = tierNum
       }
     }
 
-    if (parsedTier !== null && !isNaN(parsedTier) && parsedTier >= 1 && parsedTier <= 7) {
+    if (parsedTier !== null && !isNaN(parsedTier) && nameToTierNumber.size > 0) {
       user.tierNumbers.add(parsedTier)
     }
     
@@ -220,17 +312,24 @@ function aggregateUserData(
     withdrawAmount: number
     depositCases: number
     avgTransactionValue: number
+    first_deposit_date: string | null // ✅ Include first_deposit_date for ND tier validation
   }>()
   
   userMap.forEach((user, userUnique) => {
-    // Determine tier: highest tier number in period
-    // Tier 1 = highest, Tier 7 = lower, Regular = lowest (usually tier 0 or high number)
+    // CRITICAL: Determine tier: highest tier number in period
+    // Tier hierarchy: 1=Regular (lowest), 10=Super VIP (highest)
+    // Therefore: Higher tier number = Higher tier level
     let highestTier: number | null = null
     
     if (user.tierNumbers.size > 0) {
-      // Find highest tier (lowest number = highest tier)
-      // Tier 1 < Tier 2 < ... < Tier 7
-      highestTier = Math.min(...Array.from(user.tierNumbers))
+      const tierNumbersArray = Array.from(user.tierNumbers)
+      highestTier = Math.max(...tierNumbersArray)
+      
+      // Validation: Ensure tier number is valid (1-10)
+      if (highestTier < 1 || highestTier > 10) {
+        console.warn(`⚠️ [Tier Movement Customers] Invalid tier number ${highestTier} for user ${userUnique}, skipping`)
+        return
+      }
     }
     
     // Calculate ATV
@@ -238,19 +337,29 @@ function aggregateUserData(
       ? user.depositAmount / user.depositCases
       : 0
     
+    // CRITICAL: Determine tier_name from highest tier number
+    // If user has multiple tier_names in period, use the one corresponding to highest tier
+    let finalTierName: string | null = user.tier_name || null
+    if (highestTier && TIER_NAMES[highestTier]) {
+      finalTierName = TIER_NAMES[highestTier]
+    }
+    
     result.set(userUnique, {
       user_unique: user.user_unique,
       unique_code: user.unique_code,
       user_name: user.user_name,
-      tier_name: user.tier_name || null,
+      tier_name: finalTierName,  // ✅ Use tier_name from highest tier
       line: user.line,
       tier: highestTier,  // ✅ Use highestTier (tier tertinggi dalam period)
       depositAmount: user.depositAmount,
       withdrawAmount: user.withdrawAmount,
       depositCases: user.depositCases,
-      avgTransactionValue
+      avgTransactionValue,
+      first_deposit_date: user.first_deposit_date // ✅ Include first_deposit_date
     })
   })
+  
+  console.log(`📊 [Tier Movement Customers] Aggregated ${result.size} unique users from ${rawData.length} records`)
   
   return result
 }
@@ -436,21 +545,31 @@ export async function GET(request: NextRequest) {
       channel || undefined
     )
 
-    const currentMapped = Array.from(periodBDataMap.entries()).map(([userUnique, data]) => ({
-      user_unique: userUnique,
-      uniqueCode: data.unique_code || userUnique,
-      line: data.line || 'All',
-      tier: data.tier || 7,
-      score: 0
-    }))
+    const orderedTiers = Object.keys(TIER_NAMES).map(n => parseInt(n, 10)).sort((a, b) => a - b)
+    const orderIndex = new Map<number, number>()
+    orderedTiers.forEach((tierNum, idx) => orderIndex.set(tierNum, idx))
 
-    const previousMapped = Array.from(periodADataMap.entries()).map(([userUnique, data]) => ({
-      user_unique: userUnique,
-      uniqueCode: data.unique_code || userUnique,
-      line: data.line || 'All',
-      tier: data.tier || 7,
-      score: 0
-    }))
+    const currentMapped = Array.from(periodBDataMap.entries()).flatMap(([userUnique, data]) => {
+      if (data.tier === null) return []
+      return [{
+        user_unique: userUnique,
+        uniqueCode: data.unique_code || userUnique,
+        line: data.line || 'All',
+        tier: data.tier,
+        score: 0
+      }]
+    })
+
+    const previousMapped = Array.from(periodADataMap.entries()).flatMap(([userUnique, data]) => {
+      if (data.tier === null) return []
+      return [{
+        user_unique: userUnique,
+        uniqueCode: data.unique_code || userUnique,
+        line: data.line || 'All',
+        tier: data.tier,
+        score: 0
+      }]
+    })
 
     // History before A for NEW vs REACTIVATION
     // ✅ History: gunakan semua aktivitas sebelum Period A (tanpa filter tier_name) tapi hanya user aktif (deposit_cases > 0)
@@ -464,13 +583,42 @@ export async function GET(request: NextRequest) {
     if (squadLead && squadLead !== 'All' && squadLead !== 'ALL') historyBeforeAQuery.eq('squad_lead', squadLead)
     if (channel && channel !== 'All' && channel !== 'ALL') historyBeforeAQuery.eq('traffic', channel)
 
+    // CRITICAL: History query with consistent ordering and batch processing
     const historyBeforeASet = new Set<string>()
-    const BATCH_HISTORY = 5000
+    const BATCH_HISTORY = 10000
     let offsetHist = 0
     let moreHist = true
+    
     while (moreHist) {
-      const { data: histData, error: histErr } = await historyBeforeAQuery.range(offsetHist, offsetHist + BATCH_HISTORY - 1)
-      if (histErr) break
+      // CRITICAL: Rebuild query for each batch to ensure consistency
+      let historyBatchQuery = supabase
+        .from('blue_whale_usc')
+        .select('user_unique')
+        .eq('currency', 'USC')
+        .lt('date', periodAStartDate!)
+        .gt('deposit_cases', 0)
+        .order('user_unique', { ascending: true })
+        .order('date', { ascending: true })
+        .range(offsetHist, offsetHist + BATCH_HISTORY - 1)
+      
+      // Re-apply filters
+      if (line && line !== 'All' && line !== 'ALL') {
+        historyBatchQuery = historyBatchQuery.eq('line', line)
+      }
+      if (squadLead && squadLead !== 'All' && squadLead !== 'ALL') {
+        historyBatchQuery = historyBatchQuery.eq('squad_lead', squadLead)
+      }
+      if (channel && channel !== 'All' && channel !== 'ALL') {
+        historyBatchQuery = historyBatchQuery.eq('traffic', channel)
+      }
+      
+      const { data: histData, error: histErr } = await historyBatchQuery
+      
+      if (histErr) {
+        console.error(`❌ [Tier Movement Customers] History batch error at offset ${offsetHist}:`, histErr)
+        break
+      }
+      
       if (!histData || histData.length === 0) {
         moreHist = false
       } else {
@@ -480,7 +628,15 @@ export async function GET(request: NextRequest) {
         moreHist = histData.length === BATCH_HISTORY
         offsetHist += BATCH_HISTORY
       }
+      
+      // Safety limit
+      if (historyBeforeASet.size > 500000) {
+        console.warn('⚠️ [Tier Movement Customers] History safety limit reached: 500,000 users')
+        break
+      }
     }
+    
+    console.log(`📊 [Tier Movement Customers] History before Period A: ${historyBeforeASet.size} unique users`)
 
     const prevMap = new Map(previousMapped.map(p => [p.user_unique, p]))
     const movements: Array<{
@@ -496,8 +652,37 @@ export async function GET(request: NextRequest) {
     currentMapped.forEach(current => {
       const previous = prevMap.get(current.user_unique)
       if (!previous) {
-        const hasHistoryBeforeA = historyBeforeASet.has(current.user_unique)
-        const movementType: 'NEW' | 'REACTIVATION' = hasHistoryBeforeA ? 'REACTIVATION' : 'NEW'
+        // ✅ CRITICAL: Determine NEW vs REACTIVATION using first_deposit_date
+        // NEW (ND Tier) = first_deposit_date dalam Period B
+        // REACTIVATION = first_deposit_date SEBELUM Period B (atau tidak ada first_deposit_date tapi ada history sebelum Period A)
+        let movementType: 'NEW' | 'REACTIVATION' = 'REACTIVATION' // Default to REACTIVATION
+        
+        if (current.first_deposit_date) {
+          // ✅ CRITICAL: Use string comparison to avoid timezone issues
+          // Date format from DB is YYYY-MM-DD, compare as strings for accuracy
+          const fddStr = String(current.first_deposit_date).trim()
+          
+          // Validate date format (YYYY-MM-DD)
+          if (fddStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            // String comparison: YYYY-MM-DD format allows direct string comparison
+            if (fddStr >= periodBStartDate! && fddStr <= periodBEndDate!) {
+              // ✅ first_deposit_date dalam Period B = NEW (ND Tier)
+              movementType = 'NEW'
+            } else {
+              // first_deposit_date SEBELUM atau SETELAH Period B = REACTIVATION
+              movementType = 'REACTIVATION'
+            }
+          } else {
+            // Invalid date format: use history check as fallback
+            const hasHistoryBeforeA = historyBeforeASet.has(current.user_unique)
+            movementType = hasHistoryBeforeA ? 'REACTIVATION' : 'NEW'
+          }
+        } else {
+          // No first_deposit_date: use history check as fallback
+          const hasHistoryBeforeA = historyBeforeASet.has(current.user_unique)
+          movementType = hasHistoryBeforeA ? 'REACTIVATION' : 'NEW'
+        }
+        
         movements.push({
           user_unique: current.user_unique,
           uniqueCode: current.uniqueCode,
@@ -508,7 +693,10 @@ export async function GET(request: NextRequest) {
           tierChange: 0
         })
       } else {
-        const tierChange = previous.tier - current.tier
+        // Arah pakai index urutan A-Z: toIdx - fromIdx
+        const fromIdx = orderIndex.get(previous.tier) ?? 0
+        const toIdx = orderIndex.get(current.tier) ?? 0
+        const tierChange = toIdx - fromIdx // positif = upgrade
         let movementType: 'UPGRADE' | 'DOWNGRADE' | 'STABLE' = 'STABLE'
         if (tierChange > 0) movementType = 'UPGRADE'
         else if (tierChange < 0) movementType = 'DOWNGRADE'
@@ -557,14 +745,21 @@ export async function GET(request: NextRequest) {
       const ggr = depositAmount - withdrawAmount
       const atv = depositCases > 0 ? depositAmount / depositCases : 0
 
-      const prevDA = useCurrentOnly ? 0 : (prev?.depositAmount || 0)
-      const prevWithdraw = useCurrentOnly ? 0 : (prev?.withdrawAmount || 0)
+      // ✅ CRITICAL: Comparison logic for Period B to A
+      // For NEW/REACTIVATION: No Period A data, so comparison = null
+      // For CHURNED: No Period B data, so comparison = null
+      // For UPGRADE/DOWNGRADE/STABLE: Compare Period B (current) vs Period A (previous)
+      const prevDA = (useCurrentOnly || usePreviousOnly) ? 0 : (prev?.depositAmount || 0)
+      const prevWithdraw = (useCurrentOnly || usePreviousOnly) ? 0 : (prev?.withdrawAmount || 0)
       const prevGGR = prevDA - prevWithdraw
-      const prevATV = useCurrentOnly ? 0 : (prev?.avgTransactionValue || 0)
+      const prevATV = (useCurrentOnly || usePreviousOnly) ? 0 : (prev?.avgTransactionValue || 0)
 
-      const daChangePercent = (!useCurrentOnly && prevDA !== 0) ? ((depositAmount - prevDA) / Math.abs(prevDA)) * 100 : null
-      const ggrChangePercent = (!useCurrentOnly && prevGGR !== 0) ? ((ggr - prevGGR) / Math.abs(prevGGR)) * 100 : null
-      const atvChangePercent = (!useCurrentOnly && prevATV !== 0) ? ((atv - prevATV) / Math.abs(prevATV)) * 100 : null
+      // ✅ Calculate comparison: ((Period B - Period A) / |Period A|) * 100
+      // Only calculate if both periods have data (not NEW/REACTIVATION/CHURNED)
+      const canCompare = !useCurrentOnly && !usePreviousOnly
+      const daChangePercent = (canCompare && prevDA !== 0) ? ((depositAmount - prevDA) / Math.abs(prevDA)) * 100 : null
+      const ggrChangePercent = (canCompare && prevGGR !== 0) ? ((ggr - prevGGR) / Math.abs(prevGGR)) * 100 : null
+      const atvChangePercent = (canCompare && prevATV !== 0) ? ((atv - prevATV) / Math.abs(prevATV)) * 100 : null
 
       return {
         user_unique: m.user_unique,
@@ -597,9 +792,12 @@ export async function GET(request: NextRequest) {
 
     const movementType = specialMovement
       ? (movementTypeParam as any)
-      : (fromTierNum === toTierNum
-        ? 'STABLE'
-        : (fromTierNum! > toTierNum! ? 'UPGRADE' : 'DOWNGRADE'))
+      : (() => {
+        const fromIdx = orderIndex.get(fromTierNum!) ?? 0
+        const toIdx = orderIndex.get(toTierNum!) ?? 0
+        if (fromIdx === toIdx) return 'STABLE'
+        return toIdx > fromIdx ? 'UPGRADE' : 'DOWNGRADE'
+      })()
     
     return NextResponse.json({
       customers: sortedCustomers,

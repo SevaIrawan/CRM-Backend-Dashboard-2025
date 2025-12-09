@@ -72,6 +72,7 @@ export default function CustomerTierMovement({
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<TierMovementData | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [tierIndexMap, setTierIndexMap] = useState<Map<number, number>>(new Map())
   
   // ✅ Store slicer values in ref to always use latest values in fetchData without triggering auto reload
   const brandRef = useRef(brand)
@@ -240,6 +241,13 @@ export default function CustomerTierMovement({
         setData(result.data)
         // Store periods for modal
         setPeriods(periods)
+        // Keep tier order for movement direction mapping
+        if (result.data?.matrix?.tierOrder) {
+          tierOrderRef.current = result.data.matrix.tierOrder
+          const map = new Map<number, number>()
+          result.data.matrix.tierOrder.forEach((t: { tier: number }, idx: number) => map.set(t.tier, idx))
+          setTierIndexMap(map)
+        }
       } else {
         throw new Error(result.error || 'Failed to fetch data')
       }
@@ -254,6 +262,7 @@ export default function CustomerTierMovement({
   const fetchDataRef = useRef(fetchData)
   const lastSearchTriggerRef = useRef(0)
   const isInitialMountRef = useRef(true)
+  const tierOrderRef = useRef<Array<{ tier: number; tierName: string }>>([])
   
   // Always keep fetchDataRef updated with latest fetchData function
   useEffect(() => {
@@ -390,46 +399,35 @@ export default function CustomerTierMovement({
     }
   }
 
-  // ✅ Get cell color based on movement type with enhanced modern styling
-  // Tier numbering: Tier 1 = Super VIP (highest), Tier 7 = Regular (lowest)
-  // Logic: 
-  // - fromTier > toTier = UPGRADE (from tier 7→1, tier number decreases) = Green
-  // - fromTier < toTier = DOWNGRADE (from tier 1→7, tier number increases) = Pink
-  // - fromTier === toTier = STABLE (same tier) = Blue
-  const getCellColor = (fromTier: number, toTier: number, value: number): { bg: string; border: string; text: string } => {
-    if (value === 0) return { bg: '#FFFFFF', border: '#F3F4F6', text: '#9CA3AF' }
-    
-    if (fromTier === toTier) {
-      // Blue - Stable (with gradient effect)
-      return { 
-        bg: '#EFF6FF', 
-        border: '#BFDBFE', 
-        text: '#1E40AF' 
-      }
+  // ✅ Movement helpers use tier order from API (A→Z). Fallback keeps previous behavior if map empty.
+  type MovementDir = 'UPGRADE' | 'DOWNGRADE' | 'STABLE'
+  const getMovementDirection = (fromTier: number, toTier: number): MovementDir => {
+    const fromIdx = tierIndexMap.get(fromTier)
+    const toIdx = tierIndexMap.get(toTier)
+    if (fromIdx !== undefined && toIdx !== undefined) {
+      if (toIdx > fromIdx) return 'UPGRADE'
+      if (toIdx < fromIdx) return 'DOWNGRADE'
+      return 'STABLE'
     }
-    
-    if (fromTier > toTier) {
-      // Green - Upgrade (from higher tier number to lower)
-      return { 
-        bg: '#ECFDF5', 
-        border: '#A7F3D0', 
-        text: '#047857' 
-      }
-    }
-    
-    // Pink - Downgrade (from lower tier number to higher)
-    return { 
-      bg: '#FDF2F8', 
-      border: '#F9A8D4', 
-      text: '#BE185D' 
-    }
+    if (fromTier === toTier) return 'STABLE'
+    return toTier > fromTier ? 'UPGRADE' : 'DOWNGRADE'
   }
-  
-  // ✅ Get movement icon based on movement type
-  const getMovementIcon = (fromTier: number, toTier: number): string => {
-    if (fromTier === toTier) return '●' // Stable - Circle
-    if (fromTier > toTier) return '▲' // Upgrade - Up arrow
-    return '▼' // Downgrade - Down arrow
+
+  const getCellColor = (movement: MovementDir, value: number): { bg: string; border: string; text: string } => {
+    if (value === 0) return { bg: '#FFFFFF', border: '#F3F4F6', text: '#9CA3AF' }
+    if (movement === 'STABLE') {
+      return { bg: '#EFF6FF', border: '#BFDBFE', text: '#1E40AF' }
+    }
+    if (movement === 'UPGRADE') {
+      return { bg: '#ECFDF5', border: '#A7F3D0', text: '#047857' }
+    }
+    return { bg: '#FDF2F8', border: '#F9A8D4', text: '#BE185D' }
+  }
+
+  const getMovementIcon = (movement: MovementDir): string => {
+    if (movement === 'STABLE') return '●'
+    if (movement === 'UPGRADE') return '▲'
+    return '▼'
   }
 
   // Handle cell click to open modal
@@ -510,12 +508,17 @@ export default function CustomerTierMovement({
         }
       })
 
+      // ✅ CRITICAL: Calculate movement type BEFORE opening modal (sama seperti ND/React/Churned)
+      // Ini memastikan template sudah benar dari awal, tidak berubah dari loading ke data tampil
+      const calculatedMovementType = getMovementDirection(fromTier, toTier)
+      
       setSelectedFromTier(fromTier)
       setSelectedToTier(toTier)
       setSelectedFromTierName(fromTierName)
       setSelectedToTierName(toTierName)
+      setMovementTypeState(calculatedMovementType) // ✅ Set movement type DULUAN (sebelum buka modal)
       setError(null) // Clear any previous errors
-      setModalOpen(true)
+      setModalOpen(true) // ✅ Open modal SETELAH movement type sudah di-set
     } catch (err) {
       console.error('❌ [Customer Tier Movement] Error opening modal:', err)
       setError(err instanceof Error ? err.message : 'Failed to open customer list')
@@ -528,6 +531,7 @@ export default function CustomerTierMovement({
     setModalOpen(false)
     setSelectedFromTier(null)
     setSelectedToTier(null)
+    setMovementTypeState(null) // ✅ Reset movement type saat modal ditutup
   }
 
   return (
@@ -797,9 +801,10 @@ export default function CustomerTierMovement({
                         numericValue = 0
                       }
                       
-                      const cellColors = getCellColor(row.fromTier, tier.tier, numericValue)
-                      const movementIcon = getMovementIcon(row.fromTier, tier.tier)
-                      const isStable = row.fromTier === tier.tier
+                      const movement = getMovementDirection(row.fromTier, tier.tier)
+                      const cellColors = getCellColor(movement, numericValue)
+                      const movementIcon = getMovementIcon(movement)
+                      const isStable = movement === 'STABLE'
                       
                       // ✅ Cell is clickable if value is a positive number (> 0)
                       const isClickable = numericValue > 0 && typeof numericValue === 'number' && !isNaN(numericValue) && isFinite(numericValue)
@@ -861,7 +866,7 @@ export default function CustomerTierMovement({
                               e.currentTarget.style.borderLeftWidth = '3px'
                             }
                           }}
-                          title={isClickable ? `Click to view ${numericValue} customer${numericValue > 1 ? 's' : ''} (${isStable ? 'Stable' : row.fromTier > tier.tier ? 'Upgrade' : 'Downgrade'})` : ''}
+                          title={isClickable ? `Click to view ${numericValue} customer${numericValue > 1 ? 's' : ''} (${movement === 'UPGRADE' ? 'Upgrade' : movement === 'DOWNGRADE' ? 'Downgrade' : 'Stable'})` : ''}
                         >
                           {numericValue === 0 ? (
                             <span style={{ color: '#9CA3AF', fontSize: '12px' }}>—</span>

@@ -117,17 +117,33 @@ export async function GET(request: NextRequest) {
     const uniqueYears = Array.from(new Set(allYears?.map(row => row.year?.toString()).filter(Boolean) || []))
     const sortedYears = uniqueYears.sort((a, b) => parseInt(b || '0') - parseInt(a || '0'))
     
-    // Get latest record for defaults from MASTER TABLE
-    const { data: latestRecord } = await supabase
+    // CRITICAL: Get latest record for defaults from MASTER TABLE
+    // Must filter for active users (deposit_cases > 0) to get real maxDate
+    const { data: latestRecord, error: latestError } = await supabase
       .from('blue_whale_usc')
-      .select('year, month')
+      .select('year, month, date')
       .eq('currency', 'USC')
+      .gt('deposit_cases', 0) // CRITICAL: Only active users to get real maxDate
+      .not('date', 'is', null)
       .order('date', { ascending: false })
       .limit(1)
     
-    // Use real data from database - no hardcoded fallback
+    if (latestError) {
+      console.error('❌ [USC BP Slicer] Error fetching latest record:', latestError)
+    }
+    
+    // CRITICAL: Use real data from database - NO hardcoded fallback
+    // If no data found, return null instead of using fallback
     const defaultYear = latestRecord?.[0]?.year?.toString() || sortedYears[0] || null
     const defaultMonth = latestRecord?.[0]?.month || null
+    const maxDate = latestRecord?.[0]?.date || null
+    
+    // CRITICAL: Log maxDate for debugging
+    if (maxDate) {
+      console.log(`✅ [USC BP Slicer] maxDate from database: ${maxDate}`)
+    } else {
+      console.warn('⚠️ [USC BP Slicer] No maxDate found in database - no active users with dates')
+    }
     
     // Get months WITH year mapping from MASTER TABLE
     const { data: allMonthsData, error: monthsError } = await supabase
@@ -233,6 +249,7 @@ export async function GET(request: NextRequest) {
       years: sortedYears,
       months: monthsWithAll,
       tierNames: tierNameOptions,
+      maxDate,
       defaults: {
         currency: 'USC',
         line: defaultLine,

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import Frame from '@/components/Frame'
+import StandardLoadingSpinner from '@/components/StandardLoadingSpinner'
 import CustomerTierTrends from './CustomerTierTrends'
 import CustomerTierMovement from './CustomerTierMovement'
 import TierMetricsComparison from './TierMetricsComparison'
@@ -22,6 +23,8 @@ interface CustomerTierAnalyticsProps {
   channel: string
   searchTrigger?: number
   tierNameOptions: Array<{ name: string; group: string | null }>
+  maxDate?: string
+  loadingSlicers?: boolean // ✅ Loading state dari parent untuk slicer options
 }
 
 export default function CustomerTierAnalytics({ 
@@ -30,7 +33,9 @@ export default function CustomerTierAnalytics({
   squadLead, 
   channel,
   searchTrigger,
-  tierNameOptions
+  tierNameOptions,
+  maxDate,
+  loadingSlicers = false
 }: CustomerTierAnalyticsProps) {
   // ✅ Shared Period A and B states - digunakan oleh CustomerTierTrends dan CustomerTierMovement
   const [periodAStart, setPeriodAStart] = useState<string>('')
@@ -42,55 +47,73 @@ export default function CustomerTierAnalytics({
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [loadingAlerts, setLoadingAlerts] = useState(false)
 
+  const formatDateLocal = (d: Date) => {
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+
   // Helper function to calculate date ranges
-  // Period B (current): Based on Date Range slicer
-  // Period A (last): Same date range in previous month
+  // Period B (current): Based on Date Range slicer, anchored to maxDate data
+  // Period A (last): Same range di bulan sebelumnya (mengikuti KPI/Brand Comparison pattern)
+  const getAnchorDate = () => {
+    if (!maxDate) return null
+    const parts = maxDate.split('-').map(p => parseInt(p, 10))
+    if (parts.length === 3 && !parts.some(isNaN)) {
+      const [y, m, d] = parts
+      return new Date(y, m - 1, d) // local date, no TZ shift
+    }
+    return null
+  }
+
   const calculateDateRanges = (rangeType: string) => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const anchor = getAnchorDate()
+    if (!anchor) return null
+    anchor.setHours(0, 0, 0, 0)
     
     if (rangeType === 'Last 7 Days') {
-      // Period B: Last 7 days (current)
-      const periodBEnd = new Date(today)
-      const periodBStart = new Date(today)
-      periodBStart.setDate(today.getDate() - 6) // Last 7 days including today
+      // Period B: Last 7 days ending at anchor date
+      const periodBEnd = new Date(anchor)
+      const periodBStart = new Date(anchor)
+      periodBStart.setDate(anchor.getDate() - 6) // Last 7 days including anchor
       
-      // Period A: Same date range in previous month
+      // Period A: Range yang sama di bulan sebelumnya
       const periodAEnd = new Date(periodBEnd)
-      periodAEnd.setMonth(periodAEnd.getMonth() - 1) // Same day, previous month
+      periodAEnd.setMonth(periodAEnd.getMonth() - 1)
       const periodAStart = new Date(periodBStart)
-      periodAStart.setMonth(periodAStart.getMonth() - 1) // Same day, previous month
+      periodAStart.setMonth(periodAStart.getMonth() - 1)
       
       return {
         periodA: {
-          start: periodAStart.toISOString().split('T')[0],
-          end: periodAEnd.toISOString().split('T')[0]
+          start: formatDateLocal(periodAStart),
+          end: formatDateLocal(periodAEnd)
         },
         periodB: {
-          start: periodBStart.toISOString().split('T')[0],
-          end: periodBEnd.toISOString().split('T')[0]
+          start: formatDateLocal(periodBStart),
+          end: formatDateLocal(periodBEnd)
         }
       }
     } else if (rangeType === 'Last 30 Days') {
-      // Period B: Last 30 days (current)
-      const periodBEnd = new Date(today)
-      const periodBStart = new Date(today)
-      periodBStart.setDate(today.getDate() - 29) // Last 30 days including today
+      // Period B: Last 30 days ending at anchor date
+      const periodBEnd = new Date(anchor)
+      const periodBStart = new Date(anchor)
+      periodBStart.setDate(anchor.getDate() - 29) // Last 30 days including anchor
       
-      // Period A: Same date range in previous month
+      // Period A: Range yang sama di bulan sebelumnya
       const periodAEnd = new Date(periodBEnd)
-      periodAEnd.setMonth(periodAEnd.getMonth() - 1) // Same day, previous month
+      periodAEnd.setMonth(periodAEnd.getMonth() - 1)
       const periodAStart = new Date(periodBStart)
-      periodAStart.setMonth(periodAStart.getMonth() - 1) // Same day, previous month
+      periodAStart.setMonth(periodAStart.getMonth() - 1)
       
       return {
         periodA: {
-          start: periodAStart.toISOString().split('T')[0],
-          end: periodAEnd.toISOString().split('T')[0]
+          start: formatDateLocal(periodAStart),
+          end: formatDateLocal(periodAEnd)
         },
         periodB: {
-          start: periodBStart.toISOString().split('T')[0],
-          end: periodBEnd.toISOString().split('T')[0]
+          start: formatDateLocal(periodBStart),
+          end: formatDateLocal(periodBEnd)
         }
       }
     }
@@ -99,27 +122,31 @@ export default function CustomerTierAnalytics({
   }
   
   // Helper function to calculate Period A from Period B (for Custom Date Range)
-  // Period A: Same date range in previous month
+  // Period A: Range yang sama di bulan sebelumnya (selaras dengan KPI/Brand Comparison)
   const calculatePeriodAFromPeriodB = (periodBStart: string, periodBEnd: string) => {
     if (!periodBStart || !periodBEnd) return null
     
     const periodBStartDate = new Date(periodBStart)
     const periodBEndDate = new Date(periodBEnd)
     
-    // Period A: Same date range in previous month
     const periodAEnd = new Date(periodBEndDate)
-    periodAEnd.setMonth(periodAEnd.getMonth() - 1) // Same day, previous month
     const periodAStart = new Date(periodBStartDate)
-    periodAStart.setMonth(periodAStart.getMonth() - 1) // Same day, previous month
+    periodAEnd.setMonth(periodAEnd.getMonth() - 1)
+    periodAStart.setMonth(periodAStart.getMonth() - 1)
     
     return {
-      start: periodAStart.toISOString().split('T')[0],
-      end: periodAEnd.toISOString().split('T')[0]
+      start: formatDateLocal(periodAStart),
+      end: formatDateLocal(periodAEnd)
     }
   }
 
   // Initialize date ranges based on dateRange - HARUS di-set sebelum fetchData
   useEffect(() => {
+    if (!maxDate) {
+      // Tunggu maxDate dari DB; hindari fallback ke tanggal hari ini
+      return
+    }
+
     if (dateRange === 'Custom') {
       // Custom mode: Set to empty (Select Date) - user harus pilih manual
       setPeriodAStart('')
@@ -127,7 +154,7 @@ export default function CustomerTierAnalytics({
       setPeriodBStart('')
       setPeriodBEnd('')
     } else {
-      // Auto mode: Calculate dates for Last 7 Days or Last 30 Days immediately
+      // Auto mode: Calculate dates for Last 7 Days or Last 30 Days immediately, anchored to maxDate
       const calculatedRanges = calculateDateRanges(dateRange)
       if (calculatedRanges) {
         setPeriodAStart(calculatedRanges.periodA.start)
@@ -136,7 +163,7 @@ export default function CustomerTierAnalytics({
         setPeriodBEnd(calculatedRanges.periodB.end)
       }
     }
-  }, [dateRange])
+  }, [dateRange, maxDate])
   
   // Auto-calculate Period A when Period B changes (for Custom Date Range only)
   // Period A = Previous period with same duration as Period B
@@ -277,13 +304,13 @@ export default function CustomerTierAnalytics({
   
   // Alert modal trigger no longer needed - dropdown is handled in Header
   // Build footer info message
-  const today = new Date()
-  const year = today.getFullYear()
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
-                      'July', 'August', 'September', 'October', 'November', 'December']
-  const month = monthNames[today.getMonth()]
-  
   const getFooterInfo = () => {
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                        'July', 'August', 'September', 'October', 'November', 'December']
+    const displayDate = periodBEnd || maxDate || null
+    const display = displayDate ? new Date(displayDate) : new Date()
+    const year = display.getFullYear()
+    const month = monthNames[display.getMonth()]
     const parts = []
     parts.push(year.toString())
     parts.push(month)
@@ -291,6 +318,24 @@ export default function CustomerTierAnalytics({
     parts.push(brand || 'ALL')
     
     return `Showing data for: ${parts.join(' | ')}`
+  }
+
+  // ✅ Show loading spinner saat slicer loading atau maxDate belum tersedia
+  if (loadingSlicers || !maxDate) {
+    return (
+      <Frame variant="standard">
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '600px',
+          width: '100%'
+        }}>
+          <StandardLoadingSpinner message="Loading Customer Tier Analytics" />
+        </div>
+      </Frame>
+    )
   }
 
   return (

@@ -1,8 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { TIER_NAMES } from '@/lib/uscTierClassification'
 import { applySquadLeadFilter, applyChannelFilter } from '@/utils/brandAccessHelper'
 import { validatePeriodRanges } from '../_utils/dateValidation'
+
+// Mapping tier lokal (urut A→Z terendah→tertinggi, sama seperti Tier Movement)
+const TIER_DEFINITIONS = [
+  { num: 1, name: 'Regular' },
+  { num: 2, name: 'Tier 1' },
+  { num: 3, name: 'Tier 2' },
+  { num: 4, name: 'Tier P1' },
+  { num: 5, name: 'Tier P2' },
+  { num: 6, name: 'Tier ND_P' },
+  { num: 7, name: 'Tier 3' },
+  { num: 8, name: 'Tier 4' },
+  { num: 9, name: 'Tier 5' },
+  { num: 10, name: 'Super VIP' }
+]
+
+const TIER_NAMES: Record<number, string> = TIER_DEFINITIONS.reduce((acc, cur) => {
+  acc[cur.num] = cur.name
+  return acc
+}, {} as Record<number, string>)
+
+const TIER_NAME_MAP = (() => {
+  const map = new Map<string, number>()
+  const add = (label: string, num: number) => {
+    const norm = label.toLowerCase()
+    map.set(norm, num)
+    map.set(norm.replace(/\s|_/g, ''), num)
+  }
+  TIER_DEFINITIONS.forEach(({ num, name }) => {
+    add(name, num)
+    if (name.toLowerCase().startsWith('tier ')) {
+      add(name.substring(5), num)
+    }
+  })
+  // alias eksplisit
+  add('nd_p', 8)
+  add('ndp', 8)
+  add('p1', 9)
+  add('p2', 10)
+  return map
+})()
 
 /**
  * ============================================================================
@@ -64,15 +103,10 @@ interface TierMetricsResponse {
  * Helper: Get tier number from tier name
  */
 function getTierNumberFromName(tierName: string): number | null {
-  const tierEntry = Object.entries(TIER_NAMES).find(([_, name]) => 
-    name.toLowerCase() === tierName.toLowerCase().trim()
-  )
-  if (tierEntry) {
-    const tierNum = parseInt(tierEntry[0])
-    if (!isNaN(tierNum) && tierNum >= 1 && tierNum <= 7) {
-      return tierNum
-    }
-  }
+  if (!tierName) return null
+  const norm = tierName.toLowerCase().trim()
+  const num = TIER_NAME_MAP.get(norm) ?? TIER_NAME_MAP.get(norm.replace(/\s|_/g, ''))
+  if (num && !isNaN(num)) return num
   return null
 }
 
@@ -129,6 +163,7 @@ async function aggregateTierMetricsByDateRange(
   while (hasMore) {
     // IMPORTANT: Rebuild query for each batch to ensure all filters are preserved
     // CRITICAL: Use queryStartDate and queryEndDate constants - these are the date range for THIS period
+    // CRITICAL: Add ordering for data consistency across batches
     let batchQuery = supabase
       .from('blue_whale_usc')
       .select('userkey, tier_name, deposit_amount, withdraw_amount, deposit_cases, date')
@@ -137,6 +172,9 @@ async function aggregateTierMetricsByDateRange(
       .lte('date', queryEndDate)   // CRITICAL: Use queryEndDate constant
       .not('tier_name', 'is', null)
       .gt('deposit_cases', 0) // Only active users (consistency with movement logic)
+      .order('userkey', { ascending: true }) // CRITICAL: Ordering for consistency
+      .order('date', { ascending: true })     // CRITICAL: Ordering for consistency
+      .range(offset, offset + BATCH_SIZE - 1)
     
     if (line && line !== 'All' && line !== 'ALL') {
       batchQuery = batchQuery.eq('line', line)
@@ -148,9 +186,6 @@ async function aggregateTierMetricsByDateRange(
     if (userAllowedBrands && userAllowedBrands.length > 0) {
       batchQuery = batchQuery.in('line', userAllowedBrands)
     }
-    
-    // Apply range for pagination
-    batchQuery = batchQuery.range(offset, offset + BATCH_SIZE - 1)
     
     const { data, error } = await batchQuery
 
@@ -177,7 +212,17 @@ async function aggregateTierMetricsByDateRange(
         console.warn(`⚠️ ${periodPrefix} [Tier Metrics Aggregate] Found ${invalidDates.length} records outside date range ${queryStartDate} to ${queryEndDate}`)
       }
       
-      allData.push(...data)
+      // CRITICAL: Filter out invalid dates before adding to allData
+      const validData = data.filter((row: any) => {
+        const rowDate = row.date
+        return rowDate && rowDate >= queryStartDate && rowDate <= queryEndDate
+      })
+      
+      if (validData.length !== data.length) {
+        console.warn(`⚠️ ${periodPrefix} [Tier Metrics Aggregate] Filtered ${data.length - validData.length} invalid records in batch at offset ${offset}`)
+      }
+      
+      allData.push(...validData)
       hasMore = data.length === BATCH_SIZE
       offset += BATCH_SIZE
       
@@ -228,18 +273,14 @@ async function aggregateTierMetricsByDateRange(
   }
 
   // Tier name to number mapping for sorting (to determine highest tier)
-  const TIER_NAME_TO_NUMBER: Record<string, number> = {
-    'Super VIP': 1,
-    'Tier 5': 2,
-    'Tier 4': 3,
-    'Tier 3': 4,
-    'Tier 2': 5,
-    'Tier 1': 6,
-    'Regular': 7,
-    'ND_P': 8,
-    'P1': 9,
-    'P2': 10
-  }
+  const TIER_NAME_TO_NUMBER: Record<string, number> = {}
+  TIER_DEFINITIONS.forEach(({ num, name }) => {
+    TIER_NAME_TO_NUMBER[name] = num
+    const withoutPrefix = name.toLowerCase().startsWith('tier ') ? name.substring(5) : name
+    TIER_NAME_TO_NUMBER[withoutPrefix] = num
+    TIER_NAME_TO_NUMBER[name.replace(/\s|_/g, '')] = num
+    TIER_NAME_TO_NUMBER[withoutPrefix.replace(/\s|_/g, '')] = num
+  })
 
   function getTierSortNumber(tierName: string): number {
     return TIER_NAME_TO_NUMBER[tierName] || 99

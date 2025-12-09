@@ -403,60 +403,6 @@ export default function CustomerTierTrends({
     return { valid: true }
   }
   
-  // Helper function to calculate date ranges
-  const calculateDateRanges = (rangeType: string) => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    
-    if (rangeType === 'Last 7 Days') {
-      // Period B: Last 7 days (current)
-      const periodBEnd = new Date(today)
-      const periodBStart = new Date(today)
-      periodBStart.setDate(today.getDate() - 6) // Last 7 days including today
-      
-      // Period A: Previous month last 7 days (same day range, previous month)
-      const periodAEnd = new Date(periodBEnd)
-      periodAEnd.setMonth(periodAEnd.getMonth() - 1)
-      const periodAStart = new Date(periodBStart)
-      periodAStart.setMonth(periodAStart.getMonth() - 1)
-      
-      return {
-        periodA: {
-          start: periodAStart.toISOString().split('T')[0],
-          end: periodAEnd.toISOString().split('T')[0]
-        },
-        periodB: {
-          start: periodBStart.toISOString().split('T')[0],
-          end: periodBEnd.toISOString().split('T')[0]
-        }
-      }
-    } else if (rangeType === 'Last 30 Days') {
-      // Period B: Last 30 days (current)
-      const periodBEnd = new Date(today)
-      const periodBStart = new Date(today)
-      periodBStart.setDate(today.getDate() - 29) // Last 30 days including today
-      
-      // Period A: Previous month last 30 days (same day range, previous month)
-      const periodAEnd = new Date(periodBEnd)
-      periodAEnd.setMonth(periodAEnd.getMonth() - 1)
-      const periodAStart = new Date(periodBStart)
-      periodAStart.setMonth(periodAStart.getMonth() - 1)
-      
-      return {
-        periodA: {
-          start: periodAStart.toISOString().split('T')[0],
-          end: periodAEnd.toISOString().split('T')[0]
-        },
-        periodB: {
-          start: periodBStart.toISOString().split('T')[0],
-          end: periodBEnd.toISOString().split('T')[0]
-        }
-      }
-    }
-    
-    return null
-  }
-  
   // Check if date pickers should be enabled (only for Custom)
   const isDatePickerEnabled = dateRange === 'Custom'
   
@@ -589,6 +535,12 @@ export default function CustomerTierTrends({
   const isInitialMountRef = useRef(true)
   const lastSearchTriggerRef = useRef(0)
   const fetchDataRef = useRef(fetchData)
+  const prevPeriodsRef = useRef<{ aStart: string; aEnd: string; bStart: string; bEnd: string }>({
+    aStart: '',
+    aEnd: '',
+    bStart: '',
+    bEnd: ''
+  })
   
   // Always keep fetchDataRef updated with latest fetchData function
   useEffect(() => {
@@ -611,6 +563,27 @@ export default function CustomerTierTrends({
     }
   }, [searchTrigger]) // ✅ Only searchTrigger triggers reload, not fetchData callback recreation
   
+  // Fetch again when parent-provided periods change (e.g., after maxDate loaded)
+  useEffect(() => {
+    if (isInitialMountRef.current) return
+    if (!periodAStart || !periodAEnd || !periodBStart || !periodBEnd) return
+    const prev = prevPeriodsRef.current
+    if (
+      prev.aStart !== periodAStart ||
+      prev.aEnd !== periodAEnd ||
+      prev.bStart !== periodBStart ||
+      prev.bEnd !== periodBEnd
+    ) {
+      prevPeriodsRef.current = {
+        aStart: periodAStart,
+        aEnd: periodAEnd,
+        bStart: periodBStart,
+        bEnd: periodBEnd
+      }
+      fetchDataRef.current()
+    }
+  }, [periodAStart, periodAEnd, periodBStart, periodBEnd])
+
   // ✅ Separate effect for date picker changes (custom mode only) - REMOVED: Date picker changes should also require Search button click
   // Date picker changes will be handled by searchTrigger when user clicks Search button
   
