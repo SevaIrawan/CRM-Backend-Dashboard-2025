@@ -210,8 +210,27 @@ export async function POST(request: NextRequest) {
       
       console.log(`📊 Aggregated export data: ${aggregatedData.length} unique users`)
     } else {
-      // Single-day mode → no aggregation, keep raw rows (sorted as fetched)
-      aggregatedData = rawData
+      // Single-day mode → no aggregation, keep raw rows but enrich with ATV, PF, days_active
+      // ✅ Match data API: calculate days_active, ATV, PF for per-daily mode
+      aggregatedData = rawData.map((row: any) => {
+        const depositAmount = row.deposit_amount || 0
+        const depositCases = row.deposit_cases || 0
+        // For per-daily mode, days_active = 1 if deposit_cases > 0, else 0
+        const daysActive = depositCases > 0 ? 1 : 0
+        
+        // ATV = Average Transaction Value = deposit_amount / deposit_cases
+        const atv = depositCases > 0 ? depositAmount / depositCases : 0
+        
+        // PF = Purchase Frequency = deposit_cases / days_active
+        const pf = daysActive > 0 ? depositCases / daysActive : 0
+        
+        return {
+          ...row,
+          days_active: daysActive,
+          atv,
+          pf
+        }
+      })
       console.log(`📊 Single-day export rows: ${aggregatedData.length}`)
     }
 
@@ -278,27 +297,32 @@ export async function POST(request: NextRequest) {
         .join(' ')
     }
     
-    // Calculate ATV and PF for aggregated data
+    // ✅ Calculate ATV and PF for all data (aggregated and single-day)
+    // Note: For aggregated mode, days_active already calculated from activeDates
+    // For single-day mode, days_active already calculated above (1 if deposit_cases > 0, else 0)
     const enrichedData = aggregatedData.map(row => {
-        const depositAmount = row.deposit_amount || 0
-        const depositCases = row.deposit_cases || 0
+      const depositAmount = row.deposit_amount || 0
+      const depositCases = row.deposit_cases || 0
       const daysActive = row.days_active || 0
-        
-        // ATV = Average Transaction Value = deposit_amount / deposit_cases
-        const atv = depositCases > 0 ? depositAmount / depositCases : 0
-        
-        // PF = Purchase Frequency = deposit_cases / days_active
-        const pf = daysActive > 0 ? depositCases / daysActive : 0
-        
-        return {
-          ...row,
-          atv,
-          pf
-        }
-      })
+      
+      // ATV = Average Transaction Value = deposit_amount / deposit_cases
+      const atv = depositCases > 0 ? depositAmount / depositCases : 0
+      
+      // PF = Purchase Frequency = deposit_cases / days_active
+      const pf = daysActive > 0 ? depositCases / daysActive : 0
+      
+      return {
+        ...row,
+        atv,
+        pf
+      }
+    })
     
     // ✅ Sort by Line (ascending), Days Active (descending), then user_unique and unique_code for consistency (match data API)
+    // For aggregated mode: sort by line, days_active, user_unique, unique_code
+    // For single-day mode: sort by date (desc), year (desc), month (desc), user_unique (asc), unique_code (asc) - match data API per-daily mode
     if (!isSingleDayMode && (isDateRangeMode || isMonthMode)) {
+      // Aggregated mode sorting
       enrichedData.sort((a, b) => {
         // First sort by line (ascending)
         if (a.line !== b.line) {
@@ -312,6 +336,17 @@ export async function POST(request: NextRequest) {
         if (a.user_unique !== b.user_unique) {
           return (a.user_unique || '').localeCompare(b.user_unique || '')
         }
+        return (a.unique_code || '').localeCompare(b.unique_code || '')
+      })
+    } else if (isSingleDayMode) {
+      // Single-day mode sorting: match data API per-daily mode
+      enrichedData.sort((a, b) => {
+        // Primary: date (desc), year (desc), month (desc)
+        if (a.date !== b.date) return b.date.localeCompare(a.date)
+        if (a.year !== b.year) return (b.year || 0) - (a.year || 0)
+        if (a.month !== b.month) return (b.month || 0) - (a.month || 0)
+        // Secondary: user_unique (asc), unique_code (asc) for consistency
+        if (a.user_unique !== b.user_unique) return (a.user_unique || '').localeCompare(b.user_unique || '')
         return (a.unique_code || '').localeCompare(b.unique_code || '')
       })
     }
