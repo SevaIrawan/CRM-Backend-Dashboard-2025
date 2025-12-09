@@ -103,17 +103,18 @@ interface TierMetricsResponse {
 }
 
 // Tier name to number mapping (untuk sorting) - Lower tier_number = Higher tier
+// Urutan: Super VIP (paling tinggi) → Tier 5 → Tier 4 → Tier 3 → P2 → P1 → ND_P → Tier 2 → Tier 1 → Regular (paling rendah)
 const TIER_NAME_TO_NUMBER: Record<string, number> = {
   'Super VIP': 1,
   'Tier 5': 2,
   'Tier 4': 3,
   'Tier 3': 4,
-  'Tier 2': 5,
-  'Tier 1': 6,
-  'Regular': 7,
-  'ND_P': 8,
-  'P1': 9,
-  'P2': 10
+  'P2': 5,
+  'P1': 6,
+  'ND_P': 7,
+  'Tier 2': 8,
+  'Tier 1': 9,
+  'Regular': 10
 }
 
 function getTierNumber(tierName: string): number {
