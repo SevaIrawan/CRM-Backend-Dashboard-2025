@@ -64,32 +64,42 @@ export async function GET(request: NextRequest) {
       query = query.eq('month', month)
     }
 
-    // Get total count first
-    let countQuery = supabase
+    // ✅ CRITICAL: Calculate unique dates (not total rows) to match days_active calculation in data route
+    // days_active = unique date userkey where deposit_cases > 0
+    // This means: count distinct dates per userkey where deposit_cases > 0
+    // Build separate query to fetch all dates for unique date calculation
+    let uniqueDateQuery = supabase
       .from('blue_whale_myr')
-      .select('*', { count: 'exact', head: true })
-      .eq('userkey', userkey)
-      .gt('deposit_cases', 0)
+      .select('date')
+      .eq('userkey', userkey) // ✅ Filter by userkey
+      .gt('deposit_cases', 0) // ✅ Only rows where deposit_cases > 0
 
-    // Apply same filters to count query
+    // Apply same filters to unique date query
     if (line && line !== 'ALL') {
-      countQuery = countQuery.eq('line', line)
+      uniqueDateQuery = uniqueDateQuery.eq('line', line)
     } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
-      countQuery = countQuery.in('line', userAllowedBrands)
+      uniqueDateQuery = uniqueDateQuery.in('line', userAllowedBrands)
     }
     if (year && year !== 'ALL') {
-      countQuery = countQuery.eq('year', parseInt(year))
+      uniqueDateQuery = uniqueDateQuery.eq('year', parseInt(year))
     }
     if (isDateRangeMode) {
-      countQuery = countQuery.gte('date', startDate).lte('date', endDate)
+      uniqueDateQuery = uniqueDateQuery.gte('date', startDate).lte('date', endDate)
     } else if (isMonthMode) {
-      countQuery = countQuery.eq('month', month)
+      uniqueDateQuery = uniqueDateQuery.eq('month', month)
     }
 
-    const countResult = await countQuery
-    const totalRecords = countResult.count || 0
+    // Fetch all matching rows to count unique dates
+    const allRowsResult = await uniqueDateQuery.range(0, 999999)
+    const uniqueDates = new Set<string>()
+    allRowsResult.data?.forEach((row: any) => {
+      if (row.date) {
+        uniqueDates.add(row.date)
+      }
+    })
+    const totalRecords = uniqueDates.size
 
-    console.log(`📊 Total days active records found: ${totalRecords}`)
+    console.log(`📊 Total unique days active found: ${totalRecords} (from ${allRowsResult.data?.length || 0} total rows)`)
 
     // Get data with pagination and sorting
     const offset = (page - 1) * limit

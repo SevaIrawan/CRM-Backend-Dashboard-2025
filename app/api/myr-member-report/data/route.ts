@@ -231,7 +231,9 @@ export async function GET(request: NextRequest) {
         
         const userRecord = userMap.get(key)
         
-        // ✅ COUNT Days Active (unique dates where deposit_cases > 0) - SAME AS CUSTOMER RETENTION
+        // ✅ COUNT Days Active: unique date userkey where deposit_cases > 0
+        // This means: count distinct dates per userkey where deposit_cases > 0
+        // Using Set to automatically handle uniqueness
         if ((row.deposit_cases || 0) > 0 && row.date) {
           userRecord.activeDates.add(row.date)
         }
@@ -256,7 +258,8 @@ export async function GET(request: NextRequest) {
       
       // Convert Map to Array and calculate days_active from activeDates
       const aggregatedData = Array.from(userMap.values()).map((user: any) => {
-        // ✅ Calculate days_active from unique dates (SAME AS CUSTOMER RETENTION)
+        // ✅ Calculate days_active: unique date userkey where deposit_cases > 0
+        // days_active = count of unique dates (Set.size) where deposit_cases > 0
         const daysActive = user.activeDates ? user.activeDates.size : 0
         return {
           ...user,

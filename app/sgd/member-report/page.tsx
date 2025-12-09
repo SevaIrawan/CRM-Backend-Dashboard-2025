@@ -795,7 +795,7 @@ function DaysActiveDetailsModal({
         headers['x-user-allowed-brands'] = JSON.stringify(allowedBrands)
       }
 
-      const response = await fetch(`/api/usc-member-report/days-active-details?${params}`, { headers })
+      const response = await fetch(`/api/sgd-member-report/days-active-details?${params}`, { headers })
       
       if (!response.ok) {
         throw new Error('Failed to fetch days active details')
