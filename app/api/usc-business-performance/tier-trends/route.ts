@@ -14,7 +14,7 @@ import { validatePeriodRanges, validateDateFormat } from '../_utils/dateValidati
  * IMPORTANT:
  * - This API ONLY READS from blue_whale_usc table
  * - tier_name column already synced from tier_usc_v1 via trigger/function
- * - Tier calculation/update is handled in Admin > Tier Management (separate)
+ * - Tier calculation/update is handled directly in Supabase
  * - Business Performance USC Page has NO connection to tier calculation
  * 
  * Params:

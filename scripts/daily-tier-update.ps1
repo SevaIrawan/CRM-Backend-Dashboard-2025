@@ -51,36 +51,7 @@ try {
     Add-Content -Path $LogFile -Value "✅ Refresh completed: $RefreshResult rows"
     
     # ========================================================================
-    # STEP 2: Calculate Tiers via API (K-Means)
-    # ========================================================================
-    
-    Add-Content -Path $LogFile -Value "`nSTEP 2: Calculating tiers (incremental)..."
-    
-    # Start Next.js server if not running (skip if already running)
-    $ProcessCheck = Get-Process -Name "node" -ErrorAction SilentlyContinue | Where-Object {$_.Path -like "*NexMax-Dashboard*"}
-    
-    if (!$ProcessCheck) {
-        Add-Content -Path $LogFile -Value "Starting Next.js server..."
-        Start-Process -FilePath "npm" -ArgumentList "run","dev" -WorkingDirectory "C:\Users\BDC Computer\NexMax-Dashboard" -WindowStyle Hidden
-        Start-Sleep -Seconds 10
-    }
-    
-    # Call calculate tiers API
-    $TodayDate = Get-Date -Format "yyyy-MM-dd"
-    $CalcUrl = "http://localhost:3000/api/admin/tier-management/calculate-tiers?currency=USC&mode=incremental&date=$TodayDate"
-    
-    $CalcResult = Invoke-RestMethod -Uri $CalcUrl -Method POST -TimeoutSec 1800
-    
-    if ($CalcResult.success) {
-        Add-Content -Path $LogFile -Value "✅ Tier calculation completed"
-        Add-Content -Path $LogFile -Value "   Total processed: $($CalcResult.data.totalProcessed)"
-        Add-Content -Path $LogFile -Value "   Total updated: $($CalcResult.data.totalUpdated)"
-    } else {
-        throw "Tier calculation failed: $($CalcResult.error)"
-    }
-    
-    # ========================================================================
-    # STEP 3: Sync to Master Table (blue_whale_usc)
+    # STEP 2: Sync to Master Table (blue_whale_usc)
     # ========================================================================
     
     Add-Content -Path $LogFile -Value "`nSTEP 3: Syncing to blue_whale_usc..."

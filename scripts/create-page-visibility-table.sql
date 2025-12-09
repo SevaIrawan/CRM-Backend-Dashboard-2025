@@ -127,7 +127,6 @@ INSERT INTO page_visibility_config (page_path, page_name, page_section, visible_
 ('/admin/page-status', 'Page Status Management', 'Admin', '["admin"]'),
 ('/admin/maintenance', 'Maintenance Mode', 'Admin', '["admin"]'),
 ('/admin/target-audit-log', 'Target Audit Log', 'Admin', '["admin"]'),
-('/admin/tier-management', 'Tier Management', 'Admin', '["admin"]'),
 ('/supabase', 'Supabase Connection', 'Other', '["admin"]');
 
 -- ============================================================

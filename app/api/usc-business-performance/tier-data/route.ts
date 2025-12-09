@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { 
-  TIER_NAMES,
-  TIER_GROUPS
-} from '@/lib/uscTierClassification'
 import { applySquadLeadFilter, applyChannelFilter } from '@/utils/brandAccessHelper'
 
 /**
@@ -15,7 +11,7 @@ import { applySquadLeadFilter, applyChannelFilter } from '@/utils/brandAccessHel
  * Returns: Tier distribution, customer breakdown by tier
  * 
  * IMPORTANT: This API ONLY READS from tier_usc_v1 table.
- * NO TIER CALCULATION - Tiers must be calculated via Admin Tier Management first.
+ * NO TIER CALCULATION - Tiers are calculated directly in Supabase.
  * 
  * Params:
  * - year: Required (e.g., "2025")
@@ -229,7 +225,7 @@ export async function GET(request: NextRequest) {
         tierDistribution,
         aggregationMode: quarter ? 'QUARTERLY' : 'YEARLY',
         period: quarter ? `${quarter} ${year}` : `${year} (All Months)`,
-        note: 'Tiers are from database (calculated via Admin Tier Management). No on-the-fly calculation.'
+        note: 'Tiers are from database (calculated directly in Supabase). No on-the-fly calculation.'
       }
     })
     
@@ -246,15 +242,35 @@ export async function GET(request: NextRequest) {
 function calculateDistribution(records: any[]) {
   const distribution: Record<number, any> = {}
   
-  for (let tier = 1; tier <= 7; tier++) {
+  // ✅ Group by tier and get tier_name/tier_group from database records
+  const tierMap = new Map<number, { tier_name: string | null; tier_group: string | null }>()
+  
+  // Collect unique tier_name and tier_group for each tier from records
+  records.forEach(r => {
+    if (r.tier !== null && r.tier !== undefined) {
+      if (!tierMap.has(r.tier)) {
+        tierMap.set(r.tier, {
+          tier_name: r.tier_name || null,
+          tier_group: r.tier_group || null
+        })
+      }
+    }
+  })
+  
+  // Get all unique tiers from records
+  const uniqueTiers = Array.from(new Set(records.map(r => r.tier).filter(t => t !== null && t !== undefined)))
+  
+  uniqueTiers.forEach(tier => {
     const tierRecords = records.filter(r => r.tier === tier)
     const count = tierRecords.length
     const percentage = records.length > 0 ? (count / records.length) * 100 : 0
     
+    const tierInfo = tierMap.get(tier) || { tier_name: null, tier_group: null }
+    
     distribution[tier] = {
       tier,
-      tierName: TIER_NAMES[tier],
-      tierGroup: TIER_GROUPS[tier],
+      tierName: tierInfo.tier_name || `Tier ${tier}`, // ✅ Use tier_name from database
+      tierGroup: tierInfo.tier_group || null, // ✅ Use tier_group from database
       count,
       percentage: Math.round(percentage * 100) / 100,
       avgDA: count > 0 ? tierRecords.reduce((sum, r) => sum + (r.total_deposit_amount || 0), 0) / count : 0,

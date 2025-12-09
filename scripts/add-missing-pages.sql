@@ -34,10 +34,6 @@ INSERT INTO page_visibility_config (page_path, page_name, page_section, visible_
 VALUES ('/admin/target-audit-log', 'Target Audit Log', 'Admin', '["admin"]')
 ON CONFLICT (page_path) DO NOTHING;
 
--- Admin Tier Management - Admin only
-INSERT INTO page_visibility_config (page_path, page_name, page_section, visible_for_roles) 
-VALUES ('/admin/tier-management', 'Tier Management', 'Admin', '["admin"]')
-ON CONFLICT (page_path) DO NOTHING;
 
 -- ============================================================
 -- VERIFICATION

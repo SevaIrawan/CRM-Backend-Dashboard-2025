@@ -361,7 +361,6 @@ export default function Sidebar({
           { title: 'Page Status Management', path: '/admin/page-status' },
           { title: 'Maintenance Mode', path: '/admin/maintenance' },
           { title: 'Target Audit Log', path: '/admin/target-audit-log' },
-          { title: 'Tier Management', path: '/admin/tier-management' }
         ]
       }
     ]
