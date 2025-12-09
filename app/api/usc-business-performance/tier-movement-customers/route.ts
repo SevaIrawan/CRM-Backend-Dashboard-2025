@@ -211,6 +211,7 @@ function aggregateUserData(
   withdrawAmount: number
   depositCases: number
   avgTransactionValue: number
+  first_deposit_date: string | null // ✅ Include first_deposit_date for ND tier validation
 }> {
   const nameToNumber = new Map<string, number>()
   Object.entries(TIER_NAMES).forEach(([num, name]) => {
