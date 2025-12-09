@@ -1598,15 +1598,15 @@ export default function TierMetricsComparison({
               }}>
                 <thead>
                   <tr style={{
-                    backgroundColor: '#F9FAFB',
-                    borderBottom: '2px solid #E5E7EB'
+                    backgroundColor: '#1F2937',
+                    borderBottom: '2px solid #374151'
                   }}>
                     <th style={{
                       padding: '16px 14px',
                       textAlign: 'center',
                       fontWeight: 700,
-                      color: '#111827',
-                      borderRight: '1px solid #E5E7EB',
+                      color: '#FFFFFF',
+                      borderRight: '1px solid #374151',
                       fontSize: '14px',
                       letterSpacing: '-0.01em'
                     }}>Tier</th>
@@ -1614,8 +1614,8 @@ export default function TierMetricsComparison({
                       padding: '16px 12px',
                       textAlign: 'center',
                       fontWeight: 700,
-                      color: '#111827',
-                      borderRight: '1px solid #E5E7EB',
+                      color: '#FFFFFF',
+                      borderRight: '1px solid #374151',
                       fontSize: '13px',
                       letterSpacing: '-0.01em'
                     }}>Customer Change</th>
@@ -1623,8 +1623,8 @@ export default function TierMetricsComparison({
                       padding: '16px 12px',
                       textAlign: 'center',
                       fontWeight: 700,
-                      color: '#111827',
-                      borderRight: '1px solid #E5E7EB',
+                      color: '#FFFFFF',
+                      borderRight: '1px solid #374151',
                       fontSize: '13px',
                       letterSpacing: '-0.01em'
                     }}>DA Change</th>
@@ -1632,7 +1632,7 @@ export default function TierMetricsComparison({
                       padding: '16px 12px',
                       textAlign: 'center',
                       fontWeight: 700,
-                      color: '#111827',
+                      color: '#FFFFFF',
                       fontSize: '13px',
                       letterSpacing: '-0.01em'
                     }}>Match Status</th>
@@ -1660,17 +1660,30 @@ export default function TierMetricsComparison({
                           style={{
                             backgroundColor: index % 2 === 0 ? '#FFFFFF' : '#FAFAFA',
                             borderBottom: isRowExpanded ? 'none' : '1px solid #E5E7EB',
-                            transition: 'background-color 0.2s ease',
+                            transition: 'all 0.2s ease',
                             cursor: 'pointer'
                           }}
                           onClick={() => toggleMovementRow(tierName)}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#f3f4f6'
-                            e.currentTarget.style.boxShadow = 'inset 0 0 8px rgba(59, 130, 246, 0.1), 0 2px 4px rgba(0, 0, 0, 0.05)'
+                            const row = e.currentTarget
+                            row.style.backgroundColor = '#F3F4F6'
+                            // Update all cells in the row
+                            Array.from(row.children).forEach((cell: any) => {
+                              if (cell.tagName === 'TD') {
+                                cell.style.backgroundColor = '#F3F4F6'
+                              }
+                            })
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#FFFFFF' : '#FAFAFA'
-                            e.currentTarget.style.boxShadow = 'none'
+                            const row = e.currentTarget
+                            const baseColor = index % 2 === 0 ? '#FFFFFF' : '#FAFAFA'
+                            row.style.backgroundColor = baseColor
+                            // Update all cells in the row
+                            Array.from(row.children).forEach((cell: any) => {
+                              if (cell.tagName === 'TD') {
+                                cell.style.backgroundColor = baseColor
+                              }
+                            })
                           }}
                         >
                         <td style={{
@@ -1681,7 +1694,8 @@ export default function TierMetricsComparison({
                           borderBottom: '1px solid #E5E7EB',
                           fontSize: '13px',
                           whiteSpace: 'nowrap',
-                          borderLeft: '3px solid ' + (TIER_COLORS_WIREFRAME[tierName] || '#6b7280')
+                          borderLeft: '3px solid ' + (TIER_COLORS_WIREFRAME[tierName] || '#6b7280'),
+                          transition: 'background-color 0.2s ease'
                         }}>
                           {tierName}
                         </td>
@@ -1689,8 +1703,10 @@ export default function TierMetricsComparison({
                           padding: '12px',
                           textAlign: 'right',
                           color: customerChange >= 0 ? '#059669' : '#dc2626',
-                          borderRight: '1px solid #e5e7eb',
-                          fontWeight: 600
+                          borderRight: '1px solid #E5E7EB',
+                          borderBottom: '1px solid #E5E7EB',
+                          fontWeight: 600,
+                          transition: 'background-color 0.2s ease'
                         }}>
                           {customerChange >= 0 ? '+' : ''}{customerChange.toFixed(1)}%
                         </td>
@@ -1698,46 +1714,22 @@ export default function TierMetricsComparison({
                           padding: '12px',
                           textAlign: 'right',
                           color: daChange >= 0 ? '#059669' : '#dc2626',
-                          borderRight: '1px solid #e5e7eb',
-                          fontWeight: 600
+                          borderRight: '1px solid #E5E7EB',
+                          borderBottom: '1px solid #E5E7EB',
+                          fontWeight: 600,
+                          transition: 'background-color 0.2s ease'
                         }}>
                           {daChange >= 0 ? '+' : ''}{daChange.toFixed(1)}%
                         </td>
                         <td style={{
                           padding: '12px',
                           textAlign: 'center',
-                          color: matchColor,
-                          fontWeight: 600,
-                          position: 'relative'
+                          color: '#6b7280',
+                          fontWeight: 500,
+                          borderBottom: '1px solid #E5E7EB',
+                          transition: 'background-color 0.2s ease'
                         }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                              <span>{matchStatus}</span>
-                              {matchDelta > 5 && (
-                                <>
-                                  <span style={{ color: matchColor, fontSize: '14px' }}>⚠</span>
-                                  <span style={{ color: matchColor, fontSize: '12px' }}>Δ {matchDelta.toFixed(1)}%</span>
-                                </>
-                              )}
-                            </div>
-                            <svg
-                              width="14"
-                              height="14"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              style={{
-                                transform: isRowExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                                transition: 'transform 0.2s ease',
-                                color: '#6b7280',
-                                cursor: 'pointer',
-                                flexShrink: 0
-                              }}
-                            >
-                              <path d="M6 9l6 6 6-6" />
-                            </svg>
-                          </div>
+                          -
                         </td>
                       </tr>
                       {isRowExpanded && (
