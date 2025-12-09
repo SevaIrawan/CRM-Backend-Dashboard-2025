@@ -1075,7 +1075,7 @@ export default function BrandPerformanceTrendsPage() {
               </div>
 
               {/* Row 6: Brand Comparison Table */}
-              <div className="grid grid-cols-1 gap-6 mb-6">
+              <div className="grid grid-cols-1 gap-6 mb-6" style={{ gridColumn: '1 / -1' }}>
                 <div 
                   style={{
                   background: '#ffffff',
@@ -1133,7 +1133,7 @@ export default function BrandPerformanceTrendsPage() {
                       {/* Row 1: Period Headers */}
                       <tr style={{
                         backgroundColor: '#1f2937',
-                        borderBottom: '1px solid rgba(255,255,255,0.10)'
+                        borderBottom: '2px solid rgba(255,255,255,0.20)'
                       }}>
                         <th rowSpan={2} style={{ 
                           padding: '8px 12px',
@@ -1148,7 +1148,7 @@ export default function BrandPerformanceTrendsPage() {
                           boxShadow: 'none',
                           verticalAlign: 'bottom',
                           borderRight: 'none',
-                          borderBottom: '1px solid rgba(255,255,255,0.12)',
+                          borderBottom: '2px solid rgba(255,255,255,0.20)',
                           letterSpacing: '-0.01em',
                           width: '110px',
                           minWidth: '110px',
@@ -1161,7 +1161,7 @@ export default function BrandPerformanceTrendsPage() {
                           fontWeight: 700,
                           color: '#ffffff',
                           borderRight: 'none',
-                          borderBottom: '1px solid rgba(255,255,255,0.12)',
+                          borderBottom: '2px solid rgba(255,255,255,0.20)',
                           letterSpacing: '-0.01em'
                         }}>Period A</th>
                         <th colSpan={visibleColumnsCount} style={{ 
@@ -1170,15 +1170,15 @@ export default function BrandPerformanceTrendsPage() {
                           fontSize: '13px',
                           fontWeight: 700,
                           color: '#ffffff',
-                          borderBottom: '1px solid rgba(255,255,255,0.12)',
+                          borderBottom: '2px solid rgba(255,255,255,0.20)',
                           letterSpacing: '-0.01em'
-                        }}>Period B (% Change)</th>
+                        }}>Period B</th>
                       </tr>
                       
                       {/* Row 2: Column Headers */}
                       <tr style={{
                         backgroundColor: '#1f2937',
-                        borderBottom: '1px solid rgba(255,255,255,0.14)'
+                        borderBottom: '2px solid rgba(255,255,255,0.20)'
                       }}>
                         {/* Period A headers */}
                         {visibleColumns.count && <th style={{ 
@@ -1188,7 +1188,7 @@ export default function BrandPerformanceTrendsPage() {
                           fontWeight: 700,
                             color: '#ffffff',
                             whiteSpace: 'nowrap',
-                            borderRight: '1px solid rgba(255,255,255,0.10)',
+                            borderRight: '2px solid rgba(255,255,255,0.20)',
                             letterSpacing: '-0.01em',
                             width: '85px',
                             minWidth: '85px'
@@ -1200,7 +1200,7 @@ export default function BrandPerformanceTrendsPage() {
                           fontWeight: 700,
                           color: '#ffffff',
                           whiteSpace: 'nowrap',
-                          borderRight: '1px solid rgba(255,255,255,0.10)',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
                           letterSpacing: '-0.01em',
                           width: '95px',
                           minWidth: '95px'
@@ -1212,7 +1212,7 @@ export default function BrandPerformanceTrendsPage() {
                           fontWeight: 700,
                           color: '#ffffff',
                           whiteSpace: 'nowrap',
-                          borderRight: '1px solid rgba(255,255,255,0.10)',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
                           letterSpacing: '-0.01em',
                           width: '100px',
                           minWidth: '100px'
@@ -1224,7 +1224,7 @@ export default function BrandPerformanceTrendsPage() {
                           fontWeight: 700,
                             color: '#ffffff',
                           whiteSpace: 'nowrap',
-                          borderRight: '1px solid rgba(255,255,255,0.10)',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
                           letterSpacing: '-0.01em',
                           width: '100px',
                           minWidth: '100px'
@@ -1236,7 +1236,7 @@ export default function BrandPerformanceTrendsPage() {
                           fontWeight: 700,
                           color: '#ffffff',
                           whiteSpace: 'nowrap',
-                          borderRight: '1px solid rgba(255,255,255,0.10)',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
                           letterSpacing: '-0.01em',
                           width: '100px',
                           minWidth: '100px'
@@ -1248,7 +1248,7 @@ export default function BrandPerformanceTrendsPage() {
                           fontWeight: 700,
                           color: '#ffffff',
                           whiteSpace: 'nowrap',
-                          borderRight: '1px solid rgba(255,255,255,0.10)',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
                           letterSpacing: '-0.01em',
                           width: '95px',
                           minWidth: '95px'
@@ -1260,7 +1260,7 @@ export default function BrandPerformanceTrendsPage() {
                           fontWeight: 700,
                           color: '#ffffff',
                           whiteSpace: 'nowrap',
-                          borderRight: '1px solid rgba(255,255,255,0.10)',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
                           letterSpacing: '-0.01em',
                           width: '100px',
                           minWidth: '100px'
@@ -1273,7 +1273,7 @@ export default function BrandPerformanceTrendsPage() {
                           fontWeight: 700,
                             color: '#ffffff',
                             whiteSpace: 'nowrap',
-                            borderRight: '1px solid rgba(255,255,255,0.10)',
+                            borderRight: '2px solid rgba(255,255,255,0.20)',
                             letterSpacing: '-0.01em',
                             width: '85px',
                             minWidth: '85px'
@@ -1285,7 +1285,7 @@ export default function BrandPerformanceTrendsPage() {
                           fontWeight: 700,
                           color: '#ffffff',
                           whiteSpace: 'nowrap',
-                          borderRight: '1px solid rgba(255,255,255,0.10)',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
                           letterSpacing: '-0.01em',
                           width: '95px',
                           minWidth: '95px'
@@ -1297,7 +1297,7 @@ export default function BrandPerformanceTrendsPage() {
                           fontWeight: 700,
                           color: '#ffffff',
                           whiteSpace: 'nowrap',
-                          borderRight: '1px solid rgba(255,255,255,0.10)',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
                           letterSpacing: '-0.01em',
                           width: '100px',
                           minWidth: '100px'
@@ -1313,7 +1313,7 @@ export default function BrandPerformanceTrendsPage() {
                             whiteSpace: 'nowrap',
                             cursor: 'pointer',
                             userSelect: 'none',
-                            borderRight: '1px solid rgba(255,255,255,0.10)',
+                            borderRight: '2px solid rgba(255,255,255,0.20)',
                             letterSpacing: '-0.01em',
                             width: '100px',
                             minWidth: '100px',
@@ -1332,7 +1332,7 @@ export default function BrandPerformanceTrendsPage() {
                           fontWeight: 700,  
                           color: '#ffffff',
                           whiteSpace: 'nowrap',
-                          borderRight: '1px solid rgba(255,255,255,0.10)',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
                           letterSpacing: '-0.01em',
                           width: '100px',
                           minWidth: '100px'
@@ -1344,7 +1344,7 @@ export default function BrandPerformanceTrendsPage() {
                           fontWeight: 700,
                           color: '#ffffff',
                           whiteSpace: 'nowrap',
-                          borderRight: '1px solid rgba(255,255,255,0.10)',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
                           letterSpacing: '-0.01em',
                           width: '95px',
                           minWidth: '95px'
@@ -1450,136 +1450,52 @@ export default function BrandPerformanceTrendsPage() {
                           {visibleColumns.daUser && <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: 'none', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                             {formatNumeric(row.periodA?.depositAmountPerUser || 0)}
                           </td>}
-                          {/* Period B data with % comparison */}
+                          {/* Period B data */}
                           {visibleColumns.count && <td 
                             style={{ 
-                              padding: '10px 12px',
+                              padding: '8px 10px',
+                              textAlign: 'right',
+                              fontSize: '13px',
+                              color: '#2563eb',
+                              fontWeight: '500',
+                              cursor: 'pointer',
                               borderLeft: '1px solid rgba(148,163,184,0.22)',
                               borderRight: '1px solid rgba(148,163,184,0.22)',
                               borderBottom: '1px solid rgba(148,163,184,0.22)',
-                              backgroundColor: getPerformanceColor(row.percent?.activeMember || 0),
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease'
+                              transition: 'color 0.2s ease'
                             }}
                             onClick={() => handleCountClick(row.brand, 'B')}
                             title="Click to view customer details"
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = 'rgba(59,130,246,0.08)'
-                              e.currentTarget.style.boxShadow = '0 6px 18px rgba(59,130,246,0.25)'
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = getPerformanceColor(row.percent?.activeMember || 0)
-                              e.currentTarget.style.boxShadow = 'none'
-                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
+                            onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
                           >
-                            <div style={{ textAlign: 'right', fontSize: '13px', color: '#2563eb', fontWeight: '500', marginBottom: '4px' }}>
                             {formatInteger(row.periodB?.activeMember || 0)}
-                            </div>
-                            <div style={{ fontSize: '11px', color: (row.percent?.activeMember || 0) >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
-                              <span>{((row.percent?.activeMember || 0) >= 0 ? '+' : '') + (row.percent?.activeMember || 0).toFixed(2)}%</span>
-                            </div>
                           </td>}
-                          {visibleColumns.atv && <td style={{ padding: '10px 12px', backgroundColor: getPerformanceColor(row.percent?.avgTransactionValue || 0), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)', transition: 'all 0.2s ease' }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = 'rgba(59,130,246,0.08)'
-                              e.currentTarget.style.boxShadow = '0 6px 18px rgba(59,130,246,0.25)'
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = getPerformanceColor(row.percent?.avgTransactionValue || 0)
-                              e.currentTarget.style.boxShadow = 'none'
-                            }}
-                          >
-                            <div style={{ textAlign: 'right', fontSize: '13px', color: '#374151', fontWeight: '500', marginBottom: '4px' }}>
+                          {visibleColumns.atv && <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                             {formatNumeric(row.periodB?.avgTransactionValue || 0)}
-                            </div>
-                            <div style={{ fontSize: '11px', color: (row.percent?.avgTransactionValue || 0) >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
-                              <span>{((row.percent?.avgTransactionValue || 0) >= 0 ? '+' : '') + (row.percent?.avgTransactionValue || 0).toFixed(2)}%</span>
-                            </div>
                           </td>}
-                          {visibleColumns.da && <td style={{ padding: '10px 12px', backgroundColor: getPerformanceColor(row.percent?.depositAmount || 0), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)', transition: 'all 0.2s ease' }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = 'rgba(59,130,246,0.08)'
-                              e.currentTarget.style.boxShadow = '0 6px 18px rgba(59,130,246,0.25)'
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = getPerformanceColor(row.percent?.depositAmount || 0)
-                              e.currentTarget.style.boxShadow = 'none'
-                            }}
-                          >
-                            <div style={{ textAlign: 'right', fontSize: '13px', color: '#374151', fontWeight: '500', marginBottom: '4px' }}>
+                          {visibleColumns.da && <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                             {formatNumeric(row.periodB?.depositAmount || 0)}
-                            </div>
-                            <div style={{ fontSize: '11px', color: (row.percent?.depositAmount || 0) >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
-                              <span>{((row.percent?.depositAmount || 0) >= 0 ? '+' : '') + (row.percent?.depositAmount || 0).toFixed(2)}%</span>
-                            </div>
                           </td>}
-                          {visibleColumns.ggr && <td style={{ padding: '10px 12px', backgroundColor: getPerformanceColor(row.percent?.ggr || 0), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)', transition: 'all 0.2s ease' }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = 'rgba(59,130,246,0.08)'
-                              e.currentTarget.style.boxShadow = '0 6px 18px rgba(59,130,246,0.25)'
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = getPerformanceColor(row.percent?.ggr || 0)
-                              e.currentTarget.style.boxShadow = 'none'
-                            }}
-                          >
-                            <div style={{ textAlign: 'right', fontSize: '13px', color: (row.periodB?.ggr || 0) >= 0 ? '#059669' : '#dc2626', fontWeight: '600', marginBottom: '4px' }}>
+                          {visibleColumns.ggr && <td style={{ 
+                            padding: '8px 10px', 
+                            textAlign: 'right', 
+                            fontSize: '13px', 
+                            color: (row.periodB?.ggr || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: '600',
+                            borderRight: '1px solid rgba(148,163,184,0.22)', 
+                            borderBottom: '1px solid rgba(148,163,184,0.22)' 
+                          }}>
                             {formatNumeric(row.periodB?.ggr || 0)}
-                            </div>
-                            <div style={{ fontSize: '11px', color: (row.percent?.ggr || 0) >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
-                              <span>{((row.percent?.ggr || 0) >= 0 ? '+' : '') + (row.percent?.ggr || 0).toFixed(2)}%</span>
-                            </div>
                           </td>}
-                          {visibleColumns.winrate && <td style={{ padding: '10px 12px', backgroundColor: getPerformanceColor(row.percent?.winrate || 0), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)', transition: 'all 0.2s ease' }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = 'rgba(59,130,246,0.08)'
-                              e.currentTarget.style.boxShadow = '0 6px 18px rgba(59,130,246,0.25)'
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = getPerformanceColor(row.percent?.winrate || 0)
-                              e.currentTarget.style.boxShadow = 'none'
-                            }}
-                          >
-                            <div style={{ textAlign: 'right', fontSize: '13px', color: '#374151', fontWeight: '500', marginBottom: '4px' }}>
+                          {visibleColumns.winrate && <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                             {formatPF(row.periodB?.winrate || 0)}
-                            </div>
-                            <div style={{ fontSize: '11px', color: (row.percent?.winrate || 0) >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
-                              <span>{((row.percent?.winrate || 0) >= 0 ? '+' : '') + (row.percent?.winrate || 0).toFixed(2)}%</span>
-                            </div>
                           </td>}
-                          {visibleColumns.ggrUser && <td style={{ padding: '10px 12px', backgroundColor: getPerformanceColor(row.percent?.ggrPerUser || 0), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)', transition: 'all 0.2s ease' }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = 'rgba(59,130,246,0.08)'
-                              e.currentTarget.style.boxShadow = '0 6px 18px rgba(59,130,246,0.25)'
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = getPerformanceColor(row.percent?.ggrPerUser || 0)
-                              e.currentTarget.style.boxShadow = 'none'
-                            }}
-                          >
-                            <div style={{ textAlign: 'right', fontSize: '13px', color: '#374151', fontWeight: '500', marginBottom: '4px' }}>
+                          {visibleColumns.ggrUser && <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                             {formatNumeric(row.periodB?.ggrPerUser || 0)}
-                            </div>
-                            <div style={{ fontSize: '11px', color: (row.percent?.ggrPerUser || 0) >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
-                              <span>{((row.percent?.ggrPerUser || 0) >= 0 ? '+' : '') + (row.percent?.ggrPerUser || 0).toFixed(2)}%</span>
-                            </div>
                           </td>}
-                          {visibleColumns.daUser && <td style={{ padding: '10px 12px', backgroundColor: getPerformanceColor(row.percent?.depositAmountPerUser || 0), borderBottom: '1px solid rgba(148,163,184,0.22)', transition: 'all 0.2s ease' }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = 'rgba(59,130,246,0.08)'
-                              e.currentTarget.style.boxShadow = '0 6px 18px rgba(59,130,246,0.25)'
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = getPerformanceColor(row.percent?.depositAmountPerUser || 0)
-                              e.currentTarget.style.boxShadow = 'none'
-                            }}
-                          >
-                            <div style={{ textAlign: 'right', fontSize: '13px', color: '#374151', fontWeight: '500', marginBottom: '4px' }}>
+                          {visibleColumns.daUser && <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: 'none', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                             {formatNumeric(row.periodB?.depositAmountPerUser || 0)}
-                            </div>
-                            <div style={{ fontSize: '11px', color: (row.percent?.depositAmountPerUser || 0) >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
-                              <span>{((row.percent?.depositAmountPerUser || 0) >= 0 ? '+' : '') + (row.percent?.depositAmountPerUser || 0).toFixed(2)}%</span>
-                            </div>
                           </td>}
                         </tr>
                       ))}
@@ -1589,8 +1505,8 @@ export default function BrandPerformanceTrendsPage() {
                         borderTop: '1px solid rgba(148,163,184,0.22)'
                       }}>
                         <td style={{ 
-                          padding: '10px 12px',
-                          fontSize: '14px',
+                          padding: '12px',
+                          fontSize: '13px',
                           fontWeight: 700,
                           color: '#111827',
                           position: 'sticky',
@@ -1645,74 +1561,49 @@ export default function BrandPerformanceTrendsPage() {
                         {visibleColumns.daUser && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: '#374151', borderRight: 'none', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                           {formatNumeric(totalPeriodA.depositAmountPerUser)}
                         </td>}
-                        {/* Period B totals with % comparison */}
+                        {/* Period B totals */}
                         {visibleColumns.count && <td 
                           style={{ 
                             padding: '12px',
-                            borderLeft: 'none',
-                            borderRight: '1px solid rgba(148,163,184,0.22)',
-                            borderBottom: '1px solid rgba(148,163,184,0.22)',
-                            backgroundColor: getPerformanceColor(totalPercent.activeMember),
+                            textAlign: 'right',
+                            fontSize: '13px',
+                            fontWeight: 700,
                             cursor: 'pointer',
-                            transition: 'all 0.2s ease'
+                            color: '#2563eb',
+                            borderLeft: '1px solid rgba(148,163,184,0.22)',
+                            borderRight: '1px solid rgba(148,163,184,0.22)',
+                            borderBottom: '1px solid rgba(148,163,184,0.22)'
                           }}
                           onClick={() => handleCountClick('ALL', 'B')}
                           title="Click to view all customer details"
                         >
-                          <div style={{ textAlign: 'right', fontSize: '13px', color: '#2563eb', fontWeight: '600', marginBottom: '4px' }}>
                           {formatInteger(totalPeriodB.activeMember)}
-                          </div>
-                          <div style={{ fontSize: '11px', color: totalPercent.activeMember >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
-                            <span>{(totalPercent.activeMember >= 0 ? '+' : '') + totalPercent.activeMember.toFixed(2)}%</span>
-                          </div>
                         </td>}
-                        {visibleColumns.atv && <td style={{ padding: '12px', backgroundColor: getPerformanceColor(totalPercent.avgTransactionValue), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)', transition: 'all 0.2s ease' }}>
-                          <div style={{ textAlign: 'right', fontSize: '13px', color: '#374151', fontWeight: '600', marginBottom: '4px' }}>
+                        {visibleColumns.atv && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                           {formatNumeric(totalPeriodB.avgTransactionValue)}
-                          </div>
-                          <div style={{ fontSize: '11px', color: totalPercent.avgTransactionValue >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
-                            <span>{(totalPercent.avgTransactionValue >= 0 ? '+' : '') + totalPercent.avgTransactionValue.toFixed(2)}%</span>
-                          </div>
                         </td>}
-                        {visibleColumns.da && <td style={{ padding: '12px', backgroundColor: getPerformanceColor(totalPercent.depositAmount), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)', transition: 'all 0.2s ease' }}>
-                          <div style={{ textAlign: 'right', fontSize: '13px', color: '#374151', fontWeight: '600', marginBottom: '4px' }}>
+                        {visibleColumns.da && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                           {formatNumeric(totalPeriodB.depositAmount)}
-                          </div>
-                          <div style={{ fontSize: '11px', color: totalPercent.depositAmount >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
-                            <span>{(totalPercent.depositAmount >= 0 ? '+' : '') + totalPercent.depositAmount.toFixed(2)}%</span>
-                          </div>
                         </td>}
-                        {visibleColumns.ggr && <td style={{ padding: '12px', backgroundColor: getPerformanceColor(totalPercent.ggr), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)', transition: 'all 0.2s ease' }}>
-                          <div style={{ textAlign: 'right', fontSize: '13px', color: totalPeriodB.ggr >= 0 ? '#059669' : '#dc2626', fontWeight: '700', marginBottom: '4px' }}>
+                        {visibleColumns.ggr && <td style={{ 
+                          padding: '12px', 
+                          textAlign: 'right', 
+                          fontSize: '13px', 
+                          fontWeight: 700, 
+                          color: totalPeriodB.ggr >= 0 ? '#059669' : '#dc2626', 
+                          borderRight: '1px solid rgba(148,163,184,0.22)', 
+                          borderBottom: '1px solid rgba(148,163,184,0.22)' 
+                        }}>
                           {formatNumeric(totalPeriodB.ggr)}
-                          </div>
-                          <div style={{ fontSize: '11px', color: totalPercent.ggr >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
-                            <span>{(totalPercent.ggr >= 0 ? '+' : '') + totalPercent.ggr.toFixed(2)}%</span>
-                          </div>
                         </td>}
-                        {visibleColumns.winrate && <td style={{ padding: '12px', backgroundColor: getPerformanceColor(totalPercent.winrate), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)', transition: 'all 0.2s ease' }}>
-                          <div style={{ textAlign: 'right', fontSize: '13px', color: '#374151', fontWeight: '600', marginBottom: '4px' }}>
+                        {visibleColumns.winrate && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                           {formatPF(totalPeriodB.winrate)}
-                          </div>
-                          <div style={{ fontSize: '11px', color: totalPercent.winrate >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
-                            <span>{(totalPercent.winrate >= 0 ? '+' : '') + totalPercent.winrate.toFixed(2)}%</span>
-                          </div>
                         </td>}
-                        {visibleColumns.ggrUser && <td style={{ padding: '12px', backgroundColor: getPerformanceColor(totalPercent.ggrPerUser), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)', transition: 'all 0.2s ease' }}>
-                          <div style={{ textAlign: 'right', fontSize: '13px', color: '#374151', fontWeight: '600', marginBottom: '4px' }}>
+                        {visibleColumns.ggrUser && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                           {formatNumeric(totalPeriodB.ggrPerUser)}
-                          </div>
-                          <div style={{ fontSize: '11px', color: totalPercent.ggrPerUser >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
-                            <span>{(totalPercent.ggrPerUser >= 0 ? '+' : '') + totalPercent.ggrPerUser.toFixed(2)}%</span>
-                          </div>
                         </td>}
-                        {visibleColumns.daUser && <td style={{ padding: '12px', backgroundColor: getPerformanceColor(totalPercent.depositAmountPerUser), borderBottom: '1px solid rgba(148,163,184,0.22)', transition: 'all 0.2s ease' }}>
-                          <div style={{ textAlign: 'right', fontSize: '13px', color: '#374151', fontWeight: '600', marginBottom: '4px' }}>
+                        {visibleColumns.daUser && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: '#374151', borderRight: 'none', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                           {formatNumeric(totalPeriodB.depositAmountPerUser)}
-                          </div>
-                          <div style={{ fontSize: '11px', color: totalPercent.depositAmountPerUser >= 0 ? '#059669' : '#dc2626', fontWeight: '600', textAlign: 'right' }}>
-                            <span>{(totalPercent.depositAmountPerUser >= 0 ? '+' : '') + totalPercent.depositAmountPerUser.toFixed(2)}%</span>
-                          </div>
                         </td>}
                       </tr>
                     </tbody>
@@ -1771,6 +1662,628 @@ export default function BrandPerformanceTrendsPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Row 7: Comparison Amount & Percentage Table */}
+              <div className="grid grid-cols-1 gap-6 mb-6" style={{ gridColumn: '1 / -1' }}>
+                <div 
+                  style={{
+                    background: '#ffffff',
+                    borderRadius: '12px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                    overflow: 'hidden',
+                    border: '1px solid #e5e7eb',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.15)'
+                    e.currentTarget.style.transform = 'translateY(-4px)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'
+                    e.currentTarget.style.transform = 'translateY(0)'
+                  }}
+                >
+                {/* Table Header */}
+                <div style={{
+                  padding: '16px 20px',
+                  borderBottom: '1px solid rgba(148,163,184,0.22)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', color: '#111827', letterSpacing: '-0.01em' }}>
+                      <span 
+                        style={{
+                          width: '20px',
+                          height: '20px',
+                          display: 'inline-block',
+                          flexShrink: 0
+                        }}
+                        dangerouslySetInnerHTML={{ __html: getChartIcon('Brand Performance') }}
+                      />
+                      Comparison Amount & Percentage
+                    </h3>
+                    <span style={{ fontSize: '12px', color: '#6B7280' }}>
+                      Period A: {periodAStart} to {periodAEnd} | Period B: {periodBStart} to {periodBEnd}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Table Container */}
+                <div className="overflow-x-auto" style={{ padding: '0' }}>
+                  <table className="w-full" style={{
+                    borderCollapse: 'separate',
+                    borderSpacing: 0
+                  }}>
+                    <thead className="sticky top-0" style={{ zIndex: 10 }}>
+                      <tr style={{
+                        backgroundColor: '#1f2937',
+                        borderBottom: '2px solid rgba(255,255,255,0.20)'
+                      }}>
+                        <th rowSpan={2} style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'center',
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          position: 'sticky',
+                          left: 0,
+                          backgroundColor: '#1f2937',
+                          zIndex: 20,
+                          boxShadow: 'none',
+                          verticalAlign: 'bottom',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
+                          width: '110px',
+                          minWidth: '110px'
+                        }}>Brand</th>
+                        <th colSpan={7} style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
+                          letterSpacing: '-0.01em'
+                        }}>Comparison</th>
+                        <th colSpan={7} style={{ 
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          letterSpacing: '-0.01em',
+                          borderRight: 'none'
+                        }}>Comparison %</th>
+                      </tr>
+                      <tr style={{
+                        backgroundColor: '#1f2937',
+                        borderBottom: '2px solid rgba(255,255,255,0.20)'
+                      }}>
+                        {visibleColumns.count && <th style={{ 
+                          padding: '8px',
+                          textAlign: 'center',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          whiteSpace: 'nowrap',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
+                          letterSpacing: '-0.01em',
+                          width: '85px',
+                          minWidth: '85px'
+                        }}>Count</th>}
+                        {visibleColumns.atv && <th style={{ 
+                          padding: '8px',
+                          textAlign: 'center',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          whiteSpace: 'nowrap',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
+                          letterSpacing: '-0.01em',
+                          width: '95px',
+                          minWidth: '95px'
+                        }}>ATV</th>}
+                        {visibleColumns.da && <th style={{ 
+                          padding: '8px',
+                          textAlign: 'center',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          whiteSpace: 'nowrap',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
+                          letterSpacing: '-0.01em',
+                          width: '100px',
+                          minWidth: '100px'
+                        }}>DA</th>}
+                        {visibleColumns.ggr && <th style={{ 
+                          padding: '8px',
+                          textAlign: 'center',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          whiteSpace: 'nowrap',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
+                          letterSpacing: '-0.01em',
+                          width: '100px',
+                          minWidth: '100px'
+                        }}>GGR</th>}
+                        {visibleColumns.winrate && <th style={{ 
+                          padding: '10px',
+                          textAlign: 'center',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          whiteSpace: 'nowrap',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
+                          letterSpacing: '-0.01em',
+                          width: '100px',
+                          minWidth: '100px'
+                        }}>Winrate</th>}
+                        {visibleColumns.ggrUser && <th style={{ 
+                          padding: '8px',
+                          textAlign: 'center',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          whiteSpace: 'nowrap',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
+                          letterSpacing: '-0.01em',
+                          width: '95px',
+                          minWidth: '95px'
+                        }}>GGR User</th>}
+                        {visibleColumns.daUser && <th style={{ 
+                          padding: '8px',
+                          textAlign: 'center',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          whiteSpace: 'nowrap',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
+                          letterSpacing: '-0.01em',
+                          width: '100px',
+                          minWidth: '100px'
+                        }}>DA User</th>}
+                        {/* Comparison % headers */}
+                        {visibleColumns.count && <th style={{ 
+                          padding: '8px',
+                          textAlign: 'center',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          whiteSpace: 'nowrap',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
+                          letterSpacing: '-0.01em',
+                          width: '85px',
+                          minWidth: '85px'
+                        }}>Count</th>}
+                        {visibleColumns.atv && <th style={{ 
+                          padding: '8px',
+                          textAlign: 'center',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          whiteSpace: 'nowrap',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
+                          letterSpacing: '-0.01em',
+                          width: '95px',
+                          minWidth: '95px'
+                        }}>ATV</th>}
+                        {visibleColumns.da && <th style={{ 
+                          padding: '8px',
+                          textAlign: 'center',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          whiteSpace: 'nowrap',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
+                          letterSpacing: '-0.01em',
+                          width: '100px',
+                          minWidth: '100px'
+                        }}>DA</th>}
+                        {visibleColumns.ggr && <th style={{ 
+                          padding: '8px',
+                          textAlign: 'center',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          whiteSpace: 'nowrap',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
+                          letterSpacing: '-0.01em',
+                          width: '100px',
+                          minWidth: '100px'
+                        }}>GGR</th>}
+                        {visibleColumns.winrate && <th style={{ 
+                          padding: '10px',
+                          textAlign: 'center',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          whiteSpace: 'nowrap',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
+                          letterSpacing: '-0.01em',
+                          width: '100px',
+                          minWidth: '100px'
+                        }}>Winrate</th>}
+                        {visibleColumns.ggrUser && <th style={{ 
+                          padding: '8px',
+                          textAlign: 'center',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          whiteSpace: 'nowrap',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
+                          letterSpacing: '-0.01em',
+                          width: '95px',
+                          minWidth: '95px'
+                        }}>GGR User</th>}
+                        {visibleColumns.daUser && <th style={{ 
+                          padding: '8px',
+                          textAlign: 'center',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          whiteSpace: 'nowrap',
+                          letterSpacing: '-0.01em',
+                          width: '100px',
+                          minWidth: '100px',
+                          borderRight: 'none'
+                        }}>DA User</th>}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {getProcessedTableData.map((row: any, index: number) => (
+                        <tr key={row.brand} style={{ 
+                          backgroundColor: index % 2 === 0 ? '#ffffff' : '#f9fafb',
+                          borderBottom: '1px solid rgba(148,163,184,0.22)',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#eff6ff'
+                          e.currentTarget.style.boxShadow = '0 2px 8px rgba(102, 126, 234, 0.15)'
+                          e.currentTarget.style.transform = 'translateY(-1px)'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#ffffff' : '#f9fafb'
+                          e.currentTarget.style.boxShadow = 'none'
+                          e.currentTarget.style.transform = 'translateY(0)'
+                        }}>
+                          <td 
+                            style={{ 
+                              padding: '8px 12px',
+                              fontSize: '13px',
+                              fontWeight: row.brand === 'TOTAL' ? '700' : '500',
+                              color: '#1f2937',
+                              position: 'sticky',
+                              left: 0,
+                              background: 'inherit',
+                              zIndex: 10,
+                              boxShadow: 'none',
+                              borderRight: 'none',
+                              borderBottom: '1px solid rgba(148,163,184,0.22)',
+                              width: '110px',
+                              minWidth: '110px',
+                              maxWidth: '110px',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }}
+                            title={row.brand}
+                          >{row.brand}</td>
+                          {/* Comparison (Amount) columns */}
+                          {visibleColumns.count && <td style={{ 
+                            padding: '8px 10px', 
+                            textAlign: 'right',
+                            fontSize: '13px',
+                            color: (row.diff?.activeMember || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: '600',
+                            borderLeft: '1px solid rgba(148,163,184,0.22)',
+                            borderRight: '1px solid rgba(148,163,184,0.22)',
+                            borderBottom: '1px solid rgba(148,163,184,0.22)'
+                          }}>
+                            {formatIntegerDiff(row.diff?.activeMember || 0)}
+                          </td>}
+                          {visibleColumns.atv && <td style={{ 
+                            padding: '8px 10px', 
+                            textAlign: 'right',
+                            fontSize: '13px',
+                            color: (row.diff?.avgTransactionValue || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: '600',
+                            borderRight: '1px solid rgba(148,163,184,0.22)',
+                            borderBottom: '1px solid rgba(148,163,184,0.22)'
+                          }}>
+                            {formatNumeric(row.diff?.avgTransactionValue || 0)}
+                          </td>}
+                          {visibleColumns.da && <td style={{ 
+                            padding: '8px 10px', 
+                            textAlign: 'right',
+                            fontSize: '13px',
+                            color: (row.diff?.depositAmount || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: '600',
+                            borderRight: '1px solid rgba(148,163,184,0.22)',
+                            borderBottom: '1px solid rgba(148,163,184,0.22)'
+                          }}>
+                            {formatNumeric(row.diff?.depositAmount || 0)}
+                          </td>}
+                          {visibleColumns.ggr && <td style={{ 
+                            padding: '8px 10px', 
+                            textAlign: 'right',
+                            fontSize: '13px',
+                            color: (row.diff?.ggr || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: '700',
+                            borderRight: '1px solid rgba(148,163,184,0.22)',
+                            borderBottom: '1px solid rgba(148,163,184,0.22)'
+                          }}>
+                            {formatNumeric(row.diff?.ggr || 0)}
+                          </td>}
+                          {visibleColumns.winrate && <td style={{ 
+                            padding: '8px 10px', 
+                            textAlign: 'right',
+                            fontSize: '13px',
+                            color: (row.diff?.winrate || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: '600',
+                            borderRight: '1px solid rgba(148,163,184,0.22)',
+                            borderBottom: '1px solid rgba(148,163,184,0.22)'
+                          }}>
+                            {formatPF(row.diff?.winrate || 0)}
+                          </td>}
+                          {visibleColumns.ggrUser && <td style={{ 
+                            padding: '8px 10px', 
+                            textAlign: 'right',
+                            fontSize: '13px',
+                            color: (row.diff?.ggrPerUser || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: '600',
+                            borderRight: '1px solid rgba(148,163,184,0.22)',
+                            borderBottom: '1px solid rgba(148,163,184,0.22)'
+                          }}>
+                            {formatNumeric(row.diff?.ggrPerUser || 0)}
+                          </td>}
+                          {visibleColumns.daUser && <td style={{ 
+                            padding: '8px 10px', 
+                            textAlign: 'right',
+                            fontSize: '13px',
+                            color: (row.diff?.depositAmountPerUser || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: '600',
+                            borderRight: '1px solid rgba(148,163,184,0.22)',
+                            borderBottom: '1px solid rgba(148,163,184,0.22)'
+                          }}>
+                            {formatNumeric(row.diff?.depositAmountPerUser || 0)}
+                          </td>}
+                          {/* Comparison % columns */}
+                          {visibleColumns.count && <td style={{ 
+                            padding: '8px 10px', 
+                            textAlign: 'right',
+                            fontSize: '13px',
+                            color: (row.percent?.activeMember || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: '600',
+                            borderLeft: '1px solid rgba(148,163,184,0.22)',
+                            borderRight: '1px solid rgba(148,163,184,0.22)',
+                            borderBottom: '1px solid rgba(148,163,184,0.22)'
+                          }}>
+                            {((row.percent?.activeMember || 0) >= 0 ? '+' : '') + (row.percent?.activeMember || 0).toFixed(2)}%
+                          </td>}
+                          {visibleColumns.atv && <td style={{ 
+                            padding: '8px 10px', 
+                            textAlign: 'right',
+                            fontSize: '13px',
+                            color: (row.percent?.avgTransactionValue || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: '600',
+                            borderRight: '1px solid rgba(148,163,184,0.22)',
+                            borderBottom: '1px solid rgba(148,163,184,0.22)'
+                          }}>
+                            {((row.percent?.avgTransactionValue || 0) >= 0 ? '+' : '') + (row.percent?.avgTransactionValue || 0).toFixed(2)}%
+                          </td>}
+                          {visibleColumns.da && <td style={{ 
+                            padding: '8px 10px', 
+                            textAlign: 'right',
+                            fontSize: '13px',
+                            color: (row.percent?.depositAmount || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: '600',
+                            borderRight: '1px solid rgba(148,163,184,0.22)',
+                            borderBottom: '1px solid rgba(148,163,184,0.22)'
+                          }}>
+                            {((row.percent?.depositAmount || 0) >= 0 ? '+' : '') + (row.percent?.depositAmount || 0).toFixed(2)}%
+                          </td>}
+                          {visibleColumns.ggr && <td style={{ 
+                            padding: '8px 10px', 
+                            textAlign: 'right',
+                            fontSize: '13px',
+                            color: (row.percent?.ggr || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: '700',
+                            borderRight: '1px solid rgba(148,163,184,0.22)',
+                            borderBottom: '1px solid rgba(148,163,184,0.22)'
+                          }}>
+                            {((row.percent?.ggr || 0) >= 0 ? '+' : '') + (row.percent?.ggr || 0).toFixed(2)}%
+                          </td>}
+                          {visibleColumns.winrate && <td style={{ 
+                            padding: '8px 10px', 
+                            textAlign: 'right',
+                            fontSize: '13px',
+                            color: (row.percent?.winrate || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: '600',
+                            borderRight: '1px solid rgba(148,163,184,0.22)',
+                            borderBottom: '1px solid rgba(148,163,184,0.22)'
+                          }}>
+                            {((row.percent?.winrate || 0) >= 0 ? '+' : '') + (row.percent?.winrate || 0).toFixed(2)}%
+                          </td>}
+                          {visibleColumns.ggrUser && <td style={{ 
+                            padding: '8px 10px', 
+                            textAlign: 'right',
+                            fontSize: '13px',
+                            color: (row.percent?.ggrPerUser || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: '600',
+                            borderRight: '1px solid rgba(148,163,184,0.22)',
+                            borderBottom: '1px solid rgba(148,163,184,0.22)'
+                          }}>
+                            {((row.percent?.ggrPerUser || 0) >= 0 ? '+' : '') + (row.percent?.ggrPerUser || 0).toFixed(2)}%
+                          </td>}
+                          {visibleColumns.daUser && <td style={{ 
+                            padding: '8px 10px', 
+                            textAlign: 'right',
+                            fontSize: '13px',
+                            color: (row.percent?.depositAmountPerUser || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: '600',
+                            borderRight: 'none',
+                            borderBottom: '1px solid rgba(148,163,184,0.22)'
+                          }}>
+                            {((row.percent?.depositAmountPerUser || 0) >= 0 ? '+' : '') + (row.percent?.depositAmountPerUser || 0).toFixed(2)}%
+                          </td>}
+                        </tr>
+                      ))}
+                      {/* TOTAL Row */}
+                      <tr style={{ 
+                        backgroundColor: '#F9FAFB',
+                        borderBottom: '1px solid rgba(148,163,184,0.22)',
+                        borderTop: '2px solid #E5E7EB'
+                      }}>
+                        <td style={{ 
+                          padding: '12px',
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          color: '#111827',
+                          position: 'sticky',
+                          left: 0,
+                          backgroundColor: '#F9FAFB',
+                          zIndex: 10,
+                          boxShadow: 'none',
+                          borderRight: 'none',
+                          borderBottom: '1px solid rgba(148,163,184,0.22)'
+                        }}>TOTAL</td>
+                        {/* Comparison (Amount) totals */}
+                        {visibleColumns.count && <td style={{ 
+                          padding: '12px', 
+                          textAlign: 'right', 
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          color: (totalDiff.activeMember >= 0 ? '#059669' : '#dc2626'),
+                          borderLeft: '1px solid rgba(148,163,184,0.22)',
+                          borderRight: '1px solid rgba(148,163,184,0.22)',
+                          borderBottom: '1px solid rgba(148,163,184,0.22)'
+                        }}>
+                          {formatIntegerDiff(totalDiff.activeMember)}
+                        </td>}
+                        {visibleColumns.atv && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: (totalDiff.avgTransactionValue >= 0 ? '#059669' : '#dc2626'), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
+                          {formatNumeric(totalDiff.avgTransactionValue)}
+                        </td>}
+                        {visibleColumns.da && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: (totalDiff.depositAmount >= 0 ? '#059669' : '#dc2626'), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
+                          {formatNumeric(totalDiff.depositAmount)}
+                        </td>}
+                        {visibleColumns.ggr && <td style={{ 
+                          padding: '12px', 
+                          textAlign: 'right', 
+                          fontSize: '13px', 
+                          fontWeight: 700, 
+                          color: totalDiff.ggr >= 0 ? '#059669' : '#dc2626', 
+                          borderRight: '1px solid rgba(148,163,184,0.22)', 
+                          borderBottom: '1px solid rgba(148,163,184,0.22)' 
+                        }}>
+                          {formatNumeric(totalDiff.ggr)}
+                        </td>}
+                        {visibleColumns.winrate && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: (totalDiff.winrate >= 0 ? '#059669' : '#dc2626'), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
+                          {formatPF(totalDiff.winrate)}
+                        </td>}
+                        {visibleColumns.ggrUser && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: (totalDiff.ggrPerUser >= 0 ? '#059669' : '#dc2626'), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
+                          {formatNumeric(totalDiff.ggrPerUser)}
+                        </td>}
+                        {visibleColumns.daUser && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: (totalDiff.depositAmountPerUser >= 0 ? '#059669' : '#dc2626'), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
+                          {formatNumeric(totalDiff.depositAmountPerUser)}
+                        </td>}
+                        {/* Comparison % totals */}
+                        {visibleColumns.count && <td style={{ 
+                          padding: '12px', 
+                          textAlign: 'right', 
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          color: (totalPercent.activeMember >= 0 ? '#059669' : '#dc2626'),
+                          borderLeft: '1px solid rgba(148,163,184,0.22)',
+                          borderRight: '1px solid rgba(148,163,184,0.22)',
+                          borderBottom: '1px solid rgba(148,163,184,0.22)'
+                        }}>
+                          {((totalPercent.activeMember >= 0 ? '+' : '') + totalPercent.activeMember.toFixed(2))}%
+                        </td>}
+                        {visibleColumns.atv && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: (totalPercent.avgTransactionValue >= 0 ? '#059669' : '#dc2626'), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
+                          {((totalPercent.avgTransactionValue >= 0 ? '+' : '') + totalPercent.avgTransactionValue.toFixed(2))}%
+                        </td>}
+                        {visibleColumns.da && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: (totalPercent.depositAmount >= 0 ? '#059669' : '#dc2626'), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
+                          {((totalPercent.depositAmount >= 0 ? '+' : '') + totalPercent.depositAmount.toFixed(2))}%
+                        </td>}
+                        {visibleColumns.ggr && <td style={{ 
+                          padding: '12px', 
+                          textAlign: 'right', 
+                          fontSize: '13px', 
+                          fontWeight: 700, 
+                          color: totalPercent.ggr >= 0 ? '#059669' : '#dc2626', 
+                          borderRight: '1px solid rgba(148,163,184,0.22)', 
+                          borderBottom: '1px solid rgba(148,163,184,0.22)' 
+                        }}>
+                          {((totalPercent.ggr >= 0 ? '+' : '') + totalPercent.ggr.toFixed(2))}%
+                        </td>}
+                        {visibleColumns.winrate && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: (totalPercent.winrate >= 0 ? '#059669' : '#dc2626'), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
+                          {((totalPercent.winrate >= 0 ? '+' : '') + totalPercent.winrate.toFixed(2))}%
+                        </td>}
+                        {visibleColumns.ggrUser && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: (totalPercent.ggrPerUser >= 0 ? '#059669' : '#dc2626'), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
+                          {((totalPercent.ggrPerUser >= 0 ? '+' : '') + totalPercent.ggrPerUser.toFixed(2))}%
+                        </td>}
+                        {visibleColumns.daUser && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: (totalPercent.depositAmountPerUser >= 0 ? '#059669' : '#dc2626'), borderRight: 'none', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
+                          {((totalPercent.depositAmountPerUser >= 0 ? '+' : '') + totalPercent.depositAmountPerUser.toFixed(2))}%
+                        </td>}
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                
+                {/* Modern Table Footer */}
+                <div style={{
+                  padding: '14px 20px',
+                  background: '#f9fafb',
+                  borderTop: '1px solid #e5e7eb',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <span style={{ fontSize: '13px', color: '#6b7280', fontWeight: '500' }}>
+                    {getProcessedTableData.length === tableData.length 
+                      ? `${tableData.length.toLocaleString()} brands` 
+                      : `${getProcessedTableData.length.toLocaleString()} of ${tableData.length.toLocaleString()} brands`}
+                  </span>
+                  <button 
+                    onClick={handleExportCSV} 
+                    disabled={exporting || tableData.length === 0}
+                    style={{
+                      padding: '8px 16px',
+                      background: exporting || tableData.length === 0 ? '#9ca3af' : '#10B981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      cursor: exporting || tableData.length === 0 ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!exporting && tableData.length > 0) {
+                        e.currentTarget.style.backgroundColor = '#059669'
+                        e.currentTarget.style.transform = 'translateY(-1px)'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!exporting && tableData.length > 0) {
+                        e.currentTarget.style.backgroundColor = '#10B981'
+                        e.currentTarget.style.transform = 'translateY(0)'
+                      }
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M8 12V4M4 8l4-4 4 4" />
+                    </svg>
+                    <span>{exporting ? 'Exporting...' : 'Export'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
 
             </>
           )}
