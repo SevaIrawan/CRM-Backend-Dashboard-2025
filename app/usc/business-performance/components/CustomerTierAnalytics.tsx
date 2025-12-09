@@ -362,6 +362,7 @@ export default function CustomerTierAnalytics({
           periodAEnd={periodAEnd}
           periodBStart={periodBStart}
           periodBEnd={periodBEnd}
+          maxDate={maxDate}
           onPeriodAChange={(start, end) => {
             setPeriodAStart(start)
             setPeriodAEnd(end)

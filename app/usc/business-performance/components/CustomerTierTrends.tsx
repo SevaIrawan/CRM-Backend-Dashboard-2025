@@ -95,6 +95,7 @@ interface CustomerTierTrendsProps {
   periodBEnd?: string
   onPeriodAChange?: (start: string, end: string) => void
   onPeriodBChange?: (start: string, end: string) => void
+  maxDate?: string // ✅ Max date from database for date range calculation
 }
 
 export default function CustomerTierTrends({ 
@@ -109,7 +110,8 @@ export default function CustomerTierTrends({
   periodBStart: propPeriodBStart,
   periodBEnd: propPeriodBEnd,
   onPeriodAChange,
-  onPeriodBChange
+  onPeriodBChange,
+  maxDate
 }: CustomerTierTrendsProps) {
   // Tier mapping untuk sorting (tier_number: tier_name)
   // Lower tier_number = Higher tier (Tier 1 = Highest, Tier 7 = Lowest)
@@ -147,6 +149,82 @@ export default function CustomerTierTrends({
     })
   }, [tierNameOptions])
   
+  // Helper function to format date as YYYY-MM-DD (local, no timezone shift)
+  const formatDateLocal = (d: Date) => {
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+
+  // Helper function to get anchor date from maxDate
+  const getAnchorDate = () => {
+    if (!maxDate) return null
+    const parts = maxDate.split('-').map(p => parseInt(p, 10))
+    if (parts.length === 3 && !parts.some(isNaN)) {
+      const [y, m, d] = parts
+      return new Date(y, m - 1, d) // local date, no TZ shift
+    }
+    return null
+  }
+
+  // Helper function to calculate date ranges
+  // Period B (current): Based on Date Range slicer, anchored to maxDate data
+  // Period A (last): Same range di bulan sebelumnya (mengikuti KPI/Brand Comparison pattern)
+  const calculateDateRanges = (rangeType: string) => {
+    const anchor = getAnchorDate()
+    if (!anchor) return null
+    anchor.setHours(0, 0, 0, 0)
+    
+    if (rangeType === 'Last 7 Days') {
+      // Period B: Last 7 days ending at anchor date
+      const periodBEnd = new Date(anchor)
+      const periodBStart = new Date(anchor)
+      periodBStart.setDate(anchor.getDate() - 6) // Last 7 days including anchor
+      
+      // Period A: Range yang sama di bulan sebelumnya
+      const periodAEnd = new Date(periodBEnd)
+      periodAEnd.setMonth(periodAEnd.getMonth() - 1)
+      const periodAStart = new Date(periodBStart)
+      periodAStart.setMonth(periodAStart.getMonth() - 1)
+      
+      return {
+        periodA: {
+          start: formatDateLocal(periodAStart),
+          end: formatDateLocal(periodAEnd)
+        },
+        periodB: {
+          start: formatDateLocal(periodBStart),
+          end: formatDateLocal(periodBEnd)
+        }
+      }
+    } else if (rangeType === 'Last 30 Days') {
+      // Period B: Last 30 days ending at anchor date
+      const periodBEnd = new Date(anchor)
+      const periodBStart = new Date(anchor)
+      periodBStart.setDate(anchor.getDate() - 29) // Last 30 days including anchor
+      
+      // Period A: Range yang sama di bulan sebelumnya
+      const periodAEnd = new Date(periodBEnd)
+      periodAEnd.setMonth(periodAEnd.getMonth() - 1)
+      const periodAStart = new Date(periodBStart)
+      periodAStart.setMonth(periodAStart.getMonth() - 1)
+      
+      return {
+        periodA: {
+          start: formatDateLocal(periodAStart),
+          end: formatDateLocal(periodAEnd)
+        },
+        periodB: {
+          start: formatDateLocal(periodBStart),
+          end: formatDateLocal(periodBEnd)
+        }
+      }
+    }
+    
+    return null
+  }
+
   // Default tier_group options (when no filter selected)
   const TIER_GROUP_OPTIONS: TierOption[] = [
     { key: 'High Value', label: 'High Value', color: '#10B981' },
