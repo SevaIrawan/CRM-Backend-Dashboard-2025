@@ -69,6 +69,7 @@ async function aggregateUserDataByDateRange(
   withdrawAmount: number
   depositCases: number
   avgTransactionValue: number
+  first_deposit_date: string | null // ✅ Include first_deposit_date for ND tier validation
 }>> {
   let query = supabase
     .from('blue_whale_usc')
@@ -556,7 +557,8 @@ export async function GET(request: NextRequest) {
         uniqueCode: data.unique_code || userUnique,
         line: data.line || 'All',
         tier: data.tier,
-        score: 0
+        score: 0,
+        first_deposit_date: data.first_deposit_date || null // ✅ Include first_deposit_date for ND tier validation
       }]
     })
 
