@@ -210,13 +210,14 @@ export default function MYRMemberReportPage() {
     }
   }, [line, year, month, initialLoadDone])
 
-  // ✅ Reload on pagination change
+  // ✅ Reload on pagination change ONLY (no auto-reload on filter changes)
   useEffect(() => {
     // Skip initial render (handled by first useEffect)
     const isInitialMount = pagination.currentPage === 1 && pagination.totalPages === 1 && pagination.totalRecords === 0
     if (!isInitialMount && line) {
       fetchMemberReportData()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pagination.currentPage])
 
   const fetchSlicerOptions = async () => {
@@ -356,15 +357,23 @@ export default function MYRMemberReportPage() {
     setMonth(selectedMonth)
     setFilterMode('month')
     setUseDateRange(false)
+    // ✅ Reset pagination when month changes (user must click Search to fetch)
+    resetPagination()
   }
 
   const handleDateRangeChange = (field: 'start' | 'end', value: string) => {
-    setDateRange(prev => ({ ...prev, [field]: value }))
-    if (field === 'start' || (field === 'end' && dateRange.start)) {
-      setFilterMode('daterange')
-      setUseDateRange(true)
-      setMonth('ALL')
-    }
+    setDateRange(prev => {
+      const updated = { ...prev, [field]: value }
+      // ✅ Set filterMode when both dates are set
+      if (field === 'start' || (field === 'end' && updated.start)) {
+        setFilterMode('daterange')
+        setUseDateRange(true)
+        setMonth('ALL')
+      }
+      return updated
+    })
+    // ✅ Reset pagination when date range changes (user must click Search to fetch)
+    resetPagination()
   }
 
   // HANDLE DATE RANGE TOGGLE
@@ -377,6 +386,8 @@ export default function MYRMemberReportPage() {
       setFilterMode('month')
       setDateRange({ start: '', end: '' }) // Clear date range
     }
+    // ✅ Reset pagination when toggle changes (user must click Search to fetch)
+    resetPagination()
   }
 
   const resetPagination = () => {
@@ -468,7 +479,10 @@ export default function MYRMemberReportPage() {
           <label className="slicer-label">LINE:</label>
           <select 
             value={line} 
-            onChange={(e) => setLine(e.target.value)}
+            onChange={(e) => {
+              setLine(e.target.value)
+              resetPagination() // ✅ Reset pagination when line changes (user must click Search to fetch)
+            }}
             className={`slicer-select ${slicerLoading ? 'disabled' : ''}`}
             disabled={slicerLoading}
           >
@@ -482,7 +496,10 @@ export default function MYRMemberReportPage() {
           <label className="slicer-label">YEAR:</label>
           <select 
             value={year} 
-            onChange={(e) => setYear(e.target.value)}
+            onChange={(e) => {
+              setYear(e.target.value)
+              resetPagination() // ✅ Reset pagination when year changes (user must click Search to fetch)
+            }}
             className="slicer-select"
           >
             <option value="ALL">All</option>
