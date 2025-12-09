@@ -60,10 +60,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all data first (no pagination for aggregation)
+    // ✅ CRITICAL: Use deterministic ordering to ensure consistent batch fetching
+    // Without this, rows with same date can be fetched in different order, causing inconsistent results
     const result = await baseQuery
       .order('date', { ascending: false })
       .order('year', { ascending: false })
       .order('month', { ascending: false })
+      .order('userkey', { ascending: true }) // ✅ Additional tie-breaker for 100% deterministic ordering
 
     if (result.error) {
       console.error('❌ Supabase query error:', result.error)
@@ -402,12 +405,16 @@ function processCustomerRetentionData(rawData: any[], previousMonthUsers: Set<st
     new_depositor: processedData.filter(u => u.status === 'NEW DEPOSITOR').length
   })
   
-  // Sort by active_days DESC, net_profit DESC
+  // ✅ Sort by active_days DESC, net_profit DESC, then userkey ASC for deterministic ordering
   processedData.sort((a, b) => {
     if (b.active_days !== a.active_days) {
       return b.active_days - a.active_days
     }
-    return b.net_profit - a.net_profit
+    if (b.net_profit !== a.net_profit) {
+      return b.net_profit - a.net_profit
+    }
+    // ✅ Additional sorting for consistency (match Member Report pattern)
+    return (a.userkey || '').localeCompare(b.userkey || '')
   })
   
   console.log(`🔍 Sample processed data:`, processedData.slice(0, 2))

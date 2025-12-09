@@ -9,8 +9,11 @@ export async function POST(request: NextRequest) {
     const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
     const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
 
+    // ✅ Ensure statusFilter has default value for consistency
+    const finalStatusFilter = statusFilter || 'ALL'
+
     console.log('📥 Exporting blue_whale_sgd customer retention data with filters:', {
-      line, year, month, startDate, endDate, filterMode, statusFilter,
+      line, year, month, startDate, endDate, filterMode, statusFilter: finalStatusFilter,
       user_allowed_brands: userAllowedBrands
     })
 
@@ -44,8 +47,14 @@ export async function POST(request: NextRequest) {
         .filter('date', 'lte', endDate)
     }
 
-    // Get all data for processing
-    const result = await query.order('date', { ascending: false })
+    // Get all data for processing - match data API ordering for consistency
+    // ✅ CRITICAL: Use deterministic ordering to ensure consistent batch fetching
+    // Without this, rows with same date can be fetched in different order, causing inconsistent results
+    const result = await query
+      .order('date', { ascending: false })
+      .order('year', { ascending: false })
+      .order('month', { ascending: false })
+      .order('userkey', { ascending: true }) // ✅ Additional tie-breaker for 100% deterministic ordering
 
     if (result.error) {
       console.error('❌ Export query error:', result.error)
@@ -68,12 +77,12 @@ export async function POST(request: NextRequest) {
     const processedData = processCustomerRetentionData(rawData, previousMonthData, month, year, userMinDates)
     console.log(`📊 Processed customer retention data: ${processedData.length} users`)
 
-    // ✅ Apply status filter if specified
-    const filteredData = statusFilter && statusFilter !== 'ALL'
-      ? processedData.filter(user => user.status === statusFilter)
-      : processedData
+    // ✅ Apply status filter if specified (consistent with data route)
+    const filteredData = finalStatusFilter === 'ALL' 
+      ? processedData 
+      : processedData.filter(user => user.status === finalStatusFilter)
     
-    console.log(`📊 After status filter (${statusFilter || 'ALL'}): ${filteredData.length} users`)
+    console.log(`📊 After status filter (${finalStatusFilter}): ${filteredData.length} users`)
 
     if (filteredData.length === 0) {
       return NextResponse.json({ 
@@ -409,11 +418,16 @@ function processCustomerRetentionData(rawData: any[], previousMonthUsers: Set<st
   })
   
   // Sort by active_days DESC, net_profit DESC
+  // ✅ Sort by active_days DESC, net_profit DESC, then userkey ASC for deterministic ordering
   processedData.sort((a, b) => {
     if (b.active_days !== a.active_days) {
       return b.active_days - a.active_days
     }
-    return b.net_profit - a.net_profit
+    if (b.net_profit !== a.net_profit) {
+      return b.net_profit - a.net_profit
+    }
+    // ✅ Additional sorting for consistency (match Member Report pattern)
+    return (a.userkey || '').localeCompare(b.userkey || '')
   })
   
   return processedData
