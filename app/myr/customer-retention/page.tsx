@@ -70,6 +70,7 @@ export default function MYRCustomerRetentionPage() {
     'unique_code',
     'first_deposit_date',
     'last_deposit_date',
+    'days_inactive',  // ✅ NEW: Absent column after LDD
     'active_days',
     'atv',  // ✅ NEW: After active_days
     'pf',   // ✅ NEW: After atv
@@ -96,6 +97,7 @@ export default function MYRCustomerRetentionPage() {
       'line': 'BRAND',
       'first_deposit_date': 'FDD',
       'last_deposit_date': 'LDD',
+      'days_inactive': 'ABSENT',  // ✅ NEW: Map days_inactive to ABSENT
       'deposit_cases': 'DC',
       'deposit_amount': 'DA',
       'withdraw_cases': 'WC',

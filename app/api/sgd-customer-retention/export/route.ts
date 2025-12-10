@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Build query with same filters as data endpoint (no currency filter needed, include first_deposit_date)
-    let query = supabase.from('blue_whale_sgd').select('userkey, user_name, unique_code, date, line, year, month, first_deposit_date, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, net_profit')
+    let query = supabase.from('blue_whale_sgd').select('userkey, user_name, unique_code, date, line, year, month, first_deposit_date, days_inactive, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, net_profit')
 
     // ✅ NEW: Apply brand filter with user permission check
     if (line && line !== 'ALL') {
@@ -97,6 +97,7 @@ export async function POST(request: NextRequest) {
       'unique_code',
       'first_deposit_date',
       'last_deposit_date',
+      'days_inactive',  // ✅ NEW: Absent column after LDD
       'active_days',
       'atv',  // ✅ NEW: After active_days
       'pf',   // ✅ NEW: After atv
@@ -298,6 +299,7 @@ function processCustomerRetentionData(rawData: any[], previousMonthUsers: Set<st
         unique_code: row.unique_code,
         first_deposit_date: row.first_deposit_date || null,  // Initialize (might be null)
         last_deposit_date: row.date,
+        days_inactive: row.days_inactive || 0,  // ✅ Store days_inactive (Absent)
         active_days: 0,
         deposit_cases: 0,
         deposit_amount: 0,
@@ -329,6 +331,8 @@ function processCustomerRetentionData(rawData: any[], previousMonthUsers: Set<st
     // Update last deposit date (MAX date)
     if (new Date(row.date) > new Date(userData.last_deposit_date)) {
       userData.last_deposit_date = row.date
+      // ✅ Update days_inactive when updating last_deposit_date (use latest value)
+      userData.days_inactive = row.days_inactive || 0
     }
     
     // Count active days (unique dates with deposit_cases > 0)

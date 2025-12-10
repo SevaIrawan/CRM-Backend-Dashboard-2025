@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Build base query for filtering - using blue_whale_sgd table (include first_deposit_date and line)
-    let baseQuery = supabase.from('blue_whale_sgd').select('userkey, user_name, unique_code, date, line, year, month, first_deposit_date, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, net_profit')
+    let baseQuery = supabase.from('blue_whale_sgd').select('userkey, user_name, unique_code, date, line, year, month, first_deposit_date, days_inactive, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, net_profit')
 
     // No currency filter needed since table is blue_whale_sgd
 
@@ -289,6 +289,7 @@ function processCustomerRetentionData(rawData: any[], previousMonthUsers: Set<st
         unique_code: row.unique_code,
         first_deposit_date: row.first_deposit_date || null,  // Initialize (might be null)
         last_deposit_date: row.date,
+        days_inactive: row.days_inactive || 0,  // ✅ Store days_inactive (Absent)
         active_days: 0,
         deposit_cases: 0,
         deposit_amount: 0,
@@ -320,6 +321,8 @@ function processCustomerRetentionData(rawData: any[], previousMonthUsers: Set<st
     // Update last deposit date (MAX date)
     if (new Date(row.date) > new Date(userData.last_deposit_date)) {
       userData.last_deposit_date = row.date
+      // ✅ Update days_inactive when updating last_deposit_date (use latest value)
+      userData.days_inactive = row.days_inactive || 0
     }
     
     // Count active days (unique dates with deposit_cases > 0)
