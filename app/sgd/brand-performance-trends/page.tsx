@@ -86,11 +86,13 @@ export default function BrandPerformanceTrendsPage() {
   const [visibleColumns, setVisibleColumns] = useState({
     count: true,
     atv: true,
+    dc: true,
     da: true,
     ggr: true,
     winrate: true,
     ggrUser: true,
-    daUser: true
+    daUser: true,
+    dcUser: true
   })
   
 
@@ -314,7 +316,9 @@ export default function BrandPerformanceTrendsPage() {
     purchaseFrequency: data.comparison.periodA.purchaseFrequency,
     winrate: data.comparison.periodA.depositAmount > 0 ? ((data.comparison.periodA.depositAmount - data.comparison.periodA.withdrawAmount) / data.comparison.periodA.depositAmount) * 100 : 0,
     ggrPerUser: data.comparison.periodA.ggrUser,
-    depositAmountPerUser: data.comparison.periodA.daUser
+    depositAmountPerUser: data.comparison.periodA.daUser,
+    dcUser: data.comparison.periodA.activeMember > 0 ? data.comparison.periodA.depositCases / data.comparison.periodA.activeMember : 0,
+    dc: data.comparison.periodA.depositCases // DC = sum[deposit_cases]
   } : {
     activeMember: 0,
     depositCases: 0,
@@ -325,7 +329,9 @@ export default function BrandPerformanceTrendsPage() {
     purchaseFrequency: 0,
     winrate: 0,
     ggrPerUser: 0,
-    depositAmountPerUser: 0
+    depositAmountPerUser: 0,
+    dcUser: 0,
+    dc: 0
   }
 
   const totalPeriodB = data && data.comparison ? {
@@ -338,7 +344,9 @@ export default function BrandPerformanceTrendsPage() {
     purchaseFrequency: data.comparison.periodB.purchaseFrequency,
     winrate: data.comparison.periodB.depositAmount > 0 ? ((data.comparison.periodB.depositAmount - data.comparison.periodB.withdrawAmount) / data.comparison.periodB.depositAmount) * 100 : 0,
     ggrPerUser: data.comparison.periodB.ggrUser,
-    depositAmountPerUser: data.comparison.periodB.daUser
+    depositAmountPerUser: data.comparison.periodB.daUser,
+    dcUser: data.comparison.periodB.activeMember > 0 ? data.comparison.periodB.depositCases / data.comparison.periodB.activeMember : 0,
+    dc: data.comparison.periodB.depositCases // DC = sum[deposit_cases]
   } : {
     activeMember: 0,
     depositCases: 0,
@@ -349,7 +357,9 @@ export default function BrandPerformanceTrendsPage() {
     purchaseFrequency: 0,
     winrate: 0,
     ggrPerUser: 0,
-    depositAmountPerUser: 0
+    depositAmountPerUser: 0,
+    dcUser: 0,
+    dc: 0
   }
 
   // ✅ USE API DIFFERENCE & PERCENTAGE DATA (100% MATCH WITH STATCARD)
@@ -362,7 +372,9 @@ export default function BrandPerformanceTrendsPage() {
     ggr: data.comparison.difference.netProfit, // ✅ Table GGR column = Net Profit difference (same as Net Profit StatCard)
     winrate: (totalPeriodB.winrate - totalPeriodA.winrate), // Calculate from winrate
     ggrPerUser: data.comparison.difference.ggrUser,
-    depositAmountPerUser: data.comparison.difference.daUser
+    depositAmountPerUser: data.comparison.difference.daUser,
+    dcUser: totalPeriodB.dcUser - totalPeriodA.dcUser,
+    dc: data.comparison.difference.depositCases // DC = sum[deposit_cases] difference
   } : {
     activeMember: 0,
     avgTransactionValue: 0,
@@ -372,7 +384,9 @@ export default function BrandPerformanceTrendsPage() {
     ggr: 0,
     winrate: 0,
     ggrPerUser: 0,
-    depositAmountPerUser: 0
+    depositAmountPerUser: 0,
+    dcUser: 0,
+    dc: 0
   }
 
   const totalPercent = data && data.comparison ? {
@@ -382,9 +396,11 @@ export default function BrandPerformanceTrendsPage() {
     depositCases: data.comparison.percentageChange.depositCases,
     depositAmount: data.comparison.percentageChange.depositAmount,
     ggr: data.comparison.percentageChange.netProfit, // ✅ Table GGR column = Net Profit % (same as Net Profit StatCard)
-    winrate: totalPeriodA.winrate !== 0 ? ((totalPeriodB.winrate - totalPeriodA.winrate) / totalPeriodA.winrate) * 100 : 0, // Calculate from winrate
+    winrate: totalPeriodA.winrate !== 0 ? ((totalPeriodB.winrate - totalPeriodA.winrate) / Math.abs(totalPeriodA.winrate)) * 100 : (totalPeriodB.winrate !== 0 ? 100 : 0), // Calculate from winrate with proper negative handling
     ggrPerUser: data.comparison.percentageChange.ggrUser,
-    depositAmountPerUser: data.comparison.percentageChange.daUser
+    depositAmountPerUser: data.comparison.percentageChange.daUser,
+    dcUser: totalPeriodA.dcUser !== 0 ? ((totalPeriodB.dcUser - totalPeriodA.dcUser) / Math.abs(totalPeriodA.dcUser)) * 100 : (totalPeriodB.dcUser !== 0 ? 100 : 0),
+    dc: data.comparison.percentageChange.depositCases // DC = sum[deposit_cases] percentage change
   } : {
     activeMember: 0,
     avgTransactionValue: 0,
@@ -394,7 +410,9 @@ export default function BrandPerformanceTrendsPage() {
     ggr: 0,
     winrate: 0,
     ggrPerUser: 0,
-    depositAmountPerUser: 0
+    depositAmountPerUser: 0,
+    dcUser: 0,
+    dc: 0
   }
 
   useEffect(() => {
@@ -416,8 +434,9 @@ export default function BrandPerformanceTrendsPage() {
 
         const latest = new Date(opt.defaults.latestDate)
         // Default 7 days based on max date (latestDate)
+        // Period B: last 7 days (e.g., if max date = 09 Dec, then 02 Dec - 09 Dec)
         const bEnd = new Date(latest)
-        const bStart = new Date(latest); bStart.setDate(bStart.getDate() - 6)
+        const bStart = new Date(latest); bStart.setDate(bStart.getDate() - 7)
         // Period A: same 7-day window on previous month
         const aEnd = new Date(bEnd); aEnd.setMonth(aEnd.getMonth() - 1)
         const aStart = new Date(bStart); aStart.setMonth(aStart.getMonth() - 1)
@@ -1205,6 +1224,18 @@ export default function BrandPerformanceTrendsPage() {
                           width: '95px',
                           minWidth: '95px'
                         }}>ATV</th>}
+                        {visibleColumns.dc && <th style={{ 
+                          padding: '8px',
+                          textAlign: 'center',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          whiteSpace: 'nowrap',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
+                          letterSpacing: '-0.01em',
+                          width: '100px',
+                          minWidth: '100px'
+                        }}>DC</th>}
                         {visibleColumns.da && <th style={{ 
                           padding: '8px',
                           textAlign: 'center',
@@ -1265,6 +1296,18 @@ export default function BrandPerformanceTrendsPage() {
                           width: '100px',
                           minWidth: '100px'
                         }}>DA User</th>}
+                        {visibleColumns.dcUser && <th style={{ 
+                          padding: '8px',
+                          textAlign: 'center',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          whiteSpace: 'nowrap',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
+                          letterSpacing: '-0.01em',
+                          width: '100px',
+                          minWidth: '100px'
+                        }}>DC User</th>}
                         {/* Period B headers */}
                         {visibleColumns.count && <th style={{ 
                             padding: '8px',
@@ -1290,6 +1333,18 @@ export default function BrandPerformanceTrendsPage() {
                           width: '95px',
                           minWidth: '95px'
                         }}>ATV</th>}
+                        {visibleColumns.dc && <th style={{ 
+                          padding: '8px',
+                          textAlign: 'center',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          whiteSpace: 'nowrap',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
+                          letterSpacing: '-0.01em',
+                          width: '100px',
+                          minWidth: '100px'
+                        }}>DC</th>}
                         {visibleColumns.da && <th style={{ 
                           padding: '8px',
                           textAlign: 'center',
@@ -1356,11 +1411,23 @@ export default function BrandPerformanceTrendsPage() {
                           fontWeight: 700,
                           color: '#ffffff',
                           whiteSpace: 'nowrap',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
+                          letterSpacing: '-0.01em',
+                          width: '100px',
+                          minWidth: '100px'
+                        }}>DA User</th>}
+                        {visibleColumns.dcUser && <th style={{ 
+                          padding: '8px',
+                          textAlign: 'center',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          whiteSpace: 'nowrap',
                           letterSpacing: '-0.01em',
                           width: '100px',
                           minWidth: '100px',
                           borderRight: 'none'
-                        }}>DA User</th>}
+                        }}>DC User</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -1427,6 +1494,9 @@ export default function BrandPerformanceTrendsPage() {
                           {visibleColumns.atv && <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                             {formatNumeric(row.periodA?.avgTransactionValue || 0)}
                           </td>}
+                          {visibleColumns.dc && <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
+                            {formatInteger(row.periodA?.depositCases || 0)}
+                          </td>}
                           {visibleColumns.da && <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                             {formatNumeric(row.periodA?.depositAmount || 0)}
                           </td>}
@@ -1447,8 +1517,11 @@ export default function BrandPerformanceTrendsPage() {
                           {visibleColumns.ggrUser && <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                             {formatNumeric(row.periodA?.ggrPerUser || 0)}
                           </td>}
-                          {visibleColumns.daUser && <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: 'none', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
+                          {visibleColumns.daUser && <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                             {formatNumeric(row.periodA?.depositAmountPerUser || 0)}
+                          </td>}
+                          {visibleColumns.dcUser && <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: 'none', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
+                            {formatNumeric(row.periodA?.dcUser || 0)}
                           </td>}
                           {/* Period B data */}
                           {visibleColumns.count && <td 
@@ -1474,6 +1547,9 @@ export default function BrandPerformanceTrendsPage() {
                           {visibleColumns.atv && <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                             {formatNumeric(row.periodB?.avgTransactionValue || 0)}
                           </td>}
+                          {visibleColumns.dc && <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
+                            {formatInteger(row.periodB?.depositCases || 0)}
+                          </td>}
                           {visibleColumns.da && <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                             {formatNumeric(row.periodB?.depositAmount || 0)}
                           </td>}
@@ -1494,8 +1570,11 @@ export default function BrandPerformanceTrendsPage() {
                           {visibleColumns.ggrUser && <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                             {formatNumeric(row.periodB?.ggrPerUser || 0)}
                           </td>}
-                          {visibleColumns.daUser && <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: 'none', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
+                          {visibleColumns.daUser && <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                             {formatNumeric(row.periodB?.depositAmountPerUser || 0)}
+                          </td>}
+                          {visibleColumns.dcUser && <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '13px', color: '#374151', borderRight: 'none', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
+                            {formatNumeric(row.periodB?.dcUser || 0)}
                           </td>}
                         </tr>
                       ))}
@@ -1538,6 +1617,9 @@ export default function BrandPerformanceTrendsPage() {
                         {visibleColumns.atv && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                           {formatNumeric(totalPeriodA.avgTransactionValue)}
                         </td>}
+                        {visibleColumns.dc && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
+                          {formatInteger(totalPeriodA.dc)}
+                        </td>}
                         {visibleColumns.da && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                           {formatNumeric(totalPeriodA.depositAmount)}
                         </td>}
@@ -1558,8 +1640,11 @@ export default function BrandPerformanceTrendsPage() {
                         {visibleColumns.ggrUser && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                           {formatNumeric(totalPeriodA.ggrPerUser)}
                         </td>}
-                        {visibleColumns.daUser && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: '#374151', borderRight: 'none', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
+                        {visibleColumns.daUser && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                           {formatNumeric(totalPeriodA.depositAmountPerUser)}
+                        </td>}
+                        {visibleColumns.dcUser && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: '#374151', borderRight: 'none', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
+                          {formatNumeric(totalPeriodA.dcUser)}
                         </td>}
                         {/* Period B totals */}
                         {visibleColumns.count && <td 
@@ -1582,6 +1667,9 @@ export default function BrandPerformanceTrendsPage() {
                         {visibleColumns.atv && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                           {formatNumeric(totalPeriodB.avgTransactionValue)}
                         </td>}
+                        {visibleColumns.dc && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
+                          {formatInteger(totalPeriodB.dc)}
+                        </td>}
                         {visibleColumns.da && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                           {formatNumeric(totalPeriodB.depositAmount)}
                         </td>}
@@ -1602,8 +1690,11 @@ export default function BrandPerformanceTrendsPage() {
                         {visibleColumns.ggrUser && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                           {formatNumeric(totalPeriodB.ggrPerUser)}
                         </td>}
-                        {visibleColumns.daUser && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: '#374151', borderRight: 'none', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
+                        {visibleColumns.daUser && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: '#374151', borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                           {formatNumeric(totalPeriodB.depositAmountPerUser)}
+                        </td>}
+                        {visibleColumns.dcUser && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: '#374151', borderRight: 'none', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
+                          {formatNumeric(totalPeriodB.dcUser)}
                         </td>}
                       </tr>
                     </tbody>
@@ -1737,7 +1828,7 @@ export default function BrandPerformanceTrendsPage() {
                           width: '110px',
                           minWidth: '110px'
                         }}>Brand</th>
-                        <th colSpan={7} style={{ 
+                        <th colSpan={9} style={{ 
                           padding: '8px 12px',
                           textAlign: 'left',
                           fontSize: '13px',
@@ -1746,7 +1837,7 @@ export default function BrandPerformanceTrendsPage() {
                           borderRight: '2px solid rgba(255,255,255,0.20)',
                           letterSpacing: '-0.01em'
                         }}>Comparison</th>
-                        <th colSpan={7} style={{ 
+                        <th colSpan={9} style={{ 
                           padding: '8px 12px',
                           textAlign: 'left',
                           fontSize: '13px',
@@ -1784,6 +1875,18 @@ export default function BrandPerformanceTrendsPage() {
                           width: '95px',
                           minWidth: '95px'
                         }}>ATV</th>}
+                        {visibleColumns.dc && <th style={{ 
+                          padding: '8px',
+                          textAlign: 'center',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          whiteSpace: 'nowrap',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
+                          letterSpacing: '-0.01em',
+                          width: '100px',
+                          minWidth: '100px'
+                        }}>DC</th>}
                         {visibleColumns.da && <th style={{ 
                           padding: '8px',
                           textAlign: 'center',
@@ -1844,6 +1947,18 @@ export default function BrandPerformanceTrendsPage() {
                           width: '100px',
                           minWidth: '100px'
                         }}>DA User</th>}
+                        {visibleColumns.dcUser && <th style={{ 
+                          padding: '8px',
+                          textAlign: 'center',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          whiteSpace: 'nowrap',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
+                          letterSpacing: '-0.01em',
+                          width: '100px',
+                          minWidth: '100px'
+                        }}>DC User</th>}
                         {/* Comparison % headers */}
                         {visibleColumns.count && <th style={{ 
                           padding: '8px',
@@ -1869,6 +1984,18 @@ export default function BrandPerformanceTrendsPage() {
                           width: '95px',
                           minWidth: '95px'
                         }}>ATV</th>}
+                        {visibleColumns.dc && <th style={{ 
+                          padding: '8px',
+                          textAlign: 'center',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          whiteSpace: 'nowrap',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
+                          letterSpacing: '-0.01em',
+                          width: '100px',
+                          minWidth: '100px'
+                        }}>DC</th>}
                         {visibleColumns.da && <th style={{ 
                           padding: '8px',
                           textAlign: 'center',
@@ -1924,11 +2051,23 @@ export default function BrandPerformanceTrendsPage() {
                           fontWeight: 700,
                           color: '#ffffff',
                           whiteSpace: 'nowrap',
+                          borderRight: '2px solid rgba(255,255,255,0.20)',
+                          letterSpacing: '-0.01em',
+                          width: '100px',
+                          minWidth: '100px'
+                        }}>DA User</th>}
+                        {visibleColumns.dcUser && <th style={{ 
+                          padding: '8px',
+                          textAlign: 'center',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          whiteSpace: 'nowrap',
                           letterSpacing: '-0.01em',
                           width: '100px',
                           minWidth: '100px',
                           borderRight: 'none'
-                        }}>DA User</th>}
+                        }}>DC User</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -1994,6 +2133,17 @@ export default function BrandPerformanceTrendsPage() {
                           }}>
                             {formatNumeric(row.diff?.avgTransactionValue || 0)}
                           </td>}
+                          {visibleColumns.dc && <td style={{ 
+                            padding: '8px 10px', 
+                            textAlign: 'right',
+                            fontSize: '13px',
+                            color: (row.diff?.depositCases || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: '600',
+                            borderRight: '1px solid rgba(148,163,184,0.22)',
+                            borderBottom: '1px solid rgba(148,163,184,0.22)'
+                          }}>
+                            {formatIntegerDiff(row.diff?.depositCases || 0)}
+                          </td>}
                           {visibleColumns.da && <td style={{ 
                             padding: '8px 10px', 
                             textAlign: 'right',
@@ -2049,6 +2199,17 @@ export default function BrandPerformanceTrendsPage() {
                           }}>
                             {formatNumeric(row.diff?.depositAmountPerUser || 0)}
                           </td>}
+                          {visibleColumns.dcUser && <td style={{ 
+                            padding: '8px 10px', 
+                            textAlign: 'right',
+                            fontSize: '13px',
+                            color: (row.diff?.dcUser || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: '600',
+                            borderRight: '1px solid rgba(148,163,184,0.22)',
+                            borderBottom: '1px solid rgba(148,163,184,0.22)'
+                          }}>
+                            {formatNumeric(row.diff?.dcUser || 0)}
+                          </td>}
                           {/* Comparison % columns */}
                           {visibleColumns.count && <td style={{ 
                             padding: '8px 10px', 
@@ -2072,6 +2233,17 @@ export default function BrandPerformanceTrendsPage() {
                             borderBottom: '1px solid rgba(148,163,184,0.22)'
                           }}>
                             {((row.percent?.avgTransactionValue || 0) >= 0 ? '+' : '') + (row.percent?.avgTransactionValue || 0).toFixed(2)}%
+                          </td>}
+                          {visibleColumns.dc && <td style={{ 
+                            padding: '8px 10px', 
+                            textAlign: 'right',
+                            fontSize: '13px',
+                            color: (row.percent?.depositCases || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: '600',
+                            borderRight: '1px solid rgba(148,163,184,0.22)',
+                            borderBottom: '1px solid rgba(148,163,184,0.22)'
+                          }}>
+                            {((row.percent?.depositCases || 0) >= 0 ? '+' : '') + (row.percent?.depositCases || 0).toFixed(2)}%
                           </td>}
                           {visibleColumns.da && <td style={{ 
                             padding: '8px 10px', 
@@ -2123,10 +2295,21 @@ export default function BrandPerformanceTrendsPage() {
                             fontSize: '13px',
                             color: (row.percent?.depositAmountPerUser || 0) >= 0 ? '#059669' : '#dc2626',
                             fontWeight: '600',
-                            borderRight: 'none',
+                            borderRight: '1px solid rgba(148,163,184,0.22)',
                             borderBottom: '1px solid rgba(148,163,184,0.22)'
                           }}>
                             {((row.percent?.depositAmountPerUser || 0) >= 0 ? '+' : '') + (row.percent?.depositAmountPerUser || 0).toFixed(2)}%
+                          </td>}
+                          {visibleColumns.dcUser && <td style={{ 
+                            padding: '8px 10px', 
+                            textAlign: 'right',
+                            fontSize: '13px',
+                            color: (row.percent?.dcUser || 0) >= 0 ? '#059669' : '#dc2626',
+                            fontWeight: '600',
+                            borderRight: 'none',
+                            borderBottom: '1px solid rgba(148,163,184,0.22)'
+                          }}>
+                            {((row.percent?.dcUser || 0) >= 0 ? '+' : '') + (row.percent?.dcUser || 0).toFixed(2)}%
                           </td>}
                         </tr>
                       ))}
@@ -2165,6 +2348,9 @@ export default function BrandPerformanceTrendsPage() {
                         {visibleColumns.atv && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: (totalDiff.avgTransactionValue >= 0 ? '#059669' : '#dc2626'), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                           {formatNumeric(totalDiff.avgTransactionValue)}
                         </td>}
+                        {visibleColumns.dc && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: (totalDiff.dc >= 0 ? '#059669' : '#dc2626'), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
+                          {formatIntegerDiff(totalDiff.dc)}
+                        </td>}
                         {visibleColumns.da && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: (totalDiff.depositAmount >= 0 ? '#059669' : '#dc2626'), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                           {formatNumeric(totalDiff.depositAmount)}
                         </td>}
@@ -2188,6 +2374,9 @@ export default function BrandPerformanceTrendsPage() {
                         {visibleColumns.daUser && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: (totalDiff.depositAmountPerUser >= 0 ? '#059669' : '#dc2626'), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                           {formatNumeric(totalDiff.depositAmountPerUser)}
                         </td>}
+                        {visibleColumns.dcUser && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: (totalDiff.dcUser >= 0 ? '#059669' : '#dc2626'), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
+                          {formatNumeric(totalDiff.dcUser)}
+                        </td>}
                         {/* Comparison % totals */}
                         {visibleColumns.count && <td style={{ 
                           padding: '12px', 
@@ -2203,6 +2392,9 @@ export default function BrandPerformanceTrendsPage() {
                         </td>}
                         {visibleColumns.atv && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: (totalPercent.avgTransactionValue >= 0 ? '#059669' : '#dc2626'), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                           {((totalPercent.avgTransactionValue >= 0 ? '+' : '') + totalPercent.avgTransactionValue.toFixed(2))}%
+                        </td>}
+                        {visibleColumns.dc && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: (totalPercent.dc >= 0 ? '#059669' : '#dc2626'), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
+                          {((totalPercent.dc >= 0 ? '+' : '') + totalPercent.dc.toFixed(2))}%
                         </td>}
                         {visibleColumns.da && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: (totalPercent.depositAmount >= 0 ? '#059669' : '#dc2626'), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                           {((totalPercent.depositAmount >= 0 ? '+' : '') + totalPercent.depositAmount.toFixed(2))}%
@@ -2224,8 +2416,11 @@ export default function BrandPerformanceTrendsPage() {
                         {visibleColumns.ggrUser && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: (totalPercent.ggrPerUser >= 0 ? '#059669' : '#dc2626'), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                           {((totalPercent.ggrPerUser >= 0 ? '+' : '') + totalPercent.ggrPerUser.toFixed(2))}%
                         </td>}
-                        {visibleColumns.daUser && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: (totalPercent.depositAmountPerUser >= 0 ? '#059669' : '#dc2626'), borderRight: 'none', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
+                        {visibleColumns.daUser && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: (totalPercent.depositAmountPerUser >= 0 ? '#059669' : '#dc2626'), borderRight: '1px solid rgba(148,163,184,0.22)', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
                           {((totalPercent.depositAmountPerUser >= 0 ? '+' : '') + totalPercent.depositAmountPerUser.toFixed(2))}%
+                        </td>}
+                        {visibleColumns.dcUser && <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: (totalPercent.dcUser >= 0 ? '#059669' : '#dc2626'), borderRight: 'none', borderBottom: '1px solid rgba(148,163,184,0.22)' }}>
+                          {((totalPercent.dcUser >= 0 ? '+' : '') + totalPercent.dcUser.toFixed(2))}%
                         </td>}
                       </tr>
                     </tbody>

@@ -514,16 +514,32 @@ export async function GET(request: NextRequest) {
     }
 
     // ✅ HELPER FUNCTION: Calculate percentage change with proper handling for negative values
+    // Handles all edge cases to avoid ambiguous results:
+    // - A=0, B=0 → 0% (no change)
+    // - A=0, B>0 → 100% (new positive value)
+    // - A=0, B<0 → -100% (new negative value)
+    // - A>0, B>0 → standard percentage (B-A)/A*100
+    // - A>0, B<0 → negative percentage (decline to negative)
+    // - A<0, B>0 → positive percentage (improved from negative to positive)
+    // - A<0, B<0 → uses |A| as denominator for meaningful comparison
     const calculatePercentageChange = (valueA: number, valueB: number): number => {
-      // If Period A is 0, handle special cases
+      // Handle zero Period A
       if (valueA === 0) {
         if (valueB === 0) return 0
         // If A=0 and B is not zero, return +/-100% based on B's sign
         return valueB > 0 ? 100 : -100
       }
       
+      // Handle very small values (close to zero) to avoid division by extremely small numbers
+      // If |A| < 0.0001, treat similar to zero case
+      if (Math.abs(valueA) < 0.0001) {
+        if (Math.abs(valueB) < 0.0001) return 0
+        return valueB > 0 ? 100 : -100
+      }
+      
       // For all other cases (including negative Period A):
       // Use absolute value of Period A as denominator to get meaningful percentage
+      // This ensures consistent interpretation regardless of sign:
       // Example 1: A=-100, B=50 → diff=150, %=(150/100)*100=150% ✅ (improved from loss to profit)
       // Example 2: A=-100, B=-50 → diff=50, %=(50/100)*100=50% ✅ (loss reduced by 50%)
       // Example 3: A=-100, B=-150 → diff=-50, %=(-50/100)*100=-50% ✅ (loss increased by 50%)
@@ -543,9 +559,11 @@ export async function GET(request: NextRequest) {
       
       // Calculate derived values for Period A
       const periodAWinrate = periodA?.netProfit && periodA?.depositAmount > 0 ? ((periodA.depositAmount - periodA.withdrawAmount) / periodA.depositAmount) * 100 : 0
+      const periodADCUser = periodA?.activeMember && periodA?.activeMember > 0 ? (periodA.depositCases || 0) / periodA.activeMember : 0
       
       // Calculate derived values for Period B
       const periodBWinrate = periodB?.netProfit && periodB?.depositAmount > 0 ? ((periodB.depositAmount - periodB.withdrawAmount) / periodB.depositAmount) * 100 : 0
+      const periodBDCUser = periodB?.activeMember && periodB?.activeMember > 0 ? (periodB.depositCases || 0) / periodB.activeMember : 0
       
       // ✅ CALCULATE DIFFERENCE (B - A) FOR EACH LINE
       const difference = {
@@ -558,7 +576,8 @@ export async function GET(request: NextRequest) {
         ggr: (periodB?.grossGamingRevenue || 0) - (periodA?.grossGamingRevenue || 0),
         winrate: periodBWinrate - periodAWinrate,
         ggrPerUser: (periodB?.ggrUser || 0) - (periodA?.ggrUser || 0),
-        depositAmountPerUser: (periodB?.daUser || 0) - (periodA?.daUser || 0)
+        depositAmountPerUser: (periodB?.daUser || 0) - (periodA?.daUser || 0),
+        dcUser: periodBDCUser - periodADCUser
       }
       
       // ✅ CALCULATE PERCENTAGE CHANGE (%) FOR EACH LINE USING HELPER FUNCTION
@@ -572,7 +591,8 @@ export async function GET(request: NextRequest) {
         ggr: calculatePercentageChange(periodA?.grossGamingRevenue || 0, periodB?.grossGamingRevenue || 0),
         winrate: calculatePercentageChange(periodAWinrate, periodBWinrate),
         ggrPerUser: calculatePercentageChange(periodA?.ggrUser || 0, periodB?.ggrUser || 0),
-        depositAmountPerUser: calculatePercentageChange(periodA?.daUser || 0, periodB?.daUser || 0)
+        depositAmountPerUser: calculatePercentageChange(periodA?.daUser || 0, periodB?.daUser || 0),
+        dcUser: calculatePercentageChange(periodADCUser, periodBDCUser)
       }
       
       return {
@@ -587,7 +607,8 @@ export async function GET(request: NextRequest) {
           ggr: periodA?.grossGamingRevenue || 0,
           winrate: periodAWinrate,
           ggrPerUser: periodA?.ggrUser || 0,
-          depositAmountPerUser: periodA?.daUser || 0
+          depositAmountPerUser: periodA?.daUser || 0,
+          dcUser: periodADCUser
         },
         periodB: {
           activeMember: periodB?.activeMember || 0,
@@ -599,7 +620,8 @@ export async function GET(request: NextRequest) {
           ggr: periodB?.grossGamingRevenue || 0,
           winrate: periodBWinrate,
           ggrPerUser: periodB?.ggrUser || 0,
-          depositAmountPerUser: periodB?.daUser || 0
+          depositAmountPerUser: periodB?.daUser || 0,
+          dcUser: periodBDCUser
         },
         diff: difference,  // ✅ Match frontend property name
         percent: percentageChange  // ✅ Match frontend property name
