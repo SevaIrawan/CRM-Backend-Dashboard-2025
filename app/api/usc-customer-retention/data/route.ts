@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Build base query for filtering - using blue_whale_usc table (include first_deposit_date and line)
-    let baseQuery = supabase.from('blue_whale_usc').select('userkey, user_name, unique_code, date, line, year, month, first_deposit_date, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, net_profit')
+    let baseQuery = supabase.from('blue_whale_usc').select('userkey, user_name, unique_code, date, line, year, month, first_deposit_date, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, net_profit')
 
     // No currency filter needed since table is blue_whale_usc
 
@@ -319,13 +319,17 @@ function processCustomerRetentionData(rawData: any[], previousMonthUsers: Set<st
       userData.activeDates.add(row.date)
     }
     
-    // Aggregate all transactions
-    userData.deposit_cases += row.deposit_cases || 0
-    userData.deposit_amount += row.deposit_amount || 0
-    userData.withdraw_cases += row.withdraw_cases || 0
-    userData.withdraw_amount += row.withdraw_amount || 0
-    userData.bonus += row.bonus || 0
-    userData.net_profit += row.net_profit || 0
+    // Aggregate all transactions - ✅ Use Number() conversion for proper type handling
+    userData.deposit_cases += Number(row.deposit_cases) || 0
+    userData.deposit_amount += Number(row.deposit_amount) || 0
+    userData.withdraw_cases += Number(row.withdraw_cases) || 0
+    userData.withdraw_amount += Number(row.withdraw_amount) || 0
+    // ✅ Bonus calculation: bonus + add_bonus - deduct_bonus (net bonus)
+    const rowBonus = Number(row.bonus) || 0
+    const rowAddBonus = Number(row.add_bonus) || 0
+    const rowDeductBonus = Number(row.deduct_bonus) || 0
+    userData.bonus += rowBonus + rowAddBonus - rowDeductBonus
+    userData.net_profit += Number(row.net_profit) || 0
   })
   
   // ✅ Calculate month-year string for NEW DEPOSITOR check
