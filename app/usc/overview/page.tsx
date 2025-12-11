@@ -118,6 +118,29 @@ export default function USCOverviewPage() {
     }
     return `${symbol} ${absValue.toFixed(0)}`;
   };
+
+  // Format numeric with currency symbol and denom (thousand separator) for Revenue Metrics
+  const formatNumericWithCurrency = (value: number | null | undefined, currency: string): string => {
+    if (value === null || value === undefined || isNaN(value)) return '0.00';
+    
+    let symbol: string;
+    switch (currency) {
+      case 'MYR': symbol = 'RM'; break;
+      case 'SGD': symbol = 'SGD'; break;
+      case 'USC': symbol = 'USD'; break;
+      case 'ALL': symbol = 'RM'; break;
+      default: symbol = 'RM';
+    }
+    
+    // Format dengan thousand separator dan 2 decimal (denom standard)
+    const formattedValue = new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(Math.abs(value));
+    
+    const sign = value < 0 ? '-' : '';
+    return `${symbol} ${sign}${formattedValue}`;
+  };
   
   // Load slicer options on component mount
   useEffect(() => {
@@ -535,35 +558,49 @@ export default function USCOverviewPage() {
           {/* Content - Only show when NOT loading and NO error */}
           {!isLoading && !loadError && (
           <>
-          {/* ROW 1: KPI CARDS (2 StatCard + 4 Dual Card) - Ordered */}
+          {/* ROW 1: KPI CARDS (6 Dual Card) - Ordered */}
           <div className="kpi-row">
-            {/* 1. Active Member - StatCard */}
-            <StatCard
-              title="ACTIVE MEMBER"
-              value={formatIntegerKPI(kpiData?.activeMember || 0)}
+            {/* 1. Member Metrics - DualCard */}
+            <DualKPICard
+              title="MEMBER METRICS"
               icon="Active Member"
-              additionalKpi={{
-                label: "DAILY AVERAGE",
-                value: formatIntegerKPI(Math.round(dailyAverages.activeMember))
+              kpi1={{
+                label: "MAM",
+                value: formatIntegerKPI(kpiData?.activeMember || 0),
+                comparison: {
+                  percentage: formatMoMChange(momData?.activeMember || 0),
+                  isPositive: Boolean(momData?.activeMember && momData.activeMember > 0)
+                }
               }}
-              comparison={{
-                percentage: formatMoMChange(momData?.activeMember || 0),
-                isPositive: Boolean(momData?.activeMember && momData.activeMember > 0)
+              kpi2={{
+                label: "PURE MAM",
+                value: formatIntegerKPI(kpiData?.pureMember || 0),
+                comparison: {
+                  percentage: formatMoMChange(momData?.pureMember || 0),
+                  isPositive: Boolean(momData?.pureMember && momData.pureMember > 0)
+                }
               }}
             />
             
-            {/* 2. Net Profit - StatCard */}
-            <StatCard
-              title="NET PROFIT"
-              value={formatCurrencyKPI(kpiData?.netProfit || 0, selectedCurrency)}
+            {/* 2. Revenue Metrics - DualCard */}
+            <DualKPICard
+              title="REVENUE METRICS"
               icon="Net Profit"
-              additionalKpi={{
-                label: "DAILY AVERAGE",
-                value: formatCurrencyKPI(dailyAverages.netProfit, selectedCurrency)
+              kpi1={{
+                label: "GGR",
+                value: formatCurrencyMK(kpiData?.grossGamingRevenue || 0, selectedCurrency),
+                comparison: {
+                  percentage: formatMoMChange(momData?.grossGamingRevenue || 0),
+                  isPositive: Boolean(momData?.grossGamingRevenue && momData.grossGamingRevenue > 0)
+                }
               }}
-              comparison={{
-                percentage: formatMoMChange(momData?.netProfit || 0),
-                isPositive: Boolean(momData?.netProfit && momData.netProfit > 0)
+              kpi2={{
+                label: "NET PROFIT",
+                value: formatCurrencyMK(kpiData?.netProfit || 0, selectedCurrency),
+                comparison: {
+                  percentage: formatMoMChange(momData?.netProfit || 0),
+                  isPositive: Boolean(momData?.netProfit && momData.netProfit > 0)
+                }
               }}
             />
             
