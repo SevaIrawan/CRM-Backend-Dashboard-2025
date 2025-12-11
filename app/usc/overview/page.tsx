@@ -7,6 +7,7 @@ import Frame from '@/components/Frame';
 import SubheaderNotice from '@/components/SubheaderNotice';
 import { LineSlicer } from '@/components/slicers';
 import StatCard from '@/components/StatCard';
+import DualKPICard from '@/components/DualKPICard';
 import StandardLoadingSpinner from '@/components/StandardLoadingSpinner';
 import { getChartIcon } from '@/lib/CentralIcon';
 import { formatCurrencyKPI, formatIntegerKPI, formatMoMChange, formatNumericKPI, formatPercentageKPI } from '@/lib/formatHelpers';
@@ -79,6 +80,45 @@ export default function USCOverviewPage() {
     avgTransactionValue: 0
   });
   
+  // Previous month data for DC User MoM calculation
+  const [previousMonthData, setPreviousMonthData] = useState<{
+    depositCases: number;
+    activeMember: number;
+  } | null>(null);
+
+  // Format currency with M/K (Million/Thousand) for DualCard
+  const formatCurrencyMK = (value: number | null | undefined, currency: string): string => {
+    if (value === null || value === undefined || isNaN(value) || value === 0) {
+      let symbol: string;
+      switch (currency) {
+        case 'MYR': symbol = 'RM'; break;
+        case 'SGD': symbol = 'SGD'; break;
+        case 'USC': symbol = 'USD'; break;
+        case 'ALL': symbol = 'RM'; break;
+        default: symbol = 'RM';
+      }
+      return `${symbol} 0`;
+    }
+
+    let symbol: string;
+    switch (currency) {
+      case 'MYR': symbol = 'RM'; break;
+      case 'SGD': symbol = 'SGD'; break;
+      case 'USC': symbol = 'USD'; break;
+      case 'ALL': symbol = 'RM'; break;
+      default: symbol = 'RM';
+    }
+
+    const absValue = Math.abs(value);
+    if (absValue >= 1000000) {
+      return `${symbol} ${(absValue / 1000000).toFixed(1)}M`;
+    }
+    if (absValue >= 1000) {
+      return `${symbol} ${(absValue / 1000).toFixed(1)}K`;
+    }
+    return `${symbol} ${absValue.toFixed(0)}`;
+  };
+  
   // Load slicer options on component mount
   useEffect(() => {
     const loadSlicerOptions = async () => {
@@ -142,6 +182,36 @@ export default function USCOverviewPage() {
       setKpiData(result.current);
       setMomData(result.mom);
       setDailyAverages(result.dailyAverage);
+      
+      // Calculate previous month data for DC User MoM
+      // DC User = depositCases / activeMember
+      // Previous DC User = previousDepositCases / previousActiveMember
+      // We can reverse calculate from MoM percentages
+      const depositCasesMoM = result.mom.depositCases || 0
+      const activeMemberMoM = result.mom.activeMember || 0
+      
+      // Reverse calculate previous values from MoM
+      // MoM = ((current - previous) / previous) * 100
+      // previous = current / (1 + MoM/100)
+      // Handle edge case: if MoM = -100, then 1 + MoM/100 = 0 (division by zero)
+      // If MoM < -100, previous becomes negative (invalid)
+      const calculatePrevious = (current: number, mom: number): number => {
+        if (mom === 0) return current
+        const denominator = 1 + (mom / 100)
+        // If denominator is 0 or negative, we can't reverse calculate accurately
+        // Return a fallback value (assume no change)
+        if (denominator <= 0) return current
+        return current / denominator
+      }
+      
+      const previousDepositCases = calculatePrevious(result.current.depositCases, depositCasesMoM)
+      const previousActiveMember = calculatePrevious(result.current.activeMember, activeMemberMoM)
+      
+      setPreviousMonthData({
+        depositCases: previousDepositCases,
+        activeMember: previousActiveMember
+      });
+      
       setKpiLoaded(true);
 
       logger.log('✅ [USC Overview] KPI data loaded using STANDARD LOGIC');
@@ -465,47 +535,9 @@ export default function USCOverviewPage() {
           {/* Content - Only show when NOT loading and NO error */}
           {!isLoading && !loadError && (
           <>
-          {/* ROW 1: KPI CARDS (6 cards) */}
+          {/* ROW 1: KPI CARDS (2 StatCard + 4 Dual Card) - Ordered */}
           <div className="kpi-row">
-            <StatCard
-              title="DEPOSIT AMOUNT"
-              value={formatCurrencyKPI(kpiData?.depositAmount || 0, selectedCurrency)}
-              icon="Deposit Amount"
-              additionalKpi={{
-                label: "DAILY AVERAGE",
-                value: formatCurrencyKPI(dailyAverages.depositAmount, selectedCurrency)
-              }}
-              comparison={{
-                percentage: formatMoMChange(momData?.depositAmount || 0),
-                isPositive: Boolean(momData?.depositAmount && momData.depositAmount > 0)
-              }}
-            />
-            <StatCard
-              title="WITHDRAW AMOUNT"
-              value={formatCurrencyKPI(kpiData?.withdrawAmount || 0, selectedCurrency)}
-              icon="Withdraw Amount"
-              additionalKpi={{
-                label: "DAILY AVERAGE",
-                value: formatCurrencyKPI(dailyAverages.withdrawAmount, selectedCurrency)
-              }}
-              comparison={{
-                percentage: formatMoMChange(momData?.withdrawAmount || 0),
-                isPositive: Boolean(momData?.withdrawAmount && momData.withdrawAmount > 0)
-              }}
-            />
-            <StatCard
-              title="NET PROFIT"
-              value={formatCurrencyKPI(kpiData?.netProfit || 0, selectedCurrency)}
-              icon="Net Profit"
-              additionalKpi={{
-                label: "DAILY AVERAGE",
-                value: formatCurrencyKPI(dailyAverages.netProfit, selectedCurrency)
-              }}
-              comparison={{
-                percentage: formatMoMChange(momData?.netProfit || 0),
-                isPositive: Boolean(momData?.netProfit && momData.netProfit > 0)
-              }}
-            />
+            {/* 1. Active Member - StatCard */}
             <StatCard
               title="ACTIVE MEMBER"
               value={formatIntegerKPI(kpiData?.activeMember || 0)}
@@ -519,30 +551,147 @@ export default function USCOverviewPage() {
                 isPositive: Boolean(momData?.activeMember && momData.activeMember > 0)
               }}
             />
+            
+            {/* 2. Net Profit - StatCard */}
             <StatCard
-              title="PURCHASE FREQ"
-              value={formatNumericKPI(kpiData?.purchaseFrequency || 0)}
-              icon="Purchase Frequency"
+              title="NET PROFIT"
+              value={formatCurrencyKPI(kpiData?.netProfit || 0, selectedCurrency)}
+              icon="Net Profit"
               additionalKpi={{
                 label: "DAILY AVERAGE",
-                value: formatNumericKPI(dailyAverages.purchaseFrequency)
+                value: formatCurrencyKPI(dailyAverages.netProfit, selectedCurrency)
               }}
               comparison={{
-                percentage: formatMoMChange(momData?.purchaseFrequency || 0),
-                isPositive: Boolean(momData?.purchaseFrequency && momData.purchaseFrequency > 0)
+                percentage: formatMoMChange(momData?.netProfit || 0),
+                isPositive: Boolean(momData?.netProfit && momData.netProfit > 0)
               }}
             />
-            <StatCard
-              title="ATV"
-              value={formatCurrencyKPI(kpiData?.avgTransactionValue || 0, selectedCurrency)}
-              icon="Average Transaction Value"
-              additionalKpi={{
-                label: "DAILY AVERAGE",
-                value: formatCurrencyKPI(dailyAverages.avgTransactionValue, selectedCurrency)
+            
+            {/* 3. Transaction IN - DualCard */}
+            <DualKPICard
+              title="TRANSACTION IN"
+              icon="Deposit Amount"
+              kpi1={{
+                label: "DA",
+                value: formatCurrencyMK(kpiData?.depositAmount || 0, selectedCurrency),
+                comparison: {
+                  percentage: formatMoMChange(momData?.depositAmount || 0),
+                  isPositive: Boolean(momData?.depositAmount && momData.depositAmount > 0)
+                }
               }}
-              comparison={{
-                percentage: formatMoMChange(momData?.avgTransactionValue || 0),
-                isPositive: Boolean(momData?.avgTransactionValue && momData.avgTransactionValue > 0)
+              kpi2={{
+                label: "DC",
+                value: formatIntegerKPI(kpiData?.depositCases || 0),
+                comparison: {
+                  percentage: formatMoMChange(momData?.depositCases || 0),
+                  isPositive: Boolean(momData?.depositCases && momData.depositCases > 0)
+                }
+              }}
+            />
+            
+            {/* 4. Transaction OUT - DualCard */}
+            <DualKPICard
+              title="TRANSACTION OUT"
+              icon="Withdraw Amount"
+              kpi1={{
+                label: "WA",
+                value: formatCurrencyMK(kpiData?.withdrawAmount || 0, selectedCurrency),
+                comparison: {
+                  percentage: formatMoMChange(momData?.withdrawAmount || 0),
+                  isPositive: Boolean(momData?.withdrawAmount && momData.withdrawAmount > 0)
+                }
+              }}
+              kpi2={{
+                label: "WC",
+                value: formatIntegerKPI(kpiData?.withdrawCases || 0),
+                comparison: {
+                  percentage: formatMoMChange(momData?.withdrawCases || 0),
+                  isPositive: Boolean(momData?.withdrawCases && momData.withdrawCases > 0)
+                }
+              }}
+            />
+            
+            {/* 5. User Metrics - DualCard */}
+            <DualKPICard
+              title="USER METRICS"
+              icon="Deposit Amount"
+              kpi1={{
+                label: "DA USER",
+                value: formatCurrencyKPI(kpiData?.depositAmountUser || 0, selectedCurrency),
+                comparison: {
+                  percentage: formatMoMChange(momData?.depositAmountUser || 0),
+                  isPositive: Boolean(momData?.depositAmountUser && momData.depositAmountUser > 0)
+                }
+              }}
+              kpi2={{
+                label: "GGR USER",
+                value: formatCurrencyKPI(kpiData?.ggrPerUser || 0, selectedCurrency),
+                comparison: {
+                  percentage: formatMoMChange(momData?.ggrPerUser || 0),
+                  isPositive: Boolean(momData?.ggrPerUser && momData.ggrPerUser > 0)
+                }
+              }}
+            />
+            
+            {/* 6. Transaction Metrics - DualCard */}
+            <DualKPICard
+              title="TRANSACTION METRICS"
+              icon="Average Transaction Value"
+              kpi1={{
+                label: "ATV",
+                value: formatCurrencyKPI(kpiData?.avgTransactionValue || 0, selectedCurrency),
+                comparison: {
+                  percentage: formatMoMChange(momData?.avgTransactionValue || 0),
+                  isPositive: Boolean(momData?.avgTransactionValue && momData.avgTransactionValue > 0)
+                }
+              }}
+              kpi2={{
+                label: "DC USER",
+                value: formatNumericKPI(
+                  kpiData?.activeMember > 0 
+                    ? (kpiData?.depositCases || 0) / (kpiData?.activeMember || 1)
+                    : 0
+                ),
+                comparison: {
+                  percentage: formatMoMChange(
+                    (() => {
+                      // Calculate DC User MoM accurately
+                      const currentDCUser = kpiData?.activeMember > 0 
+                        ? (kpiData?.depositCases || 0) / (kpiData?.activeMember || 1)
+                        : 0
+                      
+                      // If no previous month data or invalid, return 0
+                      if (!previousMonthData || previousMonthData.activeMember <= 0) {
+                        return 0
+                      }
+                      
+                      const previousDCUser = previousMonthData.depositCases / previousMonthData.activeMember
+                      
+                      // Calculate MoM: ((current - previous) / previous) * 100
+                      // Handle division by zero
+                      if (previousDCUser === 0) {
+                        return currentDCUser > 0 ? 100 : 0
+                      }
+                      
+                      // Use Math.abs for denominator to handle edge cases (same as calculateUSCMoM)
+                      const momValue = ((currentDCUser - previousDCUser) / Math.abs(previousDCUser)) * 100
+                      return isNaN(momValue) || !isFinite(momValue) ? 0 : momValue
+                    })()
+                  ),
+                  isPositive: (() => {
+                    const currentDCUser = kpiData?.activeMember > 0 
+                      ? (kpiData?.depositCases || 0) / (kpiData?.activeMember || 1)
+                      : 0
+                    
+                    // If no previous month data or invalid, return false
+                    if (!previousMonthData || previousMonthData.activeMember <= 0) {
+                      return false
+                    }
+                    
+                    const previousDCUser = previousMonthData.depositCases / previousMonthData.activeMember
+                    return currentDCUser > previousDCUser
+                  })()
+                }
               }}
             />
           </div>

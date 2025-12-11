@@ -346,6 +346,10 @@ export function ComparisonIcon({ isPositive, size = '12px', className = '' }: {
   const iconSvg = getComparisonIcon(isPositive)
   const iconColor = isPositive ? '#10B981' : '#EF4444' // Green for positive, Red for negative
   
+  // Inject fill="currentColor" into SVG path to inherit color from parent
+  // Only add fill if it doesn't already exist
+  const coloredSvg = iconSvg.replace(/<path(?![^>]*fill=)/g, '<path fill="currentColor"')
+  
   return (
     <div 
       className={`comparison-icon ${className}`}
@@ -357,7 +361,7 @@ export function ComparisonIcon({ isPositive, size = '12px', className = '' }: {
         justifyContent: 'center',
         color: iconColor
       }}
-      dangerouslySetInnerHTML={{ __html: iconSvg }}
+      dangerouslySetInnerHTML={{ __html: coloredSvg }}
     />
   )
 }

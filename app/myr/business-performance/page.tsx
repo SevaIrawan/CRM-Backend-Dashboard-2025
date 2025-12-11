@@ -316,7 +316,9 @@ export default function BusinessPerformancePage() {
   
   const formatCurrencyFull = (value: number): string => {
     if (!value) return 'RM 0'
-    return `RM ${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+    if (value >= 1000000) return `RM ${(value / 1000000).toFixed(1)}M`
+    if (value >= 1000) return `RM ${(value / 1000).toFixed(1)}K`
+    return `RM ${value.toFixed(0)}`
   }
   
   // Format with 2 decimal places (for ATV, PF, GGR User, DA User)
@@ -574,16 +576,38 @@ export default function BusinessPerformancePage() {
             }}
           />
           
-          {/* DC & WC */}
+          {/* Transaction IN - DA & DC */}
           <DualKPICard 
-            title="Transaction Volume"
-            icon="Transaction Metrics"
+            title="Transaction IN"
+            icon="Deposit Amount"
             kpi1={{
+              label: 'DA',
+              value: loadingData ? 'Loading...' : formatCurrencyFull(kpiData?.depositAmount || 0),
+              comparison: {
+                percentage: loadingData ? '-' : `${comparison?.depositAmount >= 0 ? '+' : ''}${comparison?.depositAmount?.toFixed(2) || '0.00'}%`,
+                isPositive: (comparison?.depositAmount || 0) >= 0
+              }
+            }}
+            kpi2={{
               label: 'DC',
               value: loadingData ? 'Loading...' : formatNumberFull(kpiData?.depositCases || 0),
               comparison: {
                 percentage: loadingData ? '-' : `${comparison?.depositCases >= 0 ? '+' : ''}${comparison?.depositCases?.toFixed(2) || '0.00'}%`,
                 isPositive: (comparison?.depositCases || 0) >= 0
+              }
+            }}
+          />
+          
+          {/* Transaction OUT - WA & WC */}
+          <DualKPICard 
+            title="Transaction OUT"
+            icon="Withdraw Amount"
+            kpi1={{
+              label: 'WA',
+              value: loadingData ? 'Loading...' : formatCurrencyFull(kpiData?.withdrawAmount || 0),
+              comparison: {
+                percentage: loadingData ? '-' : `${comparison?.withdrawAmount >= 0 ? '+' : ''}${comparison?.withdrawAmount?.toFixed(2) || '0.00'}%`,
+                isPositive: (comparison?.withdrawAmount || 0) >= 0
               }
             }}
             kpi2={{
@@ -592,28 +616,6 @@ export default function BusinessPerformancePage() {
               comparison: {
                 percentage: loadingData ? '-' : `${comparison?.withdrawCases >= 0 ? '+' : ''}${comparison?.withdrawCases?.toFixed(2) || '0.00'}%`,
                 isPositive: (comparison?.withdrawCases || 0) >= 0
-              }
-            }}
-          />
-          
-          {/* DA & WA */}
-          <DualKPICard 
-            title="Transaction Amount"
-            icon="User Value Metrics"
-            kpi1={{
-              label: 'DA',
-              value: loadingData ? 'Loading...' : formatCurrency(kpiData?.depositAmount || 0),
-              comparison: {
-                percentage: loadingData ? '-' : `${comparison?.depositAmount >= 0 ? '+' : ''}${comparison?.depositAmount?.toFixed(2) || '0.00'}%`,
-                isPositive: (comparison?.depositAmount || 0) >= 0
-              }
-            }}
-            kpi2={{
-              label: 'WA',
-              value: loadingData ? 'Loading...' : formatCurrency(kpiData?.withdrawAmount || 0),
-              comparison: {
-                percentage: loadingData ? '-' : `${comparison?.withdrawAmount >= 0 ? '+' : ''}${comparison?.withdrawAmount?.toFixed(2) || '0.00'}%`,
-                isPositive: (comparison?.withdrawAmount || 0) >= 0
               }
             }}
           />
