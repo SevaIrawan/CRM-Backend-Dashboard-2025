@@ -651,7 +651,7 @@ export default function USCOverviewPage() {
             {/* 5. User Metrics - DualCard */}
             <DualKPICard
               title="USER METRICS"
-              icon="Deposit Amount"
+              icon="GGR User"
               kpi1={{
                 label: "DA USER",
                 value: formatCurrencyKPI(kpiData?.depositAmountUser || 0, selectedCurrency),

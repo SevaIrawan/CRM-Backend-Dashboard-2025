@@ -697,7 +697,7 @@ body {
   padding: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   border: 1px solid #e5e7eb;
-  min-height: 120px;
+  min-height: 140px; /* Standard height to match all StatCards and DualCards */
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -1181,7 +1181,7 @@ body {
   /* Basic styling */
   background: white;
   border-radius: 16px;
-  border: 1px solid #e5e7eb;
+  border: 1.5px solid #d1d5db; /* Stronger border for better visibility */
   box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.08), 0 1px 4px 0 rgba(0, 0, 0, 0.04);
   
   /* Layout */
@@ -1207,7 +1207,7 @@ body {
 .stat-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 8px 25px 0 rgba(0, 0, 0, 0.12), 0 4px 10px 0 rgba(0, 0, 0, 0.08);
-  border-color: #d1d5db;
+  border-color: #9ca3af; /* Darker border on hover for better visibility */
   z-index: 10; /* Higher z-index on hover to ensure it's above other cards */
 }
 
