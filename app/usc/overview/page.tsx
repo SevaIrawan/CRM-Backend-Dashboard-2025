@@ -337,20 +337,24 @@ export default function USCOverviewPage() {
               ],
               categories: sortedMonths.map(month => month.substring(0, 3))
             },
-            
-            // ROW 4: Double Line Charts
-            depositWithdrawTrend: {
+            depositWithdrawCasesTrend: {
               series: [
-                { name: 'Deposit Amount', data: sortedMonths.map(month => monthlyData[month].deposit_amount) },
-                { name: 'Withdraw Amount', data: sortedMonths.map(month => monthlyData[month].withdraw_amount) }
+                { name: 'Deposit Cases', data: sortedMonths.map(month => monthlyData[month].deposit_cases), color: '#3B82F6' },
+                { name: 'Withdraw Cases', data: sortedMonths.map(month => monthlyData[month].withdraw_cases), color: '#F97316' }
               ],
               categories: sortedMonths.map(month => month.substring(0, 3))
             },
-            ggrNetProfitTrend: {
+            
+            // ROW 4: Double Bar Charts
+            depositWithdrawTrend: {
               series: [
-                { name: 'Gross Gaming Revenue', data: sortedMonths.map(month => monthlyData[month].ggr) },
-                { name: 'Net Profit', data: sortedMonths.map(month => monthlyData[month].net_profit) }
+                { name: 'Deposit Amount', data: sortedMonths.map(month => monthlyData[month].deposit_amount), color: '#3B82F6' },
+                { name: 'Withdraw Amount', data: sortedMonths.map(month => monthlyData[month].withdraw_amount), color: '#F97316' }
               ],
+              categories: sortedMonths.map(month => month.substring(0, 3))
+            },
+            netProfitTrend: {
+              series: [{ name: 'Net Profit', data: sortedMonths.map(month => monthlyData[month].net_profit) }],
               categories: sortedMonths.map(month => month.substring(0, 3))
             },
             
@@ -360,19 +364,10 @@ export default function USCOverviewPage() {
               categories: sortedMonths.map(month => month.substring(0, 3))
             },
             purchaseFrequencyTrend: {
-              series: [{ name: 'Purchase Frequency', data: sortedMonths.map(month => monthlyData[month].purchase_frequency) }],
+              series: [{ name: 'DC User', data: sortedMonths.map(month => monthlyData[month].purchase_frequency) }],
               categories: sortedMonths.map(month => month.substring(0, 3))
             },
             
-            // ROW 6: Single Bar Charts
-            depositCasesTrend: {
-              series: [{ name: 'Deposit Cases', data: sortedMonths.map(month => monthlyData[month].deposit_cases) }],
-              categories: sortedMonths.map(month => month.substring(0, 3))
-            },
-            withdrawCasesTrend: {
-              series: [{ name: 'Withdraw Cases', data: sortedMonths.map(month => monthlyData[month].withdraw_cases) }],
-              categories: sortedMonths.map(month => month.substring(0, 3))
-            },
             
             // ROW 7: Single Line Charts
             winrateTrend: {
@@ -387,10 +382,6 @@ export default function USCOverviewPage() {
             // ROW 8: Single Line Charts
             conversionRateTrend: {
               series: [{ name: 'Conversion Rate', data: sortedMonths.map(month => monthlyData[month].conversion_rate) }],
-              categories: sortedMonths.map(month => month.substring(0, 3))
-            },
-            holdPercentageTrend: {
-              series: [{ name: 'Hold Percentage', data: sortedMonths.map(month => monthlyData[month].hold_percentage) }],
               categories: sortedMonths.map(month => month.substring(0, 3))
             }
           };
@@ -741,8 +732,7 @@ export default function USCOverviewPage() {
               title="DA USER TREND"
               currency={selectedCurrency}
               hideLegend={true}
-              showDataLabels={true}
-              useDenominationLabels={true}
+              showDataLabels={false}
               chartIcon={getChartIcon('Deposit Amount')}
             />
             <LineChart
@@ -751,14 +741,13 @@ export default function USCOverviewPage() {
               title="GGR USER TREND"
               currency={selectedCurrency}
               hideLegend={true}
-              showDataLabels={true}
-              useDenominationLabels={true}
+              showDataLabels={false}
               color="#F97316"
               chartIcon={getChartIcon('Net Profit')}
             />
           </div>
 
-          {/* ROW 3: ACTIVE vs PURE MEMBER, NEW REGISTER vs NEW DEPOSITOR (Double Bar Charts) */}
+          {/* ROW 3: ACTIVE vs PURE MEMBER, DEPOSIT CASES vs WITHDRAW CASES (Double Bar Charts) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <BarChart
               series={chartData?.activePureMemberTrend?.series || []}
@@ -766,43 +755,49 @@ export default function USCOverviewPage() {
               title="ACTIVE MEMBER VS PURE MEMBER TREND"
               currency="MEMBER"
               chartIcon={getChartIcon('Active Member')}
+              showDataLabels={false}
               customLegend={[
                 { label: 'Active Member', color: '#3B82F6' },
                 { label: 'Pure Member', color: '#F97316' }
               ]}
             />
             <BarChart
-              series={chartData?.registerDepositorTrend?.series || []}
-              categories={chartData?.registerDepositorTrend?.categories || []}
-              title="NEW REGISTER VS NEW DEPOSITOR TREND"
-              currency="MEMBER"
-              chartIcon={getChartIcon('New Register')}
+              series={chartData?.depositWithdrawCasesTrend?.series || []}
+              categories={chartData?.depositWithdrawCasesTrend?.categories || []}
+              title="DEPOSIT CASES VS WITHDRAW CASES TREND"
+              currency="CASES"
+              chartIcon={getChartIcon('Deposit Amount')}
+              showDataLabels={false}
               customLegend={[
-                { label: 'New Register', color: '#3B82F6' },
-                { label: 'New Depositor', color: '#F97316' }
+                { label: 'Deposit Cases', color: '#3B82F6' },
+                { label: 'Withdraw Cases', color: '#F97316' }
               ]}
             />
           </div>
 
-          {/* ROW 4: DEPOSIT vs WITHDRAW, GGR vs NET PROFIT (Double Line Charts) */}
+          {/* ROW 4: DEPOSIT vs WITHDRAW (Double Bar Chart), NET PROFIT (Single Line Chart) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <LineChart
+            <BarChart
               series={chartData?.depositWithdrawTrend?.series || []}
               categories={chartData?.depositWithdrawTrend?.categories || []}
               title="DEPOSIT AMOUNT VS WITHDRAW AMOUNT TREND"
               currency={selectedCurrency}
-              showDataLabels={true}
-              useDenominationLabels={true}
               chartIcon={getChartIcon('Deposit Amount')}
+              showDataLabels={false}
+              customLegend={[
+                { label: 'Deposit Amount', color: '#3B82F6' },
+                { label: 'Withdraw Amount', color: '#F97316' }
+              ]}
             />
             <LineChart
-              series={chartData?.ggrNetProfitTrend?.series || []}
-              categories={chartData?.ggrNetProfitTrend?.categories || []}
-              title="GROSS GAMING REVENUE VS NET PROFIT TREND"
+              series={chartData?.netProfitTrend?.series || []}
+              categories={chartData?.netProfitTrend?.categories || []}
+              title="NET PROFIT TREND"
               currency={selectedCurrency}
-              showDataLabels={true}
-              useDenominationLabels={true}
-              chartIcon={getChartIcon('Gross Gaming Revenue')}
+              hideLegend={true}
+              showDataLabels={false}
+              color="#3B82F6"
+              chartIcon={getChartIcon('Net Profit')}
             />
           </div>
 
@@ -814,39 +809,19 @@ export default function USCOverviewPage() {
               title="AVERAGE TRANSACTION VALUE TREND"
               currency={selectedCurrency}
               hideLegend={true}
-              showDataLabels={true}
-              useDenominationLabels={true}
+              showDataLabels={false}
               color="#3B82F6"
               chartIcon={getChartIcon('Average Transaction Value')}
             />
             <LineChart
               series={chartData?.purchaseFrequencyTrend?.series || []}
               categories={chartData?.purchaseFrequencyTrend?.categories || []}
-              title="PURCHASE FREQUENCY TREND"
+              title="DC USER TREND"
               currency={selectedCurrency}
               hideLegend={true}
-              showDataLabels={true}
+              showDataLabels={false}
               color="#F97316"
-              chartIcon={getChartIcon('Purchase Frequency')}
-            />
-          </div>
-
-          {/* ROW 6: DEPOSIT CASES & WITHDRAW CASES (Single Bar Charts) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <BarChart
-              series={chartData?.depositCasesTrend?.series || []}
-              categories={chartData?.depositCasesTrend?.categories || []}
-              title="DEPOSIT CASES TREND"
-              currency="CASES"
-              chartIcon={getChartIcon('deposits')}
-            />
-            <BarChart
-              series={chartData?.withdrawCasesTrend?.series || []}
-              categories={chartData?.withdrawCasesTrend?.categories || []}
-              title="WITHDRAW CASES TREND"
-              currency="CASES"
-              color="#F97316"
-              chartIcon={getChartIcon('Withdraw Amount')}
+              chartIcon={getChartIcon('Deposit Amount')}
             />
           </div>
 
@@ -858,7 +833,7 @@ export default function USCOverviewPage() {
               title="WINRATE TREND"
               currency="PERCENTAGE"
               hideLegend={true}
-              showDataLabels={true}
+              showDataLabels={false}
               color="#3B82F6"
               chartIcon={getChartIcon('Winrate')}
             />
@@ -868,7 +843,7 @@ export default function USCOverviewPage() {
               title="WITHDRAWAL RATE TREND"
               currency="PERCENTAGE"
               hideLegend={true}
-              showDataLabels={true}
+              showDataLabels={false}
               color="#F97316"
               chartIcon={getChartIcon('Withdraw Amount')}
             />
@@ -882,19 +857,21 @@ export default function USCOverviewPage() {
               title="CONVERSION RATE TREND"
               currency="PERCENTAGE"
               hideLegend={true}
-              showDataLabels={true}
+              showDataLabels={false}
               color="#3B82F6"
               chartIcon={getChartIcon('New Register')}
             />
-            <LineChart
-              series={chartData?.holdPercentageTrend?.series || []}
-              categories={chartData?.holdPercentageTrend?.categories || []}
-              title="HOLD PERCENTAGE TREND"
-              currency="PERCENTAGE"
-              hideLegend={true}
-              showDataLabels={true}
-              color="#F97316"
-              chartIcon={getChartIcon('Net Profit')}
+            <BarChart
+              series={chartData?.registerDepositorTrend?.series || []}
+              categories={chartData?.registerDepositorTrend?.categories || []}
+              title="NEW REGISTER VS NEW DEPOSITOR TREND"
+              currency="MEMBER"
+              chartIcon={getChartIcon('New Register')}
+              showDataLabels={false}
+              customLegend={[
+                { label: 'New Register', color: '#3B82F6' },
+                { label: 'New Depositor', color: '#F97316' }
+              ]}
             />
           </div>
 

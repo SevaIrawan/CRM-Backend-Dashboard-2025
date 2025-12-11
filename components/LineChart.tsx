@@ -278,11 +278,12 @@ export default function LineChart({
       datasetLabel.toLowerCase().includes('conversion')
     );
     
-    // Check if this is a frequency/ratio/average type (Purchase Frequency, ACL)
+    // Check if this is a frequency/ratio/average type (Purchase Frequency, ACL, DC User)
     const isFrequencyType = datasetLabel && (
       datasetLabel.toLowerCase().includes('frequency') ||
       datasetLabel.toLowerCase().includes('ratio') ||
-      datasetLabel.toLowerCase().includes('lifespan') // ACL adalah average
+      datasetLabel.toLowerCase().includes('lifespan') || // ACL adalah average
+      datasetLabel.toLowerCase().includes('dc user') // DC User = deposit_cases / active_member (2 decimal format)
     );
     
     // Check if this is a formula/numeric type (GGR User, DA User, ATV, etc.)
@@ -309,24 +310,27 @@ export default function LineChart({
     );
     
     // Check if this is an amount/currency type (Deposit, Withdraw, Revenue, CLV, etc.)
+    // EXCLUDE "dc user" from amount type (it's a frequency/ratio type)
     const isAmountType = datasetLabel && (
-      datasetLabel.toLowerCase().includes('amount') ||
-      datasetLabel.toLowerCase().includes('deposit') ||
-      datasetLabel.toLowerCase().includes('withdraw') ||
-      datasetLabel.toLowerCase().includes('revenue') ||
-      datasetLabel.toLowerCase().includes('ggr') ||
-      datasetLabel.toLowerCase().includes('gaming') ||
-      datasetLabel.toLowerCase().includes('lifetime') ||
-      datasetLabel.toLowerCase().includes('clv') ||
-      datasetLabel.toLowerCase().includes('value') ||
-      datasetLabel.toLowerCase().includes('transaction') ||
-      datasetLabel.toLowerCase().includes('income') ||
-      datasetLabel.toLowerCase().includes('cost') ||
-      datasetLabel.toLowerCase().includes('profit') ||
-      datasetLabel.toLowerCase().includes('gross gaming revenue') ||
-      datasetLabel.toLowerCase().includes('per user') ||
-      datasetLabel.toLowerCase().includes('pure user') ||
-      datasetLabel.toLowerCase().includes('user') // Add user back for GGR User, DA User
+      !datasetLabel.toLowerCase().includes('dc user') && ( // EXCLUDE DC User
+        datasetLabel.toLowerCase().includes('amount') ||
+        datasetLabel.toLowerCase().includes('deposit') ||
+        datasetLabel.toLowerCase().includes('withdraw') ||
+        datasetLabel.toLowerCase().includes('revenue') ||
+        datasetLabel.toLowerCase().includes('ggr') ||
+        datasetLabel.toLowerCase().includes('gaming') ||
+        datasetLabel.toLowerCase().includes('lifetime') ||
+        datasetLabel.toLowerCase().includes('clv') ||
+        datasetLabel.toLowerCase().includes('value') ||
+        datasetLabel.toLowerCase().includes('transaction') ||
+        datasetLabel.toLowerCase().includes('income') ||
+        datasetLabel.toLowerCase().includes('cost') ||
+        datasetLabel.toLowerCase().includes('profit') ||
+        datasetLabel.toLowerCase().includes('gross gaming revenue') ||
+        datasetLabel.toLowerCase().includes('per user') ||
+        datasetLabel.toLowerCase().includes('pure user') ||
+        datasetLabel.toLowerCase().includes('user') // Add user back for GGR User, DA User
+      )
     );
     
     // Check if this is Customer Maturity Index (special case - no currency, no decimal)
