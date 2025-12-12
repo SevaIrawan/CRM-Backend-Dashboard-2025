@@ -621,7 +621,7 @@ export default function USCOverviewPage() {
           mode: currentDailyMode ? 'DAILY' : 'MONTHLY',
           chartCount: Object.keys(preparedChartData).length,
           sampleChart: Object.keys(preparedChartData)[0],
-          sampleCategories: preparedChartData[Object.keys(preparedChartData)[0]]?.categories?.slice(0, 5),
+          sampleCategories: (preparedChartData as any)[Object.keys(preparedChartData)[0]]?.categories?.slice(0, 5),
           allCharts: Object.keys(preparedChartData),
           daUserCategories: preparedChartData.daUserTrend?.categories?.slice(0, 10),
           daUserData: preparedChartData.daUserTrend?.series?.[0]?.data?.slice(0, 10)
