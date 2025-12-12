@@ -228,7 +228,7 @@ export default function MYRMemberReportPage() {
       const userStr = localStorage.getItem('nexmax_user')
       const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
       
-      const response = await fetch('/api/usc-member-report/slicer-options', {
+      const response = await fetch('/api/myr-member-report/slicer-options', {
         headers: {
           'x-user-allowed-brands': JSON.stringify(allowedBrands)
         },
@@ -253,7 +253,7 @@ export default function MYRMemberReportPage() {
         }
       }
     } catch (error) {
-      console.error('Error fetching usc-member-report slicer options:', error)
+      console.error('Error fetching myr-member-report slicer options:', error)
     } finally {
       setSlicerLoading(false)
     }
@@ -340,7 +340,7 @@ export default function MYRMemberReportPage() {
         setLoading(false)
       }
     } catch (error) {
-      console.error('❌ Error fetching usc-member-report data:', error)
+      console.error('❌ Error fetching myr-member-report data:', error)
       setMemberReportData([])
       setPagination(prev => ({ 
         ...prev, 
@@ -862,7 +862,7 @@ function DaysActiveDetailsModal({
           fetchHeaders['x-user-allowed-brands'] = JSON.stringify(allowedBrands)
         }
 
-        const res = await fetch(`/api/usc-member-report/days-active-details?${params}`, { headers: fetchHeaders })
+        const res = await fetch(`/api/myr-member-report/days-active-report?${params}`, { headers: fetchHeaders })
         const json = await res.json()
         const rows: any[] = json?.data || []
         

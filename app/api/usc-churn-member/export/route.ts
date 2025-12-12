@@ -209,7 +209,7 @@ export async function POST(request: NextRequest) {
           userkey: row.userkey, // ✅ Store userkey for consistency with data route
           line: row.line,
           user_name: row.user_name,
-          unique_code: row.unique_code,
+          unique_code: row.update_unique_code || row.unique_code,  // ✅ Use update_unique_code, fallback to unique_code
           traffic: row.traffic,
           first_deposit_date: row.first_deposit_date || null,
           last_deposit_date: row.last_deposit_date,

@@ -255,7 +255,7 @@ export async function GET(request: NextRequest) {
         // Initialize user record with first occurrence data
         userMap.set(key, {
           userkey: row.userkey, // ✅ Store userkey for modal drill-out
-          unique_code: row.unique_code || null,
+          unique_code: row.update_unique_code || row.unique_code || null,  // ✅ Use update_unique_code, fallback to unique_code
           user_name: row.user_name || null,
           line: row.line || null,
           traffic: row.traffic || null,

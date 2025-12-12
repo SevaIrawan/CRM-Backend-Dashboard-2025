@@ -253,7 +253,7 @@ export default function SGDMemberReportPage() {
         }
       }
     } catch (error) {
-      console.error('Error fetching usc-member-report slicer options:', error)
+      console.error('Error fetching sgd-member-report slicer options:', error)
     } finally {
       setSlicerLoading(false)
     }
@@ -340,7 +340,7 @@ export default function SGDMemberReportPage() {
         setLoading(false)
       }
     } catch (error) {
-      console.error('❌ Error fetching usc-member-report data:', error)
+      console.error('❌ Error fetching sgd-member-report data:', error)
       setMemberReportData([])
       setPagination(prev => ({ 
         ...prev, 
@@ -862,7 +862,7 @@ function DaysActiveDetailsModal({
           fetchHeaders['x-user-allowed-brands'] = JSON.stringify(allowedBrands)
         }
 
-        const res = await fetch(`/api/usc-member-report/days-active-details?${params}`, { headers: fetchHeaders })
+        const res = await fetch(`/api/sgd-member-report/days-active-details?${params}`, { headers: fetchHeaders })
         const json = await res.json()
         const rows: any[] = json?.data || []
         

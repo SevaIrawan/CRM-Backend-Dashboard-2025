@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       while (hasMore) {
         const base = supabase
           .from('blue_whale_myr')
-          .select('userkey, user_unique, user_name, unique_code, date, line, year, month, vip_level, operator, traffic, register_date, first_deposit_date, first_deposit_amount, last_deposit_date, days_inactive, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, add_transaction, deduct_transaction, cases_adjustment, cases_bets, bets_amount, valid_amount, ggr, net_profit, last_activity_days')
+          .select('userkey, user_unique, user_name, unique_code, update_unique_code, date, line, year, month, vip_level, operator, traffic, register_date, first_deposit_date, first_deposit_amount, last_deposit_date, days_inactive, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, add_transaction, deduct_transaction, cases_adjustment, cases_bets, bets_amount, valid_amount, ggr, net_profit, last_activity_days')
           .eq('currency', 'MYR')
         const filtered = applyFilters(base)
         if ((filtered as any).error) {
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
             date_range: dateRangeValue,
             line: row.line,
             user_name: row.user_name,
-            unique_code: row.unique_code,
+            unique_code: row.update_unique_code || row.unique_code,  // ✅ Use update_unique_code, fallback to unique_code
             vip_level: row.vip_level,
             operator: row.operator,
             traffic: row.traffic,
