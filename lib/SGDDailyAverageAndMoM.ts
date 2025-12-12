@@ -22,8 +22,8 @@ export interface SGDKPIData {
   grossGamingRevenue: number
   winrate: number
   withdrawalRate: number
-  daUser: number
-  ggrUser: number
+  depositAmountUser: number
+  ggrPerUser: number
   addBonus: number
   deductBonus: number
   addTransaction: number
@@ -53,8 +53,8 @@ export interface SGDMoMData {
   grossGamingRevenue: number
   winrate: number
   withdrawalRate: number
-  daUser: number
-  ggrUser: number
+  depositAmountUser: number
+  ggrPerUser: number
   addBonus: number
   deductBonus: number
   addTransaction: number
@@ -256,8 +256,8 @@ async function getSGDKPIData(year: string, month: string, line?: string): Promis
       grossGamingRevenue: (row.ggr as number) || 0,
       winrate: (row.winrate as number) || 0,
       withdrawalRate: (row.withdrawal_rate as number) || 0,
-      daUser: (row.da_user as number) || 0,
-      ggrUser: (row.ggr_user as number) || 0,
+      depositAmountUser: (row.da_user as number) || 0,
+      ggrPerUser: (row.ggr_user as number) || 0,
       addBonus: (row.add_bonus as number) || 0,
       deductBonus: (row.deduct_bonus as number) || 0,
       addTransaction: (row.add_transaction as number) || 0,
@@ -299,8 +299,8 @@ function getEmptySGDKPIData(): SGDKPIData {
     grossGamingRevenue: 0,
     winrate: 0,
     withdrawalRate: 0,
-    daUser: 0,
-    ggrUser: 0,
+    depositAmountUser: 0,
+    ggrPerUser: 0,
     addBonus: 0,
     deductBonus: 0,
     addTransaction: 0,
@@ -340,8 +340,8 @@ export async function calculateAllSGDDailyAverages(
       grossGamingRevenue: await calculateSGDDailyAverage(monthlyData.grossGamingRevenue, year, month),
       winrate: await calculateSGDDailyAverage(monthlyData.winrate, year, month),
       withdrawalRate: await calculateSGDDailyAverage(monthlyData.withdrawalRate, year, month),
-      daUser: await calculateSGDDailyAverage(monthlyData.daUser, year, month),
-      ggrUser: await calculateSGDDailyAverage(monthlyData.ggrUser, year, month),
+      depositAmountUser: await calculateSGDDailyAverage(monthlyData.depositAmountUser, year, month),
+      ggrPerUser: await calculateSGDDailyAverage(monthlyData.ggrPerUser, year, month),
       addBonus: await calculateSGDDailyAverage(monthlyData.addBonus, year, month),
       deductBonus: await calculateSGDDailyAverage(monthlyData.deductBonus, year, month),
       addTransaction: await calculateSGDDailyAverage(monthlyData.addTransaction, year, month),
@@ -396,8 +396,8 @@ export async function getAllSGDKPIsWithMoM(
       grossGamingRevenue: calculateSGDMoM(currentData.grossGamingRevenue, previousData.grossGamingRevenue),
       winrate: calculateSGDMoM(currentData.winrate, previousData.winrate),
       withdrawalRate: calculateSGDMoM(currentData.withdrawalRate, previousData.withdrawalRate),
-      daUser: calculateSGDMoM(currentData.daUser, previousData.daUser),
-      ggrUser: calculateSGDMoM(currentData.ggrUser, previousData.ggrUser),
+      depositAmountUser: calculateSGDMoM(currentData.depositAmountUser, previousData.depositAmountUser),
+      ggrPerUser: calculateSGDMoM(currentData.ggrPerUser, previousData.ggrPerUser),
       addBonus: calculateSGDMoM(currentData.addBonus, previousData.addBonus),
       deductBonus: calculateSGDMoM(currentData.deductBonus, previousData.deductBonus),
       addTransaction: calculateSGDMoM(currentData.addTransaction, previousData.addTransaction),

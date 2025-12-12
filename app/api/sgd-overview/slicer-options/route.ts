@@ -9,9 +9,14 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔍 [SGD Overview API] Fetching slicer options for SGD currency lock')
 
-    // ✅ Get user's allowed brands from request header
+    // ✅ NEW: Get user's allowed brands from request header (client will send this)
     const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
     const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
+    
+    console.log('🔐 [SGD Overview API] User brand access:', {
+      allowed_brands: userAllowedBrands,
+      is_squad_lead: userAllowedBrands !== null && userAllowedBrands.length > 0
+    })
 
     // Currency is LOCKED to SGD for this page
     const currencies = ['SGD']
@@ -43,12 +48,39 @@ export async function GET(request: NextRequest) {
     const uniqueLines = Array.from(new Set(allLines?.map(row => row.line).filter(Boolean) || [])) as string[]
     const cleanLines = uniqueLines.filter(line => line !== 'ALL' && line !== 'All')
     
-    // ✅ Filter brands based on user permission
+    console.log('🔍 [SGD Overview API] RAW BRANDS FROM DATABASE:', {
+      total: uniqueLines.length,
+      all_brands: uniqueLines,
+      clean_brands: cleanLines
+    })
+    
+    console.log('🔍 [SGD Overview API] USER PERMISSION:', {
+      allowed_brands: userAllowedBrands,
+      is_squad_lead: userAllowedBrands !== null && userAllowedBrands?.length > 0
+    })
+    
+    // ✅ NEW: Filter brands based on user permission
     const filteredBrands = filterBrandsByUser(cleanLines, userAllowedBrands)
+    
+    console.log('🔍 [SGD Overview API] AFTER filterBrandsByUser:', {
+      filtered_brands: filteredBrands
+    })
+    
     let linesWithAll = ['ALL', ...filteredBrands.sort()]
     
-    // ✅ Remove 'ALL' option for Squad Lead users
+    console.log('🔍 [SGD Overview API] AFTER adding ALL:', {
+      lines_with_all: linesWithAll
+    })
+    
+    // ✅ NEW: Remove 'ALL' option for Squad Lead users
     linesWithAll = removeAllOptionForSquadLead(linesWithAll, userAllowedBrands)
+    
+    console.log('✅ [SGD Overview API] FINAL BRANDS FOR USER:', {
+      total_available: cleanLines.length,
+      user_access: filteredBrands.length,
+      has_all_option: linesWithAll.includes('ALL'),
+      final_brands: linesWithAll
+    })
 
     // Get years from MV - NO LIMIT
     const { data: allYears, error: yearsError } = await supabase
@@ -142,7 +174,7 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 [SGD Slicer] Month-year mapping:', monthYearMap)
 
-    // ✅ Set default line for Squad Lead to first brand, others to 'ALL'
+    // ✅ NEW: Set default line for Squad Lead to first brand, others to 'ALL'
     const defaultLine = userAllowedBrands && userAllowedBrands.length > 0 
       ? getDefaultBrandForSquadLead(userAllowedBrands) || filteredBrands[0] 
       : 'ALL'
@@ -158,7 +190,7 @@ export async function GET(request: NextRequest) {
       },
       defaults: {
         currency: 'SGD',
-        line: defaultLine, // ✅ Auto-select first brand for Squad Lead
+        line: defaultLine, // ✅ NEW: Auto-select first brand for Squad Lead
         year: defaultYear,
         month: defaultMonth
       }
@@ -185,3 +217,4 @@ export async function GET(request: NextRequest) {
     }, { status: 500 })
   }
 }
+

@@ -60,6 +60,7 @@ export default function USCOverviewPage() {
   const [selectedMonth, setSelectedMonth] = useState('');
   const [selectedCurrency] = useState('USC'); // Locked to USC
   const [selectedLine, setSelectedLine] = useState('');
+  const [isDailyMode, setIsDailyMode] = useState(false); // ✅ Toggle Daily Mode
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [kpiLoaded, setKpiLoaded] = useState(false);
@@ -150,8 +151,16 @@ export default function USCOverviewPage() {
         setLoadError(null);
 
         // Get user's allowed brands from localStorage
-        const userStr = localStorage.getItem('nexmax_user');
-        const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null;
+        let allowedBrands: string[] | null = null;
+        try {
+          const userStr = localStorage.getItem('nexmax_user');
+          if (userStr) {
+            allowedBrands = JSON.parse(userStr).allowed_brands || null;
+          }
+        } catch (parseError) {
+          console.warn('⚠️ [USC Overview] Failed to parse user data from localStorage:', parseError);
+          allowedBrands = null;
+        }
 
         const response = await fetch('/api/usc-overview/slicer-options', {
           headers: {
@@ -246,156 +255,401 @@ export default function USCOverviewPage() {
     }
   };
 
-  // ✅ Auto-load KPI data ONCE when defaults are set (initial load only)
+  // ✅ Initial load ONCE when page first loads (auto-load monthly data)
   useEffect(() => {
+    // Only load once when page first mounts and slicers are ready
     if (!initialLoadDone && selectedYear && selectedMonth && selectedLine) {
-      console.log('✅ [USC Overview] Initial load with defaults:', { selectedYear, selectedMonth, selectedLine });
-      setTimeout(() => {
-        loadKPIData();
-        loadChartData();
-        setInitialLoadDone(true);
-      }, 100);
+      console.log('✅ [USC Overview] Initial load (first time):', { selectedYear, selectedMonth, selectedLine });
+      // Auto-load monthly data on first page load
+      // Note: isLoading will be set to false by the useEffect that watches kpiLoaded and chartsLoaded
+      loadKPIData();
+      loadChartData(false); // false = monthly mode for initial load
+      setInitialLoadDone(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedYear, selectedMonth, selectedLine, initialLoadDone]);
+  
+  // ✅ NO AUTO-RELOAD after initial load: All subsequent changes require Search button click
 
   // Helper functions removed - now using STANDARD LOGIC FILE
 
   // ✅ Function to load Chart data (can be called manually or automatically)
-  const loadChartData = async () => {
-    if (!selectedYear || !selectedLine) return;
+  // ✅ Use current isDailyMode value directly, not from closure
+  const loadChartData = async (forceDailyMode?: boolean) => {
+    // ✅ Use forceDailyMode if provided, otherwise use current state
+    const currentDailyMode = forceDailyMode !== undefined ? forceDailyMode : isDailyMode;
+    
+    if (!selectedYear || !selectedLine) {
+      console.warn('⚠️ [USC Overview] Cannot load chart: missing year or line', { selectedYear, selectedLine });
+      return;
+    }
+    // ✅ Daily mode requires month selection
+    if (currentDailyMode && !selectedMonth) {
+      console.warn('⚠️ [USC Overview] Cannot load daily chart: month not selected', { currentDailyMode, selectedMonth });
+      return;
+    }
 
     try {
       setChartError(null);
       
-      console.log('🔄 [USC Overview] Loading Chart data (MONTHLY for entire year)...');
+      const period = currentDailyMode ? 'daily' : 'monthly';
+      console.log(`🔄 [USC Overview] ========== LOADING CHART DATA ==========`);
+      console.log(`🔄 [USC Overview] Mode: ${period.toUpperCase()}${currentDailyMode ? ` | Month: ${selectedMonth}` : ' | Entire Year'}`);
+      console.log(`📋 [USC Overview] Slicer values:`, {
+        selectedYear,
+        selectedMonth,
+        selectedLine,
+        isDailyMode: currentDailyMode, // ✅ Use currentDailyMode
+        period,
+        forceDailyMode: forceDailyMode !== undefined ? forceDailyMode : 'not provided'
+      });
       
       // Get user's allowed brands from localStorage
-      const userStr = localStorage.getItem('nexmax_user');
-      const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null;
+      let allowedBrands: string[] | null = null;
+      try {
+        const userStr = localStorage.getItem('nexmax_user');
+        if (userStr) {
+          allowedBrands = JSON.parse(userStr).allowed_brands || null;
+        }
+      } catch (parseError) {
+        console.warn('⚠️ [USC Overview] Failed to parse user data from localStorage:', parseError);
+        allowedBrands = null;
+      }
       
-      // Get chart data from MV table (pre-aggregated)
-      const chartResponse = await fetch(`/api/usc-overview/chart-data?line=${selectedLine}&year=${selectedYear}`, {
+      // ✅ SIMPLE LOGIC: When toggle daily ON, fetch from blue_whale_usc table based on active month slicer
+      let apiUrl = `/api/usc-overview/chart-data?line=${selectedLine}&year=${selectedYear}&period=${period}`;
+      if (currentDailyMode && selectedMonth) {
+        apiUrl += `&month=${selectedMonth}`; // ✅ Send month from slicer - CRITICAL: Use currentDailyMode, not isDailyMode!
+      }
+      
+      console.log('🔗 [USC Overview] API URL (FINAL):', apiUrl);
+      
+      console.log(`🔗 [USC Overview] API URL:`, apiUrl);
+      
+      // Get chart data from MV table (pre-aggregated) or daily table
+      const chartResponse = await fetch(apiUrl, {
         headers: {
           'x-user-allowed-brands': JSON.stringify(allowedBrands)
         }
       });
-      const chartResult = await chartResponse.json();
       
-      console.log('📊 [USC Overview] Chart API Response:', chartResult);
-      
-      if (!chartResult.success) {
-        throw new Error('Failed to fetch chart data');
+      // ✅ Check HTTP status first
+      if (!chartResponse.ok) {
+        const errorText = await chartResponse.text();
+        console.error('❌ [USC Overview] HTTP Error:', {
+          status: chartResponse.status,
+          statusText: chartResponse.statusText,
+          errorText,
+          apiUrl,
+          currentDailyMode
+        });
+        throw new Error(`HTTP ${chartResponse.status}: ${chartResponse.statusText}`);
       }
       
-      const monthlyData = chartResult.monthlyData;
+      const chartResult = await chartResponse.json();
       
-      console.log('📊 [USC Overview] Monthly data from MV:', monthlyData);
+      console.log('📊 [USC Overview] Chart API Response:', {
+        success: chartResult.success,
+        hasDailyData: !!chartResult.dailyData,
+        hasMonthlyData: !!chartResult.monthlyData,
+        currentDailyMode, // ✅ Use currentDailyMode, not isDailyMode state
+        isDailyMode, // Also log state for comparison
+        dailyDataKeys: chartResult.dailyData ? Object.keys(chartResult.dailyData).length : 0,
+        monthlyDataKeys: chartResult.monthlyData ? Object.keys(chartResult.monthlyData).length : 0,
+        dailyDataSample: chartResult.dailyData ? Object.keys(chartResult.dailyData).slice(0, 3) : null,
+        monthlyDataSample: chartResult.monthlyData ? Object.keys(chartResult.monthlyData).slice(0, 3) : null,
+        error: chartResult.error || null,
+        message: chartResult.message || null
+      });
       
-      // Debug hold_percentage values
-      const holdPercentageDebug = Object.keys(monthlyData).map(month => ({
-        month,
-        hold_percentage: monthlyData[month].hold_percentage,
-        conversion_rate: monthlyData[month].conversion_rate,
-        net_profit: monthlyData[month].net_profit,
-        valid_amount: monthlyData[month].valid_amount
-      }));
-      console.log('🔍 [USC Overview] Hold Percentage Debug:', holdPercentageDebug);
+      if (!chartResult.success) {
+        throw new Error(chartResult.message || chartResult.error || 'Failed to fetch chart data');
+      }
       
-      if (Object.keys(monthlyData).length > 0) {
-          // Sort months chronologically
-          const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 
-                             'July', 'August', 'September', 'October', 'November', 'December'];
-          const sortedMonths = Object.keys(monthlyData).sort((a, b) => 
-            monthOrder.indexOf(a) - monthOrder.indexOf(b)
-          );
+      // ✅ CRITICAL: Check if data exists for the requested period
+      // When currentDailyMode is true, MUST use dailyData, NOT monthlyData - NO FALLBACK!
+      let data: any = null;
+      
+      console.log('🔍 [USC Overview] Data selection check:', {
+        currentDailyMode: currentDailyMode, // ✅ Use currentDailyMode
+        isDailyMode: isDailyMode, // Also log state value for comparison
+        hasDailyData: !!chartResult.dailyData,
+        hasMonthlyData: !!chartResult.monthlyData,
+        dailyDataKeys: chartResult.dailyData ? Object.keys(chartResult.dailyData).length : 0,
+        monthlyDataKeys: chartResult.monthlyData ? Object.keys(chartResult.monthlyData).length : 0
+      });
+      
+      if (currentDailyMode === true) {
+        // ✅ DAILY MODE: MUST use dailyData only
+        if (!chartResult.dailyData || Object.keys(chartResult.dailyData).length === 0) {
+          console.error('❌ [USC Overview] isDailyMode is TRUE but dailyData is missing or empty!', {
+            hasDailyData: !!chartResult.dailyData,
+            dailyDataKeys: chartResult.dailyData ? Object.keys(chartResult.dailyData).length : 0,
+            hasMonthlyData: !!chartResult.monthlyData,
+            chartResult
+          });
+          throw new Error('Daily data not available. Please ensure month is selected and data exists.');
+        }
+        // ✅ FORCE use dailyData - NO FALLBACK to monthlyData!
+        data = chartResult.dailyData;
+        console.log('✅ [USC Overview] FORCED to use DAILY data (toggle is ON):', {
+          dateCount: Object.keys(data).length,
+          sampleDates: Object.keys(data).slice(0, 5),
+          firstDate: Object.keys(data).sort()[0],
+          lastDate: Object.keys(data).sort().reverse()[0]
+        });
+      } else {
+        // ✅ MONTHLY MODE: Use monthlyData
+        if (!chartResult.monthlyData || Object.keys(chartResult.monthlyData).length === 0) {
+          console.error('❌ [USC Overview] isDailyMode is FALSE but monthlyData is missing or empty!');
+          throw new Error('Monthly data not available');
+        }
+        data = chartResult.monthlyData;
+        console.log('✅ [USC Overview] Using MONTHLY data (toggle is OFF):', {
+          monthCount: Object.keys(data).length,
+          sampleMonths: Object.keys(data).slice(0, 5)
+        });
+      }
+      
+      if (!data || Object.keys(data).length === 0) {
+        console.error(`❌ [USC Overview] Data is empty for ${currentDailyMode ? 'daily' : 'monthly'} mode`);
+        throw new Error(`No ${currentDailyMode ? 'daily' : 'monthly'} data available`);
+      }
+      
+      console.log(`📊 [USC Overview] ${currentDailyMode ? 'Daily' : 'Monthly'} data:`, {
+        keyCount: Object.keys(data).length,
+        sampleKeys: Object.keys(data).slice(0, 5),
+        sampleData: data[Object.keys(data)[0]]
+      });
+      
+      if (Object.keys(data).length > 0) {
+          // ✅ CRITICAL: Determine if data is daily or monthly based on key format
+          // Daily data keys are dates (YYYY-MM-DD), monthly data keys are month names
+          const firstKey = Object.keys(data)[0];
+          const isDailyData = /^\d{4}-\d{2}-\d{2}$/.test(firstKey); // Check if key is date format
+          
+          console.log('🔍 [USC Overview] ========== DATA TYPE DETECTION ==========');
+          console.log('🔍 [USC Overview] Data type detection:', {
+            currentDailyMode: currentDailyMode, // ✅ Log currentDailyMode
+            isDailyMode: isDailyMode, // Also log state for comparison
+            firstKey: firstKey,
+            isDailyData: isDailyData,
+            dataKeysSample: Object.keys(data).slice(0, 10),
+            allKeys: Object.keys(data),
+            dataSource: currentDailyMode ? 'Should be dailyData' : 'Should be monthlyData'
+          });
+          
+          // ✅ CRITICAL: If currentDailyMode is true, we MUST use daily format
+          // Even if data looks like monthly, if toggle is ON, we should have daily data
+          // If we have daily data (date format), use daily format
+          // If we have monthly data but toggle is ON, something is wrong - log error
+          const useDailyFormat = currentDailyMode === true && isDailyData === true;
+          
+          if (currentDailyMode === true && !isDailyData) {
+            console.error('❌ [USC Overview] CRITICAL ERROR: Toggle is ON but data is NOT daily format!', {
+              currentDailyMode: currentDailyMode,
+              isDailyMode: isDailyMode,
+              isDailyData: isDailyData,
+              firstKey: firstKey,
+              dataKeys: Object.keys(data).slice(0, 10)
+            });
+            // Still try to use daily format if toggle is ON
+          }
+          
+          console.log('🔍 [USC Overview] Format decision:', {
+            currentDailyMode: currentDailyMode,
+            isDailyMode: isDailyMode,
+            isDailyData: isDailyData,
+            useDailyFormat: useDailyFormat,
+            willUseDailyFormat: useDailyFormat || (currentDailyMode === true) // Force daily if toggle ON
+          });
+          
+          // ✅ FORCE daily format if toggle is ON, regardless of data format detection
+          const finalUseDailyFormat = currentDailyMode === true ? true : (isDailyData === true);
+          
+          // For monthly: sort months chronologically
+          // For daily: sort dates chronologically
+          let sortedKeys: string[];
+          if (finalUseDailyFormat) {
+            sortedKeys = Object.keys(data).sort((a, b) => {
+              const dateA = new Date(a);
+              const dateB = new Date(b);
+              return dateA.getTime() - dateB.getTime();
+            });
+            console.log('✅ [USC Overview] Sorted as DAILY dates:', sortedKeys.slice(0, 10));
+          } else {
+            const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 
+                               'July', 'August', 'September', 'October', 'November', 'December'];
+            sortedKeys = Object.keys(data).sort((a, b) => 
+              monthOrder.indexOf(a) - monthOrder.indexOf(b)
+            );
+            console.log('✅ [USC Overview] Sorted as MONTHLY months:', sortedKeys.slice(0, 10));
+          }
 
-          // Create chart data from aggregated monthly data
+          // Helper function to format categories (months or dates)
+          const formatCategory = (key: string): string => {
+            if (finalUseDailyFormat) {
+              // ✅ CRITICAL: If toggle is ON, we MUST format as date, even if key looks like month name
+              // Format date as "DD MMM" (e.g., "01 Jan")
+              try {
+                const date = new Date(key);
+                if (isNaN(date.getTime())) {
+                  // If date is invalid but toggle is ON, this is an error
+                  console.error('❌ [USC Overview] CRITICAL: Toggle ON but key is not a valid date:', key);
+                  // Don't fallback - try to parse as date string first
+                  // If key is "December", try to convert to date
+                  if (key.includes('December') || key.includes('Dec')) {
+                    console.warn('⚠️ [USC Overview] Key appears to be month name, not date. This should not happen when toggle is ON.');
+                  }
+                  // Still try to format as date if possible
+                  const dateStr = key.match(/\d{4}-\d{2}-\d{2}/)?.[0];
+                  if (dateStr) {
+                    const validDate = new Date(dateStr);
+                    if (!isNaN(validDate.getTime())) {
+                      const day = validDate.getDate().toString().padStart(2, '0');
+                      const month = validDate.toLocaleString('en-US', { month: 'short' });
+                      return `${day} ${month}`;
+                    }
+                  }
+                  // Last resort: if toggle is ON, we should have date format, so this is an error
+                  console.error('❌ [USC Overview] Cannot format as date. Key:', key, 'Toggle ON but data format is wrong!');
+                  return key; // Return as-is to show the problem
+                }
+                const day = date.getDate().toString().padStart(2, '0');
+                const month = date.toLocaleString('en-US', { month: 'short' });
+                return `${day} ${month}`;
+              } catch (e) {
+                console.error('❌ [USC Overview] Error formatting date:', key, e);
+                // Don't fallback - this is an error when toggle is ON
+                return key; // Return as-is to show the problem
+              }
+            } else {
+              // Format month as "MMM" (e.g., "Jan")
+              return key.substring(0, 3);
+            }
+          };
+          
+          console.log('✅ [USC Overview] Category format:', {
+            useDailyFormat: finalUseDailyFormat,
+            currentDailyMode: currentDailyMode,
+            sampleCategories: sortedKeys.slice(0, 5).map(formatCategory),
+            sampleKeys: sortedKeys.slice(0, 5)
+          });
+
+          // Create chart data from aggregated data (monthly or daily)
+          // ✅ Use safe access with fallback to 0 for all fields
+          const safeGet = (key: string, field: string): number => {
+            return (data[key] && typeof data[key][field] === 'number') ? data[key][field] : 0;
+          };
+          
           const preparedChartData = {
             // ROW 2: Single Line Charts
             daUserTrend: {
-              series: [{ name: 'DA User', data: sortedMonths.map(month => monthlyData[month].da_user) }],
-              categories: sortedMonths.map(month => month.substring(0, 3))
+              series: [{ name: 'DA User', data: sortedKeys.map(key => safeGet(key, 'da_user')) }],
+              categories: sortedKeys.map(formatCategory)
             },
             ggrUserTrend: {
-              series: [{ name: 'GGR User', data: sortedMonths.map(month => monthlyData[month].ggr_user) }],
-              categories: sortedMonths.map(month => month.substring(0, 3))
+              series: [{ name: 'GGR User', data: sortedKeys.map(key => safeGet(key, 'ggr_user')) }],
+              categories: sortedKeys.map(formatCategory)
             },
             
             // ROW 3: Double Bar Charts
             activePureMemberTrend: {
               series: [
-                { name: 'Active Member', data: sortedMonths.map(month => monthlyData[month].active_member), color: '#3B82F6' },
-                { name: 'Pure Member', data: sortedMonths.map(month => monthlyData[month].pure_member), color: '#F97316' }
+                { name: 'Active Member', data: sortedKeys.map(key => safeGet(key, 'active_member')), color: '#3B82F6' },
+                { name: 'Pure Member', data: sortedKeys.map(key => safeGet(key, 'pure_member')), color: '#F97316' }
               ],
-              categories: sortedMonths.map(month => month.substring(0, 3))
+              categories: sortedKeys.map(formatCategory)
             },
             registerDepositorTrend: {
               series: [
-                { name: 'New Register', data: sortedMonths.map(month => monthlyData[month].new_register), color: '#3B82F6' },
-                { name: 'New Depositor', data: sortedMonths.map(month => monthlyData[month].new_depositor), color: '#F97316' }
+                { name: 'New Register', data: sortedKeys.map(key => safeGet(key, 'new_register')), color: '#3B82F6' },
+                { name: 'New Depositor', data: sortedKeys.map(key => safeGet(key, 'new_depositor')), color: '#F97316' }
               ],
-              categories: sortedMonths.map(month => month.substring(0, 3))
+              categories: sortedKeys.map(formatCategory)
             },
             depositWithdrawCasesTrend: {
               series: [
-                { name: 'Deposit Cases', data: sortedMonths.map(month => monthlyData[month].deposit_cases), color: '#3B82F6' },
-                { name: 'Withdraw Cases', data: sortedMonths.map(month => monthlyData[month].withdraw_cases), color: '#F97316' }
+                { name: 'Deposit Cases', data: sortedKeys.map(key => safeGet(key, 'deposit_cases')), color: '#3B82F6' },
+                { name: 'Withdraw Cases', data: sortedKeys.map(key => safeGet(key, 'withdraw_cases')), color: '#F97316' }
               ],
-              categories: sortedMonths.map(month => month.substring(0, 3))
+              categories: sortedKeys.map(formatCategory)
             },
             
             // ROW 4: Double Bar Charts
             depositWithdrawTrend: {
               series: [
-                { name: 'Deposit Amount', data: sortedMonths.map(month => monthlyData[month].deposit_amount), color: '#3B82F6' },
-                { name: 'Withdraw Amount', data: sortedMonths.map(month => monthlyData[month].withdraw_amount), color: '#F97316' }
+                { name: 'Deposit Amount', data: sortedKeys.map(key => safeGet(key, 'deposit_amount')), color: '#3B82F6' },
+                { name: 'Withdraw Amount', data: sortedKeys.map(key => safeGet(key, 'withdraw_amount')), color: '#F97316' }
               ],
-              categories: sortedMonths.map(month => month.substring(0, 3))
+              categories: sortedKeys.map(formatCategory)
             },
             netProfitTrend: {
-              series: [{ name: 'Net Profit', data: sortedMonths.map(month => monthlyData[month].net_profit) }],
-              categories: sortedMonths.map(month => month.substring(0, 3))
+              series: [{ name: 'Net Profit', data: sortedKeys.map(key => safeGet(key, 'net_profit')) }],
+              categories: sortedKeys.map(formatCategory)
             },
             
             // ROW 5: Single Line Charts
             atvTrend: {
-              series: [{ name: 'Average Transaction Value', data: sortedMonths.map(month => monthlyData[month].atv) }],
-              categories: sortedMonths.map(month => month.substring(0, 3))
+              series: [{ name: 'Average Transaction Value', data: sortedKeys.map(key => safeGet(key, 'atv')) }],
+              categories: sortedKeys.map(formatCategory)
             },
             purchaseFrequencyTrend: {
-              series: [{ name: 'DC User', data: sortedMonths.map(month => monthlyData[month].purchase_frequency) }],
-              categories: sortedMonths.map(month => month.substring(0, 3))
+              series: [{ name: 'DC User', data: sortedKeys.map(key => safeGet(key, 'purchase_frequency') || safeGet(key, 'dc_user')) }],
+              categories: sortedKeys.map(formatCategory)
             },
             
             
             // ROW 7: Single Line Charts
             winrateTrend: {
-              series: [{ name: 'Winrate', data: sortedMonths.map(month => monthlyData[month].winrate) }],
-              categories: sortedMonths.map(month => month.substring(0, 3))
+              series: [{ name: 'Winrate', data: sortedKeys.map(key => safeGet(key, 'winrate')) }],
+              categories: sortedKeys.map(formatCategory)
             },
             withdrawalRateTrend: {
-              series: [{ name: 'Withdrawal Rate', data: sortedMonths.map(month => monthlyData[month].withdrawal_rate) }],
-              categories: sortedMonths.map(month => month.substring(0, 3))
+              series: [{ name: 'Withdrawal Rate', data: sortedKeys.map(key => safeGet(key, 'withdrawal_rate')) }],
+              categories: sortedKeys.map(formatCategory)
             },
             
             // ROW 8: Single Line Charts
             conversionRateTrend: {
-              series: [{ name: 'Conversion Rate', data: sortedMonths.map(month => monthlyData[month].conversion_rate) }],
-              categories: sortedMonths.map(month => month.substring(0, 3))
+              series: [{ name: 'Conversion Rate', data: sortedKeys.map(key => safeGet(key, 'conversion_rate')) }],
+              categories: sortedKeys.map(formatCategory)
             }
           };
           
-        setChartData(preparedChartData);
-        setChartsLoaded(true);
+        console.log('✅ [USC Overview] Setting chart data:', {
+          mode: currentDailyMode ? 'DAILY' : 'MONTHLY',
+          chartCount: Object.keys(preparedChartData).length,
+          sampleChart: Object.keys(preparedChartData)[0],
+          sampleCategories: preparedChartData[Object.keys(preparedChartData)[0]]?.categories?.slice(0, 5),
+          allCharts: Object.keys(preparedChartData),
+          daUserCategories: preparedChartData.daUserTrend?.categories?.slice(0, 10),
+          daUserData: preparedChartData.daUserTrend?.series?.[0]?.data?.slice(0, 10)
+        });
+        
+        // ✅ CRITICAL: Force update chart data
+        setChartData(null); // Clear first to force re-render
+        setTimeout(() => {
+          setChartData(preparedChartData);
+          setChartsLoaded(true);
+          console.log(`✅ [USC Overview] Chart data loaded and set successfully (${currentDailyMode ? 'DAILY' : 'MONTHLY'})`);
+          console.log('✅ [USC Overview] Chart data state updated, categories:', preparedChartData.daUserTrend?.categories?.slice(0, 10));
+        }, 10);
       } else {
+        console.warn('⚠️ [USC Overview] No data to set for charts');
         setChartsLoaded(true); // Even if no data, mark as loaded
       }
-      
-      console.log('✅ [USC Overview] Chart data loaded successfully (MONTHLY)');
 
     } catch (error) {
-      console.error('Error loading chart data:', error);
+      console.error('❌ [USC Overview] Error loading chart data:', error);
+      console.error('❌ [USC Overview] Error details:', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        currentDailyMode,
+        selectedYear,
+        selectedMonth,
+        selectedLine
+      });
       setChartError('Failed to load chart data.');
       setChartsLoaded(true); // Mark as loaded even on error
     }
@@ -406,8 +660,11 @@ export default function USCOverviewPage() {
     setKpiLoaded(false);
     setChartsLoaded(false);
     loadKPIData();
-    loadChartData();
+    loadChartData(isDailyMode); // ✅ Pass current isDailyMode value
   };
+
+  // ✅ NO AUTO-RELOAD: Data only loads when Search button is clicked
+  // All data refresh must go through handleApplyFilters (Search button)
   
   // ✅ ONLY set isLoading false when BOTH KPI and Charts are ready!
   useEffect(() => {
@@ -497,6 +754,68 @@ export default function USCOverviewPage() {
             selectedLine={selectedLine}
             onLineChange={setSelectedLine}
           />
+        </div>
+
+        {/* ✅ TOGGLE DAILY MODE */}
+        <div className="slicer-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <label className="slicer-label" style={{ margin: 0 }}>DAILY:</label>
+          <label style={{ 
+            position: 'relative',
+            display: 'inline-block',
+            width: '48px',
+            height: '24px',
+            cursor: 'pointer'
+          }}>
+            <input
+              type="checkbox"
+              checked={isDailyMode}
+              onChange={(e) => {
+                const newValue = e.target.checked;
+                console.log('🔄 [USC Overview] ========== TOGGLE DAILY MODE ==========');
+                console.log('🔄 [USC Overview] Toggle change:', { 
+                  from: isDailyMode, 
+                  to: newValue,
+                  selectedYear,
+                  selectedMonth,
+                  selectedLine
+                });
+                
+                // ✅ Update state only - NO AUTO-RELOAD
+                // Data will only refresh when user clicks Search button
+                setIsDailyMode(newValue);
+                console.log('✅ [USC Overview] Toggle Daily Mode updated to:', newValue, '- Waiting for Search button click to reload data');
+              }}
+              style={{ 
+                opacity: 0,
+                width: 0,
+                height: 0
+              }}
+            />
+            <span style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: isDailyMode ? '#10b981' : '#d1d5db',
+              borderRadius: '24px',
+              transition: 'background-color 0.3s ease',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)'
+            }}>
+              <span style={{
+                position: 'absolute',
+                content: '""',
+                height: '18px',
+                width: '18px',
+                left: isDailyMode ? '26px' : '3px',
+                bottom: '3px',
+                backgroundColor: 'white',
+                borderRadius: '50%',
+                transition: 'left 0.3s ease',
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
+              }} />
+            </span>
+          </label>
         </div>
 
         {/* ✅ SEARCH BUTTON */}
@@ -727,6 +1046,7 @@ export default function USCOverviewPage() {
           {/* ROW 2: DA USER & GGR USER (Single Line Charts) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <LineChart
+              key={`da-user-${isDailyMode ? 'daily' : 'monthly'}-${selectedMonth}-${selectedYear}`}
               series={chartData?.daUserTrend?.series || []}
               categories={chartData?.daUserTrend?.categories || []}
               title="DA USER TREND"
@@ -736,6 +1056,7 @@ export default function USCOverviewPage() {
               chartIcon={getChartIcon('Deposit Amount')}
             />
             <LineChart
+              key={`ggr-user-${isDailyMode ? 'daily' : 'monthly'}-${selectedMonth}-${selectedYear}`}
               series={chartData?.ggrUserTrend?.series || []}
               categories={chartData?.ggrUserTrend?.categories || []}
               title="GGR USER TREND"
@@ -750,6 +1071,7 @@ export default function USCOverviewPage() {
           {/* ROW 3: ACTIVE vs PURE MEMBER, DEPOSIT CASES vs WITHDRAW CASES (Double Bar Charts) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <BarChart
+              key={`active-pure-${isDailyMode ? 'daily' : 'monthly'}-${selectedMonth}-${selectedYear}`}
               series={chartData?.activePureMemberTrend?.series || []}
               categories={chartData?.activePureMemberTrend?.categories || []}
               title="ACTIVE MEMBER VS PURE MEMBER TREND"
@@ -762,6 +1084,7 @@ export default function USCOverviewPage() {
               ]}
             />
             <BarChart
+              key={`deposit-withdraw-cases-${isDailyMode ? 'daily' : 'monthly'}-${selectedMonth}-${selectedYear}`}
               series={chartData?.depositWithdrawCasesTrend?.series || []}
               categories={chartData?.depositWithdrawCasesTrend?.categories || []}
               title="DEPOSIT CASES VS WITHDRAW CASES TREND"
@@ -778,6 +1101,7 @@ export default function USCOverviewPage() {
           {/* ROW 4: DEPOSIT vs WITHDRAW (Double Bar Chart), NET PROFIT (Single Line Chart) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <BarChart
+              key={`deposit-withdraw-${isDailyMode ? 'daily' : 'monthly'}-${selectedMonth}-${selectedYear}`}
               series={chartData?.depositWithdrawTrend?.series || []}
               categories={chartData?.depositWithdrawTrend?.categories || []}
               title="DEPOSIT AMOUNT VS WITHDRAW AMOUNT TREND"
@@ -790,6 +1114,7 @@ export default function USCOverviewPage() {
               ]}
             />
             <LineChart
+              key={`net-profit-${isDailyMode ? 'daily' : 'monthly'}-${selectedMonth}-${selectedYear}`}
               series={chartData?.netProfitTrend?.series || []}
               categories={chartData?.netProfitTrend?.categories || []}
               title="NET PROFIT TREND"
@@ -804,6 +1129,7 @@ export default function USCOverviewPage() {
           {/* ROW 5: ATV & PURCHASE FREQUENCY (Single Line Charts) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <LineChart
+              key={`atv-${isDailyMode ? 'daily' : 'monthly'}-${selectedMonth}-${selectedYear}`}
               series={chartData?.atvTrend?.series || []}
               categories={chartData?.atvTrend?.categories || []}
               title="AVERAGE TRANSACTION VALUE TREND"
@@ -814,6 +1140,7 @@ export default function USCOverviewPage() {
               chartIcon={getChartIcon('Average Transaction Value')}
             />
             <LineChart
+              key={`dc-user-${isDailyMode ? 'daily' : 'monthly'}-${selectedMonth}-${selectedYear}`}
               series={chartData?.purchaseFrequencyTrend?.series || []}
               categories={chartData?.purchaseFrequencyTrend?.categories || []}
               title="DC USER TREND"
@@ -828,6 +1155,7 @@ export default function USCOverviewPage() {
           {/* ROW 7: WINRATE & WITHDRAWAL RATE (Single Line Charts) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <LineChart
+              key={`winrate-${isDailyMode ? 'daily' : 'monthly'}-${selectedMonth}-${selectedYear}`}
               series={chartData?.winrateTrend?.series || []}
               categories={chartData?.winrateTrend?.categories || []}
               title="WINRATE TREND"
@@ -838,6 +1166,7 @@ export default function USCOverviewPage() {
               chartIcon={getChartIcon('Winrate')}
             />
             <LineChart
+              key={`withdrawal-rate-${isDailyMode ? 'daily' : 'monthly'}-${selectedMonth}-${selectedYear}`}
               series={chartData?.withdrawalRateTrend?.series || []}
               categories={chartData?.withdrawalRateTrend?.categories || []}
               title="WITHDRAWAL RATE TREND"
@@ -852,6 +1181,7 @@ export default function USCOverviewPage() {
           {/* ROW 8: CONVERSION RATE & HOLD PERCENTAGE (Single Line Charts) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <LineChart
+              key={`conversion-rate-${isDailyMode ? 'daily' : 'monthly'}-${selectedMonth}-${selectedYear}`}
               series={chartData?.conversionRateTrend?.series || []}
               categories={chartData?.conversionRateTrend?.categories || []}
               title="CONVERSION RATE TREND"
@@ -862,6 +1192,7 @@ export default function USCOverviewPage() {
               chartIcon={getChartIcon('New Register')}
             />
             <BarChart
+              key={`register-depositor-${isDailyMode ? 'daily' : 'monthly'}-${selectedMonth}-${selectedYear}`}
               series={chartData?.registerDepositorTrend?.series || []}
               categories={chartData?.registerDepositorTrend?.categories || []}
               title="NEW REGISTER VS NEW DEPOSITOR TREND"
