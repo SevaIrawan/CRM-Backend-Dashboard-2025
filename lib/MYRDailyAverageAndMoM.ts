@@ -22,8 +22,8 @@ export interface MYRKPIData {
   grossGamingRevenue: number
   winrate: number
   withdrawalRate: number
-  daUser: number
-  ggrUser: number
+  depositAmountUser: number
+  ggrPerUser: number
   addBonus: number
   deductBonus: number
   addTransaction: number
@@ -53,8 +53,8 @@ export interface MYRMoMData {
   grossGamingRevenue: number
   winrate: number
   withdrawalRate: number
-  daUser: number
-  ggrUser: number
+  depositAmountUser: number
+  ggrPerUser: number
   addBonus: number
   deductBonus: number
   addTransaction: number
@@ -256,8 +256,8 @@ async function getMYRKPIData(year: string, month: string, line?: string): Promis
       grossGamingRevenue: (row.ggr as number) || 0,
       winrate: (row.winrate as number) || 0,
       withdrawalRate: (row.withdrawal_rate as number) || 0,
-      daUser: (row.da_user as number) || 0,
-      ggrUser: (row.ggr_user as number) || 0,
+      depositAmountUser: (row.da_user as number) || 0,
+      ggrPerUser: (row.ggr_user as number) || 0,
       addBonus: (row.add_bonus as number) || 0,
       deductBonus: (row.deduct_bonus as number) || 0,
       addTransaction: (row.add_transaction as number) || 0,
@@ -299,8 +299,8 @@ function getEmptyMYRKPIData(): MYRKPIData {
     grossGamingRevenue: 0,
     winrate: 0,
     withdrawalRate: 0,
-    daUser: 0,
-    ggrUser: 0,
+    depositAmountUser: 0,
+    ggrPerUser: 0,
     addBonus: 0,
     deductBonus: 0,
     addTransaction: 0,
@@ -340,8 +340,8 @@ export async function calculateAllMYRDailyAverages(
       grossGamingRevenue: await calculateMYRDailyAverage(monthlyData.grossGamingRevenue, year, month),
       winrate: await calculateMYRDailyAverage(monthlyData.winrate, year, month),
       withdrawalRate: await calculateMYRDailyAverage(monthlyData.withdrawalRate, year, month),
-      daUser: await calculateMYRDailyAverage(monthlyData.daUser, year, month),
-      ggrUser: await calculateMYRDailyAverage(monthlyData.ggrUser, year, month),
+      depositAmountUser: await calculateMYRDailyAverage(monthlyData.depositAmountUser, year, month),
+      ggrPerUser: await calculateMYRDailyAverage(monthlyData.ggrPerUser, year, month),
       addBonus: await calculateMYRDailyAverage(monthlyData.addBonus, year, month),
       deductBonus: await calculateMYRDailyAverage(monthlyData.deductBonus, year, month),
       addTransaction: await calculateMYRDailyAverage(monthlyData.addTransaction, year, month),
@@ -396,8 +396,8 @@ export async function getAllMYRKPIsWithMoM(
       grossGamingRevenue: calculateMYRMoM(currentData.grossGamingRevenue, previousData.grossGamingRevenue),
       winrate: calculateMYRMoM(currentData.winrate, previousData.winrate),
       withdrawalRate: calculateMYRMoM(currentData.withdrawalRate, previousData.withdrawalRate),
-      daUser: calculateMYRMoM(currentData.daUser, previousData.daUser),
-      ggrUser: calculateMYRMoM(currentData.ggrUser, previousData.ggrUser),
+      depositAmountUser: calculateMYRMoM(currentData.depositAmountUser, previousData.depositAmountUser),
+      ggrPerUser: calculateMYRMoM(currentData.ggrPerUser, previousData.ggrPerUser),
       addBonus: calculateMYRMoM(currentData.addBonus, previousData.addBonus),
       deductBonus: calculateMYRMoM(currentData.deductBonus, previousData.deductBonus),
       addTransaction: calculateMYRMoM(currentData.addTransaction, previousData.addTransaction),
