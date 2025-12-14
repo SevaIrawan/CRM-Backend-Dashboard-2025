@@ -15,6 +15,11 @@ interface SlicerOptions {
   years: string[]
   months: { value: string; label: string }[]
   dateRange: { min: string; max: string }
+  defaults?: {
+    line: string
+    year: string
+    month: string
+  }
 }
 
 interface Pagination {
@@ -36,6 +41,7 @@ export default function MYRMemberReportPage() {
   const [searchUserName, setSearchUserName] = useState('') // Search User Name input
 
   const [memberReportData, setMemberReportData] = useState<MemberReportData[]>([])
+  const [lastFetchedColumns, setLastFetchedColumns] = useState<string[]>([]) // ✅ Simpan kolom terakhir yang berhasil di-fetch
   const [pagination, setPagination] = useState<Pagination>({
     currentPage: 1,
     totalPages: 1,
@@ -324,7 +330,12 @@ export default function MYRMemberReportPage() {
       const result = await response.json()
       
       if (result.success) {
-        setMemberReportData(result.data || [])
+        const data = result.data || []
+        setMemberReportData(data)
+        // ✅ Simpan kolom terakhir yang berhasil di-fetch untuk empty state
+        if (data.length > 0) {
+          setLastFetchedColumns(Object.keys(data[0]))
+        }
         setPagination(result.pagination || {
           currentPage: 1,
           totalPages: 1,
@@ -414,14 +425,41 @@ export default function MYRMemberReportPage() {
     }
   }
   
-  // Handle Clear search input
+  // Handle Clear search input - Reset semua ke default
   const handleClearSearch = () => {
     const wasSearching = searchUserName && searchUserName.trim()
+    
+    // ✅ Reset search input
     setSearchUserName('')
+    
+    // ✅ Reset pagination ke page 1
     resetPagination()
-    // ✅ Auto fetch data semula setelah clear (tanpa filter user name)
-    // Pass empty string to override userName filter
-    if (line && wasSearching) {
+    
+    // ✅ Reset date range
+    setDateRange({ start: '', end: '' })
+    setUseDateRange(false)
+    setFilterMode('month')
+    
+    // ✅ Reset slicer ke default dari API dan fetch data
+    if (slicerOptions && slicerOptions.defaults) {
+      const defaultLine = slicerOptions.defaults.line || 'ALL'
+      const defaultYear = slicerOptions.defaults.year || 'ALL'
+      const defaultMonth = slicerOptions.defaults.month || 'ALL'
+      
+      // Set defaults
+      setLine(defaultLine)
+      setYear(defaultYear)
+      setMonth(defaultMonth)
+      
+      // Fetch dengan default settings (tanpa userName filter)
+      if (wasSearching) {
+        // Use setTimeout to ensure state updates are applied
+        setTimeout(() => {
+          fetchMemberReportData('')
+        }, 50)
+      }
+    } else if (wasSearching && line) {
+      // Fallback: jika tidak ada defaults, tetap fetch tanpa userName
       fetchMemberReportData('')
     }
   }
@@ -645,14 +683,103 @@ export default function MYRMemberReportPage() {
                 <StandardLoadingSpinner message="Loading MYR Member Report" />
               </div>
             </div>
+          ) : memberReportData.length === 0 && searchUserName && searchUserName.trim() ? (
+            // ✅ Ketika userName tidak ditemukan: Tampilkan table dengan header, pesan di tengah tbody
+            <>
+              <div className="simple-table-container">
+                {/* Date Range Controls Only - No Title */}
+                <div className="table-header-controls" style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <div className="date-range-controls">
+                    <div className="date-range-toggle">
+                      <label className="toggle-label">
+                        <input
+                          type="checkbox"
+                          checked={useDateRange}
+                          onChange={(e) => handleDateRangeToggle(e.target.checked)}
+                        />
+                        Date Range
+                      </label>
+                    </div>
+                    
+                    <div className="date-range-inputs">
+                      <input
+                        type="date"
+                        placeholder="Start Date"
+                        value={dateRange.start}
+                        onChange={(e) => handleDateRangeChange('start', e.target.value)}
+                        disabled={!useDateRange}
+                        min={slicerOptions.dateRange.min}
+                        max={slicerOptions.dateRange.max}
+                        className={`date-input ${!useDateRange ? 'disabled' : ''}`}
+                      />
+                      <input
+                        type="date"
+                        placeholder="End Date"
+                        value={dateRange.end}
+                        onChange={(e) => handleDateRangeChange('end', e.target.value)}
+                        disabled={!useDateRange}
+                        min={slicerOptions.dateRange.min}
+                        max={slicerOptions.dateRange.max}
+                        className={`date-input ${!useDateRange ? 'disabled' : ''}`}
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="simple-table-wrapper">
+                  <table className="simple-table" style={{
+                    borderCollapse: 'collapse',
+                    border: '1px solid #e0e0e0',
+                    width: '100%'
+                  }}>
+                    <thead>
+                      <tr>
+                        {/* ✅ Gunakan kolom terakhir yang berhasil di-fetch (sama dengan table normal) */}
+                        {lastFetchedColumns.length > 0 && getSortedColumns(lastFetchedColumns)
+                          .map((column) => (
+                            <th key={column} style={{ 
+                              textAlign: 'left',
+                              border: '1px solid #e0e0e0',
+                              borderBottom: '2px solid #d0d0d0',
+                              padding: '8px 12px'
+                            }}>
+                              {formatHeaderTitle(column)}
+                            </th>
+                          ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td 
+                          colSpan={lastFetchedColumns.length > 0 ? getSortedColumns(lastFetchedColumns).length : 1}
+                          style={{
+                            textAlign: 'center',
+                            padding: '60px 20px',
+                            border: '1px solid #e0e0e0',
+                            color: '#6b7280',
+                            fontSize: '14px',
+                            fontWeight: 500
+                          }}
+                        >
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ fontSize: '32px', marginBottom: '8px' }}>📭</div>
+                            <div>
+                              No member data found for user name "{searchUserName.trim()}" with the selected filters
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
           ) : memberReportData.length === 0 ? (
+            // ✅ Ketika tidak ada searchUserName dan data kosong: Tampilkan empty-container biasa
             <div className="empty-container">
               <div className="empty-icon">📭</div>
               <div className="empty-text">
-                {searchUserName && searchUserName.trim() 
-                  ? `No member data found for user name "${searchUserName.trim()}" with the selected filters`
-                  : 'No MYR member report data found for the selected filters'
-                }
+                No MYR member report data found for the selected filters
               </div>
             </div>
           ) : (
