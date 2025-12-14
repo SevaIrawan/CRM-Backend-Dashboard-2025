@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
   const startDate = searchParams.get('startDate')
   const endDate = searchParams.get('endDate')
   const filterMode = searchParams.get('filterMode')
+  const userName = searchParams.get('userName') // ✅ Search User Name filter
   const page = parseInt(searchParams.get('page') || '1')
   const limit = parseInt(searchParams.get('limit') || '1000')
 
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
 
   try {
     console.log('📊 Fetching blue_whale_myr data with filters:', { 
-      currency, line, year, month, startDate, endDate, filterMode, page, limit,
+      currency, line, year, month, startDate, endDate, filterMode, userName, page, limit,
       user_allowed_brands: userAllowedBrands,
       is_squad_lead: userAllowedBrands !== null && userAllowedBrands.length > 0
     })
@@ -289,8 +290,19 @@ export async function GET(request: NextRequest) {
         }
       })
       
+      // ✅ Filter by userName if provided (case-insensitive partial match)
+      let filteredData = enrichedData
+      if (userName && userName.trim()) {
+        const searchTerm = userName.trim().toLowerCase()
+        filteredData = enrichedData.filter((row: any) => {
+          const rowUserName = (row.user_name || '').toLowerCase()
+          return rowUserName.includes(searchTerm)
+        })
+        console.log(`🔍 Filtered by userName "${userName}": ${filteredData.length} of ${enrichedData.length} records`)
+      }
+      
       // ✅ Sort by Line (ascending), Days Active (descending), then user_unique and unique_code for consistency
-      enrichedData.sort((a, b) => {
+      filteredData.sort((a, b) => {
         // First sort by line (ascending)
         if (a.line !== b.line) {
           return (a.line || '').localeCompare(b.line || '')
@@ -306,11 +318,11 @@ export async function GET(request: NextRequest) {
         return (a.unique_code || '').localeCompare(b.unique_code || '')
       })
       
-      // ✅ Apply pagination to aggregated data
-      const totalRecords = enrichedData.length
+      // ✅ Apply pagination to filtered data
+      const totalRecords = filteredData.length
       const totalPages = Math.ceil(totalRecords / limit)
       const offset = (page - 1) * limit
-      const paginatedData = enrichedData.slice(offset, offset + limit)
+      const paginatedData = filteredData.slice(offset, offset + limit)
       
       return NextResponse.json({
         success: true,
@@ -330,7 +342,8 @@ export async function GET(request: NextRequest) {
           month,
           startDate,
           endDate,
-          filterMode
+          filterMode,
+          userName
         },
         aggregated: true
       })
@@ -344,6 +357,11 @@ export async function GET(request: NextRequest) {
 
     // Currency lock to MYR table
     baseQuery = baseQuery.eq('currency', 'MYR')
+
+    // ✅ Apply date filter for PER-DAILY MODE (single day)
+    if (isDateRangeMode && startDate && endDate) {
+      baseQuery = baseQuery.filter('date', 'eq', startDate) // Single day = startDate === endDate
+    }
 
     // ✅ NEW: Apply brand filter with user permission check
     if (line && line !== 'ALL') {
@@ -369,11 +387,22 @@ export async function GET(request: NextRequest) {
     if (filterMode === 'month' && month && month !== 'ALL') {
       baseQuery = baseQuery.filter('month', 'eq', month)
     }
+    
+    // ✅ Filter by userName if provided (case-insensitive partial match)
+    if (userName && userName.trim()) {
+      baseQuery = baseQuery.ilike('user_name', `%${userName.trim()}%`)
+      console.log(`🔍 Filtering by userName: "${userName.trim()}"`)
+    }
 
     // Get total count first (separate query) - Build count query with same filters
     let countQuery = supabase.from('blue_whale_myr').select('*', { count: 'exact', head: true }).eq('currency', 'MYR')
     
     // Apply same filters to count query (no currency filter needed)
+    // ✅ Apply date filter for PER-DAILY MODE (single day)
+    if (isDateRangeMode && startDate && endDate) {
+      countQuery = countQuery.filter('date', 'eq', startDate) // Single day = startDate === endDate
+    }
+    
     // ✅ NEW: Apply brand filter with user permission check
     if (line && line !== 'ALL') {
       // Validate Squad Lead access (same check as baseQuery)
@@ -393,6 +422,11 @@ export async function GET(request: NextRequest) {
     }
     if (filterMode === 'month' && month && month !== 'ALL') {
       countQuery = countQuery.filter('month', 'eq', month)
+    }
+    
+    // ✅ Apply userName filter to count query
+    if (userName && userName.trim()) {
+      countQuery = countQuery.ilike('user_name', `%${userName.trim()}%`)
     }
     
     const countResult = await countQuery
@@ -462,7 +496,8 @@ export async function GET(request: NextRequest) {
         month,
         startDate,
         endDate,
-        filterMode
+        filterMode,
+        userName
       },
       aggregated: false
     })

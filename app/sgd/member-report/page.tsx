@@ -33,6 +33,7 @@ export default function SGDMemberReportPage() {
   const [dateRange, setDateRange] = useState({ start: '', end: '' })
   const [filterMode, setFilterMode] = useState('month')
   const [useDateRange, setUseDateRange] = useState(false)
+  const [searchUserName, setSearchUserName] = useState('') // Search User Name input
 
   const [memberReportData, setMemberReportData] = useState<MemberReportData[]>([])
   const [pagination, setPagination] = useState<Pagination>({
@@ -259,7 +260,7 @@ export default function SGDMemberReportPage() {
     }
   }
 
-  const fetchMemberReportData = async () => {
+  const fetchMemberReportData = async (overrideUserName?: string) => {
     // ✅ VALIDATION: Don't fetch if required slicers not set yet
     if (!line) {
       console.log('⏳ [Member Report] Waiting for slicers to be set...')
@@ -278,6 +279,12 @@ export default function SGDMemberReportPage() {
         page: pagination.currentPage.toString(),
         limit: pagination.recordsPerPage.toString()
       })
+      
+      // ✅ Add userName parameter if searchUserName is provided (or use override)
+      const userNameToUse = overrideUserName !== undefined ? overrideUserName : searchUserName
+      if (userNameToUse && userNameToUse.trim()) {
+        params.append('userName', userNameToUse.trim())
+      }
 
       // Get user's allowed brands from localStorage
       const userStr = localStorage.getItem('nexmax_user')
@@ -399,6 +406,25 @@ export default function SGDMemberReportPage() {
     resetPagination()
     fetchMemberReportData()
   }
+  
+  // Handle Enter key in search input
+  const handleSearchInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleApplyFilters()
+    }
+  }
+  
+  // Handle Clear search input
+  const handleClearSearch = () => {
+    const wasSearching = searchUserName && searchUserName.trim()
+    setSearchUserName('')
+    resetPagination()
+    // ✅ Auto fetch data semula setelah clear (tanpa filter user name)
+    // Pass empty string to override userName filter
+    if (line && wasSearching) {
+      fetchMemberReportData('')
+    }
+  }
 
   const handlePageChange = (newPage: number) => {
     setPagination(prev => ({ ...prev, currentPage: newPage }))
@@ -470,7 +496,72 @@ export default function SGDMemberReportPage() {
 
   const subHeaderContent = (
     <div className="subheader-content">
-      <div className="subheader-title">
+      <div className="subheader-title" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        {/* Search User Name Input - Kiri Atas */}
+        <div className="slicer-group" style={{ marginRight: 'auto' }}>
+          <label className="slicer-label">User Name:</label>
+          <div style={{ position: 'relative', display: 'inline-block' }}>
+            <input
+              type="text"
+              value={searchUserName}
+              onChange={(e) => setSearchUserName(e.target.value)}
+              onKeyDown={handleSearchInputKeyDown}
+              placeholder="Enter user name..."
+              style={{
+                padding: '4px 32px 4px 8px',
+                minWidth: '200px',
+                maxWidth: '250px',
+                borderRadius: '4px',
+                border: '1px solid #d1d5db',
+                fontSize: '13px',
+                fontWeight: 500,
+                backgroundColor: 'white',
+                cursor: 'text',
+                transition: 'all 0.2s ease',
+                outline: 'none'
+              }}
+              onFocus={(e) => { e.target.style.borderColor = '#9ca3af' }}
+              onBlur={(e) => { e.target.style.borderColor = '#d1d5db' }}
+            />
+            {/* Clear Button - Auto show when input has value */}
+            {searchUserName && searchUserName.trim() && (
+              <button
+                onClick={handleClearSearch}
+                style={{
+                  position: 'absolute',
+                  right: '6px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '2px 4px',
+                  color: '#6b7280',
+                  fontSize: '18px',
+                  lineHeight: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => { 
+                  e.currentTarget.style.color = '#ef4444'
+                  e.currentTarget.style.backgroundColor = '#fee2e2'
+                }}
+                onMouseLeave={(e) => { 
+                  e.currentTarget.style.color = '#6b7280'
+                  e.currentTarget.style.backgroundColor = 'transparent'
+                }}
+                title="Clear search"
+              >
+                ×
+              </button>
+            )}
+          </div>
+        </div>
         <span className="filter-export-text"> </span>
       </div>
       
@@ -543,12 +634,25 @@ export default function SGDMemberReportPage() {
       <Frame variant="compact">
         <div className="deposit-container">
           {loading ? (
-            <StandardLoadingSpinner message="Loading SGD Member Report" />
+            <div className="simple-table-container">
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                alignItems: 'center', 
+                minHeight: '400px',
+                padding: '40px'
+              }}>
+                <StandardLoadingSpinner message="Loading SGD Member Report" />
+              </div>
+            </div>
           ) : memberReportData.length === 0 ? (
             <div className="empty-container">
               <div className="empty-icon">📭</div>
               <div className="empty-text">
-                No SGD member report data found for the selected filters
+                {searchUserName && searchUserName.trim() 
+                  ? `No member data found for user name "${searchUserName.trim()}" with the selected filters`
+                  : 'No SGD member report data found for the selected filters'
+                }
               </div>
             </div>
           ) : (
