@@ -79,6 +79,9 @@ interface TierMetricsData {
   tierName: string
   customerCount: number
   depositAmount: number
+  withdrawAmount: number
+  depositCases: number
+  withdrawCases: number
   ggr: number
 }
 
@@ -1011,7 +1014,7 @@ export default function TierMetricsComparison({
           // Helper to get tier data or default
           const getTierData = (tierName: string, metrics: TierMetricsData[]) => {
             const tier = metrics.find(t => t.tierName === tierName)
-            return tier || { tierName, customerCount: 0, depositAmount: 0, ggr: 0 }
+            return tier || { tierName, customerCount: 0, depositAmount: 0, withdrawAmount: 0, depositCases: 0, withdrawCases: 0, ggr: 0 }
           }
 
           return (
@@ -1064,7 +1067,7 @@ export default function TierMetricsComparison({
                       minWidth: '120px',
                       width: '120px'
                     }}>Tier</th>
-                    <th colSpan={5} style={{
+                    <th colSpan={8} style={{
                       padding: '16px 14px',
                       textAlign: 'left',
                       fontWeight: 700,
@@ -1076,7 +1079,7 @@ export default function TierMetricsComparison({
                     }}>
                       Period A
                     </th>
-                    <th colSpan={5} style={{
+                    <th colSpan={8} style={{
                       padding: '16px 14px',
                       textAlign: 'left',
                       fontWeight: 700,
@@ -1111,6 +1114,17 @@ export default function TierMetricsComparison({
                       fontSize: '13px',
                       borderRight: '1px solid #374151',
                       letterSpacing: '-0.01em',
+                      minWidth: '100px',
+                      width: '100px'
+                    }}>DC</th>
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      color: '#FFFFFF',
+                      fontSize: '13px',
+                      borderRight: '1px solid #374151',
+                      letterSpacing: '-0.01em',
                       minWidth: '130px',
                       width: '130px'
                     }}>DA</th>
@@ -1122,9 +1136,20 @@ export default function TierMetricsComparison({
                       fontSize: '13px',
                       borderRight: '1px solid #374151',
                       letterSpacing: '-0.01em',
-                      minWidth: '120px',
-                      width: '120px'
-                    }}>DA/User</th>
+                      minWidth: '100px',
+                      width: '100px'
+                    }}>WC</th>
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      color: '#FFFFFF',
+                      fontSize: '13px',
+                      borderRight: '1px solid #374151',
+                      letterSpacing: '-0.01em',
+                      minWidth: '130px',
+                      width: '130px'
+                    }}>WA</th>
                     <th style={{
                       padding: '16px 12px',
                       textAlign: 'center',
@@ -1136,6 +1161,17 @@ export default function TierMetricsComparison({
                       minWidth: '130px',
                       width: '130px'
                     }}>GGR</th>
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      color: '#FFFFFF',
+                      fontSize: '13px',
+                      borderRight: '1px solid #374151',
+                      letterSpacing: '-0.01em',
+                      minWidth: '120px',
+                      width: '120px'
+                    }}>DA/User</th>
                     <th style={{
                       padding: '16px 12px',
                       textAlign: 'center',
@@ -1166,6 +1202,17 @@ export default function TierMetricsComparison({
                       fontSize: '13px',
                       borderRight: '1px solid #374151',
                       letterSpacing: '-0.01em',
+                      minWidth: '100px',
+                      width: '100px'
+                    }}>DC</th>
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      color: '#FFFFFF',
+                      fontSize: '13px',
+                      borderRight: '1px solid #374151',
+                      letterSpacing: '-0.01em',
                       minWidth: '130px',
                       width: '130px'
                     }}>DA</th>
@@ -1177,9 +1224,20 @@ export default function TierMetricsComparison({
                       fontSize: '13px',
                       borderRight: '1px solid #374151',
                       letterSpacing: '-0.01em',
-                      minWidth: '120px',
-                      width: '120px'
-                    }}>DA/User</th>
+                      minWidth: '100px',
+                      width: '100px'
+                    }}>WC</th>
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      color: '#FFFFFF',
+                      fontSize: '13px',
+                      borderRight: '1px solid #374151',
+                      letterSpacing: '-0.01em',
+                      minWidth: '130px',
+                      width: '130px'
+                    }}>WA</th>
                     <th style={{
                       padding: '16px 12px',
                       textAlign: 'center',
@@ -1191,6 +1249,17 @@ export default function TierMetricsComparison({
                       minWidth: '130px',
                       width: '130px'
                     }}>GGR</th>
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      color: '#FFFFFF',
+                      fontSize: '13px',
+                      borderRight: '1px solid #374151',
+                      letterSpacing: '-0.01em',
+                      minWidth: '120px',
+                      width: '120px'
+                    }}>DA/User</th>
                     <th style={{
                       padding: '16px 12px',
                       textAlign: 'center',
@@ -1280,6 +1349,7 @@ export default function TierMetricsComparison({
                         }}>
                           {tierName}
                         </td>
+                        {/* Period A: Count */}
                         <td style={{
                           padding: '12px',
                           textAlign: 'right',
@@ -1292,6 +1362,20 @@ export default function TierMetricsComparison({
                         }}>
                           {formatIntegerKPI(tierA.customerCount)}
                         </td>
+                        {/* Period A: DC */}
+                        <td style={{
+                          padding: '12px',
+                          textAlign: 'right',
+                          color: '#374151',
+                          borderRight: '1px solid #E5E7EB',
+                          borderBottom: '1px solid #E5E7EB',
+                          minWidth: '100px',
+                          width: '100px',
+                          transition: 'background-color 0.2s ease'
+                        }}>
+                          {formatIntegerKPI(tierA.depositCases)}
+                        </td>
+                        {/* Period A: DA */}
                         <td style={{
                           padding: '12px',
                           textAlign: 'right',
@@ -1304,18 +1388,33 @@ export default function TierMetricsComparison({
                         }}>
                           {formatCurrencyKPI(tierA.depositAmount, 'USC')}
                         </td>
+                        {/* Period A: WC */}
                         <td style={{
                           padding: '12px',
                           textAlign: 'right',
                           color: '#374151',
                           borderRight: '1px solid #E5E7EB',
                           borderBottom: '1px solid #E5E7EB',
-                          minWidth: '120px',
-                          width: '120px',
+                          minWidth: '100px',
+                          width: '100px',
                           transition: 'background-color 0.2s ease'
                         }}>
-                          {formatCurrencyKPI(daPerUserA, 'USC')}
+                          {formatIntegerKPI(tierA.withdrawCases)}
                         </td>
+                        {/* Period A: WA */}
+                        <td style={{
+                          padding: '12px',
+                          textAlign: 'right',
+                          color: '#374151',
+                          borderRight: '1px solid #E5E7EB',
+                          borderBottom: '1px solid #E5E7EB',
+                          minWidth: '130px',
+                          width: '130px',
+                          transition: 'background-color 0.2s ease'
+                        }}>
+                          {formatCurrencyKPI(tierA.withdrawAmount, 'USC')}
+                        </td>
+                        {/* Period A: GGR */}
                         <td style={{
                           padding: '12px',
                           textAlign: 'right',
@@ -1329,6 +1428,20 @@ export default function TierMetricsComparison({
                         }}>
                           {formatCurrencyKPI(tierA.ggr, 'USC')}
                         </td>
+                        {/* Period A: DA/User */}
+                        <td style={{
+                          padding: '12px',
+                          textAlign: 'right',
+                          color: '#374151',
+                          borderRight: '1px solid #E5E7EB',
+                          borderBottom: '1px solid #E5E7EB',
+                          minWidth: '120px',
+                          width: '120px',
+                          transition: 'background-color 0.2s ease'
+                        }}>
+                          {formatCurrencyKPI(daPerUserA, 'USC')}
+                        </td>
+                        {/* Period A: WR */}
                         <td style={{
                           padding: '12px',
                           textAlign: 'right',
@@ -1341,6 +1454,7 @@ export default function TierMetricsComparison({
                         }}>
                           {formatPercentageKPI(winRateA)}
                         </td>
+                        {/* Period B: Count */}
                         <td style={{
                           padding: '12px',
                           textAlign: 'right',
@@ -1365,6 +1479,20 @@ export default function TierMetricsComparison({
                             )}
                           </div>
                         </td>
+                        {/* Period B: DC */}
+                        <td style={{
+                          padding: '12px',
+                          textAlign: 'right',
+                          color: '#374151',
+                          borderRight: '1px solid #E5E7EB',
+                          borderBottom: '1px solid #E5E7EB',
+                          minWidth: '100px',
+                          width: '100px',
+                          transition: 'background-color 0.2s ease'
+                        }}>
+                          {formatIntegerKPI(tierB.depositCases)}
+                        </td>
+                        {/* Period B: DA */}
                         <td style={{
                           padding: '12px',
                           textAlign: 'right',
@@ -1389,30 +1517,33 @@ export default function TierMetricsComparison({
                             )}
                           </div>
                         </td>
+                        {/* Period B: WC */}
                         <td style={{
                           padding: '12px',
                           textAlign: 'right',
                           color: '#374151',
                           borderRight: '1px solid #E5E7EB',
                           borderBottom: '1px solid #E5E7EB',
-                          minWidth: '120px',
-                          width: '120px',
+                          minWidth: '100px',
+                          width: '100px',
                           transition: 'background-color 0.2s ease'
                         }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
-                            <span>{formatCurrencyKPI(daPerUserB, 'USC')}</span>
-                            {daPerUserChange !== 0 && (
-                              <span style={{
-                                fontSize: '11px',
-                                color: daPerUserChange >= 0 ? '#059669' : '#dc2626',
-                                fontWeight: 600,
-                                lineHeight: '1.2'
-                              }}>
-                                {daPerUserChange >= 0 ? '↑' : '↓'} {Math.abs(daPerUserChange).toFixed(1)}%
-                              </span>
-                            )}
-                          </div>
+                          {formatIntegerKPI(tierB.withdrawCases)}
                         </td>
+                        {/* Period B: WA */}
+                        <td style={{
+                          padding: '12px',
+                          textAlign: 'right',
+                          color: '#374151',
+                          borderRight: '1px solid #E5E7EB',
+                          borderBottom: '1px solid #E5E7EB',
+                          minWidth: '130px',
+                          width: '130px',
+                          transition: 'background-color 0.2s ease'
+                        }}>
+                          {formatCurrencyKPI(tierB.withdrawAmount, 'USC')}
+                        </td>
+                        {/* Period B: GGR */}
                         <td style={{
                           padding: '12px',
                           textAlign: 'right',
@@ -1439,6 +1570,32 @@ export default function TierMetricsComparison({
                             )}
                           </div>
                         </td>
+                        {/* Period B: DA/User */}
+                        <td style={{
+                          padding: '12px',
+                          textAlign: 'right',
+                          color: '#374151',
+                          borderRight: '1px solid #E5E7EB',
+                          borderBottom: '1px solid #E5E7EB',
+                          minWidth: '120px',
+                          width: '120px',
+                          transition: 'background-color 0.2s ease'
+                        }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                            <span>{formatCurrencyKPI(daPerUserB, 'USC')}</span>
+                            {daPerUserChange !== 0 && (
+                              <span style={{
+                                fontSize: '11px',
+                                color: daPerUserChange >= 0 ? '#059669' : '#dc2626',
+                                fontWeight: 600,
+                                lineHeight: '1.2'
+                              }}>
+                                {daPerUserChange >= 0 ? '↑' : '↓'} {Math.abs(daPerUserChange).toFixed(1)}%
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        {/* Period B: WR */}
                         <td style={{
                           padding: '12px',
                           textAlign: 'right',

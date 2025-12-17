@@ -63,12 +63,13 @@ async function aggregateTierMetricsByDateRange(
 ): Promise<Map<string, { customerCount: number; depositAmount: number; ggr: number }>> {
   let query = supabase
     .from('blue_whale_usc')
-    .select('userkey, tier_name, deposit_amount, withdraw_amount, date')
+    .select('userkey, tier_name, deposit_amount, withdraw_amount, deposit_cases, date')
     .eq('currency', 'USC')
     .gte('date', startDate)
     .lte('date', endDate)
     .not('tier_name', 'is', null)
-    .gt('deposit_cases', 0) // Active customers only
+    // ✅ FIX: Remove .gt('deposit_cases', 0) filter - we need ALL rows for deposit_amount and withdraw_amount
+    // Customer count will be filtered in code (only count where deposit_cases > 0)
 
   if (line && line !== 'All' && line !== 'ALL') {
     query = query.eq('line', line)
@@ -120,6 +121,7 @@ async function aggregateTierMetricsByDateRange(
     tierNumber: number
     depositAmount: number
     withdrawAmount: number
+    isActive: boolean // deposit_cases > 0
   }>()
 
   allData.forEach(row => {
@@ -133,13 +135,16 @@ async function aggregateTierMetricsByDateRange(
 
     const depositAmount = parseFloat(row.deposit_amount || 0)
     const withdrawAmount = parseFloat(row.withdraw_amount || 0)
+    const depositCases = parseFloat(row.deposit_cases || 0)
+    const isActive = depositCases > 0
 
     if (!userMap.has(userkey)) {
       userMap.set(userkey, {
         tierName,
         tierNumber,
         depositAmount: 0,
-        withdrawAmount: 0
+        withdrawAmount: 0,
+        isActive: false
       })
     }
 
@@ -151,31 +156,43 @@ async function aggregateTierMetricsByDateRange(
     }
     userData.depositAmount += depositAmount
     userData.withdrawAmount += withdrawAmount
+    if (isActive) {
+      userData.isActive = true
+    }
   })
 
   // Aggregate by tier
   const tierMetrics = new Map<string, {
     customerCount: number
     depositAmount: number
+    withdrawAmount: number
     ggr: number
   }>()
 
   userMap.forEach((userData) => {
     const tierName = userData.tierName
-    const ggr = userData.depositAmount - userData.withdrawAmount
 
     if (!tierMetrics.has(tierName)) {
       tierMetrics.set(tierName, {
         customerCount: 0,
         depositAmount: 0,
+        withdrawAmount: 0,
         ggr: 0
       })
     }
 
     const tier = tierMetrics.get(tierName)!
-    tier.customerCount += 1
+    // Customer Count (active only - deposit_cases > 0)
+    if (userData.isActive) {
+      tier.customerCount += 1
+    }
     tier.depositAmount += userData.depositAmount
-    tier.ggr += ggr
+    tier.withdrawAmount += userData.withdrawAmount
+  })
+
+  // ✅ FIX: Calculate GGR per tier AFTER aggregation: GGR = SUM(deposit_amount) - SUM(withdraw_amount) per tier
+  tierMetrics.forEach((tier, tierName) => {
+    tier.ggr = tier.depositAmount - tier.withdrawAmount
   })
 
   return tierMetrics

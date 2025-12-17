@@ -76,6 +76,9 @@ interface TierMetricsData {
   tierName: string
   customerCount: number
   depositAmount: number
+  withdrawAmount: number
+  depositCases: number
+  withdrawCases: number
   ggr: number
 }
 
@@ -132,6 +135,9 @@ async function aggregateTierMetricsByDateRange(
 ): Promise<{
   customerCountByTier: Map<string, Set<string>> // tier_name -> Set<userkey>
   depositAmountByTier: Map<string, number> // tier_name -> total deposit_amount
+  withdrawAmountByTier: Map<string, number> // tier_name -> total withdraw_amount
+  depositCasesByTier: Map<string, number> // tier_name -> total deposit_cases
+  withdrawCasesByTier: Map<string, number> // tier_name -> total withdraw_cases
   ggrByTier: Map<string, number> // tier_name -> total ggr
 }> {
   const periodPrefix = periodLabel ? `[${periodLabel}]` : ''
@@ -166,12 +172,13 @@ async function aggregateTierMetricsByDateRange(
     // CRITICAL: Add ordering for data consistency across batches
     let batchQuery = supabase
       .from('blue_whale_usc')
-      .select('userkey, tier_name, deposit_amount, withdraw_amount, deposit_cases, date')
+      .select('userkey, tier_name, deposit_amount, withdraw_amount, deposit_cases, withdraw_cases, date')
       .eq('currency', 'USC')
       .gte('date', queryStartDate) // CRITICAL: Use queryStartDate constant
       .lte('date', queryEndDate)   // CRITICAL: Use queryEndDate constant
       .not('tier_name', 'is', null)
-      .gt('deposit_cases', 0) // Only active users (consistency with movement logic)
+      // ✅ FIX: Remove .gt('deposit_cases', 0) filter - we need ALL rows for deposit_amount and withdraw_amount
+      // Customer count will be filtered in code (only count where deposit_cases > 0)
       .order('userkey', { ascending: true }) // CRITICAL: Ordering for consistency
       .order('date', { ascending: true })     // CRITICAL: Ordering for consistency
       .range(offset, offset + BATCH_SIZE - 1)
@@ -292,6 +299,8 @@ async function aggregateTierMetricsByDateRange(
     tierNames: Set<string> // Track all tier_names for this user
     depositAmount: number
     withdrawAmount: number
+    depositCases: number
+    withdrawCases: number
     isActive: boolean // deposit_cases > 0
   }>()
 
@@ -302,6 +311,7 @@ async function aggregateTierMetricsByDateRange(
     const depositAmount = parseFloat(row.deposit_amount) || 0
     const withdrawAmount = parseFloat(row.withdraw_amount) || 0
     const depositCases = parseFloat(row.deposit_cases) || 0
+    const withdrawCases = parseFloat(row.withdraw_cases) || 0
     const isActive = depositCases > 0
 
     if (!userMap.has(userkey)) {
@@ -310,6 +320,8 @@ async function aggregateTierMetricsByDateRange(
         tierNames: new Set(),
         depositAmount: 0,
         withdrawAmount: 0,
+        depositCases: 0,
+        withdrawCases: 0,
         isActive: false
       })
     }
@@ -321,9 +333,11 @@ async function aggregateTierMetricsByDateRange(
       user.tierNames.add(String(row.tier_name).trim())
     }
 
-    // Accumulate deposit and withdraw amounts
+    // Accumulate deposit and withdraw amounts and cases
     user.depositAmount += depositAmount
     user.withdrawAmount += withdrawAmount
+    user.depositCases += depositCases
+    user.withdrawCases += withdrawCases
     if (isActive) {
       user.isActive = true
     }
@@ -335,6 +349,8 @@ async function aggregateTierMetricsByDateRange(
     tierName: string
     depositAmount: number
     withdrawAmount: number
+    depositCases: number
+    withdrawCases: number
     isActive: boolean
   }>()
 
@@ -358,19 +374,25 @@ async function aggregateTierMetricsByDateRange(
       tierName: highestTierName || 'Unknown',
       depositAmount: user.depositAmount,
       withdrawAmount: user.withdrawAmount,
+      depositCases: user.depositCases,
+      withdrawCases: user.withdrawCases,
       isActive: user.isActive
     })
   })
 
   // Step 3: Aggregate by tier
+  // ✅ FIX: Aggregate ALL deposit_amount and withdraw_amount per tier based on period, line, squadLead, channel
   const customerCountByTier = new Map<string, Set<string>>() // tier_name -> Set<userkey> (active only)
   const depositAmountByTier = new Map<string, number>() // tier_name -> total deposit_amount
+  const withdrawAmountByTier = new Map<string, number>() // tier_name -> total withdraw_amount
+  const depositCasesByTier = new Map<string, number>() // tier_name -> total deposit_cases
+  const withdrawCasesByTier = new Map<string, number>() // tier_name -> total withdraw_cases
   const ggrByTier = new Map<string, number>() // tier_name -> total ggr
 
   userTierMap.forEach((userData, userkey) => {
-    const { tierName, depositAmount, withdrawAmount, isActive } = userData
+    const { tierName, depositAmount, withdrawAmount, depositCases, withdrawCases, isActive } = userData
 
-    // Customer Count (active only)
+    // Customer Count (active only - deposit_cases > 0)
     if (isActive) {
       if (!customerCountByTier.has(tierName)) {
         customerCountByTier.set(tierName, new Set())
@@ -378,23 +400,54 @@ async function aggregateTierMetricsByDateRange(
       customerCountByTier.get(tierName)!.add(userkey)
     }
 
-    // Deposit Amount
+    // ✅ Deposit Amount: SUM ALL deposit_amount per tier (based on period, line, squadLead, channel)
     if (!depositAmountByTier.has(tierName)) {
       depositAmountByTier.set(tierName, 0)
     }
     depositAmountByTier.set(tierName, depositAmountByTier.get(tierName)! + depositAmount)
 
-    // GGR (deposit_amount - withdraw_amount)
-    const ggr = depositAmount - withdrawAmount
-    if (!ggrByTier.has(tierName)) {
-      ggrByTier.set(tierName, 0)
+    // ✅ Withdraw Amount: SUM ALL withdraw_amount per tier (based on period, line, squadLead, channel)
+    if (!withdrawAmountByTier.has(tierName)) {
+      withdrawAmountByTier.set(tierName, 0)
     }
-    ggrByTier.set(tierName, ggrByTier.get(tierName)! + ggr)
+    withdrawAmountByTier.set(tierName, withdrawAmountByTier.get(tierName)! + withdrawAmount)
+
+    // Deposit Cases
+    if (!depositCasesByTier.has(tierName)) {
+      depositCasesByTier.set(tierName, 0)
+    }
+    depositCasesByTier.set(tierName, depositCasesByTier.get(tierName)! + depositCases)
+
+    // Withdraw Cases
+    if (!withdrawCasesByTier.has(tierName)) {
+      withdrawCasesByTier.set(tierName, 0)
+    }
+    withdrawCasesByTier.set(tierName, withdrawCasesByTier.get(tierName)! + withdrawCases)
+  })
+
+  // ✅ FIX: Calculate GGR per tier AFTER aggregation: GGR = SUM(deposit_amount) - SUM(withdraw_amount) per tier
+  // This ensures GGR is calculated correctly from aggregated totals, not from per-user calculations
+  depositAmountByTier.forEach((depositAmt, tierName) => {
+    const withdrawAmt = withdrawAmountByTier.get(tierName) || 0
+    const ggr = depositAmt - withdrawAmt
+    ggrByTier.set(tierName, ggr)
+  })
+
+  // ✅ Debug logging: Log aggregated amounts per tier
+  console.log(`📊 ${periodPrefix} [Tier Metrics Aggregate] Aggregated amounts per tier:`)
+  Array.from(depositAmountByTier.keys()).sort().forEach(tierName => {
+    const depositAmt = depositAmountByTier.get(tierName) || 0
+    const withdrawAmt = withdrawAmountByTier.get(tierName) || 0
+    const ggr = ggrByTier.get(tierName) || 0
+    console.log(`  ${tierName}: DA=${depositAmt.toFixed(2)}, WA=${withdrawAmt.toFixed(2)}, GGR=${ggr.toFixed(2)}`)
   })
 
   return {
     customerCountByTier,
     depositAmountByTier,
+    withdrawAmountByTier,
+    depositCasesByTier,
+    withdrawCasesByTier,
     ggrByTier
   }
 }
@@ -508,12 +561,18 @@ export async function GET(request: NextRequest) {
     const tierMetricsA: TierMetricsData[] = Array.from(allTierNames).map(tierName => {
       const customerCount = periodAMetrics.customerCountByTier.get(tierName)?.size || 0
       const depositAmount = periodAMetrics.depositAmountByTier.get(tierName) || 0
+      const withdrawAmount = periodAMetrics.withdrawAmountByTier.get(tierName) || 0
+      const depositCases = periodAMetrics.depositCasesByTier.get(tierName) || 0
+      const withdrawCases = periodAMetrics.withdrawCasesByTier.get(tierName) || 0
       const ggr = periodAMetrics.ggrByTier.get(tierName) || 0
 
       return {
         tierName,
         customerCount,
         depositAmount,
+        withdrawAmount,
+        depositCases,
+        withdrawCases,
         ggr
       }
     }).sort((a, b) => {
@@ -526,12 +585,18 @@ export async function GET(request: NextRequest) {
     const tierMetricsB: TierMetricsData[] = Array.from(allTierNames).map(tierName => {
       const customerCount = periodBMetrics.customerCountByTier.get(tierName)?.size || 0
       const depositAmount = periodBMetrics.depositAmountByTier.get(tierName) || 0
+      const withdrawAmount = periodBMetrics.withdrawAmountByTier.get(tierName) || 0
+      const depositCases = periodBMetrics.depositCasesByTier.get(tierName) || 0
+      const withdrawCases = periodBMetrics.withdrawCasesByTier.get(tierName) || 0
       const ggr = periodBMetrics.ggrByTier.get(tierName) || 0
 
       return {
         tierName,
         customerCount,
         depositAmount,
+        withdrawAmount,
+        depositCases,
+        withdrawCases,
         ggr
       }
     }).sort((a, b) => {

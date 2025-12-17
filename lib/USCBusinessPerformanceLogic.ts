@@ -325,6 +325,8 @@ async function getNewRegister(filters: USCBPFilters): Promise<number> {
 
 /**
  * Get aggregated amounts from blue_whale_usc
+ * ✅ FIX: Use batch fetching to get ALL rows (not just first 1000)
+ * For deposit_amount and withdraw_amount: count ALL spending based on tier and period
  */
 async function getAggregatedAmounts(filters: USCBPFilters): Promise<{
   depositAmount: number
@@ -332,25 +334,97 @@ async function getAggregatedAmounts(filters: USCBPFilters): Promise<{
   depositCases: number
   withdrawCases: number
 }> {
-  let query = buildBaseQuery('blue_whale_usc', filters, 'deposit_amount, withdraw_amount, deposit_cases, withdraw_cases')
+  // Batch fetch for large datasets (same pattern as tier-metrics API)
+  const BATCH_SIZE = 10000
+  let allData: any[] = []
+  let offset = 0
+  let hasMore = true
   
-  const { data, error } = await query
+  console.log('📊 [USC BP Logic] Fetching aggregated amounts with batch fetching')
   
-  if (error) {
-    console.error('❌ Error fetching aggregated amounts:', error)
+  while (hasMore) {
+    // Rebuild query for each batch to ensure all filters are preserved
+    let batchQuery = buildBaseQuery('blue_whale_usc', filters, 'deposit_amount, withdraw_amount, deposit_cases, withdraw_cases')
+    batchQuery = batchQuery.order('date', { ascending: true }).order('userkey', { ascending: true })
+    batchQuery = batchQuery.range(offset, offset + BATCH_SIZE - 1)
+    
+    const { data, error } = await batchQuery
+    
+    if (error) {
+      console.error('❌ [USC BP Logic] Error fetching aggregated amounts batch at offset', offset, ':', error)
+      break
+    }
+    
+    if (!data || data.length === 0) {
+      hasMore = false
+    } else {
+      allData.push(...data)
+      hasMore = data.length === BATCH_SIZE
+      offset += BATCH_SIZE
+      
+      if (offset === BATCH_SIZE) {
+        console.log(`📊 [USC BP Logic] First batch fetched: ${data.length} records`)
+      }
+    }
+    
+    // ✅ NO LIMIT - Fetch ALL data
+  }
+  
+  console.log(`📊 [USC BP Logic] Total records fetched for aggregation: ${allData.length}`)
+  
+  if (allData.length === 0) {
     return { depositAmount: 0, withdrawAmount: 0, depositCases: 0, withdrawCases: 0 }
   }
   
-  if (!data || !Array.isArray(data)) {
-    return { depositAmount: 0, withdrawAmount: 0, depositCases: 0, withdrawCases: 0 }
-  }
+  // ✅ Aggregate ALL rows: SUM all deposit_amount, withdraw_amount, deposit_cases, withdraw_cases
+  // No filter needed - count ALL spending based on tier and period
+  // ✅ FIX: Ensure proper number conversion for withdraw_amount (same as deposit_amount)
+  let depositCount = 0
+  let withdrawCount = 0
+  let depositNullCount = 0
+  let withdrawNullCount = 0
   
-  const aggregated = data.reduce((acc: any, row: any) => ({
-    depositAmount: acc.depositAmount + (Number(row.deposit_amount) || 0),
-    withdrawAmount: acc.withdrawAmount + (Number(row.withdraw_amount) || 0),
-    depositCases: acc.depositCases + (Number(row.deposit_cases) || 0),
-    withdrawCases: acc.withdrawCases + (Number(row.withdraw_cases) || 0)
-  }), { depositAmount: 0, withdrawAmount: 0, depositCases: 0, withdrawCases: 0 })
+  const aggregated = allData.reduce((acc: any, row: any) => {
+    // Convert to number, handle null/undefined/empty string
+    const depositAmt = row.deposit_amount != null ? Number(row.deposit_amount) : 0
+    const withdrawAmt = row.withdraw_amount != null ? Number(row.withdraw_amount) : 0
+    const depositCases = row.deposit_cases != null ? Number(row.deposit_cases) : 0
+    const withdrawCases = row.withdraw_cases != null ? Number(row.withdraw_cases) : 0
+    
+    // Debug counters
+    if (depositAmt > 0) depositCount++
+    if (withdrawAmt > 0) withdrawCount++
+    if (row.deposit_amount == null) depositNullCount++
+    if (row.withdraw_amount == null) withdrawNullCount++
+    
+    // Handle NaN cases
+    const finalDepositAmt = isNaN(depositAmt) ? 0 : depositAmt
+    const finalWithdrawAmt = isNaN(withdrawAmt) ? 0 : withdrawAmt
+    const finalDepositCases = isNaN(depositCases) ? 0 : depositCases
+    const finalWithdrawCases = isNaN(withdrawCases) ? 0 : withdrawCases
+    
+    return {
+      depositAmount: acc.depositAmount + finalDepositAmt,
+      withdrawAmount: acc.withdrawAmount + finalWithdrawAmt,
+      depositCases: acc.depositCases + finalDepositCases,
+      withdrawCases: acc.withdrawCases + finalWithdrawCases
+    }
+  }, { depositAmount: 0, withdrawAmount: 0, depositCases: 0, withdrawCases: 0 })
+  
+  console.log('✅ [USC BP Logic] Aggregated amounts:', {
+    depositAmount: aggregated.depositAmount,
+    withdrawAmount: aggregated.withdrawAmount,
+    depositCases: aggregated.depositCases,
+    withdrawCases: aggregated.withdrawCases,
+    calculatedGGR: aggregated.depositAmount - aggregated.withdrawAmount,
+    debug: {
+      totalRows: allData.length,
+      rowsWithDeposit: depositCount,
+      rowsWithWithdraw: withdrawCount,
+      depositNullCount,
+      withdrawNullCount
+    }
+  })
   
   return aggregated
 }
