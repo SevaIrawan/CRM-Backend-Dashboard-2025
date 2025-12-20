@@ -100,12 +100,25 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Get current roles array
-    const currentRoles = Array.isArray(currentPage.visible_for_roles) 
-      ? [...currentPage.visible_for_roles] 
-      : []
+    // ✅ FIX: Safe parsing - Handle string, array, or null (same as GET route)
+    // Supabase JSONB column can return as string or array
+    let currentRoles: string[] = []
     
-    console.log('📋 [PageVisibility Toggle API] Current roles:', currentRoles)
+    if (currentPage.visible_for_roles) {
+      if (Array.isArray(currentPage.visible_for_roles)) {
+        currentRoles = [...currentPage.visible_for_roles]
+      } else if (typeof currentPage.visible_for_roles === 'string') {
+        try {
+          const parsed = JSON.parse(currentPage.visible_for_roles)
+          currentRoles = Array.isArray(parsed) ? parsed : []
+        } catch {
+          console.warn('⚠️ [PageVisibility Toggle API] Failed to parse visible_for_roles as JSON, using empty array')
+          currentRoles = []
+        }
+      }
+    }
+    
+    console.log('📋 [PageVisibility Toggle API] Current roles (parsed):', currentRoles)
     
     // Update roles based on action
     let newRoles: string[]
@@ -183,16 +196,32 @@ export async function POST(request: NextRequest) {
       )
     }
     
+    // ✅ FIX: Safe parsing for response - Handle string, array, or null
+    let responseRoles: string[] = []
+    
+    if (updatedPage.visible_for_roles) {
+      if (Array.isArray(updatedPage.visible_for_roles)) {
+        responseRoles = updatedPage.visible_for_roles
+      } else if (typeof updatedPage.visible_for_roles === 'string') {
+        try {
+          const parsed = JSON.parse(updatedPage.visible_for_roles)
+          responseRoles = Array.isArray(parsed) ? parsed : []
+        } catch {
+          console.warn('⚠️ [PageVisibility Toggle API] Failed to parse response visible_for_roles as JSON, using empty array')
+          responseRoles = []
+        }
+      }
+    }
+    
     // Calculate new status
-    const roleCount = Array.isArray(updatedPage.visible_for_roles) 
-      ? updatedPage.visible_for_roles.length 
-      : 0
+    const roleCount = responseRoles.length
     const status = roleCount <= 1 ? 'building' : 'running'
     
     console.log('✅ [PageVisibility Toggle API] Updated successfully:', {
       page_path: updatedPage.page_path,
       status,
-      roleCount
+      roleCount,
+      roles: responseRoles
     })
     
     // Return success response
@@ -202,9 +231,7 @@ export async function POST(request: NextRequest) {
         page_path: updatedPage.page_path,
         page_name: updatedPage.page_name,
         page_section: updatedPage.page_section,
-        visible_for_roles: Array.isArray(updatedPage.visible_for_roles) 
-          ? updatedPage.visible_for_roles 
-          : [],
+        visible_for_roles: responseRoles,
         status,
         updated_at: updatedPage.updated_at
       },
@@ -310,10 +337,23 @@ export async function GET(request: NextRequest) {
       )
     }
     
-    // Check if role has access
-    const visibleRoles = Array.isArray(page.visible_for_roles) 
-      ? page.visible_for_roles 
-      : []
+    // ✅ FIX: Safe parsing - Handle string, array, or null (same as GET route)
+    let visibleRoles: string[] = []
+    
+    if (page.visible_for_roles) {
+      if (Array.isArray(page.visible_for_roles)) {
+        visibleRoles = page.visible_for_roles
+      } else if (typeof page.visible_for_roles === 'string') {
+        try {
+          const parsed = JSON.parse(page.visible_for_roles)
+          visibleRoles = Array.isArray(parsed) ? parsed : []
+        } catch {
+          console.warn('⚠️ [PageVisibility Toggle API] Failed to parse visible_for_roles as JSON, using empty array')
+          visibleRoles = []
+        }
+      }
+    }
+    
     const hasAccess = visibleRoles.includes(role)
     
     console.log('✅ [PageVisibility Toggle API] Access check result:', { page_path, role, hasAccess })
