@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import StandardLoadingSpinner from '@/components/StandardLoadingSpinner'
 import { TIER_NAME_COLORS } from '../constants'
 import { formatCurrencyKPI, formatIntegerKPI, formatPercentageKPI } from '@/lib/formatHelpers'
+import TierCountCustomersModal from './TierCountCustomersModal'
 
 // CSS override khusus untuk Business Performance USC page - background grey full canvas
 // IMPORTANT: Hanya berlaku untuk Business Performance page dengan parent selector bp-subheader-wrapper
@@ -158,6 +159,11 @@ export default function TierMetricsComparison({
   
   // State untuk track expanded row di Tier Movement & Match Analysis (hanya 1 row boleh expanded)
   const [expandedMovementRow, setExpandedMovementRow] = useState<string | null>(null)
+  
+  // State untuk modal Count customers
+  const [countModalOpen, setCountModalOpen] = useState(false)
+  const [countModalTierName, setCountModalTierName] = useState<string>('')
+  const [countModalPeriod, setCountModalPeriod] = useState<'A' | 'B'>('A')
   
   // Function to toggle row expansion (hanya 1 row boleh expanded pada satu waktu)
   const toggleMovementRow = (tierName: string) => {
@@ -1350,16 +1356,40 @@ export default function TierMetricsComparison({
                           {tierName}
                         </td>
                         {/* Period A: Count */}
-                        <td style={{
-                          padding: '12px',
-                          textAlign: 'right',
-                          color: '#374151',
-                          borderRight: '1px solid #E5E7EB',
-                          borderBottom: '1px solid #E5E7EB',
-                          minWidth: '100px',
-                          width: '100px',
-                          transition: 'background-color 0.2s ease'
-                        }}>
+                        <td 
+                          onClick={() => {
+                            if (tierA.customerCount > 0) {
+                              setCountModalTierName(tierName)
+                              setCountModalPeriod('A')
+                              setCountModalOpen(true)
+                            }
+                          }}
+                          style={{
+                            padding: '12px',
+                            textAlign: 'right',
+                            color: tierA.customerCount > 0 ? '#3b82f6' : '#374151',
+                            borderRight: '1px solid #E5E7EB',
+                            borderBottom: '1px solid #E5E7EB',
+                            minWidth: '100px',
+                            width: '100px',
+                            transition: 'all 0.2s ease',
+                            cursor: tierA.customerCount > 0 ? 'pointer' : 'default',
+                            textDecoration: tierA.customerCount > 0 ? 'underline' : 'none'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (tierA.customerCount > 0) {
+                              e.currentTarget.style.backgroundColor = '#E0E7FF'
+                              e.currentTarget.style.color = '#2563eb'
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (tierA.customerCount > 0) {
+                              e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#FFFFFF' : '#FAFAFA'
+                              e.currentTarget.style.color = '#3b82f6'
+                            }
+                          }}
+                          title={tierA.customerCount > 0 ? 'Click to view customer details' : ''}
+                        >
                           {formatIntegerKPI(tierA.customerCount)}
                         </td>
                         {/* Period A: DC */}
@@ -1455,18 +1485,42 @@ export default function TierMetricsComparison({
                           {formatPercentageKPI(winRateA)}
                         </td>
                         {/* Period B: Count */}
-                        <td style={{
-                          padding: '12px',
-                          textAlign: 'right',
-                          color: '#374151',
-                          borderRight: '1px solid #E5E7EB',
-                          borderBottom: '1px solid #E5E7EB',
-                          minWidth: '100px',
-                          width: '100px',
-                          transition: 'background-color 0.2s ease'
-                        }}>
+                        <td 
+                          onClick={() => {
+                            if (tierB.customerCount > 0) {
+                              setCountModalTierName(tierName)
+                              setCountModalPeriod('B')
+                              setCountModalOpen(true)
+                            }
+                          }}
+                          style={{
+                            padding: '12px',
+                            textAlign: 'right',
+                            color: tierB.customerCount > 0 ? '#3b82f6' : '#374151',
+                            borderRight: '1px solid #E5E7EB',
+                            borderBottom: '1px solid #E5E7EB',
+                            minWidth: '100px',
+                            width: '100px',
+                            transition: 'all 0.2s ease',
+                            cursor: tierB.customerCount > 0 ? 'pointer' : 'default',
+                            textDecoration: tierB.customerCount > 0 ? 'underline' : 'none'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (tierB.customerCount > 0) {
+                              e.currentTarget.style.backgroundColor = '#E0E7FF'
+                              e.currentTarget.style.color = '#2563eb'
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (tierB.customerCount > 0) {
+                              e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#FFFFFF' : '#FAFAFA'
+                              e.currentTarget.style.color = '#3b82f6'
+                            }
+                          }}
+                          title={tierB.customerCount > 0 ? 'Click to view customer details' : ''}
+                        >
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
-                            <span>{formatIntegerKPI(tierB.customerCount)}</span>
+                            <span style={{ textDecoration: tierB.customerCount > 0 ? 'underline' : 'none' }}>{formatIntegerKPI(tierB.customerCount)}</span>
                             {countChange !== 0 && (
                               <span style={{
                                 fontSize: '11px',
@@ -1943,6 +1997,21 @@ export default function TierMetricsComparison({
           )
         })()}
       </div>
+
+      {/* Tier Count Customers Modal */}
+      {countModalOpen && (
+        <TierCountCustomersModal
+          isOpen={countModalOpen}
+          onClose={() => setCountModalOpen(false)}
+          tierName={countModalTierName}
+          period={countModalPeriod}
+          startDate={countModalPeriod === 'A' ? periodA.startDate : periodB.startDate}
+          endDate={countModalPeriod === 'A' ? periodA.endDate : periodB.endDate}
+          brand={brand}
+          squadLead={squadLead}
+          channel={channel}
+        />
+      )}
     </div>
   )
 }

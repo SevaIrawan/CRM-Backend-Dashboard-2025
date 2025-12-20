@@ -581,23 +581,50 @@ export default function TierMovementCustomerModal({
     }))
   }
 
-  // Handle send button click
-  const handleSend = (index: number) => {
+  // Handle send button click - Save assignment to database
+  const handleSend = async (index: number) => {
     const handler = assignments[startIndex + index] // Use global index
     if (!handler || handler === 'Select...') {
       showNotificationToast('Please select a handler first', 'error')
       return
     }
 
-    // TODO: Implement API call to save assignment
     const customer = paginatedCustomers[index]
-    console.log('Sending assignment:', {
-      customer: customer,
-      handler
-    })
+    
+    try {
+      // Save assignment to database
+      const response = await fetch('/api/usc-business-performance/save-assignment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          unique_code: customer.unique_code,
+          user_name: customer.user_name,
+          handler: handler,
+          tier: customer.tier,
+          periodAStart,
+          periodAEnd,
+          periodBStart,
+          periodBEnd
+        })
+      })
 
-    // ✅ Show professional notification instead of alert (use 'info' type for assignment)
-    showNotificationToast(`Assignment sent: ${customer.unique_code} → ${handler}`, 'info')
+      if (!response.ok) {
+        throw new Error('Failed to save assignment')
+      }
+
+      const result = await response.json()
+      
+      if (result.success) {
+        showNotificationToast(`Assignment saved: ${customer.unique_code} → ${handler}`, 'success')
+      } else {
+        throw new Error(result.error || 'Failed to save assignment')
+      }
+    } catch (error) {
+      console.error('Error saving assignment:', error)
+      showNotificationToast('Failed to save assignment. Please try again.', 'error')
+    }
   }
   
   // ✅ Export CSV function

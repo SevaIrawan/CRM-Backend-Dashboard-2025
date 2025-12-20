@@ -1,0 +1,84 @@
+[1mdiff --git a/app/sgd/customer-retention/page.tsx b/app/sgd/customer-retention/page.tsx[m
+[1mindex 4c2e621..637c19a 100644[m
+[1m--- a/app/sgd/customer-retention/page.tsx[m
+[1m+++ b/app/sgd/customer-retention/page.tsx[m
+[36m@@ -165,13 +165,14 @@[m [mexport default function SGDCustomerRetentionPage() {[m
+     }[m
+   }, [line, year, month, initialLoadDone])[m
+ [m
+[31m-  // ✅ Reload on pagination OR status filter change[m
+[32m+[m[32m  // ✅ Reload on pagination OR status filter change ONLY (no auto-reload on filter changes)[m
+   useEffect(() => {[m
+     // Skip initial render (handled by first useEffect)[m
+     const isInitialMount = pagination.currentPage === 1 && pagination.totalPages === 1 && pagination.totalRecords === 0[m
+     if (!isInitialMount && line && year && month) {[m
+       fetchCustomerRetentionData()[m
+     }[m
+[32m+[m[32m    // eslint-disable-next-line react-hooks/exhaustive-deps[m
+   }, [pagination.currentPage, statusFilter])[m
+ [m
+   const fetchSlicerOptions = async () => {[m
+[36m@@ -289,16 +290,23 @@[m [mexport default function SGDCustomerRetentionPage() {[m
+     // ✅ Clear date range ketika month berubah[m
+     setUseDateRange(false)[m
+     setDateRange({ start: '', end: '' })[m
+[32m+[m[32m    // ✅ Reset pagination when month changes (user must click Search to fetch)[m
+[32m+[m[32m    resetPagination()[m
+   }[m
+ [m
+   const handleDateRangeChange = (field: 'start' | 'end', value: string) => {[m
+[31m-    setDateRange(prev => ({ ...prev, [field]: value }))[m
+[31m-    // ✅ Keep month locked, don't change to 'ALL'[m
+[31m-    if (field === 'start' || (field === 'end' && dateRange.start)) {[m
+[31m-      setFilterMode('daterange')[m
+[31m-      setUseDateRange(true)[m
+[31m-      // Month remains locked to selected month[m
+[31m-    }[m
+[32m+[m[32m    setDateRange(prev => {[m
+[32m+[m[32m      const updated = { ...prev, [field]: value }[m
+[32m+[m[32m      // ✅ Keep month locked, don't change to 'ALL'[m
+[32m+[m[32m      if (field === 'start' || (field === 'end' && updated.start)) {[m
+[32m+[m[32m        setFilterMode('daterange')[m
+[32m+[m[32m        setUseDateRange(true)[m
+[32m+[m[32m        // Month remains locked to selected month[m
+[32m+[m[32m      }[m
+[32m+[m[32m      return updated[m
+[32m+[m[32m    })[m
+[32m+[m[32m    // ✅ Reset pagination when date range changes (user must click Search to fetch)[m
+[32m+[m[32m    resetPagination()[m
+   }[m
+ [m
+   // HANDLE DATE RANGE TOGGLE[m
+[36m@@ -318,6 +326,8 @@[m [mexport default function SGDCustomerRetentionPage() {[m
+       setFilterMode('month')[m
+       setDateRange({ start: '', end: '' }) // Clear date range[m
+     }[m
+[32m+[m[32m    // ✅ Reset pagination when toggle changes (user must click Search to fetch)[m
+[32m+[m[32m    resetPagination()[m
+   }[m
+   [m
+   // ✅ NEW: Calculate and set date range based on selected month[m
+[36m@@ -482,7 +492,10 @@[m [mexport default function SGDCustomerRetentionPage() {[m
+           <label className="slicer-label">LINE:</label>[m
+           <select [m
+             value={line} [m
+[31m-            onChange={(e) => setLine(e.target.value)}[m
+[32m+[m[32m            onChange={(e) => {[m
+[32m+[m[32m              setLine(e.target.value)[m
+[32m+[m[32m              resetPagination() // ✅ Reset pagination when line changes (user must click Search to fetch)[m
+[32m+[m[32m            }}[m
+             className={`slicer-select ${slicerLoading ? 'disabled' : ''}`}[m
+             disabled={slicerLoading}[m
+           >[m
+[36m@@ -496,7 +509,10 @@[m [mexport default function SGDCustomerRetentionPage() {[m
+           <label className="slicer-label">YEAR:</label>[m
+           <select [m
+             value={year} [m
+[31m-            onChange={(e) => setYear(e.target.value)}[m
+[32m+[m[32m            onChange={(e) => {[m
+[32m+[m[32m              setYear(e.target.value)[m
+[32m+[m[32m              resetPagination() // ✅ Reset pagination when year changes (user must click Search to fetch)[m
+[32m+[m[32m            }}[m
+             className="slicer-select"[m
+           >[m
+             <option value="ALL">All</option>[m
