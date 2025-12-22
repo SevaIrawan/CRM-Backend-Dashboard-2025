@@ -863,7 +863,7 @@ export default function MYRAutoApprovalMonitorPage() {
                      title={isDateRangeMode ? "AVERAGE PROCESSING TIME AUTOMATION (DAILY)" : "AVERAGE PROCESSING TIME AUTOMATION (MONTHLY)"}
                      currency="MYR"
                      hideLegend={selectedCompareLine === 'Select'}
-                     showDataLabels={true}
+                     showDataLabels={false}
                      chartIcon={getChartIcon('Processing Time')}
                      forceSingleYAxis={true}
                      clickable={true}
@@ -887,7 +887,7 @@ export default function MYRAutoApprovalMonitorPage() {
                          })(),
                          categories: data?.weeklyProcessingTime ? data.weeklyProcessingTime.map(item => item.week) : [],
                          hideLegend: selectedCompareLine === 'Select',
-                         showDataLabels: true,
+                         showDataLabels: false,
                          forceSingleYAxis: true
                        },
                        'line',
@@ -915,7 +915,7 @@ export default function MYRAutoApprovalMonitorPage() {
                      title={isDateRangeMode ? "COVERAGE RATE (DAILY TREND)" : "COVERAGE RATE (MONTHLY TREND)"}
                      currency="MYR"
                      hideLegend={selectedCompareLine === 'Select'}
-                     showDataLabels={true}
+                     showDataLabels={false}
                      color="#FF8C00"
                      chartIcon={getChartIcon('Coverage Rate')}
                      forceSingleYAxis={true}
@@ -940,7 +940,7 @@ export default function MYRAutoApprovalMonitorPage() {
                          })(),
                          categories: data?.weeklyCoverageRate ? data.weeklyCoverageRate.map(item => item.week) : [],
                          hideLegend: selectedCompareLine === 'Select',
-                         showDataLabels: true,
+                         showDataLabels: false,
                          forceSingleYAxis: true
                        },
                        'line',
@@ -967,7 +967,7 @@ export default function MYRAutoApprovalMonitorPage() {
                      categories={data?.totalTransactionsTrend ? data.totalTransactionsTrend.categories : []}
                      title={isDateRangeMode ? "TRANSACTION VOLUME TREND ANALYSIS (DAILY)" : "TRANSACTION VOLUME TREND ANALYSIS (MONTHLY)"}
                      currency="MYR"
-                     showDataLabels={true}
+                     showDataLabels={false}
                      chartIcon={getChartIcon('Transaction Volume')}
                      customLegend={[
                        { label: 'Total Transaction', color: '#3B82F6' },
@@ -989,7 +989,7 @@ export default function MYRAutoApprovalMonitorPage() {
                            }
                          ] : [],
                          categories: data?.totalTransactionsTrend ? data.totalTransactionsTrend.categories : [],
-                         showDataLabels: true,
+                         showDataLabels: false,
                          customLegend: [
                            { label: 'Total Transaction', color: '#3B82F6' },
                            { label: 'Total Trans Automation', color: '#FF8C00' }
@@ -1020,7 +1020,7 @@ export default function MYRAutoApprovalMonitorPage() {
                      title={isDateRangeMode ? "OVERDUE TRANS AUTOMATION (DAILY)" : "OVERDUE TRANS AUTOMATION (MONTHLY)"}
                      currency="MYR"
                      hideLegend={selectedCompareLine === 'Select'}
-                     showDataLabels={true}
+                     showDataLabels={false}
                      color="#3B82F6"
                      chartIcon={getChartIcon('Daily Overdue Count')}
                      forceSingleYAxis={true}
@@ -1046,7 +1046,7 @@ export default function MYRAutoApprovalMonitorPage() {
                          })(),
                          categories: data?.dailyOverdueCount ? data.dailyOverdueCount.map(item => item.date) : [],
                          hideLegend: selectedCompareLine === 'Select',
-                         showDataLabels: true,
+                         showDataLabels: false,
                          forceSingleYAxis: true
                        },
                        'line',
@@ -1078,7 +1078,7 @@ export default function MYRAutoApprovalMonitorPage() {
                      title={isDateRangeMode ? "OVERDUE 2m-5m TRANS AUTOMATION (DAILY)" : "OVERDUE 2m-5m TRANS AUTOMATION (MONTHLY)"}
                      currency="MYR"
                      hideLegend={selectedCompareLine === 'Select'}
-                     showDataLabels={true}
+                     showDataLabels={false}
                      chartIcon={getChartIcon('Overdue 2m-5m')}
                      forceSingleYAxis={true}
                      clickable={true}
@@ -1103,7 +1103,7 @@ export default function MYRAutoApprovalMonitorPage() {
                          })(),
                          categories: data?.dailyOverdueCount2mTo5m ? data.dailyOverdueCount2mTo5m.map(item => item.date) : [],
                          hideLegend: selectedCompareLine === 'Select',
-                         showDataLabels: true,
+                         showDataLabels: false,
                          forceSingleYAxis: true
                        },
                        'line',
@@ -1131,7 +1131,7 @@ export default function MYRAutoApprovalMonitorPage() {
                      title={isDateRangeMode ? "OVERDUE 5m-30m TRANS AUTOMATION (DAILY)" : "OVERDUE 5m-30m TRANS AUTOMATION (MONTHLY)"}
                      currency="MYR"
                      hideLegend={selectedCompareLine === 'Select'}
-                     showDataLabels={true}
+                     showDataLabels={false}
                      chartIcon={getChartIcon('Overdue 5m-30m')}
                      forceSingleYAxis={true}
                      clickable={true}
@@ -1156,7 +1156,7 @@ export default function MYRAutoApprovalMonitorPage() {
                          })(),
                          categories: data?.dailyOverdueCount5mTo30m ? data.dailyOverdueCount5mTo30m.map(item => item.date) : [],
                          hideLegend: selectedCompareLine === 'Select',
-                         showDataLabels: true,
+                         showDataLabels: false,
                          forceSingleYAxis: true
                        },
                        'line',
@@ -1188,7 +1188,7 @@ export default function MYRAutoApprovalMonitorPage() {
                      title={isDateRangeMode ? "PROCESSING TIME DISTRIBUTION AUTOMATION (DAILY)" : "PROCESSING TIME DISTRIBUTION AUTOMATION (MONTHLY)"}
                      currency="MYR"
                      hideLegend={selectedCompareLine === 'Select'}
-                     showDataLabels={true}
+                     showDataLabels={false}
                      chartIcon={getChartIcon('Processing Time Distribution')}
                      forceSingleYAxis={true}
                      clickable={true}
@@ -1212,7 +1212,7 @@ export default function MYRAutoApprovalMonitorPage() {
                          })(),
                          categories: data?.dailyAutomationProcessingDistribution ? data.dailyAutomationProcessingDistribution.map(item => item.date) : [],
                          hideLegend: selectedCompareLine === 'Select',
-                         showDataLabels: true,
+                         showDataLabels: false,
                          forceSingleYAxis: true
                        },
                        'line',
@@ -1234,8 +1234,8 @@ export default function MYRAutoApprovalMonitorPage() {
                      title="PEAK HOUR PROC TIME AUTOMATION"
                      currency="MYR"
                      hideLegend={false}
-                     showDataLabels={true}
-                     alwaysShowLabels={true}
+                     showDataLabels={false}
+                     alwaysShowLabels={false}
                      color="#3B82F6"
                      chartIcon={getChartIcon('Peak Hour Processing Time')}
                      peakHourData={data?.peakHourProcessingTime}
@@ -1254,8 +1254,8 @@ export default function MYRAutoApprovalMonitorPage() {
                          ] : [],
                          categories: data?.peakHourProcessingTime ? data.peakHourProcessingTime.map(item => item.period) : [],
                          hideLegend: false,
-                         showDataLabels: true,
-                         alwaysShowLabels: true,
+                         showDataLabels: false,
+                         alwaysShowLabels: false,
                          color: '#3B82F6',
                          peakHourData: data?.peakHourProcessingTime
                        },
