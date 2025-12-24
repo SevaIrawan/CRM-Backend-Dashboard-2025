@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Build base query for filtering - using blue_whale_usc table (include first_deposit_date and line)
-    let baseQuery = supabase.from('blue_whale_usc').select('userkey, user_name, unique_code, update_unique_code, date, line, year, month, first_deposit_date, days_inactive, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, net_profit')
+    let baseQuery = supabase.from('blue_whale_usc').select('userkey, user_name, unique_code, update_unique_code, date, line, year, month, first_deposit_date, days_inactive, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, net_profit, tier_name')
 
     // No currency filter needed since table is blue_whale_usc
 
@@ -290,7 +290,8 @@ function processCustomerRetentionData(rawData: any[], previousMonthUsers: Set<st
         bonus: 0,
         net_profit: 0,
         activeDates: new Set(),
-        brands: new Set([row.line])  // ✅ Track multiple brands
+        brands: new Set([row.line]),  // ✅ Track multiple brands
+        tier_name: row.tier_name || ''  // ✅ Store tier_name (userkey unique per brand, so tier_name is consistent)
       })
     }
     
@@ -299,6 +300,12 @@ function processCustomerRetentionData(rawData: any[], previousMonthUsers: Set<st
     // ✅ Track multiple brands for this user
     if (row.line) {
       userData.brands.add(row.line)
+    }
+    
+    // ✅ Update tier_name if found (userkey unique per brand, so all rows have same tier_name)
+    // Always update if tier_name exists (in case first row has NULL but later rows have value)
+    if (row.tier_name) {
+      userData.tier_name = row.tier_name
     }
     
     // ✅ Update first deposit date (MIN date) - for data consistency
@@ -399,6 +406,7 @@ function processCustomerRetentionData(rawData: any[], previousMonthUsers: Set<st
       pf,   // ✅ NEW: Play Frequency
       winrate,  // ✅ NEW: Winrate (GGR / Deposit Amount)
       wd_rate,  // ✅ NEW: Withdrawal Rate
+      tier_name: user.tier_name || '',  // ✅ NEW: Tier Name (userkey unique per brand)
       status,
       activeDates: undefined, // Remove from final data
       brands: undefined // Remove from final data
