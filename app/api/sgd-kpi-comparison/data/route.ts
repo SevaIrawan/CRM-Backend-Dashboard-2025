@@ -161,9 +161,9 @@ export async function GET(request: NextRequest) {
       { key: 'withdrawRate', label: 'Withdraw Rate', type: 'percentage', inverse: true },
       { key: 'winrate', label: 'Winrate', type: 'percentage', inverse: true },
       { key: 'avgTransactionValue', label: 'Average Transaction Value (ATV)', type: 'amount', inverse: false },
-      { key: 'purchaseFrequency', label: 'Purchase Frequency', type: 'decimal', inverse: false },
       { key: 'ggrPerUser', label: 'GGR User', type: 'amount', inverse: false },
-      { key: 'depositAmountPerUser', label: 'DA User', type: 'amount', inverse: false }
+      { key: 'depositAmountPerUser', label: 'DA User', type: 'amount', inverse: false },
+      { key: 'purchaseFrequency', label: 'DC User', type: 'decimal', inverse: false }
     ];
 
     // Build comparison data
