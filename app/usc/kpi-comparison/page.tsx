@@ -271,8 +271,8 @@ export default function KPIComparisonPage() {
                 <input
                   type="date"
                   value={tempAStart}
-                  min="2021-01-01"
-                  max="2025-12-31"
+                  min={slicerOptions?.dateRange?.min || '2021-01-01'}
+                  max={slicerOptions?.dateRange?.max || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]}
                   onChange={(e) => setTempAStart(e.target.value)}
                   style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px' }}
                 />
@@ -280,8 +280,8 @@ export default function KPIComparisonPage() {
                 <input
                   type="date"
                   value={tempAEnd}
-                  min="2021-01-01"
-                  max="2025-12-31"
+                  min={slicerOptions?.dateRange?.min || '2021-01-01'}
+                  max={slicerOptions?.dateRange?.max || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]}
                   onChange={(e) => setTempAEnd(e.target.value)}
                   style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px' }}
                 />
@@ -348,8 +348,8 @@ export default function KPIComparisonPage() {
                 <input
                   type="date"
                   value={tempBStart}
-                  min="2021-01-01"
-                  max="2025-12-31"
+                  min={slicerOptions?.dateRange?.min || '2021-01-01'}
+                  max={slicerOptions?.dateRange?.max || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]}
                   onChange={(e) => setTempBStart(e.target.value)}
                   style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px' }}
                 />
@@ -357,8 +357,8 @@ export default function KPIComparisonPage() {
                 <input
                   type="date"
                   value={tempBEnd}
-                  min="2021-01-01"
-                  max="2025-12-31"
+                  min={slicerOptions?.dateRange?.min || '2021-01-01'}
+                  max={slicerOptions?.dateRange?.max || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]}
                   onChange={(e) => setTempBEnd(e.target.value)}
                   style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px' }}
                 />

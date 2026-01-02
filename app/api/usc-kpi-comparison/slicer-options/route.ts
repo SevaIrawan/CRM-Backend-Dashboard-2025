@@ -51,7 +51,8 @@ export async function GET(request: NextRequest) {
       .limit(1)
 
     const minDate = minRecord?.[0]?.date || '2021-01-01'
-    const maxDate = latestRecord?.[0]?.date || '2025-12-31'
+    // Use latest record date or current date + 1 year as fallback to allow future dates
+    const maxDate = latestRecord?.[0]?.date || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]
 
     const slicerOptions = {
       lines: linesWithAll,

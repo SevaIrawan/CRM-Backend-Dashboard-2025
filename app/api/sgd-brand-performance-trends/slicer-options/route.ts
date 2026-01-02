@@ -29,7 +29,8 @@ export async function GET(request: NextRequest) {
     }
 
     const minDate = minRecord?.[0]?.date || '2021-01-01'
-    const maxDate = maxRecord?.[0]?.date || new Date().toISOString().split('T')[0]
+    // Use latest record date or current date + 1 year as fallback to allow future dates
+    const maxDate = maxRecord?.[0]?.date || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]
 
     console.log('✅ [SGD Brand Performance Trends] Slicer options loaded:', { minDate, maxDate })
 
