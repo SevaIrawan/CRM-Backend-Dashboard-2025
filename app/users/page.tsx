@@ -9,7 +9,8 @@ import {
   canAccessUserManagement, 
   isReadOnly, 
   getAvailableRoles,
-  getDefaultPageByRole
+  getDefaultPageByRole,
+  isSNR
 } from '@/utils/rolePermissions'
 
 // Session utility functions
@@ -126,6 +127,44 @@ export default function UsersPage() {
     fetchUsers()
     setAuthLoading(false)
   }, []) // Remove router from dependency to prevent re-runs
+
+  // Function untuk extract line dari username SNR
+  const extractLineFromSNRUsername = (username: string): string | null => {
+    // Pattern: snr01_sbkh → SBKH
+    // Pattern: snr02_uwkh → UWKH
+    // Pattern: snr01_ok188 → OK188
+    const match = username.match(/^snr\d+_(.+)$/i)
+    if (match) {
+      return match[1].toUpperCase() // Return line in uppercase
+    }
+    return null
+  }
+
+  // Function untuk detect market dari line
+  const detectMarketFromLine = (line: string): 'MYR' | 'SGD' | 'USC' | null => {
+    const lineUpper = line.toUpperCase()
+    
+    // USC lines (KH, CAM, etc)
+    if (lineUpper.includes('KH') || 
+        lineUpper.includes('CAM') || 
+        ['SBKH', 'UWKH', 'OK188KH', 'OK888KH', 'CAM68', 'CAM78', 'KH888', 'KH778'].includes(lineUpper)) {
+      return 'USC'
+    }
+    
+    // MYR lines (MY suffix)
+    if (lineUpper.endsWith('MY') || 
+        ['SBMY', 'LVMY', 'STMY', 'JMMY'].includes(lineUpper)) {
+      return 'MYR'
+    }
+    
+    // SGD lines (SG suffix)
+    if (lineUpper.endsWith('SG') || 
+        ['SBSG', 'LVSG'].includes(lineUpper)) {
+      return 'SGD'
+    }
+    
+    return null
+  }
 
   // Fetch available brands from database based on market
   const fetchAvailableBrands = async (market: string) => {
@@ -277,12 +316,40 @@ export default function UsersPage() {
       return
     }
 
+    // ✅ Auto-extract line dan detect market untuk SNR
+    let allowedBrands: string[] | null = null
+    let snrRole: string | null = null
+    
+    if (formData.role.startsWith('snr_')) {
+      const extractedLine = extractLineFromSNRUsername(formData.username)
+      if (extractedLine) {
+        allowedBrands = [extractedLine] // Auto-lock line: ['SBKH']
+        
+        // Detect market dari line
+        const detectedMarket = detectMarketFromLine(extractedLine)
+        if (detectedMarket) {
+          snrRole = `snr_${detectedMarket.toLowerCase()}` // snr_usc
+          console.log(`✅ Auto-detected market: ${detectedMarket} for line: ${extractedLine}`)
+        } else {
+          alert(`Cannot detect market for line: ${extractedLine}. Please check line name.`)
+          return
+        }
+      } else {
+        alert('SNR username format invalid. Format: snr01_sbkh, snr02_uwkh, etc')
+        return
+      }
+    }
+
     try {
+      const finalRole = snrRole || formData.role
+      const finalAllowedBrands = formData.role.startsWith('squad_lead_') ? formData.allowed_brands : allowedBrands
+      
       console.log('➕ Adding new user:', {
         username: formData.username,
-        role: formData.role,
-        allowed_brands: formData.role.startsWith('squad_lead_') ? formData.allowed_brands : null,
-        password: 'hidden for security'
+        role: finalRole,
+        allowed_brands: finalAllowedBrands,
+        password: 'hidden for security',
+        ...(snrRole && { auto_detected: { line: extractLineFromSNRUsername(formData.username), market: detectMarketFromLine(extractLineFromSNRUsername(formData.username) || '') } })
       })
       
       const { data, error } = await supabase
@@ -290,8 +357,8 @@ export default function UsersPage() {
         .insert([{
           username: formData.username.trim(),
           password: formData.password.trim(),
-          role: formData.role,
-          allowed_brands: formData.role.startsWith('squad_lead_') ? formData.allowed_brands : null
+          role: finalRole,
+          allowed_brands: finalAllowedBrands
         }])
         .select()
 
@@ -569,6 +636,12 @@ export default function UsersPage() {
         return 'SQUAD LEAD SGD'
       case 'squad_lead_usc':
         return 'SQUAD LEAD USC'
+      case 'snr_myr':
+        return 'SNR Marketing MYR'
+      case 'snr_sgd':
+        return 'SNR Marketing SGD'
+      case 'snr_usc':
+        return 'SNR Marketing USC'
       default:
         return role.toUpperCase()
     }
@@ -696,7 +769,7 @@ export default function UsersPage() {
                          </span>
                       </td>
                       <td className="brands-cell" style={{fontSize: '12px', minWidth: '250px', whiteSpace: 'normal'}}>
-                        {user.role.startsWith('squad_lead_') && user.allowed_brands && user.allowed_brands.length > 0 ? (
+                        {(user.role.startsWith('squad_lead_') || isSNR(user.role)) && user.allowed_brands && user.allowed_brands.length > 0 ? (
                           <div style={{
                             display: 'flex',
                             flexWrap: 'wrap',
@@ -947,6 +1020,42 @@ export default function UsersPage() {
                   <p style={{fontSize: '11px', color: '#666', marginTop: '4px', marginBottom: 0}}>
                     Selected: {formData.allowed_brands.length} brand(s)
                   </p>
+                </div>
+              )}
+
+              {/* Show Preview untuk SNR */}
+              {formData.role.startsWith('snr_') && (
+                <div className="form-group">
+                  <div style={{
+                    padding: '12px',
+                    background: '#e3f2fd',
+                    borderRadius: '5px',
+                    fontSize: '12px',
+                    border: '1px solid #90caf9'
+                  }}>
+                    <strong style={{display: 'block', marginBottom: '8px', color: '#1976d2'}}>SNR Account Info:</strong>
+                    {formData.username && extractLineFromSNRUsername(formData.username) ? (
+                      (() => {
+                        const extractedLine = extractLineFromSNRUsername(formData.username)
+                        const detectedMarket = detectMarketFromLine(extractedLine || '')
+                        return (
+                          <div>
+                            <div style={{marginBottom: '4px'}}>✅ Account: <strong>{formData.username}</strong></div>
+                            <div style={{marginBottom: '4px'}}>✅ Auto-locked Line: <strong>{extractedLine}</strong></div>
+                            <div style={{marginBottom: '4px'}}>✅ Auto-detected Market: <strong>{detectedMarket || 'N/A'}</strong></div>
+                            <div style={{marginBottom: '4px'}}>✅ Role: <strong>snr_{detectedMarket?.toLowerCase() || 'N/A'}</strong></div>
+                            <div style={{fontSize: '11px', color: '#666', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #90caf9'}}>
+                              Line and market will be automatically set when user is created.
+                            </div>
+                          </div>
+                        )
+                      })()
+                    ) : (
+                      <div style={{color: '#f44336'}}>
+                        ⚠️ Invalid format. Use: snr01_sbkh, snr02_uwkh, etc
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 

@@ -164,6 +164,16 @@ export function generateFallbackPageVisibility(): PageVisibilityData[] {
     { path: '/usc/customer-retention', name: 'Customer Retention', section: 'USC', defaultRoles: ['admin', 'executive', 'manager_usc', 'sq_usc'] },
     { path: '/usc/churn-member', name: 'Churned Members', section: 'USC', defaultRoles: ['admin'] },
     { path: '/usc/member-report', name: 'Member Report', section: 'USC', defaultRoles: ['admin', 'executive', 'manager_usc', 'sq_usc'] },
+    { path: '/usc/customer-assignment', name: 'Customer Assignment', section: 'USC', defaultRoles: ['admin', 'manager_usc', 'squad_lead_usc'] },
+    { path: '/usc/snr-customers', name: 'SNR Customers', section: 'USC', defaultRoles: ['admin', 'snr_usc'] },
+    
+    // MYR SNR Pages
+    { path: '/myr/customer-assignment', name: 'Customer Assignment', section: 'MYR', defaultRoles: ['admin', 'manager_myr', 'squad_lead_myr'] },
+    { path: '/myr/snr-customers', name: 'SNR Customers', section: 'MYR', defaultRoles: ['admin', 'snr_myr'] },
+    
+    // SGD SNR Pages
+    { path: '/sgd/customer-assignment', name: 'Customer Assignment', section: 'SGD', defaultRoles: ['admin', 'manager_sgd', 'squad_lead_sgd'] },
+    { path: '/sgd/snr-customers', name: 'SNR Customers', section: 'SGD', defaultRoles: ['admin', 'snr_sgd'] },
     
     // Admin & Other Pages
     { path: '/users', name: 'User Management', section: 'Admin', defaultRoles: ['admin'] },

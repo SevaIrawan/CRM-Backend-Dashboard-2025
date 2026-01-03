@@ -34,6 +34,9 @@ const filterMenuItemsByRole = (menuItems: any[], userRole: string) => {
   // Pages to hide for USC roles (manager_usc, sq_usc, executive)
   const hiddenPagesForUSCRoles = ['/usc/member-analytic', '/usc/churn-member']
   
+  // Check if user is SNR
+  const isSNR = userRole.startsWith('snr_')
+  
   // Only admin can see all pages
   if (userRole === 'admin') {
     return menuItems
@@ -45,7 +48,9 @@ const filterMenuItemsByRole = (menuItems: any[], userRole: string) => {
       return {
         ...item,
         submenu: item.submenu.filter((subItem: any) => 
-          !hiddenPagesForMYRRoles.includes(subItem.path)
+          !hiddenPagesForMYRRoles.includes(subItem.path) &&
+          // Hide SNR Customers for non-SNR roles
+          (!subItem.snrOnly || isSNR)
         )
       }
     }
@@ -55,7 +60,9 @@ const filterMenuItemsByRole = (menuItems: any[], userRole: string) => {
       return {
         ...item,
         submenu: item.submenu.filter((subItem: any) => 
-          !hiddenPagesForSGDRoles.includes(subItem.path)
+          !hiddenPagesForSGDRoles.includes(subItem.path) &&
+          // Hide SNR Customers for non-SNR roles
+          (!subItem.snrOnly || isSNR)
         )
       }
     }
@@ -65,8 +72,31 @@ const filterMenuItemsByRole = (menuItems: any[], userRole: string) => {
       return {
         ...item,
         submenu: item.submenu.filter((subItem: any) => 
-          !hiddenPagesForUSCRoles.includes(subItem.path)
+          !hiddenPagesForUSCRoles.includes(subItem.path) &&
+          // Hide SNR Customers for non-SNR roles
+          (!subItem.snrOnly || isSNR)
         )
+      }
+    }
+    
+    // For SNR roles, show only SNR Customers menu in their market
+    if (isSNR && item.submenu) {
+      // SNR hanya lihat SNR Customers di market mereka
+      if ((userRole === 'snr_myr' && item.title === 'MYR') ||
+          (userRole === 'snr_sgd' && item.title === 'SGD') ||
+          (userRole === 'snr_usc' && item.title === 'USC')) {
+        return {
+          ...item,
+          submenu: item.submenu.filter((subItem: any) => 
+            subItem.snrOnly === true
+          )
+        }
+      } else {
+        // Hide other markets for SNR
+        return {
+          ...item,
+          submenu: []
+        }
       }
     }
     
@@ -311,7 +341,9 @@ export default function Sidebar({
           { title: 'Member Analytic', path: '/myr/member-analytic' },
           { title: 'Customer Retention', path: '/myr/customer-retention' },
           { title: 'Churned Members', path: '/myr/churn-member' },
-          { title: 'Member Report', path: '/myr/member-report' }
+          { title: 'Member Report', path: '/myr/member-report' },
+          { title: 'Customer Assignment', path: '/myr/customer-assignment' },
+          { title: 'SNR Customers', path: '/myr/snr-customers', snrOnly: true }
         ]
       },
       {
@@ -328,7 +360,9 @@ export default function Sidebar({
         { title: 'Member Analytic', path: '/sgd/member-analytic' },
         { title: 'Customer Retention', path: '/sgd/customer-retention' },
           { title: 'Churned Members', path: '/sgd/churn-member' },
-          { title: 'Member Report', path: '/sgd/member-report' }
+          { title: 'Member Report', path: '/sgd/member-report' },
+          { title: 'Customer Assignment', path: '/sgd/customer-assignment' },
+          { title: 'SNR Customers', path: '/sgd/snr-customers', snrOnly: true }
         ]
       },
       {
@@ -346,7 +380,9 @@ export default function Sidebar({
         { title: 'Pure Member Analysis', path: '/usc/pure-member-analysis' },
         { title: 'Customer Retention', path: '/usc/customer-retention' },
           { title: 'Churned Members', path: '/usc/churn-member' },
-          { title: 'Member Report', path: '/usc/member-report' }
+          { title: 'Member Report', path: '/usc/member-report' },
+          { title: 'Customer Assignment', path: '/usc/customer-assignment' },
+          { title: 'SNR Customers', path: '/usc/snr-customers', snrOnly: true }
         ]
       },
       {

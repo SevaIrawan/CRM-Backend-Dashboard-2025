@@ -217,3 +217,32 @@ export const applyChannelFilter = (
   return query.eq('traffic', selectedChannel)
 }
 
+/**
+ * Apply SNR account filter to Supabase query
+ * IMPORTANT: Only applies filter if user is SNR role
+ * @param query - Supabase query object
+ * @param userRole - User's role (e.g., 'snr_usc', 'snr_myr', 'snr_sgd')
+ * @param userUsername - User's username (e.g., 'snr01_sbkh')
+ * @returns Filtered query (or unchanged query if not SNR)
+ */
+export const applySNRFilter = (
+  query: any,
+  userRole: string | null,
+  userUsername: string | null
+) => {
+  // Only apply filter if user is SNR
+  if (!userRole || !userRole.startsWith('snr_')) {
+    return query
+  }
+  
+  // Only apply filter if username is provided
+  if (!userUsername) {
+    console.warn('⚠️ [SNR Filter] Username not provided for SNR user')
+    return query
+  }
+  
+  // Filter by snr_account = username (e.g., snr01_sbkh)
+  console.log(`🔒 [SNR Filter] Applying snr_account filter: ${userUsername}`)
+  return query.eq('snr_account', userUsername)
+}
+

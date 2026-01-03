@@ -10,6 +10,9 @@
 // 8. Squad Lead MYR = Limited Access: Specific Brands within MYR Market + Read Only
 // 9. Squad Lead SGD = Limited Access: Specific Brands within SGD Market + Read Only
 // 10. Squad Lead USC = Limited Access: Specific Brands within USC Market + Read Only
+// 11. SNR MYR = Marketing role for MYR Market (Brand-level access, auto-locked from username)
+// 12. SNR SGD = Marketing role for SGD Market (Brand-level access, auto-locked from username)
+// 13. SNR USC = Marketing role for USC Market (Brand-level access, auto-locked from username)
 
 export interface UserRole {
   id: string
@@ -192,6 +195,36 @@ export const USER_ROLES: { [key: string]: UserRole } = {
     canAccessUserManagement: false,
     isReadOnly: true,
     allowedBrands: null // Will be populated from database per user
+  },
+  // SNR MYR = Marketing role for MYR market (Brand-level access)
+  'snr_myr': {
+    id: 'snr_myr',
+    name: 'snr_myr',
+    displayName: 'SNR Marketing MYR',
+    permissions: ['myr'], // MYR market only
+    canAccessUserManagement: false,
+    isReadOnly: true,
+    allowedBrands: null // Will be populated from database per user (auto-locked from username)
+  },
+  // SNR SGD = Marketing role for SGD market (Brand-level access)
+  'snr_sgd': {
+    id: 'snr_sgd',
+    name: 'snr_sgd',
+    displayName: 'SNR Marketing SGD',
+    permissions: ['sgd'], // SGD market only
+    canAccessUserManagement: false,
+    isReadOnly: true,
+    allowedBrands: null // Will be populated from database per user (auto-locked from username)
+  },
+  // SNR USC = Marketing role for USC market (Brand-level access)
+  'snr_usc': {
+    id: 'snr_usc',
+    name: 'snr_usc',
+    displayName: 'SNR Marketing USC',
+    permissions: ['usc'], // USC market only
+    canAccessUserManagement: false,
+    isReadOnly: true,
+    allowedBrands: null // Will be populated from database per user (auto-locked from username)
   }
 }
 
@@ -212,6 +245,18 @@ export const hasPermission = (userRole: string, pagePath: string): boolean => {
     return false
   }
 
+  // ✅ SNR roles can ONLY access their SNR customer pages
+  if (userRole.startsWith('snr_')) {
+    const allowedSNRPages = [
+      '/myr/snr-customers',
+      '/sgd/snr-customers',
+      '/usc/snr-customers'
+    ]
+    const hasAccess = allowedSNRPages.includes(pagePath)
+    console.log('🔒 [SNR] Access check:', { pagePath, hasAccess })
+    return hasAccess
+  }
+
   // Map page paths to permission names
   const pathToPermission: { [key: string]: string } = {
     '/dashboard': 'dashboard',
@@ -222,6 +267,12 @@ export const hasPermission = (userRole: string, pagePath: string): boolean => {
     '/usc/member-analytic': 'usc',
     '/usc/brand-comparison': 'usc',
     '/usc/kpi-comparison': 'usc',
+    '/myr/snr-customers': 'myr',
+    '/sgd/snr-customers': 'sgd',
+    '/usc/snr-customers': 'usc',
+    '/myr/customer-assignment': 'myr',
+    '/sgd/customer-assignment': 'sgd',
+    '/usc/customer-assignment': 'usc',
     '/transaction': 'transaction',
     '/transaction/adjustment': 'transaction',
     '/transaction/deposit': 'transaction',
@@ -306,6 +357,12 @@ export const getDefaultPageByRole = (userRole: string): string => {
     case 'sq_usc':
     case 'squad_lead_usc':  // Squad Lead USC → USC Overview
       return '/usc/overview'
+    case 'snr_myr':  // SNR MYR → MYR SNR Customers (will be created later)
+      return '/myr/snr-customers'
+    case 'snr_sgd':  // SNR SGD → SGD SNR Customers (will be created later)
+      return '/sgd/snr-customers'
+    case 'snr_usc':  // SNR USC → USC SNR Customers (will be created later)
+      return '/usc/snr-customers'
     case 'admin':
     case 'analyst':
     case 'demo':
@@ -341,4 +398,9 @@ export const canAccessBrand = (brandName: string): boolean => {
 // NEW: Check if user is Squad Lead (any market)
 export const isSquadLead = (userRole: string): boolean => {
   return userRole.startsWith('squad_lead_')
+}
+
+// NEW: Check if user is SNR (any market)
+export const isSNR = (userRole: string): boolean => {
+  return userRole.startsWith('snr_')
 } 
