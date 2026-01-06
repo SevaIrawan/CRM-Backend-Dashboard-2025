@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    const snr_handler = handlerData.handler
+    const snr_handler = String(handlerData.handler || '').trim()
 
     // Get current user from request (if available)
     const userHeader = request.headers.get('x-user')
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       .from('blue_whale_usc')
       .update({
         snr_account: snr_account.trim(),
-        snr_handler: snr_handler.trim(),
+        snr_handler: snr_handler,
         snr_assigned_at: assignedAt,
         snr_assigned_by: assignedBy
       })
