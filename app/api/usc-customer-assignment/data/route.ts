@@ -7,6 +7,7 @@ export async function GET(request: NextRequest) {
   const line = searchParams.get('line')
   const year = searchParams.get('year')
   const month = searchParams.get('month')
+  const tier = searchParams.get('tier')
   const search = searchParams.get('search') || ''
   const searchColumn = searchParams.get('searchColumn') || 'update_unique_code'
   const page = parseInt(searchParams.get('page') || '1')
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
 
   try {
     console.log('📊 Fetching customer assignment data:', { 
-      line, year, month, search, searchColumn, page, limit,
+      line, year, month, tier, search, searchColumn, page, limit,
       user_allowed_brands: userAllowedBrands
     })
 
@@ -54,6 +55,11 @@ export async function GET(request: NextRequest) {
       query = query.eq('line', line)
     } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
       query = query.in('line', userAllowedBrands)
+    }
+
+    // Apply tier filter
+    if (tier && tier !== 'ALL' && tier.trim()) {
+      query = query.eq('tier_name', tier)
     }
 
     // Note: Search will be applied after aggregation

@@ -58,6 +58,22 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
+    // Get unique tiers
+    const { data: tierData, error: tierError } = await supabase
+      .from('blue_whale_usc')
+      .select('tier_name')
+      .not('tier_name', 'is', null)
+      .order('tier_name')
+
+    if (tierError) {
+      console.error('❌ Error fetching tiers:', tierError)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Database error while fetching tiers',
+        message: tierError.message 
+      }, { status: 500 })
+    }
+
     // Get max date for defaults
     const { data: maxDateData, error: maxDateError } = await supabase
       .from('blue_whale_usc')
@@ -100,6 +116,10 @@ export async function GET(request: NextRequest) {
     const sortedMonths = validMonths.sort((a, b) => monthNames.indexOf(a) - monthNames.indexOf(b))
     const months = sortedMonths.map(month => ({ value: month, label: month })) // ✅ Return month as string (January, February, etc)
 
+    // Process tiers
+    const tiers = Array.from(new Set(tierData?.map(row => row.tier_name).filter(Boolean) || [])) as string[]
+    const sortedTiers = tiers.sort()
+
     // Get default year and month from MAX date in database
     let defaultYear = years.length > 0 ? years[0] : '' // Latest year (already sorted DESC)
     let defaultMonth = ''
@@ -125,6 +145,7 @@ export async function GET(request: NextRequest) {
       lines: finalLines.length,
       years: years.length,
       months: months.length,
+      tiers: sortedTiers.length,
       defaults: { line: 'ALL', year: defaultYear, month: defaultMonth }
     })
 
@@ -134,6 +155,7 @@ export async function GET(request: NextRequest) {
         lines: finalLines,
         years,
         months,
+        tiers: sortedTiers,
         defaults: {
           line: 'ALL',
           year: defaultYear,

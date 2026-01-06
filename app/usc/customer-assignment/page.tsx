@@ -47,6 +47,7 @@ interface SlicerOptions {
   lines: string[]
   years: string[]
   months: { value: string; label: string }[] // value is month name (January, February, etc)
+  tiers: string[]
 }
 
 interface AssignmentEdit {
@@ -61,6 +62,7 @@ export default function USCCustomerAssignmentPage() {
   const [line, setLine] = useState('ALL')
   const [year, setYear] = useState('')
   const [month, setMonth] = useState('')
+  const [tier, setTier] = useState('ALL')
   const [searchInput, setSearchInput] = useState('')
   
   const [customerData, setCustomerData] = useState<CustomerData[]>([])
@@ -81,7 +83,8 @@ export default function USCCustomerAssignmentPage() {
   const [slicerOptions, setSlicerOptions] = useState<SlicerOptions>({
     lines: [],
     years: [],
-    months: []
+    months: [],
+    tiers: []
   })
   
   const [loading, setLoading] = useState(true)
@@ -137,7 +140,8 @@ export default function USCCustomerAssignmentPage() {
         setSlicerOptions({
           lines: result.data.lines || [],
           years: result.data.years || [],
-          months: result.data.months || []
+          months: result.data.months || [],
+          tiers: result.data.tiers || []
         })
         
         // Auto-set to defaults from API
@@ -179,6 +183,7 @@ export default function USCCustomerAssignmentPage() {
         year,
         month,
         line: line === 'ALL' ? '' : line,
+        tier: tier === 'ALL' ? '' : tier,
         page: pagination.currentPage.toString(),
         limit: pagination.recordsPerPage.toString(),
         search: searchValue,
@@ -426,11 +431,20 @@ export default function USCCustomerAssignmentPage() {
   // Auto-load data ONCE when defaults are set from API (initial load only)
   useEffect(() => {
     if (!initialLoadDone && year && month) {
-      console.log('✅ [Customer Assignment] Initial load with defaults:', { line, year, month })
+      console.log('✅ [Customer Assignment] Initial load with defaults:', { line, year, month, tier })
       fetchCustomerData()
       setInitialLoadDone(true)
     }
-  }, [line, year, month, initialLoadDone])
+  }, [line, year, month, tier, initialLoadDone])
+
+  // Auto-fetch data when slicers change (after initial load) - same as other slicers (line, year, month, tier)
+  useEffect(() => {
+    if (initialLoadDone && year && month) {
+      console.log('🔄 [Customer Assignment] Slicers changed, auto-fetching data:', { line, year, month, tier })
+      setPagination(prev => ({ ...prev, currentPage: 1 }))
+      fetchCustomerData()
+    }
+  }, [line, year, month, tier])
 
   // Fetch data when page changes
   useEffect(() => {
@@ -863,6 +877,23 @@ export default function USCCustomerAssignmentPage() {
                   {slicerOptions.months.map((monthOption) => (
                     <option key={monthOption.value} value={monthOption.value}>
                       {monthOption.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="slicer-group">
+                <label className="slicer-label">TIER:</label>
+                <select 
+                  value={tier} 
+                  onChange={(e) => setTier(e.target.value)}
+                  className={`slicer-select ${slicerLoading ? 'disabled' : ''}`}
+                  disabled={slicerLoading}
+                >
+                  <option value="ALL">All</option>
+                  {slicerOptions.tiers.map((tierOption) => (
+                    <option key={tierOption} value={tierOption}>
+                      {tierOption}
                     </option>
                   ))}
                 </select>
