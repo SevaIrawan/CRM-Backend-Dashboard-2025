@@ -341,6 +341,7 @@ export default function Sidebar({
           { title: 'Deposit Auto‑Approval', path: '/myr/auto-approval-monitor' },
           { title: 'Withdrawal Auto‑Approval', path: '/myr/auto-approval-withdraw' },
           { title: 'Member Analytic', path: '/myr/member-analytic' },
+          { title: 'Pure Member Analysis', path: '/myr/pure-member-analysis' },
           { title: 'Customer Retention', path: '/myr/customer-retention' },
           { title: 'Churned Members', path: '/myr/churn-member' },
           { title: 'Member Report', path: '/myr/member-report' },

@@ -135,6 +135,7 @@ export function generateFallbackPageVisibility(): PageVisibilityData[] {
     // MYR Pages
     { path: '/myr/overview', name: 'Overview', section: 'MYR', defaultRoles: ['admin', 'executive', 'manager_myr', 'sq_myr'] },
     { path: '/myr/member-analytic', name: 'Member Analytic', section: 'MYR', defaultRoles: ['admin'] },
+    { path: '/myr/pure-member-analysis', name: 'Pure Member Analysis', section: 'MYR', defaultRoles: ['admin', 'executive', 'manager_myr', 'sq_myr'] },
     { path: '/myr/brand-performance-trends', name: 'Brand Comparison Trends', section: 'MYR', defaultRoles: ['admin', 'executive', 'manager_myr', 'sq_myr'] },
     { path: '/myr/kpi-comparison', name: 'KPI Comparison', section: 'MYR', defaultRoles: ['admin', 'executive', 'manager_myr', 'sq_myr'] },
     { path: '/myr/overall-label', name: 'Overall Label', section: 'MYR', defaultRoles: ['admin', 'executive', 'manager_myr', 'sq_myr'] },
