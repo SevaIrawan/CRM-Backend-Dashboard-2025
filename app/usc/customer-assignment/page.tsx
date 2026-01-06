@@ -100,8 +100,14 @@ export default function USCCustomerAssignmentPage() {
         return
       }
 
-      setSnrAccounts(data || [])
-      console.log('✅ SNR accounts fetched:', data?.length || 0)
+      // ✅ Type assertion untuk memastikan type sesuai dengan SNRAccount[]
+      const accounts: SNRAccount[] = (data || []).map((item: any) => ({
+        username: String(item.username || ''),
+        allowed_brands: item.allowed_brands || null
+      }))
+
+      setSnrAccounts(accounts)
+      console.log('✅ SNR accounts fetched:', accounts.length)
     } catch (error) {
       console.error('❌ Error fetching SNR accounts:', error)
     }
@@ -121,9 +127,9 @@ export default function USCCustomerAssignmentPage() {
         .eq('currency', 'USC')
         .not('line', 'is', null)
       
-      const allLines = Array.from(new Set(linesData?.map(r => r.line).filter(Boolean) || []))
+      const allLines = Array.from(new Set(linesData?.map((r: any) => String(r.line || '')).filter(Boolean) || [])) as string[]
       const filteredLines = userAllowedBrands && userAllowedBrands.length > 0
-        ? allLines.filter(line => userAllowedBrands.includes(line))
+        ? allLines.filter((line: string) => userAllowedBrands.includes(line))
         : allLines
       
       // Fetch years
@@ -133,8 +139,8 @@ export default function USCCustomerAssignmentPage() {
         .eq('currency', 'USC')
         .not('year', 'is', null)
       
-      const allYears = Array.from(new Set(yearsData?.map(r => r.year).filter(Boolean) || []))
-        .sort((a, b) => b - a)
+      const allYears = Array.from(new Set(yearsData?.map((r: any) => Number(r.year) || 0).filter((y: number) => y > 0) || []))
+        .sort((a: number, b: number) => b - a)
       
       // Fetch months
       const months = [
@@ -160,7 +166,7 @@ export default function USCCustomerAssignmentPage() {
       
       // Set defaults
       if (!year && allYears.length > 0) {
-        setYear(allYears[0].toString())
+        setYear(String(allYears[0]))
       }
       if (!month) {
         const currentMonth = new Date().getMonth() + 1
@@ -602,7 +608,7 @@ export default function USCCustomerAssignmentPage() {
 
           {/* Table */}
           {loading ? (
-            <StandardLoadingSpinner />
+            <StandardLoadingSpinner message="Loading customer data..." />
           ) : (
             <div style={{
               backgroundColor: '#ffffff',
