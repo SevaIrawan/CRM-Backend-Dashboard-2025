@@ -142,10 +142,14 @@ export default function USCCustomerAssignmentPage() {
         
         // Auto-set to defaults from API
         if (result.data.defaults) {
-          if (!year && result.data.defaults.year) {
+          // Always set Line to 'ALL' (default)
+          setLine('ALL')
+          
+          // Always set Year and Month to last data from table
+          if (result.data.defaults.year) {
             setYear(result.data.defaults.year)
           }
-          if (!month && result.data.defaults.month) {
+          if (result.data.defaults.month) {
             setMonth(result.data.defaults.month)
           }
           console.log('✅ [Customer Assignment] Auto-set to defaults:', result.data.defaults)
@@ -159,7 +163,7 @@ export default function USCCustomerAssignmentPage() {
   }
 
   // Fetch customer data
-  const fetchCustomerData = async () => {
+  const fetchCustomerData = async (overrideSearch?: string) => {
     if (!year || !month) {
       console.log('⏳ Waiting for slicers...')
       return
@@ -168,13 +172,16 @@ export default function USCCustomerAssignmentPage() {
     try {
       setLoading(true)
       
+      // Use overrideSearch if provided, otherwise use searchInput from state
+      const searchValue = overrideSearch !== undefined ? overrideSearch : searchInput
+      
       const params = new URLSearchParams({
         year,
         month,
         line: line === 'ALL' ? '' : line,
         page: pagination.currentPage.toString(),
         limit: pagination.recordsPerPage.toString(),
-        search: searchInput,
+        search: searchValue,
         searchColumn: 'update_unique_code' // Always search by unique code
       })
 
@@ -231,6 +238,13 @@ export default function USCCustomerAssignmentPage() {
     }
     
     setEditingAssignments(new Map(editingAssignments.set(userkey, updated)))
+  }
+
+  // Clear assignment - Reset all changes to default
+  const handleClearAssignment = (userkey: string) => {
+    const newEditing = new Map(editingAssignments)
+    newEditing.delete(userkey)
+    setEditingAssignments(newEditing)
   }
 
   // Save single assignment
@@ -470,9 +484,15 @@ export default function USCCustomerAssignmentPage() {
     }
   }
 
-  // Handle clear search
+  // Handle clear search - Reset all to default
   const handleClearSearch = () => {
     setSearchInput('')
+    // Reset pagination to first page
+    setPagination(prev => ({ ...prev, currentPage: 1 }))
+    // Fetch all data without search filter immediately (pass empty string)
+    if (year && month) {
+      fetchCustomerData('')
+    }
   }
 
   // Get subtitle and description based on active bookmark
@@ -880,7 +900,8 @@ export default function USCCustomerAssignmentPage() {
               <div className="simple-table-wrapper" style={{ maxHeight: '600px', overflowY: 'auto' }}>
                 <table className="simple-table" style={{
                   borderCollapse: 'collapse',
-                  width: '100%'
+                  width: '100%',
+                  tableLayout: 'auto'
                 }}>
                   <thead>
                     <tr>
@@ -889,112 +910,129 @@ export default function USCCustomerAssignmentPage() {
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'nowrap',
+                        width: 'auto'
                       }}>Brand</th>
                       <th style={{ 
                         textAlign: 'left',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'nowrap',
+                        width: 'auto'
                       }}>Unique Code</th>
                       <th style={{ 
                         textAlign: 'left',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'normal',
+                        maxWidth: '300px',
+                        wordBreak: 'break-word'
                       }}>Traffic</th>
                       <th style={{ 
                         textAlign: 'left',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'nowrap',
+                        width: 'auto'
                       }}>LDD</th>
                       <th style={{ 
                         textAlign: 'right',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'nowrap',
+                        width: 'auto'
                       }}>Days Active</th>
                       <th style={{ 
                         textAlign: 'right',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'nowrap',
+                        width: 'auto'
                       }}>ATV</th>
                       <th style={{ 
                         textAlign: 'right',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'nowrap',
+                        width: 'auto'
                       }}>PF</th>
                       <th style={{ 
                         textAlign: 'right',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'nowrap',
+                        width: 'auto'
                       }}>DC</th>
                       <th style={{ 
                         textAlign: 'right',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'nowrap',
+                        width: 'auto'
                       }}>DA</th>
                       <th style={{ 
                         textAlign: 'right',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'nowrap',
+                        width: 'auto'
                       }}>WC</th>
                       <th style={{ 
                         textAlign: 'right',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'nowrap',
+                        width: 'auto'
                       }}>WA</th>
                       <th style={{ 
                         textAlign: 'right',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'nowrap',
+                        width: 'auto'
                       }}>GGR</th>
                       <th style={{ 
                         textAlign: 'left',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'nowrap',
+                        width: 'auto'
                       }}>Tier</th>
                       <th style={{ 
                         textAlign: 'left',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'nowrap',
+                        width: 'auto'
                       }}>Assignee</th>
                       <th style={{ 
                         textAlign: 'left',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'nowrap',
+                        width: 'auto'
                       }}>Handler</th>
                       <th style={{ 
                         textAlign: 'center',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'nowrap',
+                        width: 'auto'
                       }}>Action</th>
                     </tr>
                   </thead>
@@ -1016,7 +1054,10 @@ export default function USCCustomerAssignmentPage() {
                           }}>{customer.update_unique_code || '-'}</td>
                           <td style={{ 
                             border: '1px solid #e0e0e0',
-                            padding: '8px 12px'
+                            padding: '8px 12px',
+                            whiteSpace: 'normal',
+                            maxWidth: '300px',
+                            wordBreak: 'break-word'
                           }}>{customer.traffic || '-'}</td>
                           <td style={{ 
                             border: '1px solid #e0e0e0',
@@ -1074,46 +1115,91 @@ export default function USCCustomerAssignmentPage() {
                             padding: '8px 12px',
                             backgroundColor: hasChanges ? '#fef3c7' : 'transparent'
                           }}>
-                            <select
-                              value={editing.snr_account || ''}
-                              onChange={(e) => handleAssignmentChange(customer.userkey, 'snr_account', e.target.value)}
-                              style={{
-                                width: '100%',
-                                padding: '6px 10px',
-                                border: '1px solid #d1d5db',
-                                borderRadius: '4px',
-                                fontSize: '13px',
-                                backgroundColor: '#ffffff',
-                                minWidth: '150px'
-                              }}
-                            >
-                              <option value="">Select SNR Account</option>
-                              {snrAccounts.map(account => (
-                                <option key={account.username} value={account.username}>
-                                  {account.username}
-                                </option>
-                              ))}
-                            </select>
+                            <div style={{ position: 'relative', display: 'inline-block', width: '100%', maxWidth: '180px' }}>
+                              <select
+                                value={editing.snr_account || customer.snr_account || ''}
+                                onChange={(e) => handleAssignmentChange(customer.userkey, 'snr_account', e.target.value)}
+                                style={{
+                                  width: '100%',
+                                  padding: '6px 32px 6px 10px',
+                                  border: '1px solid #d1d5db',
+                                  borderRadius: '4px',
+                                  fontSize: '13px',
+                                  backgroundColor: '#ffffff',
+                                  minWidth: '120px',
+                                  appearance: 'none',
+                                  WebkitAppearance: 'none',
+                                  MozAppearance: 'none'
+                                }}
+                              >
+                                <option value="">Select SNR</option>
+                                {snrAccounts
+                                  .filter(account => {
+                                    // Filter SNR accounts based on customer line
+                                    if (!account.allowed_brands || !Array.isArray(account.allowed_brands)) {
+                                      return false
+                                    }
+                                    // Check if allowed_brands contains the customer's line
+                                    return account.allowed_brands.includes(customer.line)
+                                  })
+                                  .map(account => (
+                                    <option key={account.username} value={account.username}>
+                                      {account.username}
+                                    </option>
+                                  ))}
+                              </select>
+                              {/* Clear Button X - Inside select wrapper */}
+                              {(editing.snr_account || customer.snr_account) && (
+                                <button
+                                  onClick={() => handleClearAssignment(customer.userkey)}
+                                  style={{
+                                    position: 'absolute',
+                                    right: '6px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: '2px 4px',
+                                    color: '#6b7280',
+                                    fontSize: '18px',
+                                    lineHeight: 1,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: '20px',
+                                    height: '20px',
+                                    borderRadius: '50%',
+                                    transition: 'all 0.2s ease',
+                                    zIndex: 10
+                                  }}
+                                  onMouseEnter={(e) => { 
+                                    e.currentTarget.style.color = '#ef4444'
+                                    e.currentTarget.style.backgroundColor = '#fee2e2'
+                                  }}
+                                  onMouseLeave={(e) => { 
+                                    e.currentTarget.style.color = '#6b7280'
+                                    e.currentTarget.style.backgroundColor = 'transparent'
+                                  }}
+                                  title="Clear assignment"
+                                >
+                                  ×
+                                </button>
+                              )}
+                            </div>
                           </td>
                           <td style={{ 
                             border: '1px solid #e0e0e0',
                             padding: '8px 12px',
                             backgroundColor: hasChanges ? '#fef3c7' : 'transparent'
                           }}>
-                            <input
-                              type="text"
-                              value={editing.snr_handler || ''}
-                              onChange={(e) => handleAssignmentChange(customer.userkey, 'snr_handler', e.target.value)}
-                              placeholder="Enter handler name"
-                              style={{
-                                width: '100%',
-                                padding: '6px 10px',
-                                border: '1px solid #d1d5db',
-                                borderRadius: '4px',
-                                fontSize: '13px',
-                                minWidth: '120px'
-                              }}
-                            />
+                            <span style={{
+                              fontSize: '13px',
+                              color: customer.snr_handler ? '#374151' : '#9ca3af',
+                              fontStyle: customer.snr_handler ? 'normal' : 'italic'
+                            }}>
+                              {customer.snr_handler || '-'}
+                            </span>
                           </td>
                           <td style={{ 
                             textAlign: 'center',
