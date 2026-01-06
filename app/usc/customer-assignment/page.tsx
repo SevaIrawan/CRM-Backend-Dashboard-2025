@@ -58,6 +58,24 @@ interface AssignmentEdit {
   snr_handler: string
 }
 
+interface HandlerData {
+  id?: string
+  snr_account: string
+  line: string
+  handler: string
+  assigned_by: string | null
+  assigned_time: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+interface HandlerEdit {
+  id?: string
+  snr_account: string
+  line: string
+  handler: string
+}
+
 export default function USCCustomerAssignmentPage() {
   const [line, setLine] = useState('ALL')
   const [year, setYear] = useState('')
@@ -92,6 +110,13 @@ export default function USCCustomerAssignmentPage() {
   const [initialLoadDone, setInitialLoadDone] = useState(false)
   const [user, setUser] = useState<any>(null)
   const [activeBookmark, setActiveBookmark] = useState<'handler-setup' | 'assignment' | 'snr-performance'>('assignment')
+  
+  // Handler Setup states
+  const [handlerData, setHandlerData] = useState<HandlerData[]>([])
+  const [editingHandlers, setEditingHandlers] = useState<Map<string, HandlerEdit>>(new Map())
+  const [savingHandlers, setSavingHandlers] = useState<Set<string>>(new Set())
+  const [handlerLoading, setHandlerLoading] = useState(false)
+  const [availableLines, setAvailableLines] = useState<string[]>([]) // Lines from blue_whale_usc
 
   // Fetch SNR accounts (users with role snr_usc)
   const fetchSNRAccounts = async () => {
@@ -225,7 +250,7 @@ export default function USCCustomerAssignmentPage() {
   }
 
   // Handle assignment edit
-  const handleAssignmentChange = (userkey: string, field: 'snr_account' | 'snr_handler', value: string) => {
+  const handleAssignmentChange = async (userkey: string, field: 'snr_account' | 'snr_handler', value: string) => {
     const customer = customerData.find(c => c.userkey === userkey)
     if (!customer) return
 
@@ -237,19 +262,98 @@ export default function USCCustomerAssignmentPage() {
       snr_handler: customer.snr_handler || ''
     }
     
-    const updated = {
+    let updated = {
       ...current,
       [field]: value
+    }
+
+    // If snr_account is changed, auto-fetch handler from snr_usc_handler table
+    if (field === 'snr_account' && value && value.trim()) {
+      try {
+        const response = await fetch(`/api/usc-customer-assignment/get-handler?snr_account=${encodeURIComponent(value.trim())}`)
+        const result = await response.json()
+        
+        if (result.success && result.handler) {
+          updated.snr_handler = result.handler
+          console.log(`✅ Auto-fetched handler for ${value}: ${result.handler}`)
+        } else {
+          // Handler not found in snr_usc_handler table
+          updated.snr_handler = ''
+          console.log(`⚠️ No handler found for SNR account: ${value}`)
+        }
+      } catch (error) {
+        console.error('❌ Error fetching handler:', error)
+        updated.snr_handler = ''
+      }
+    }
+    
+    // If snr_account is cleared (empty), also clear snr_handler
+    if (field === 'snr_account' && (!value || !value.trim())) {
+      updated.snr_handler = ''
     }
     
     setEditingAssignments(new Map(editingAssignments.set(userkey, updated)))
   }
 
-  // Clear assignment - Reset all changes to default
-  const handleClearAssignment = (userkey: string) => {
-    const newEditing = new Map(editingAssignments)
-    newEditing.delete(userkey)
-    setEditingAssignments(newEditing)
+  // Clear assignment - Reset to null in database
+  const handleClearAssignment = async (userkey: string) => {
+    const customer = customerData.find(c => c.userkey === userkey)
+    if (!customer) return
+
+    // If customer already has snr_account in database, clear it via API
+    if (customer.snr_account) {
+      try {
+        const userStr = localStorage.getItem('nexmax_user')
+        const currentUser = userStr ? JSON.parse(userStr) : null
+
+        const response = await fetch('/api/usc-customer-assignment/clear-assignment', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-user': JSON.stringify(currentUser)
+          },
+          body: JSON.stringify({
+            userkey,
+            user_unique: customer.user_unique,
+            line: customer.line
+          })
+        })
+
+        const result = await response.json()
+
+        if (result.success) {
+          // Update local data - set both to null
+          setCustomerData(prev => prev.map(c => 
+            c.userkey === userkey
+              ? {
+                  ...c,
+                  snr_account: null,
+                  snr_handler: null,
+                  snr_assigned_at: null,
+                  snr_assigned_by: null
+                }
+              : c
+          ))
+          
+          // Remove from editing
+          const newEditing = new Map(editingAssignments)
+          newEditing.delete(userkey)
+          setEditingAssignments(newEditing)
+          
+          console.log(`✅ Cleared assignment for ${userkey}`)
+        } else {
+          alert(`Error: ${result.error || 'Failed to clear assignment'}`)
+        }
+      } catch (error) {
+        console.error('❌ Error clearing assignment:', error)
+        alert('Error clearing assignment')
+      }
+    } else {
+      // If no snr_account in database, just remove from editing state
+      const newEditing = new Map(editingAssignments)
+      newEditing.delete(userkey)
+      setEditingAssignments(newEditing)
+    }
   }
 
   // Save single assignment
@@ -262,10 +366,8 @@ export default function USCCustomerAssignmentPage() {
       return
     }
 
-    if (!assignment.snr_handler || !assignment.snr_handler.trim()) {
-      alert('Please enter Handler name')
-      return
-    }
+    // Handler will be auto-fetched from snr_usc_handler table in API
+    // No need to validate handler here
 
     try {
       setSavingAssignments(prev => new Set(prev).add(userkey))
@@ -290,26 +392,16 @@ export default function USCCustomerAssignmentPage() {
           userkey,
           user_unique: customer.user_unique,
           line: customer.line,
-          snr_account: assignment.snr_account.trim(),
-          snr_handler: assignment.snr_handler.trim()
+          snr_account: assignment.snr_account.trim()
+          // snr_handler will be auto-fetched from snr_handlers table in API
         })
       })
 
       const result = await response.json()
 
       if (result.success) {
-        // Update local data
-        setCustomerData(prev => prev.map(c => 
-          c.userkey === userkey
-            ? {
-                ...c,
-                snr_account: assignment.snr_account,
-                snr_handler: assignment.snr_handler,
-                snr_assigned_at: new Date().toISOString(),
-                snr_assigned_by: user?.username || null
-              }
-            : c
-        ))
+        // Reload data to get the handler from database
+        await fetchCustomerData()
         
         // Remove from editing
         const newEditing = new Map(editingAssignments)
@@ -318,7 +410,7 @@ export default function USCCustomerAssignmentPage() {
         
         alert('Assignment saved successfully!')
       } else {
-        alert(`Error: ${result.error || 'Failed to save assignment'}`)
+        alert(`Error: ${result.error || result.message || 'Failed to save assignment'}`)
       }
     } catch (error) {
       console.error('❌ Error saving assignment:', error)
@@ -347,10 +439,8 @@ export default function USCCustomerAssignmentPage() {
         alert(`Please select SNR Account for ${assignment.userkey}`)
         return
       }
-      if (!assignment.snr_handler || !assignment.snr_handler.trim()) {
-        alert(`Please enter Handler name for ${assignment.userkey}`)
-        return
-      }
+      // Handler will be auto-fetched from snr_usc_handler table in API
+      // No need to validate handler here
       // Ensure user_unique and line are included
       if (!assignment.user_unique || !assignment.line) {
         const customer = customerData.find(c => c.userkey === assignment.userkey)
@@ -383,32 +473,252 @@ export default function USCCustomerAssignmentPage() {
       const result = await response.json()
 
       if (result.success) {
-        // Update local data
-        const updatedData = customerData.map(c => {
-          const assignment = assignments.find(a => a.userkey === c.userkey)
-          if (assignment) {
-            return {
-              ...c,
-              snr_account: assignment.snr_account,
-              snr_handler: assignment.snr_handler,
-              snr_assigned_at: new Date().toISOString(),
-              snr_assigned_by: user?.username || null
-            }
-          }
-          return c
-        })
+        // Reload data to get the handlers from database
+        await fetchCustomerData()
         
-        setCustomerData(updatedData)
         setEditingAssignments(new Map())
-        alert(`Successfully sent ${assignments.length} assignments!`)
+        alert(`Successfully sent ${result.successCount || assignments.length} assignments!`)
       } else {
-        alert(`Error: ${result.error || 'Failed to save assignments'}`)
+        alert(`Error: ${result.error || result.message || 'Failed to save assignments'}`)
+        if (result.errors && result.errors.length > 0) {
+          console.error('❌ Assignment errors:', result.errors)
+        }
       }
     } catch (error) {
       console.error('❌ Error bulk saving:', error)
       alert('Error saving assignments')
     } finally {
       setBulkSaving(false)
+    }
+  }
+
+  // Fetch available lines from blue_whale_usc
+  const fetchAvailableLines = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('blue_whale_usc')
+        .select('line')
+        .eq('currency', 'USC')
+        .not('line', 'is', null)
+      
+      if (error) {
+        console.error('❌ Error fetching lines:', error)
+        return
+      }
+
+      // Get unique lines
+      const uniqueLines = Array.from(new Set((data || []).map((row: any) => row.line).filter(Boolean)))
+      uniqueLines.sort()
+      setAvailableLines(uniqueLines)
+      console.log('✅ Available lines fetched:', uniqueLines.length)
+    } catch (error) {
+      console.error('❌ Error fetching lines:', error)
+    }
+  }
+
+  // Fetch handler setup data
+  const fetchHandlerData = async () => {
+    try {
+      setHandlerLoading(true)
+      const response = await fetch('/api/usc-customer-assignment/handler-setup/data', {
+        cache: 'no-store'
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        setHandlerData(result.data || [])
+        console.log('✅ Handler data fetched:', result.data?.length || 0)
+      } else {
+        console.error('❌ Error fetching handler data:', result.error)
+        setHandlerData([])
+      }
+    } catch (error) {
+      console.error('❌ Error fetching handler data:', error)
+      setHandlerData([])
+    } finally {
+      setHandlerLoading(false)
+    }
+  }
+
+  // Handle handler edit
+  const handleHandlerChange = (id: string, field: 'snr_account' | 'line' | 'handler', value: string) => {
+    const existing = handlerData.find(h => h.id === id)
+    
+    // For new rows, initialize with empty values
+    const current = editingHandlers.get(id) || (existing ? {
+      id,
+      snr_account: existing.snr_account,
+      line: existing.line,
+      handler: existing.handler
+    } : {
+      snr_account: '',
+      line: '',
+      handler: ''
+    })
+    
+    const updated = {
+      ...current,
+      [field]: value
+    }
+    
+    // If line changes, clear snr_account (need to re-select based on new line)
+    if (field === 'line' && value !== current.line) {
+      updated.snr_account = ''
+    }
+    
+    setEditingHandlers(new Map(editingHandlers.set(id, updated)))
+  }
+
+  // Get available SNR accounts for a specific line
+  const getAvailableSNRAccounts = (line: string) => {
+    if (!line || !line.trim()) return []
+    
+    return snrAccounts
+      .filter(account => {
+        if (!account.allowed_brands || !Array.isArray(account.allowed_brands)) {
+          return false
+        }
+        return account.allowed_brands.includes(line.trim())
+      })
+      .map(account => account.username)
+      .sort()
+  }
+
+  // Handle new handler (for adding new row)
+  const handleAddNewHandler = () => {
+    const newId = `new-${Date.now()}`
+    const newHandler: HandlerEdit = {
+      snr_account: '',
+      line: '',
+      handler: ''
+    }
+    setEditingHandlers(new Map(editingHandlers.set(newId, newHandler)))
+  }
+
+  // Save handler (update or create)
+  const handleSaveHandler = async (id: string) => {
+    const handler = editingHandlers.get(id)
+    if (!handler) return
+
+    if (!handler.snr_account || !handler.snr_account.trim()) {
+      alert('Please enter SNR Account')
+      return
+    }
+    if (!handler.line || !handler.line.trim()) {
+      alert('Please enter Line')
+      return
+    }
+    if (!handler.handler || !handler.handler.trim()) {
+      alert('Please enter Handler name')
+      return
+    }
+
+    try {
+      setSavingHandlers(prev => new Set(prev).add(id))
+      
+      const userStr = localStorage.getItem('nexmax_user')
+      const currentUser = userStr ? JSON.parse(userStr) : null
+
+      const response = await fetch('/api/usc-customer-assignment/handler-setup/save', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user': JSON.stringify(currentUser)
+        },
+        body: JSON.stringify({
+          id: id.startsWith('new-') ? undefined : id,
+          snr_account: handler.snr_account.trim(),
+          line: handler.line.trim(),
+          handler: handler.handler.trim()
+        })
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        // Reload handler data
+        await fetchHandlerData()
+        
+        // Remove from editing
+        const newEditing = new Map(editingHandlers)
+        newEditing.delete(id)
+        setEditingHandlers(newEditing)
+        
+        alert('Handler saved successfully!')
+      } else {
+        alert(`Error: ${result.error || result.message || 'Failed to save handler'}`)
+      }
+    } catch (error) {
+      console.error('❌ Error saving handler:', error)
+      alert('Error saving handler')
+    } finally {
+      setSavingHandlers(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(id)
+        return newSet
+      })
+    }
+  }
+
+  // Clear handler
+  const handleClearHandler = async (id: string) => {
+    if (!id || id.startsWith('new-')) {
+      // Just remove from editing if it's a new row
+      const newEditing = new Map(editingHandlers)
+      newEditing.delete(id)
+      setEditingHandlers(newEditing)
+      return
+    }
+
+    if (!confirm('Are you sure you want to delete this handler?')) {
+      return
+    }
+
+    try {
+      setSavingHandlers(prev => new Set(prev).add(id))
+      
+      const response = await fetch('/api/usc-customer-assignment/handler-setup/clear', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ id })
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        // Reload handler data
+        await fetchHandlerData()
+        
+        // Remove from editing
+        const newEditing = new Map(editingHandlers)
+        newEditing.delete(id)
+        setEditingHandlers(newEditing)
+        
+        alert('Handler cleared successfully!')
+      } else {
+        alert(`Error: ${result.error || result.message || 'Failed to clear handler'}`)
+      }
+    } catch (error) {
+      console.error('❌ Error clearing handler:', error)
+      alert('Error clearing handler')
+    } finally {
+      setSavingHandlers(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(id)
+        return newSet
+      })
+    }
+  }
+
+  // Get editing state for handler
+  const getEditingHandlerState = (id: string) => {
+    return editingHandlers.get(id) || {
+      snr_account: handlerData.find(h => h.id === id)?.snr_account || '',
+      line: handlerData.find(h => h.id === id)?.line || '',
+      handler: handlerData.find(h => h.id === id)?.handler || ''
     }
   }
 
@@ -427,6 +737,14 @@ export default function USCCustomerAssignmentPage() {
     fetchSNRAccounts()
     fetchSlicerOptions()
   }, [])
+
+  // Fetch handler data and lines when Handler Setup bookmark is active
+  useEffect(() => {
+    if (activeBookmark === 'handler-setup') {
+      fetchAvailableLines()
+      fetchHandlerData()
+    }
+  }, [activeBookmark])
 
   // Auto-load data ONCE when defaults are set from API (initial load only)
   useEffect(() => {
@@ -727,11 +1045,469 @@ export default function USCCustomerAssignmentPage() {
     if (activeBookmark === 'handler-setup') {
       return (
         <Frame variant="compact">
-          <ComingSoon 
-            title="Handler Setup"
-            subtitle="Manage and assign handlers for SNR accounts"
-            message="This feature will allow you to set and manage handlers for each SNR account. You'll be able to assign, update, and track handler assignments easily."
-          />
+          <div className="deposit-container">
+            {/* Handler Setup Table */}
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '8px',
+              border: '1px solid #e5e7eb',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+              overflow: 'hidden'
+            }}>
+              {/* Table Header with Add Button */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '16px',
+                borderBottom: '1px solid #e5e7eb',
+                backgroundColor: '#f9fafb'
+              }}>
+                <h3 style={{
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  color: '#1f2937',
+                  margin: 0
+                }}>
+                  Handler Setup
+                </h3>
+                <button
+                  onClick={handleAddNewHandler}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#059669'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#10b981'
+                  }}
+                >
+                  + Add New Handler
+                </button>
+              </div>
+
+              {/* Table Section */}
+              {handlerLoading ? (
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  alignItems: 'center', 
+                  minHeight: '400px',
+                  padding: '40px'
+                }}>
+                  <StandardLoadingSpinner message="Loading Handler Setup" />
+                </div>
+              ) : (
+                <div className="simple-table-wrapper" style={{ maxHeight: '600px', overflowY: 'auto' }}>
+                  <table className="simple-table" style={{
+                    borderCollapse: 'collapse',
+                    width: '100%',
+                    tableLayout: 'auto'
+                  }}>
+                    <thead>
+                      <tr>
+                        <th style={{ 
+                          textAlign: 'left',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          padding: '8px 12px',
+                          whiteSpace: 'nowrap',
+                          width: 'auto'
+                        }}>Line</th>
+                        <th style={{ 
+                          textAlign: 'left',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          padding: '8px 12px',
+                          whiteSpace: 'nowrap',
+                          width: 'auto'
+                        }}>SNR Account</th>
+                        <th style={{ 
+                          textAlign: 'left',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          padding: '8px 12px',
+                          whiteSpace: 'nowrap',
+                          width: 'auto'
+                        }}>Handler</th>
+                        <th style={{ 
+                          textAlign: 'left',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          padding: '8px 12px',
+                          whiteSpace: 'nowrap',
+                          width: 'auto'
+                        }}>Assigned By</th>
+                        <th style={{ 
+                          textAlign: 'left',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          padding: '8px 12px',
+                          whiteSpace: 'nowrap',
+                          width: 'auto'
+                        }}>Assigned Time</th>
+                        <th style={{ 
+                          textAlign: 'center',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          padding: '8px 12px',
+                          whiteSpace: 'nowrap',
+                          width: 'auto'
+                        }}>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {/* Existing handlers */}
+                      {handlerData.map((handler, index) => {
+                        const editing = getEditingHandlerState(handler.id!)
+                        const hasChanges = editingHandlers.has(handler.id!)
+                        const isSaving = savingHandlers.has(handler.id!)
+                        
+                        return (
+                          <tr key={handler.id} style={{
+                            backgroundColor: index % 2 === 0 ? '#ffffff' : '#f9fafb'
+                          }}>
+                            <td style={{ 
+                              border: '1px solid #e0e0e0',
+                              padding: '10px 16px'
+                            }}>
+                              {hasChanges ? (
+                                <select
+                                  value={editing.line}
+                                  onChange={(e) => handleHandlerChange(handler.id!, 'line', e.target.value)}
+                                  style={{
+                                    width: '100%',
+                                    padding: '6px 10px',
+                                    border: '1px solid #d1d5db',
+                                    borderRadius: '4px',
+                                    fontSize: '13px',
+                                    backgroundColor: '#fffef0',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  <option value="">Select Line</option>
+                                  {availableLines.map(line => (
+                                    <option key={line} value={line}>{line}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <span>{handler.line}</span>
+                              )}
+                            </td>
+                            <td style={{ 
+                              border: '1px solid #e0e0e0',
+                              padding: '10px 16px'
+                            }}>
+                              {hasChanges ? (
+                                <select
+                                  value={editing.snr_account}
+                                  onChange={(e) => handleHandlerChange(handler.id!, 'snr_account', e.target.value)}
+                                  disabled={!editing.line || !editing.line.trim()}
+                                  style={{
+                                    width: '100%',
+                                    padding: '6px 10px',
+                                    border: '1px solid #d1d5db',
+                                    borderRadius: '4px',
+                                    fontSize: '13px',
+                                    backgroundColor: editing.line && editing.line.trim() ? '#fffef0' : '#f3f4f6',
+                                    cursor: editing.line && editing.line.trim() ? 'pointer' : 'not-allowed',
+                                    opacity: editing.line && editing.line.trim() ? 1 : 0.6
+                                  }}
+                                >
+                                  <option value="">Select SNR Account</option>
+                                  {getAvailableSNRAccounts(editing.line).map(account => (
+                                    <option key={account} value={account}>{account}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <span style={{ fontWeight: 500 }}>{handler.snr_account}</span>
+                              )}
+                            </td>
+                            <td style={{ 
+                              border: '1px solid #e0e0e0',
+                              padding: '10px 16px'
+                            }}>
+                              {hasChanges ? (
+                                <input
+                                  type="text"
+                                  value={editing.handler}
+                                  onChange={(e) => handleHandlerChange(handler.id!, 'handler', e.target.value)}
+                                  style={{
+                                    width: '100%',
+                                    padding: '6px 10px',
+                                    border: '1px solid #d1d5db',
+                                    borderRadius: '4px',
+                                    fontSize: '13px',
+                                    backgroundColor: '#fffef0'
+                                  }}
+                                />
+                              ) : (
+                                <span>{handler.handler}</span>
+                              )}
+                            </td>
+                            <td style={{ 
+                              border: '1px solid #e0e0e0',
+                              padding: '10px 16px',
+                              color: '#6b7280'
+                            }}>
+                              {handler.assigned_by || '-'}
+                            </td>
+                            <td style={{ 
+                              border: '1px solid #e0e0e0',
+                              padding: '10px 16px',
+                              color: '#6b7280',
+                              fontSize: '12px'
+                            }}>
+                              {handler.assigned_time 
+                                ? new Date(handler.assigned_time).toLocaleString('en-US', {
+                                    year: 'numeric',
+                                    month: '2-digit',
+                                    day: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })
+                                : '-'}
+                            </td>
+                            <td style={{ 
+                              textAlign: 'center',
+                              border: '1px solid #e0e0e0',
+                              padding: '10px 16px'
+                            }}>
+                              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                                {hasChanges ? (
+                                  <>
+                                    <button
+                                      onClick={() => handleSaveHandler(handler.id!)}
+                                      disabled={isSaving}
+                                      style={{
+                                        padding: '6px 12px',
+                                        backgroundColor: '#10b981',
+                                        color: '#ffffff',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        fontWeight: 500,
+                                        cursor: isSaving ? 'not-allowed' : 'pointer',
+                                        opacity: isSaving ? 0.6 : 1
+                                      }}
+                                    >
+                                      {isSaving ? 'Saving...' : 'Save'}
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        const newEditing = new Map(editingHandlers)
+                                        newEditing.delete(handler.id!)
+                                        setEditingHandlers(newEditing)
+                                      }}
+                                      disabled={isSaving}
+                                      style={{
+                                        padding: '6px 12px',
+                                        backgroundColor: '#6b7280',
+                                        color: '#ffffff',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        fontWeight: 500,
+                                        cursor: isSaving ? 'not-allowed' : 'pointer',
+                                        opacity: isSaving ? 0.6 : 1
+                                      }}
+                                    >
+                                      Cancel
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={() => {
+                                        const editing = getEditingHandlerState(handler.id!)
+                                        setEditingHandlers(new Map(editingHandlers.set(handler.id!, editing)))
+                                      }}
+                                      style={{
+                                        padding: '6px 12px',
+                                        backgroundColor: '#3b82f6',
+                                        color: '#ffffff',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        fontWeight: 500,
+                                        cursor: 'pointer'
+                                      }}
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      onClick={() => handleClearHandler(handler.id!)}
+                                      disabled={isSaving}
+                                      style={{
+                                        padding: '6px 12px',
+                                        backgroundColor: '#ef4444',
+                                        color: '#ffffff',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        fontWeight: 500,
+                                        cursor: isSaving ? 'not-allowed' : 'pointer',
+                                        opacity: isSaving ? 0.6 : 1
+                                      }}
+                                    >
+                                      Clear
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                      
+                      {/* New handler rows (being added) */}
+                      {Array.from(editingHandlers.entries())
+                        .filter(([id]) => id.startsWith('new-'))
+                        .map(([id, editing]) => {
+                          const isSaving = savingHandlers.has(id)
+                          return (
+                            <tr key={id} style={{ backgroundColor: '#fffef0' }}>
+                              <td style={{ 
+                                border: '1px solid #e0e0e0',
+                                padding: '10px 16px'
+                              }}>
+                                <select
+                                  value={editing.line}
+                                  onChange={(e) => handleHandlerChange(id, 'line', e.target.value)}
+                                  style={{
+                                    width: '100%',
+                                    padding: '6px 10px',
+                                    border: '1px solid #d1d5db',
+                                    borderRadius: '4px',
+                                    fontSize: '13px',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  <option value="">Select Line</option>
+                                  {availableLines.map(line => (
+                                    <option key={line} value={line}>{line}</option>
+                                  ))}
+                                </select>
+                              </td>
+                              <td style={{ 
+                                border: '1px solid #e0e0e0',
+                                padding: '10px 16px'
+                              }}>
+                                <select
+                                  value={editing.snr_account}
+                                  onChange={(e) => handleHandlerChange(id, 'snr_account', e.target.value)}
+                                  disabled={!editing.line || !editing.line.trim()}
+                                  style={{
+                                    width: '100%',
+                                    padding: '6px 10px',
+                                    border: '1px solid #d1d5db',
+                                    borderRadius: '4px',
+                                    fontSize: '13px',
+                                    backgroundColor: editing.line && editing.line.trim() ? '#fffef0' : '#f3f4f6',
+                                    cursor: editing.line && editing.line.trim() ? 'pointer' : 'not-allowed',
+                                    opacity: editing.line && editing.line.trim() ? 1 : 0.6
+                                  }}
+                                >
+                                  <option value="">Select SNR Account</option>
+                                  {getAvailableSNRAccounts(editing.line).map(account => (
+                                    <option key={account} value={account}>{account}</option>
+                                  ))}
+                                </select>
+                              </td>
+                              <td style={{ 
+                                border: '1px solid #e0e0e0',
+                                padding: '10px 16px'
+                              }}>
+                                <input
+                                  type="text"
+                                  value={editing.handler}
+                                  onChange={(e) => handleHandlerChange(id, 'handler', e.target.value)}
+                                  placeholder="Enter Handler Name"
+                                  style={{
+                                    width: '100%',
+                                    padding: '6px 10px',
+                                    border: '1px solid #d1d5db',
+                                    borderRadius: '4px',
+                                    fontSize: '13px'
+                                  }}
+                                />
+                              </td>
+                              <td style={{ 
+                                border: '1px solid #e0e0e0',
+                                padding: '10px 16px',
+                                color: '#9ca3af',
+                                fontStyle: 'italic'
+                              }}>-</td>
+                              <td style={{ 
+                                border: '1px solid #e0e0e0',
+                                padding: '10px 16px',
+                                color: '#9ca3af',
+                                fontStyle: 'italic'
+                              }}>-</td>
+                              <td style={{ 
+                                textAlign: 'center',
+                                border: '1px solid #e0e0e0',
+                                padding: '10px 16px'
+                              }}>
+                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                                  <button
+                                    onClick={() => handleSaveHandler(id)}
+                                    disabled={isSaving}
+                                    style={{
+                                      padding: '6px 12px',
+                                      backgroundColor: '#10b981',
+                                      color: '#ffffff',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      fontSize: '12px',
+                                      fontWeight: 500,
+                                      cursor: isSaving ? 'not-allowed' : 'pointer',
+                                      opacity: isSaving ? 0.6 : 1
+                                    }}
+                                  >
+                                    {isSaving ? 'Saving...' : 'Save'}
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      const newEditing = new Map(editingHandlers)
+                                      newEditing.delete(id)
+                                      setEditingHandlers(newEditing)
+                                    }}
+                                    disabled={isSaving}
+                                    style={{
+                                      padding: '6px 12px',
+                                      backgroundColor: '#6b7280',
+                                      color: '#ffffff',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      fontSize: '12px',
+                                      fontWeight: 500,
+                                      cursor: isSaving ? 'not-allowed' : 'pointer',
+                                      opacity: isSaving ? 0.6 : 1
+                                    }}
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
         </Frame>
       )
     }
@@ -1144,7 +1920,7 @@ export default function USCCustomerAssignmentPage() {
                           <td style={{ 
                             border: '1px solid #e0e0e0',
                             padding: '8px 12px',
-                            backgroundColor: hasChanges ? '#fef3c7' : 'transparent'
+                            backgroundColor: hasChanges ? '#fef3c7' : (customer.snr_account ? '#dcfce7' : 'transparent') // Green background if has snr_account
                           }}>
                             <div style={{ position: 'relative', display: 'inline-block', width: '100%', maxWidth: '180px' }}>
                               <select
@@ -1153,10 +1929,10 @@ export default function USCCustomerAssignmentPage() {
                                 style={{
                                   width: '100%',
                                   padding: '6px 32px 6px 10px',
-                                  border: '1px solid #d1d5db',
+                                  border: customer.snr_account ? '1px solid #16a34a' : '1px solid #d1d5db', // Green border if has snr_account
                                   borderRadius: '4px',
                                   fontSize: '13px',
-                                  backgroundColor: '#ffffff',
+                                  backgroundColor: customer.snr_account ? '#dcfce7' : '#ffffff', // Green background if has snr_account
                                   minWidth: '120px',
                                   appearance: 'none',
                                   WebkitAppearance: 'none',
@@ -1179,7 +1955,7 @@ export default function USCCustomerAssignmentPage() {
                                     </option>
                                   ))}
                               </select>
-                              {/* Clear Button X - Inside select wrapper */}
+                              {/* Clear Button X - Only show if has snr_account (from database or editing) */}
                               {(editing.snr_account || customer.snr_account) && (
                                 <button
                                   onClick={() => handleClearAssignment(customer.userkey)}
@@ -1222,14 +1998,15 @@ export default function USCCustomerAssignmentPage() {
                           <td style={{ 
                             border: '1px solid #e0e0e0',
                             padding: '8px 12px',
-                            backgroundColor: hasChanges ? '#fef3c7' : 'transparent'
+                            backgroundColor: hasChanges ? '#fef3c7' : (customer.snr_handler ? '#fed7aa' : 'transparent') // Orange background if has snr_handler
                           }}>
                             <span style={{
                               fontSize: '13px',
-                              color: customer.snr_handler ? '#374151' : '#9ca3af',
-                              fontStyle: customer.snr_handler ? 'normal' : 'italic'
+                              color: customer.snr_handler ? '#ea580c' : '#9ca3af', // Orange text if has snr_handler
+                              fontStyle: customer.snr_handler ? 'normal' : 'italic',
+                              fontWeight: customer.snr_handler ? 500 : 400
                             }}>
-                              {customer.snr_handler || '-'}
+                              {editing.snr_handler || customer.snr_handler || '-'}
                             </span>
                           </td>
                           <td style={{ 

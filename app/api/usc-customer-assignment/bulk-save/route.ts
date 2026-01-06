@@ -34,15 +34,37 @@ export async function POST(request: NextRequest) {
 
     // Process each assignment
     for (const assignment of assignments) {
-      const { userkey, user_unique, line, snr_account, snr_handler } = assignment
+      const { userkey, user_unique, line, snr_account } = assignment
 
-      if (!userkey || !user_unique || !line || !snr_account || !snr_handler) {
+      if (!userkey || !user_unique || !line || !snr_account) {
         errors.push(`Missing required fields for ${userkey}`)
         errorCount++
         continue
       }
 
       try {
+        // Fetch handler from snr_usc_handler table
+        const { data: handlerData, error: handlerError } = await supabase
+          .from('snr_usc_handler')
+          .select('handler')
+          .eq('snr_account', snr_account.trim())
+          .single()
+
+        if (handlerError && handlerError.code !== 'PGRST116') {
+          errors.push(`Failed to fetch handler for ${snr_account}: ${handlerError.message}`)
+          errorCount++
+          continue
+        }
+
+        // If handler not found, skip this assignment
+        if (!handlerData || !handlerData.handler) {
+          errors.push(`No handler found for SNR account: ${snr_account}. Please set handler in Handler Setup first.`)
+          errorCount++
+          continue
+        }
+
+        const snr_handler = handlerData.handler
+
         // Update all rows for this user_unique and line in blue_whale_usc
         const { error: updateError } = await supabase
           .from('blue_whale_usc')

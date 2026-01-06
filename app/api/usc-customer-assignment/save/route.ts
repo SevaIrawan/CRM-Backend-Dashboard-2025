@@ -4,16 +4,43 @@ import { supabase } from '@/lib/supabase'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { userkey, user_unique, line, snr_account, snr_handler } = body
+    const { userkey, user_unique, line, snr_account } = body
 
-    if (!userkey || !user_unique || !line || !snr_account || !snr_handler) {
+    if (!userkey || !user_unique || !line || !snr_account) {
       return NextResponse.json({
         success: false,
-        error: 'Missing required fields: userkey, user_unique, line, snr_account, snr_handler'
+        error: 'Missing required fields: userkey, user_unique, line, snr_account'
       }, { status: 400 })
     }
 
     console.log(`📊 Saving assignment for ${userkey} (${user_unique}, ${line})...`)
+
+    // Fetch handler from snr_usc_handler table
+    const { data: handlerData, error: handlerError } = await supabase
+      .from('snr_usc_handler')
+      .select('handler')
+      .eq('snr_account', snr_account.trim())
+      .single()
+
+    if (handlerError && handlerError.code !== 'PGRST116') {
+      console.error(`❌ Error fetching handler for ${snr_account}:`, handlerError)
+      return NextResponse.json({
+        success: false,
+        error: 'Database error',
+        message: `Failed to fetch handler: ${handlerError.message}`
+      }, { status: 500 })
+    }
+
+    // If handler not found, return error (handler must exist in snr_usc_handler table)
+    if (!handlerData || !handlerData.handler) {
+      return NextResponse.json({
+        success: false,
+        error: 'Handler not found',
+        message: `No handler found for SNR account: ${snr_account}. Please set handler in Handler Setup first.`
+      }, { status: 400 })
+    }
+
+    const snr_handler = handlerData.handler
 
     // Get current user from request (if available)
     const userHeader = request.headers.get('x-user')
