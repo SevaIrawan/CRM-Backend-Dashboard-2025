@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import Layout from '@/components/Layout'
 import Frame from '@/components/Frame'
 import StandardLoadingSpinner from '@/components/StandardLoadingSpinner'
+import ComingSoon from '@/components/ComingSoon'
 import { getAllowedBrandsFromStorage } from '@/utils/brandAccessHelper'
 import { supabase } from '@/lib/supabase'
 
@@ -87,6 +88,7 @@ export default function USCCustomerAssignmentPage() {
   const [slicerLoading, setSlicerLoading] = useState(false)
   const [initialLoadDone, setInitialLoadDone] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const [activeBookmark, setActiveBookmark] = useState<'handler-setup' | 'assignment' | 'snr-performance'>('assignment')
 
   // Fetch SNR accounts (users with role snr_usc)
   const fetchSNRAccounts = async () => {
@@ -473,20 +475,247 @@ export default function USCCustomerAssignmentPage() {
     setSearchInput('')
   }
 
-  // Empty SubHeader (untuk bookmark nanti)
+  // Get subtitle and description based on active bookmark
+  const getPageInfo = () => {
+    switch (activeBookmark) {
+      case 'handler-setup':
+        return {
+          subtitle: 'Handler Setup',
+          description: 'Manage and assign handlers for SNR accounts. Set, update, and track handler assignments for each SNR account.'
+        }
+      case 'snr-performance':
+        return {
+          subtitle: 'SNR Performance',
+          description: 'Overview and analytics of SNR team performance. View comprehensive reports including customer assignment metrics, handler productivity, and performance trends.'
+        }
+      case 'assignment':
+      default:
+        return {
+          subtitle: 'Customer Assignment',
+          description: 'Assign customers to SNR accounts and handlers. Manage customer assignments, track assignments, and update handler information.'
+        }
+    }
+  }
+
+  const pageInfo = getPageInfo()
+
+  // SubHeader dengan Bookmark
   const subHeaderContent = (
-    <div className="subheader-content">
-      <div className="subheader-title">
-        <span className="filter-export-text"> </span>
+    <div className="subheader-content" style={{ paddingLeft: '16px', paddingRight: '24px' }}>
+      <div className="subheader-title" style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: '4px',
+        alignItems: 'flex-start',
+        flex: '1 1 auto',
+        paddingLeft: '0'
+      }}>
+        <h2 style={{
+          fontSize: '18px',
+          fontWeight: 700,
+          color: '#1f2937',
+          margin: 0,
+          lineHeight: '1.2'
+        }}>
+          {pageInfo.subtitle}
+        </h2>
+        <p style={{
+          fontSize: '13px',
+          fontWeight: 400,
+          color: '#6b7280',
+          margin: 0,
+          lineHeight: '1.4'
+        }}>
+          {pageInfo.description}
+        </p>
       </div>
-      <div className="subheader-controls">
-        {/* Bookmark akan ditambahkan di sini */}
+      <div className="subheader-controls" style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '8px',
+        marginLeft: 'auto',
+        flex: '0 0 auto'
+      }}>
+        {/* Bookmark 1: Handler Setup */}
+        <button
+          onClick={() => {
+            setActiveBookmark('handler-setup')
+          }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 16px',
+            borderRadius: '8px',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: 500,
+            transition: 'all 0.2s ease',
+            backgroundColor: activeBookmark === 'handler-setup' ? '#3b82f6' : 'transparent',
+            color: activeBookmark === 'handler-setup' ? 'white' : '#9ca3af',
+            opacity: activeBookmark === 'handler-setup' ? 1 : 0.7
+          }}
+          onMouseEnter={(e) => {
+            if (activeBookmark !== 'handler-setup') {
+              e.currentTarget.style.backgroundColor = '#f3f4f6'
+              e.currentTarget.style.opacity = '1'
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (activeBookmark !== 'handler-setup') {
+              e.currentTarget.style.backgroundColor = 'transparent'
+              e.currentTarget.style.opacity = '0.7'
+            }
+          }}
+          title="Handler Setup - Coming Soon"
+        >
+          <svg 
+            width="18" 
+            height="18" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2"
+          >
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          <span>Handler Setup</span>
+        </button>
+
+        {/* Bookmark 2: Customer Assignment (Active) */}
+        <button
+          onClick={() => {
+            setActiveBookmark('assignment')
+            // Already on this page, no navigation needed
+          }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 16px',
+            borderRadius: '8px',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: 500,
+            transition: 'all 0.2s ease',
+            backgroundColor: activeBookmark === 'assignment' ? '#3b82f6' : 'transparent',
+            color: activeBookmark === 'assignment' ? 'white' : '#9ca3af',
+            opacity: activeBookmark === 'assignment' ? 1 : 0.7
+          }}
+          onMouseEnter={(e) => {
+            if (activeBookmark !== 'assignment') {
+              e.currentTarget.style.backgroundColor = '#f3f4f6'
+              e.currentTarget.style.opacity = '1'
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (activeBookmark !== 'assignment') {
+              e.currentTarget.style.backgroundColor = 'transparent'
+              e.currentTarget.style.opacity = '0.7'
+            }
+          }}
+        >
+          <svg 
+            width="18" 
+            height="18" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke={activeBookmark === 'assignment' ? 'white' : 'currentColor'} 
+            strokeWidth="2"
+          >
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="8.5" cy="7" r="4"></circle>
+            <path d="M20 8v6"></path>
+            <path d="M23 11h-6"></path>
+          </svg>
+          <span>Customer Assignment</span>
+        </button>
+
+        {/* Bookmark 3: SNR Performance */}
+        <button
+          onClick={() => {
+            setActiveBookmark('snr-performance')
+          }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 16px',
+            borderRadius: '8px',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: 500,
+            transition: 'all 0.2s ease',
+            backgroundColor: activeBookmark === 'snr-performance' ? '#3b82f6' : 'transparent',
+            color: activeBookmark === 'snr-performance' ? 'white' : '#9ca3af',
+            opacity: activeBookmark === 'snr-performance' ? 1 : 0.7
+          }}
+          onMouseEnter={(e) => {
+            if (activeBookmark !== 'snr-performance') {
+              e.currentTarget.style.backgroundColor = '#f3f4f6'
+              e.currentTarget.style.opacity = '1'
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (activeBookmark !== 'snr-performance') {
+              e.currentTarget.style.backgroundColor = 'transparent'
+              e.currentTarget.style.opacity = '0.7'
+            }
+          }}
+          title="SNR Performance - Coming Soon"
+        >
+          <svg 
+            width="18" 
+            height="18" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2"
+          >
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+          <span>SNR Performance</span>
+        </button>
       </div>
     </div>
   )
 
-  return (
-    <Layout customSubHeader={subHeaderContent}>
+  // Render content based on active bookmark
+  const renderPageContent = () => {
+    if (activeBookmark === 'handler-setup') {
+      return (
+        <Frame variant="compact">
+          <ComingSoon 
+            title="Handler Setup"
+            subtitle="Manage and assign handlers for SNR accounts"
+            message="This feature will allow you to set and manage handlers for each SNR account. You'll be able to assign, update, and track handler assignments easily."
+          />
+        </Frame>
+      )
+    }
+
+    if (activeBookmark === 'snr-performance') {
+      return (
+        <Frame variant="compact">
+          <ComingSoon 
+            title="SNR Performance"
+            subtitle="Overview and analytics of SNR team performance"
+            message="This feature will provide comprehensive reports and analytics on SNR team performance, including customer assignment metrics, handler productivity, and performance trends."
+          />
+        </Frame>
+      )
+    }
+
+    // Default: Customer Assignment page
+    return (
       <Frame variant="compact">
         <div className="deposit-container">
           {/* Unified Canvas: Slicer > Table > Pagination */}
@@ -999,6 +1228,12 @@ export default function USCCustomerAssignmentPage() {
           </div>
         </div>
       </Frame>
+    )
+  }
+
+  return (
+    <Layout customSubHeader={subHeaderContent}>
+      {renderPageContent()}
     </Layout>
   )
 }
