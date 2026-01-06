@@ -34,8 +34,10 @@ const filterMenuItemsByRole = (menuItems: any[], userRole: string) => {
   // Pages to hide for USC roles (manager_usc, sq_usc, executive)
   const hiddenPagesForUSCRoles = ['/usc/member-analytic', '/usc/churn-member']
   
-  // Check if user is SNR
+  // Check if user is SNR, Manager, or Squad Lead
   const isSNR = userRole.startsWith('snr_')
+  const isManager = userRole.startsWith('manager_')
+  const isSquadLead = userRole.startsWith('squad_lead_')
   
   // Only admin can see all pages
   if (userRole === 'admin') {
@@ -49,8 +51,8 @@ const filterMenuItemsByRole = (menuItems: any[], userRole: string) => {
         ...item,
         submenu: item.submenu.filter((subItem: any) => 
           !hiddenPagesForMYRRoles.includes(subItem.path) &&
-          // Hide SNR Customers for non-SNR roles
-          (!subItem.snrOnly || isSNR)
+          // SNR Customers: visible for SNR, Manager, and Squad Lead
+          (!subItem.snrOnly || isSNR || (isManager && userRole === 'manager_myr') || (isSquadLead && userRole === 'squad_lead_myr'))
         )
       }
     }
@@ -61,8 +63,8 @@ const filterMenuItemsByRole = (menuItems: any[], userRole: string) => {
         ...item,
         submenu: item.submenu.filter((subItem: any) => 
           !hiddenPagesForSGDRoles.includes(subItem.path) &&
-          // Hide SNR Customers for non-SNR roles
-          (!subItem.snrOnly || isSNR)
+          // SNR Customers: visible for SNR, Manager, and Squad Lead
+          (!subItem.snrOnly || isSNR || (isManager && userRole === 'manager_sgd') || (isSquadLead && userRole === 'squad_lead_sgd'))
         )
       }
     }
@@ -73,8 +75,8 @@ const filterMenuItemsByRole = (menuItems: any[], userRole: string) => {
         ...item,
         submenu: item.submenu.filter((subItem: any) => 
           !hiddenPagesForUSCRoles.includes(subItem.path) &&
-          // Hide SNR Customers for non-SNR roles
-          (!subItem.snrOnly || isSNR)
+          // SNR Customers: visible for SNR, Manager, and Squad Lead
+          (!subItem.snrOnly || isSNR || (isManager && userRole === 'manager_usc') || (isSquadLead && userRole === 'squad_lead_usc'))
         )
       }
     }

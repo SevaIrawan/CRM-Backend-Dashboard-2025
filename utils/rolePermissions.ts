@@ -257,6 +257,9 @@ export const hasPermission = (userRole: string, pagePath: string): boolean => {
     return hasAccess
   }
 
+  // ✅ Manager and Squad Lead can also access SNR Customer pages in their market
+  // (SNR pages are already mapped in pathToPermission below, so they'll get access via normal permission check)
+
   // Map page paths to permission names
   const pathToPermission: { [key: string]: string } = {
     '/dashboard': 'dashboard',

@@ -6,10 +6,12 @@ export async function GET(request: NextRequest) {
     console.log('📊 [MYR Brand Performance Trends] Fetching slicer options...')
     
     // Ambil min dan max date dari table blue_whale_myr (real-time data)
+    // ✅ CRITICAL: Filter out null dates dan pastikan mengambil dari semua data yang ada
     const { data: minRecord, error: minErr } = await supabase
       .from('blue_whale_myr')
       .select('date')
       .eq('currency', 'MYR')
+      .not('date', 'is', null)
       .order('date', { ascending: true })
       .limit(1)
     if (minErr) {
@@ -21,6 +23,7 @@ export async function GET(request: NextRequest) {
       .from('blue_whale_myr')
       .select('date')
       .eq('currency', 'MYR')
+      .not('date', 'is', null)
       .order('date', { ascending: false })
       .limit(1)
     if (maxErr) {
@@ -28,11 +31,22 @@ export async function GET(request: NextRequest) {
       throw maxErr
     }
 
-    const minDate = minRecord?.[0]?.date || '2021-01-01'
-    // Use latest record date or current date + 1 year as fallback to allow future dates
-    const maxDate = maxRecord?.[0]?.date || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]
+    // ✅ DEBUG: Log raw data dari database
+    console.log('🔍 [MYR Brand Performance Trends] Raw maxRecord:', maxRecord)
+    console.log('🔍 [MYR Brand Performance Trends] Raw minRecord:', minRecord)
 
-    console.log('✅ [MYR Brand Performance Trends] Slicer options loaded:', { minDate, maxDate })
+    // ✅ Pastikan format date benar (YYYY-MM-DD)
+    const minDate = minRecord?.[0]?.date ? String(minRecord[0].date).split('T')[0] : '2021-01-01'
+    // ✅ Pastikan max date diambil dari database, bukan hardcoded
+    const maxDate = maxRecord?.[0]?.date ? String(maxRecord[0].date).split('T')[0] : new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]
+
+    // ✅ DEBUG: Log formatted dates
+    console.log('✅ [MYR Brand Performance Trends] Slicer options loaded:', { 
+      minDate, 
+      maxDate,
+      rawMinDate: minRecord?.[0]?.date,
+      rawMaxDate: maxRecord?.[0]?.date
+    })
 
     return NextResponse.json({
       success: true,
