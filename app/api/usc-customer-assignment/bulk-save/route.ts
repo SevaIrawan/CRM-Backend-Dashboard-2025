@@ -63,14 +63,14 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        const snr_handler = handlerData.handler
+        const snr_handler = String(handlerData.handler || '').trim()
 
         // Update all rows for this user_unique and line in blue_whale_usc
         const { error: updateError } = await supabase
           .from('blue_whale_usc')
           .update({
             snr_account: snr_account.trim(),
-            snr_handler: snr_handler.trim(),
+            snr_handler: snr_handler,
             snr_assigned_at: assignedAt,
             snr_assigned_by: assignedBy
           })
