@@ -577,8 +577,8 @@ export default function BrandPerformanceTrendsPage() {
                 <input 
                   type="date" 
                   value={tempAStart} 
-                  min={slicerOptions?.dateRange?.min || '2021-01-01'} 
-                  max={slicerOptions?.dateRange?.max || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]} 
+                  min={slicerOptions?.dateRange?.min} 
+                  max={slicerOptions?.dateRange?.max} 
                   onChange={e=>setTempAStart(e.target.value)}
                   style={{
                     width:'100%',
@@ -610,8 +610,8 @@ export default function BrandPerformanceTrendsPage() {
                 <input 
                   type="date" 
                   value={tempAEnd} 
-                  min={tempAStart || slicerOptions?.dateRange?.min || '2021-01-01'} 
-                  max={slicerOptions?.dateRange?.max || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]} 
+                  min={tempAStart || slicerOptions?.dateRange?.min} 
+                  max={slicerOptions?.dateRange?.max} 
                   onChange={e=>setTempAEnd(e.target.value)}
                   style={{
                     width:'100%',
@@ -736,8 +736,8 @@ export default function BrandPerformanceTrendsPage() {
                 <input 
                   type="date" 
                   value={tempBStart} 
-                  min={slicerOptions?.dateRange?.min || '2021-01-01'} 
-                  max={slicerOptions?.dateRange?.max || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]} 
+                  min={slicerOptions?.dateRange?.min} 
+                  max={slicerOptions?.dateRange?.max} 
                   onChange={e=>setTempBStart(e.target.value)}
                   style={{
                     width:'100%',
@@ -769,8 +769,8 @@ export default function BrandPerformanceTrendsPage() {
                 <input 
                   type="date" 
                   value={tempBEnd} 
-                  min={tempBStart || slicerOptions?.dateRange?.min || '2021-01-01'} 
-                  max={slicerOptions?.dateRange?.max || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]} 
+                  min={tempBStart || slicerOptions?.dateRange?.min} 
+                  max={slicerOptions?.dateRange?.max} 
                   onChange={e=>setTempBEnd(e.target.value)}
                   style={{
                     width:'100%',

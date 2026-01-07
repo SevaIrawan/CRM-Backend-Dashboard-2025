@@ -35,10 +35,13 @@ export async function GET(request: NextRequest) {
     console.log('🔍 [MYR Brand Performance Trends] Raw maxRecord:', maxRecord)
     console.log('🔍 [MYR Brand Performance Trends] Raw minRecord:', minRecord)
 
-    // ✅ Pastikan format date benar (YYYY-MM-DD)
-    const minDate = minRecord?.[0]?.date ? String(minRecord[0].date).split('T')[0] : '2021-01-01'
-    // ✅ Pastikan max date diambil dari database, bukan hardcoded
-    const maxDate = maxRecord?.[0]?.date ? String(maxRecord[0].date).split('T')[0] : new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]
+    // ✅ Pastikan format date benar (YYYY-MM-DD) - NO HARDCODED FALLBACK
+    if (!minRecord?.[0]?.date || !maxRecord?.[0]?.date) {
+      throw new Error('No date data found in database')
+    }
+    
+    const minDate = String(minRecord[0].date).split('T')[0]
+    const maxDate = String(maxRecord[0].date).split('T')[0]
 
     // ✅ DEBUG: Log formatted dates
     console.log('✅ [MYR Brand Performance Trends] Slicer options loaded:', { 
