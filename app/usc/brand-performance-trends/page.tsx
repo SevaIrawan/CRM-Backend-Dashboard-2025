@@ -577,8 +577,9 @@ export default function BrandPerformanceTrendsPage() {
                 <input 
                   type="date" 
                   value={tempAStart} 
-                  min={slicerOptions?.dateRange?.min} 
-                  max={slicerOptions?.dateRange?.max} 
+                  min={slicerOptions?.dateRange?.min || undefined} 
+                  max={slicerOptions?.dateRange?.max || undefined} 
+                  disabled={!slicerOptions?.dateRange?.min || !slicerOptions?.dateRange?.max}
                   onChange={e=>setTempAStart(e.target.value)}
                   style={{
                     width:'100%',
@@ -610,8 +611,9 @@ export default function BrandPerformanceTrendsPage() {
                 <input 
                   type="date" 
                   value={tempAEnd} 
-                  min={tempAStart || slicerOptions?.dateRange?.min} 
-                  max={slicerOptions?.dateRange?.max} 
+                  min={tempAStart || slicerOptions?.dateRange?.min || undefined} 
+                  max={slicerOptions?.dateRange?.max || undefined} 
+                  disabled={!slicerOptions?.dateRange?.min || !slicerOptions?.dateRange?.max}
                   onChange={e=>setTempAEnd(e.target.value)}
                   style={{
                     width:'100%',
@@ -736,8 +738,9 @@ export default function BrandPerformanceTrendsPage() {
                 <input 
                   type="date" 
                   value={tempBStart} 
-                  min={slicerOptions?.dateRange?.min} 
-                  max={slicerOptions?.dateRange?.max} 
+                  min={slicerOptions?.dateRange?.min || undefined} 
+                  max={slicerOptions?.dateRange?.max || undefined} 
+                  disabled={!slicerOptions?.dateRange?.min || !slicerOptions?.dateRange?.max}
                   onChange={e=>setTempBStart(e.target.value)}
                   style={{
                     width:'100%',
@@ -769,8 +772,9 @@ export default function BrandPerformanceTrendsPage() {
                 <input 
                   type="date" 
                   value={tempBEnd} 
-                  min={tempBStart || slicerOptions?.dateRange?.min} 
-                  max={slicerOptions?.dateRange?.max} 
+                  min={tempBStart || slicerOptions?.dateRange?.min || undefined} 
+                  max={slicerOptions?.dateRange?.max || undefined} 
+                  disabled={!slicerOptions?.dateRange?.min || !slicerOptions?.dateRange?.max}
                   onChange={e=>setTempBEnd(e.target.value)}
                   style={{
                     width:'100%',

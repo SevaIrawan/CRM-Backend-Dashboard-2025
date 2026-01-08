@@ -12,8 +12,10 @@ interface PureMemberData {
 
 interface SlicerOptions {
   years: string[]
+  months: Array<{ value: string; label: string }>
   defaults?: {
     year: string
+    month: string
     metrics: string
   }
 }
@@ -29,6 +31,7 @@ interface Pagination {
 
 export default function USCPureMemberAnalysisPage() {
   const [year, setYear] = useState('')
+  const [month, setMonth] = useState('ALL')
   const [metrics, setMetrics] = useState('') // existing_member, pure_existing_member, new_depositor, pure_new_depositor
   const [pureMemberData, setPureMemberData] = useState<PureMemberData[]>([])
   const [pagination, setPagination] = useState<Pagination>({
@@ -40,7 +43,8 @@ export default function USCPureMemberAnalysisPage() {
     hasPrevPage: false
   })
   const [slicerOptions, setSlicerOptions] = useState<SlicerOptions>({
-    years: []
+    years: [],
+    months: []
   })
   const [loading, setLoading] = useState(true)
   const [slicerLoading, setSlicerLoading] = useState(false)
@@ -253,11 +257,11 @@ export default function USCPureMemberAnalysisPage() {
 
   useEffect(() => {
     if (!initialLoadDone && year && metrics) {
-      console.log('✅ [Pure Member Analysis] Initial load with defaults:', { year, metrics })
+      console.log('✅ [Pure Member Analysis] Initial load with defaults:', { year, month, metrics })
       fetchPureMemberData()
       setInitialLoadDone(true)
     } else if (initialLoadDone && year && metrics) {
-      console.log('✅ [Pure Member Analysis] Metrics changed, fetching data:', { year, metrics })
+      console.log('✅ [Pure Member Analysis] Filters changed, fetching data:', { year, month, metrics })
       // Clear search when switching to Pure metrics
       if (isPure && (searchUserName || searchInput)) {
         setSearchUserName('')
@@ -265,14 +269,14 @@ export default function USCPureMemberAnalysisPage() {
       }
       fetchPureMemberData()
     }
-  }, [year, metrics, initialLoadDone])
+  }, [year, month, metrics, initialLoadDone])
 
   useEffect(() => {
     const isInitialMount = pagination.currentPage === 1 && pagination.totalPages === 1 && pagination.totalRecords === 0
     if (!isInitialMount && year && metrics) {
       fetchPureMemberData()
     }
-  }, [pagination.currentPage])
+  }, [pagination.currentPage, year, month, metrics])
 
   const fetchSlicerOptions = async () => {
     try {
@@ -288,6 +292,7 @@ export default function USCPureMemberAnalysisPage() {
         
         if (result.data.defaults) {
           setYear(result.data.defaults.year || '')
+          setMonth(result.data.defaults.month || 'ALL')
           setMetrics(result.data.defaults.metrics || 'new_depositor')
           console.log('✅ [Pure Member Analysis] Auto-set to defaults:', result.data.defaults)
         }
@@ -309,6 +314,7 @@ export default function USCPureMemberAnalysisPage() {
       setLoading(true)
       const params = new URLSearchParams({
         year,
+        month: month || 'ALL',
         metrics,
         page: pagination.currentPage.toString(),
         limit: pagination.recordsPerPage.toString()
@@ -371,6 +377,7 @@ export default function USCPureMemberAnalysisPage() {
         },
         body: JSON.stringify({
           year,
+          month: month || 'ALL',
           metrics
         }),
         signal: AbortSignal.timeout(300000)
@@ -383,7 +390,8 @@ export default function USCPureMemberAnalysisPage() {
         a.style.display = 'none'
         a.href = url
         
-        const filename = `usc_pure_member_${metrics}_${year}.csv`
+        const monthSuffix = month === 'ALL' ? 'yearly' : month.toLowerCase()
+        const filename = `usc_pure_member_${metrics}_${year}_${monthSuffix}.csv`
         a.download = filename
         document.body.appendChild(a)
         a.click()
@@ -421,6 +429,23 @@ export default function USCPureMemberAnalysisPage() {
           >
             {slicerOptions.years.map((yearOption) => (
               <option key={yearOption} value={yearOption}>{yearOption}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="slicer-group">
+          <label className="slicer-label">MONTH:</label>
+          <select 
+            value={month} 
+            onChange={(e) => {
+              setMonth(e.target.value)
+              setPagination(prev => ({ ...prev, currentPage: 1 }))
+            }}
+            className={`slicer-select ${slicerLoading ? 'disabled' : ''}`}
+            disabled={slicerLoading}
+          >
+            {slicerOptions.months.map((monthOption) => (
+              <option key={monthOption.value} value={monthOption.value}>{monthOption.label}</option>
             ))}
           </select>
         </div>
