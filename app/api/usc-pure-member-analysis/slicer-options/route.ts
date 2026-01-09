@@ -5,61 +5,65 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔍 [Pure Member Analysis USC] Fetching slicer options...')
 
-    // Get unique years from YEARLY MV table (same as original implementation)
-    const { data: yearData, error: yearError } = await supabase
-      .from('db_usc_lifetime_customer_yearly_summary')
-      .select('year')
+    // Get years and months from MONTHLY MV table - ambil semua data yang ada
+    const { data: monthlyData, error: monthlyError } = await supabase
+      .from('db_usc_monthly_customer_monthly_summary')
+      .select('year, month')
       .not('year', 'is', null)
-      .order('year', { ascending: false })
+      .not('month', 'is', null)
 
-    if (yearError) {
-      console.error('❌ Error fetching years:', yearError)
+    if (monthlyError) {
+      console.error('❌ [Pure Member Analysis USC] Error fetching monthly data:', monthlyError)
       return NextResponse.json({ 
         success: false, 
-        error: 'Database error while fetching years',
-        message: yearError.message 
+        error: 'Database error while fetching monthly data',
+        message: monthlyError.message 
       }, { status: 500 })
     }
 
-    // Get unique months from MONTHLY MV table
+    console.log('🔍 [Pure Member Analysis USC] Raw monthlyData from DB:', {
+      totalRows: monthlyData?.length || 0,
+      sampleData: monthlyData?.slice(0, 10) || []
+    })
+
+    // Process years - langsung dari kolom [year]
+    const years = Array.from(new Set(monthlyData?.map(row => row.year?.toString()).filter(Boolean) || [])) as string[]
+    const sortedYears = years.sort((a, b) => parseInt(b || '0') - parseInt(a || '0'))
+
+    // Process months - langsung dari kolom [month] yang sudah TEXT (month name)
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                        'July', 'August', 'September', 'October', 'November', 'December']
     
-    const { data: monthData, error: monthError } = await supabase
-      .from('db_usc_monthly_customer_monthly_summary')
-      .select('month')
-      .not('month', 'is', null)
-
-    if (monthError) {
-      console.error('❌ Error fetching months:', monthError)
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Database error while fetching months',
-        message: monthError.message 
-      }, { status: 500 })
-    }
-
-    const years = Array.from(new Set(yearData?.map(row => row.year?.toString()).filter(Boolean) || [])) as string[]
+    // Ambil unique month names langsung dari kolom month (sudah text, bukan number)
+    const rawMonths = Array.from(new Set(monthlyData?.map(row => String(row.month)).filter(Boolean) || [])) as string[]
     
-    // Process months: Convert month number to month name
-    const rawMonths = Array.from(new Set(monthData?.map(row => row.month).filter(Boolean) || [])) as number[]
-    const validMonths = rawMonths
-      .filter((monthNum: number) => monthNum >= 1 && monthNum <= 12)
-      .map((monthNum: number) => monthNames[monthNum - 1])
-      .filter(Boolean)
+    // Filter hanya month names yang valid
+    const validMonths = rawMonths.filter(month => monthNames.includes(month))
+    
+    // Sort sesuai urutan
     const sortedMonths = validMonths.sort((a, b) => monthNames.indexOf(a) - monthNames.indexOf(b))
+    
+    // Create months array
     const months = [
       { value: 'ALL', label: 'ALL' },
       ...sortedMonths.map(month => ({ value: month, label: month }))
     ]
     
+    console.log('🔍 [Pure Member Analysis USC] Raw months from DB:', rawMonths)
+    console.log('🔍 [Pure Member Analysis USC] Valid months:', validMonths)
+    console.log('🔍 [Pure Member Analysis USC] Sorted months:', sortedMonths)
+    
+    console.log('🔍 [Pure Member Analysis USC] Processed years:', sortedYears)
+    console.log('🔍 [Pure Member Analysis USC] Processed months (final):', months)
+    console.log('🔍 [Pure Member Analysis USC] Months count:', months.length)
+    
     // Default to latest year and latest month (or ALL)
-    const defaultYear = years.length > 0 ? years[0] : ''
+    const defaultYear = sortedYears.length > 0 ? sortedYears[0] : ''
     const defaultMonth = 'ALL' // Default to yearly view
     const defaultMetrics = 'new_depositor'
 
     console.log('✅ [Pure Member Analysis USC] Slicer options loaded:', {
-      years_count: years.length,
+      years_count: sortedYears.length,
       months_count: months.length,
       defaults: { year: defaultYear, month: defaultMonth, metrics: defaultMetrics }
     })
@@ -67,7 +71,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        years,
+        years: sortedYears,
         months,
         defaults: {
           year: defaultYear,

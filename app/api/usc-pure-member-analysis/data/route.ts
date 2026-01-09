@@ -61,12 +61,9 @@ export async function GET(request: NextRequest) {
       .eq('year', parseInt(year))
       .gt('deposit_cases', 0)  // ✅ WAJIB: active main (deposit_cases > 0)
     
-    // ✅ Filter by month (only for monthly MV)
+    // ✅ Filter by month (only for monthly MV) - month adalah TEXT (month name)
     if (!isYearlyView) {
-      const monthIndex = monthNames.indexOf(month)
-      if (monthIndex !== -1) {
-        baseQuery = baseQuery.eq('month', monthIndex + 1) // Month is stored as 1-12
-      }
+      baseQuery = baseQuery.eq('month', month) // Month adalah TEXT (month name seperti "January")
     }
     
     // ✅ FILTER di DATABASE berdasarkan metrics
@@ -126,6 +123,11 @@ export async function GET(request: NextRequest) {
       const dataMap = new Map<string, any>()
       
       rawData.forEach((row: any) => {
+        // ✅ Skip rows dengan unique_code null/undefined untuk Pure metrics
+        if (!row.unique_code) {
+          return
+        }
+        
         const key = row.unique_code
         
         if (!dataMap.has(key)) {

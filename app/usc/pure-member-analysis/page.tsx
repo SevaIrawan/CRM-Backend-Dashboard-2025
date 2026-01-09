@@ -288,6 +288,11 @@ export default function USCPureMemberAnalysisPage() {
       const result = await response.json()
       
       if (result.success) {
+        console.log('✅ [Pure Member Analysis] Slicer options received:', {
+          years: result.data.years?.length || 0,
+          months: result.data.months?.length || 0,
+          monthsData: result.data.months
+        })
         setSlicerOptions(result.data)
         
         if (result.data.defaults) {
@@ -296,9 +301,11 @@ export default function USCPureMemberAnalysisPage() {
           setMetrics(result.data.defaults.metrics || 'new_depositor')
           console.log('✅ [Pure Member Analysis] Auto-set to defaults:', result.data.defaults)
         }
+      } else {
+        console.error('❌ [Pure Member Analysis] Failed to fetch slicer options:', result.error)
       }
     } catch (error) {
-      console.error('Error fetching slicer options:', error)
+      console.error('❌ [Pure Member Analysis] Error fetching slicer options:', error)
     } finally {
       setSlicerLoading(false)
     }
@@ -441,12 +448,16 @@ export default function USCPureMemberAnalysisPage() {
               setMonth(e.target.value)
               setPagination(prev => ({ ...prev, currentPage: 1 }))
             }}
-            className={`slicer-select ${slicerLoading ? 'disabled' : ''}`}
-            disabled={slicerLoading}
+            className={`slicer-select ${slicerLoading || slicerOptions.months.length === 0 ? 'disabled' : ''}`}
+            disabled={slicerLoading || slicerOptions.months.length === 0}
           >
-            {slicerOptions.months.map((monthOption) => (
-              <option key={monthOption.value} value={monthOption.value}>{monthOption.label}</option>
-            ))}
+            {slicerOptions.months.length > 0 ? (
+              slicerOptions.months.map((monthOption) => (
+                <option key={monthOption.value} value={monthOption.value}>{monthOption.label}</option>
+              ))
+            ) : (
+              <option value="ALL">Loading months...</option>
+            )}
           </select>
         </div>
 
