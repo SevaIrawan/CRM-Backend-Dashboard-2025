@@ -1,54 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
+// ✅ Force dynamic route - no caching
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET(request: NextRequest) {
   try {
     console.log('📊 [SGD Brand Performance Trends] Fetching slicer options...')
     
-    // Ambil min dan max date dari table blue_whale_sgd (real-time data)
-    // ✅ CRITICAL: Filter out null dates dan pastikan mengambil dari semua data yang ada
+    // Get latest record for date range defaults from master table (real-time data)
+    // ✅ SAME LOGIC AS KPI COMPARISON - Query langsung tanpa filter null yang ketat
+    const { data: latestRecord, error: maxErr } = await supabase
+      .from('blue_whale_sgd')
+      .select('date')
+      .eq('currency', 'SGD')
+      .order('date', { ascending: false })
+      .limit(1)
+
+    // Get min date from master table
     const { data: minRecord, error: minErr } = await supabase
       .from('blue_whale_sgd')
       .select('date')
       .eq('currency', 'SGD')
-      .not('date', 'is', null)
       .order('date', { ascending: true })
       .limit(1)
-    if (minErr) {
-      console.error('❌ [SGD Brand Performance Trends] Error fetching min date:', minErr)
-      throw minErr
-    }
 
-    const { data: maxRecord, error: maxErr } = await supabase
-      .from('blue_whale_sgd')
-      .select('date')
-      .eq('currency', 'SGD')
-      .not('date', 'is', null)
-      .order('date', { ascending: false })
-      .limit(1)
     if (maxErr) {
-      console.error('❌ [SGD Brand Performance Trends] Error fetching max date:', maxErr)
-      throw maxErr
+      console.warn('⚠️ [SGD Brand Performance Trends] Error fetching max date:', maxErr)
+    }
+    if (minErr) {
+      console.warn('⚠️ [SGD Brand Performance Trends] Error fetching min date:', minErr)
     }
 
-    // ✅ DEBUG: Log raw data dari database
-    console.log('🔍 [SGD Brand Performance Trends] Raw maxRecord:', maxRecord)
-    console.log('🔍 [SGD Brand Performance Trends] Raw minRecord:', minRecord)
+    // ✅ Format date consistently (YYYY-MM-DD) - always fresh from database
+    const minDate = minRecord?.[0]?.date ? String(minRecord[0].date).split('T')[0] : '2021-01-01'
+    // Use latest record date or current date + 1 year as fallback to allow future dates
+    const maxDate = latestRecord?.[0]?.date ? String(latestRecord[0].date).split('T')[0] : new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]
 
-    // ✅ Pastikan format date benar (YYYY-MM-DD) - NO HARDCODED FALLBACK
-    if (!minRecord?.[0]?.date || !maxRecord?.[0]?.date) {
-      throw new Error('No date data found in database')
-    }
-    
-    const minDate = String(minRecord[0].date).split('T')[0]
-    const maxDate = String(maxRecord[0].date).split('T')[0]
-
-    // ✅ DEBUG: Log formatted dates
-    console.log('✅ [SGD Brand Performance Trends] Slicer options loaded:', { 
-      minDate, 
-      maxDate,
-      rawMinDate: minRecord?.[0]?.date,
-      rawMaxDate: maxRecord?.[0]?.date
+    console.log('✅ [SGD Brand Performance Trends] Slicer options loaded:', {
+      minDate,
+      maxDate
     })
 
     return NextResponse.json({

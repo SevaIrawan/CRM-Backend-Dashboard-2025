@@ -54,6 +54,8 @@ export default function BrandPerformanceTrendsPage() {
   const [exporting, setExporting] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [slicerLoaded, setSlicerLoaded] = useState(false)
+  const [autoLoaded, setAutoLoaded] = useState(false)
 
   // Auto-close date pickers when click outside
   useEffect(() => {
@@ -415,92 +417,93 @@ export default function BrandPerformanceTrendsPage() {
     dc: 0
   }
 
+  // Fetch slicer options
   useEffect(() => {
-    const init = async () => {
+    const fetchSlicerOptions = async () => {
       try {
         const userStr = localStorage.getItem('nexmax_user')
         const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
         
-        const res = await fetch('/api/usc-brand-performance-trends/slicer-options', {
+        const response = await fetch('/api/usc-brand-performance-trends/slicer-options', {
           headers: {
             'x-user-allowed-brands': JSON.stringify(allowedBrands)
           },
-          cache: 'no-store' // ✅ Prevent caching
-        })
-        const json = await res.json()
-        if (!json.success) throw new Error('Failed to load slicers')
-        const opt: SlicerOptions = json.data
-        setSlicerOptions(opt)
-
-        const latest = new Date(opt.defaults.latestDate)
-        // Default 7 days based on max date (latestDate)
-        // Period B: last 7 days (e.g., if max date = 09 Dec, then 02 Dec - 09 Dec)
-        const bEnd = new Date(latest)
-        const bStart = new Date(latest); bStart.setDate(bStart.getDate() - 7)
-        // Period A: same 7-day window on previous month
-        const aEnd = new Date(bEnd); aEnd.setMonth(aEnd.getMonth() - 1)
-        const aStart = new Date(bStart); aStart.setMonth(aStart.getMonth() - 1)
-
-        const bEndStr = bEnd.toISOString().split('T')[0]
-        const bStartStr = bStart.toISOString().split('T')[0]
-        const aEndStr = aEnd.toISOString().split('T')[0]
-        const aStartStr = aStart.toISOString().split('T')[0]
-
-        setPeriodBEnd(bEndStr)
-        setPeriodBStart(bStartStr)
-        setPeriodAEnd(aEndStr)
-        setPeriodAStart(aStartStr)
-
-        // Initial load once with defaults (no auto-reload on subsequent changes)
-        const params = new URLSearchParams({
-          periodAStart: aStartStr,
-          periodAEnd: aEndStr,
-          periodBStart: bStartStr,
-          periodBEnd: bEndStr,
-        })
-        const dataRes = await fetch(`/api/usc-brand-performance-trends/data?${params}`, {
-          headers: {
-            'x-user-allowed-brands': JSON.stringify(allowedBrands)
-          }
-        })
-        const dataJson = await dataRes.json()
-        if (!dataJson.success) throw new Error('Failed to load data')
-        setData(dataJson.data)
-        setTableData(dataJson.data?.rows || [])
-      } catch (e: any) {
-        setError(e.message || 'Failed to init')
-      } finally {
-        setLoading(false)
+          cache: 'no-store'
+        });
+        if (!response.ok) throw new Error('Failed to load slicer options');
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to load slicer options');
+        }
+        
+        const data = result.data;
+        setSlicerOptions(data);
+        
+        // Default ranges: 7 days for Period B ending at max date,
+        // and same 7-day window for previous month for Period A
+        const latestDate = new Date(data.defaults.latestDate);
+        const periodBEndDate = new Date(latestDate);
+        const periodBStartDate = new Date(latestDate);
+        periodBStartDate.setDate(periodBStartDate.getDate() - 6); // 7 days inclusive
+        
+        const periodAEndDate = new Date(periodBEndDate);
+        periodAEndDate.setMonth(periodAEndDate.getMonth() - 1);
+        const periodAStartDate = new Date(periodBStartDate);
+        periodAStartDate.setMonth(periodAStartDate.getMonth() - 1);
+        
+        setPeriodBEnd(periodBEndDate.toISOString().split('T')[0]);
+        setPeriodBStart(periodBStartDate.toISOString().split('T')[0]);
+        setPeriodAEnd(periodAEndDate.toISOString().split('T')[0]);
+        setPeriodAStart(periodAStartDate.toISOString().split('T')[0]);
+        setSlicerLoaded(true);
+        
+      } catch (err) {
+        console.error('Error fetching slicer options:', err);
+        setError('Failed to load slicer options');
+        setLoading(false);
       }
+    };
+
+    fetchSlicerOptions();
+  }, []);
+
+  // Auto-load once after defaults are set
+  useEffect(() => {
+    if (!autoLoaded && slicerLoaded && periodAStart && periodAEnd && periodBStart && periodBEnd) {
+      setAutoLoaded(true);
+      handleApplyFilters();
     }
-    init()
-  }, [])
+  }, [autoLoaded, slicerLoaded, periodAStart, periodAEnd, periodBStart, periodBEnd]);
 
   // Manual fetch via Search button (no auto-reload on date changes)
   const handleApplyFilters = async () => {
-    if (!periodAStart || !periodAEnd || !periodBStart || !periodBEnd) return
-    setLoading(true)
-    setError(null)
+    if (!periodAStart || !periodAEnd || !periodBStart || !periodBEnd) return;
+    if (!slicerLoaded) setLoading(true); // Only set loading if slicers not loaded yet
+    setError(null);
     try {
       const userStr = localStorage.getItem('nexmax_user')
       const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
       
-      const params = new URLSearchParams({ periodAStart, periodAEnd, periodBStart, periodBEnd })
-      const res = await fetch(`/api/usc-brand-performance-trends/data?${params}`, {
+      const params = new URLSearchParams({ periodAStart, periodAEnd, periodBStart, periodBEnd });
+      const response = await fetch(`/api/usc-brand-performance-trends/data?${params}`, {
         headers: {
           'x-user-allowed-brands': JSON.stringify(allowedBrands)
         }
-      })
-      const json = await res.json()
-      if (!json.success) throw new Error('Failed to load data')
-      setData(json.data)
-      setTableData(json.data?.rows || [])
-    } catch (e: any) {
-      setError(e.message || 'Failed to load')
+      });
+      if (!response.ok) throw new Error('Failed to load data');
+      const json = await response.json();
+      if (!json.success) throw new Error('Failed to load data');
+      setData(json.data);
+      setTableData(json.data?.rows || []);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setError('Failed to load data');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const customSubHeader = (
     <div className="dashboard-subheader">
@@ -577,9 +580,8 @@ export default function BrandPerformanceTrendsPage() {
                 <input 
                   type="date" 
                   value={tempAStart} 
-                  min={slicerOptions?.dateRange?.min || undefined} 
-                  max={slicerOptions?.dateRange?.max || undefined} 
-                  disabled={!slicerOptions?.dateRange?.min || !slicerOptions?.dateRange?.max}
+                  min={slicerOptions?.dateRange?.min || '2021-01-01'}
+                  max={slicerOptions?.dateRange?.max || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]}
                   onChange={e=>setTempAStart(e.target.value)}
                   style={{
                     width:'100%',
@@ -611,9 +613,8 @@ export default function BrandPerformanceTrendsPage() {
                 <input 
                   type="date" 
                   value={tempAEnd} 
-                  min={tempAStart || slicerOptions?.dateRange?.min || undefined} 
-                  max={slicerOptions?.dateRange?.max || undefined} 
-                  disabled={!slicerOptions?.dateRange?.min || !slicerOptions?.dateRange?.max}
+                  min={tempAStart || slicerOptions?.dateRange?.min || '2021-01-01'}
+                  max={slicerOptions?.dateRange?.max || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]}
                   onChange={e=>setTempAEnd(e.target.value)}
                   style={{
                     width:'100%',
@@ -738,9 +739,8 @@ export default function BrandPerformanceTrendsPage() {
                 <input 
                   type="date" 
                   value={tempBStart} 
-                  min={slicerOptions?.dateRange?.min || undefined} 
-                  max={slicerOptions?.dateRange?.max || undefined} 
-                  disabled={!slicerOptions?.dateRange?.min || !slicerOptions?.dateRange?.max}
+                  min={slicerOptions?.dateRange?.min || '2021-01-01'}
+                  max={slicerOptions?.dateRange?.max || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]}
                   onChange={e=>setTempBStart(e.target.value)}
                   style={{
                     width:'100%',
@@ -772,9 +772,8 @@ export default function BrandPerformanceTrendsPage() {
                 <input 
                   type="date" 
                   value={tempBEnd} 
-                  min={tempBStart || slicerOptions?.dateRange?.min || undefined} 
-                  max={slicerOptions?.dateRange?.max || undefined} 
-                  disabled={!slicerOptions?.dateRange?.min || !slicerOptions?.dateRange?.max}
+                  min={tempBStart || slicerOptions?.dateRange?.min || '2021-01-01'}
+                  max={slicerOptions?.dateRange?.max || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]}
                   onChange={e=>setTempBEnd(e.target.value)}
                   style={{
                     width:'100%',
