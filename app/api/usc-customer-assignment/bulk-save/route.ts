@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
     let successCount = 0
     let errorCount = 0
     const errors: string[] = []
+    const results: any[] = [] // ✅ Store results for each assignment
 
     // Process each assignment
     for (const assignment of assignments) {
@@ -82,13 +83,29 @@ export async function POST(request: NextRequest) {
           console.error(`❌ Error updating ${userkey}:`, updateError)
           errors.push(`Failed to update ${userkey}: ${updateError.message}`)
           errorCount++
+          results.push({
+            userkey,
+            success: false,
+            error: updateError.message
+          })
         } else {
           successCount++
+          results.push({
+            userkey,
+            success: true,
+            snr_account: snr_account.trim(),
+            handler: snr_handler // ✅ Return handler so frontend can update without reload
+          })
         }
       } catch (error: any) {
         console.error(`❌ Exception updating ${userkey}:`, error)
         errors.push(`Exception updating ${userkey}: ${error.message}`)
         errorCount++
+        results.push({
+          userkey,
+          success: false,
+          error: error.message
+        })
       }
     }
 
@@ -107,7 +124,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: `Successfully updated ${successCount} assignments`,
-      successCount
+      successCount,
+      results // ✅ Return results so frontend can update without reload
     })
 
   } catch (error: any) {

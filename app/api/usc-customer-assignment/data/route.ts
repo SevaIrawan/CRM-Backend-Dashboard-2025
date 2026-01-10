@@ -62,9 +62,18 @@ export async function GET(request: NextRequest) {
       query = query.eq('tier_name', tier)
     }
 
-    // Note: Search will be applied after aggregation
+    // ✅ Optimasi: Apply search filter at database level before aggregation
+    // This reduces data size before aggregation, improving performance
+    if (search && search.trim()) {
+      if (searchColumn === 'update_unique_code') {
+        query = query.ilike('update_unique_code', `%${search.trim()}%`)
+      } else if (searchColumn === 'userkey' || searchColumn === 'user_unique') {
+        // For userkey/user_unique search, filter by user_unique field
+        query = query.ilike('user_unique', `%${search.trim()}%`)
+      }
+    }
 
-    // Fetch all data (no limit for aggregation)
+    // Fetch all data (no limit for aggregation, but already filtered by search)
     const { data: rawData, error } = await query
 
     if (error) {
@@ -139,10 +148,16 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Convert Map to Array and calculate days_active
+    // Convert Map to Array and calculate days_active, ATV, and PF
     let aggregatedData = Array.from(userMap.values()).map((user: any) => {
       const daysActive = user.activeDates ? user.activeDates.size : 0
       const ggr = user.deposit_amount - user.withdraw_amount
+      
+      // ✅ Calculate ATV (Average Transaction Value) = deposit_amount / deposit_cases
+      const atv = user.deposit_cases > 0 ? user.deposit_amount / user.deposit_cases : 0
+      
+      // ✅ Calculate PF (Purchase Frequency) = deposit_cases / days_active
+      const pf = daysActive > 0 ? user.deposit_cases / daysActive : 0
       
       return {
         userkey: user.userkey,
@@ -157,26 +172,16 @@ export async function GET(request: NextRequest) {
         withdraw_cases: user.withdraw_cases,
         withdraw_amount: user.withdraw_amount,
         ggr: ggr,
+        atv: atv, // ✅ Added ATV from API
+        pf: pf, // ✅ Added PF from API
         snr_account: user.snr_account,
         snr_handler: user.snr_handler,
         tier_name: user.tier_name
       }
     })
 
-    // Apply search filter on aggregated data
-    if (search && search.trim()) {
-      if (searchColumn === 'update_unique_code') {
-        aggregatedData = aggregatedData.filter((row: any) => 
-          row.update_unique_code?.toLowerCase().includes(search.toLowerCase())
-        )
-      } else if (searchColumn === 'userkey') {
-        // userkey is combination of user_unique + line
-        aggregatedData = aggregatedData.filter((row: any) => 
-          row.userkey?.toLowerCase().includes(search.toLowerCase()) ||
-          row.user_unique?.toLowerCase().includes(search.toLowerCase())
-        )
-      }
-    }
+    // ✅ Search filter already applied at database level
+    // No need to filter again after aggregation (already filtered before)
 
     // Sort by line, then by update_unique_code
     aggregatedData.sort((a: any, b: any) => {

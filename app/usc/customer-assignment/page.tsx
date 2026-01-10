@@ -1,12 +1,13 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import Layout from '@/components/Layout'
 import Frame from '@/components/Frame'
 import StandardLoadingSpinner from '@/components/StandardLoadingSpinner'
 import ComingSoon from '@/components/ComingSoon'
 import { getAllowedBrandsFromStorage } from '@/utils/brandAccessHelper'
 import { supabase } from '@/lib/supabase'
+import { useToast } from '@/hooks/useToast'
 
 interface CustomerData {
   userkey: string
@@ -21,6 +22,8 @@ interface CustomerData {
   withdraw_cases: number
   withdraw_amount: number
   ggr: number
+  atv: number // ✅ ATV from API (Average Transaction Value)
+  pf: number // ✅ PF from API (Purchase Frequency)
   tier_name: string | null
   // SNR columns
   snr_account: string | null
@@ -77,6 +80,8 @@ interface HandlerEdit {
 }
 
 export default function USCCustomerAssignmentPage() {
+  const { showToast, ToastComponent } = useToast()
+  
   const [line, setLine] = useState('ALL')
   const [year, setYear] = useState('')
   const [month, setMonth] = useState('')
@@ -119,7 +124,7 @@ export default function USCCustomerAssignmentPage() {
   const [availableLines, setAvailableLines] = useState<string[]>([]) // Lines from blue_whale_usc
 
   // Fetch SNR accounts (users with role snr_usc)
-  const fetchSNRAccounts = async () => {
+  const fetchSNRAccounts = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('users')
@@ -143,12 +148,52 @@ export default function USCCustomerAssignmentPage() {
     } catch (error) {
       console.error('❌ Error fetching SNR accounts:', error)
     }
-  }
+  }, [])
 
-  // Fetch slicer options from API
-  const fetchSlicerOptions = async () => {
+  // Fetch slicer options from API with localStorage caching
+  const fetchSlicerOptions = useCallback(async () => {
     try {
       setSlicerLoading(true)
+      
+      // Check cache first (5 minutes TTL)
+      const cacheKey = 'usc_customer_assignment_slicer_options'
+      const cacheTimeKey = 'usc_customer_assignment_slicer_options_time'
+      const cachedData = localStorage.getItem(cacheKey)
+      const cachedTime = localStorage.getItem(cacheTimeKey)
+      const now = Date.now()
+      const fiveMinutes = 5 * 60 * 1000 // 5 minutes in milliseconds
+      
+      let useCachedData = false
+      if (cachedData && cachedTime && (now - parseInt(cachedTime)) < fiveMinutes) {
+        try {
+          const parsed = JSON.parse(cachedData)
+          setSlicerOptions({
+            lines: parsed.lines || [],
+            years: parsed.years || [],
+            months: parsed.months || [],
+            tiers: parsed.tiers || []
+          })
+          
+          // Auto-set to defaults from cached data
+          if (parsed.defaults) {
+            setLine('ALL')
+            if (parsed.defaults.year) {
+              setYear(parsed.defaults.year)
+            }
+            if (parsed.defaults.month) {
+              setMonth(parsed.defaults.month)
+            }
+            console.log('✅ [Customer Assignment] Using cached slicer options')
+          }
+          
+          useCachedData = true
+          // Still fetch in background to update cache (non-blocking)
+          setSlicerLoading(false)
+        } catch (e) {
+          console.error('❌ Error parsing cached data:', e)
+          // Continue to fetch fresh data
+        }
+      }
       
       const userAllowedBrands = getAllowedBrandsFromStorage()
       
@@ -162,26 +207,44 @@ export default function USCCustomerAssignmentPage() {
       const result = await response.json()
       
       if (result.success) {
-        setSlicerOptions({
+        const slicerData = {
           lines: result.data.lines || [],
           years: result.data.years || [],
           months: result.data.months || [],
-          tiers: result.data.tiers || []
-        })
+          tiers: result.data.tiers || [],
+          defaults: result.data.defaults || null
+        }
         
-        // Auto-set to defaults from API
-        if (result.data.defaults) {
-          // Always set Line to 'ALL' (default)
-          setLine('ALL')
+        // Update cache
+        localStorage.setItem(cacheKey, JSON.stringify(slicerData))
+        localStorage.setItem(cacheTimeKey, now.toString())
+        
+        // Only update state if not using cached data (to avoid flicker)
+        if (!useCachedData) {
+          setSlicerOptions({
+            lines: slicerData.lines,
+            years: slicerData.years,
+            months: slicerData.months,
+            tiers: slicerData.tiers
+          })
           
-          // Always set Year and Month to last data from table
-          if (result.data.defaults.year) {
-            setYear(result.data.defaults.year)
+          // Auto-set to defaults from API
+          if (result.data.defaults) {
+            // Always set Line to 'ALL' (default)
+            setLine('ALL')
+            
+            // Always set Year and Month to last data from table
+            if (result.data.defaults.year) {
+              setYear(result.data.defaults.year)
+            }
+            if (result.data.defaults.month) {
+              setMonth(result.data.defaults.month)
+            }
+            console.log('✅ [Customer Assignment] Auto-set to defaults:', result.data.defaults)
           }
-          if (result.data.defaults.month) {
-            setMonth(result.data.defaults.month)
-          }
-          console.log('✅ [Customer Assignment] Auto-set to defaults:', result.data.defaults)
+        } else {
+          // Update cache silently in background
+          console.log('✅ [Customer Assignment] Cache updated in background')
         }
       }
     } catch (error) {
@@ -189,10 +252,10 @@ export default function USCCustomerAssignmentPage() {
     } finally {
       setSlicerLoading(false)
     }
-  }
+  }, [])
 
   // Fetch customer data
-  const fetchCustomerData = async (overrideSearch?: string) => {
+  const fetchCustomerData = useCallback(async (overrideSearch?: string, resetPage: boolean = false) => {
     if (!year || !month) {
       console.log('⏳ Waiting for slicers...')
       return
@@ -204,12 +267,15 @@ export default function USCCustomerAssignmentPage() {
       // Use overrideSearch if provided, otherwise use searchInput from state
       const searchValue = overrideSearch !== undefined ? overrideSearch : searchInput
       
+      // Reset pagination to page 1 if resetPage is true or if search is being cleared
+      const currentPage = resetPage || (overrideSearch === '') ? 1 : pagination.currentPage
+      
       const params = new URLSearchParams({
         year,
         month,
         line: line === 'ALL' ? '' : line,
         tier: tier === 'ALL' ? '' : tier,
-        page: pagination.currentPage.toString(),
+        page: currentPage.toString(),
         limit: pagination.recordsPerPage.toString(),
         search: searchValue,
         searchColumn: 'update_unique_code' // Always search by unique code
@@ -247,7 +313,7 @@ export default function USCCustomerAssignmentPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [year, month, line, tier, searchInput, pagination.currentPage, pagination.recordsPerPage])
 
   // Handle assignment edit
   const handleAssignmentChange = async (userkey: string, field: 'snr_account' | 'snr_handler', value: string) => {
@@ -341,12 +407,13 @@ export default function USCCustomerAssignmentPage() {
           setEditingAssignments(newEditing)
           
           console.log(`✅ Cleared assignment for ${userkey}`)
+          showToast('Assignment cleared successfully!', 'error')
         } else {
-          alert(`Error: ${result.error || 'Failed to clear assignment'}`)
+          showToast(`Error: ${result.error || 'Failed to clear assignment'}`, 'error')
         }
       } catch (error) {
         console.error('❌ Error clearing assignment:', error)
-        alert('Error clearing assignment')
+        showToast('Error clearing assignment', 'error')
       }
     } else {
       // If no snr_account in database, just remove from editing state
@@ -362,7 +429,7 @@ export default function USCCustomerAssignmentPage() {
     if (!assignment) return
 
     if (!assignment.snr_account || !assignment.snr_account.trim()) {
-      alert('Please select an SNR Account')
+      showToast('Please select an SNR Account', 'warning')
       return
     }
 
@@ -378,7 +445,7 @@ export default function USCCustomerAssignmentPage() {
 
       const customer = customerData.find(c => c.userkey === userkey)
       if (!customer) {
-        alert('Customer not found')
+        showToast('Customer not found', 'error')
         return
       }
 
@@ -400,21 +467,29 @@ export default function USCCustomerAssignmentPage() {
       const result = await response.json()
 
       if (result.success) {
-        // Reload data to get the handler from database
-        await fetchCustomerData()
+        // ✅ Update local state without reload - handler sudah ada di result
+        setCustomerData(prev => prev.map(c => 
+          c.userkey === userkey
+            ? {
+                ...c,
+                snr_account: assignment.snr_account.trim(),
+                snr_handler: result.handler || assignment.snr_handler || c.snr_handler
+              }
+            : c
+        ))
         
         // Remove from editing
         const newEditing = new Map(editingAssignments)
         newEditing.delete(userkey)
         setEditingAssignments(newEditing)
         
-        alert('Assignment saved successfully!')
+        showToast('Assignment saved successfully!', 'success')
       } else {
-        alert(`Error: ${result.error || result.message || 'Failed to save assignment'}`)
+        showToast(`Error: ${result.error || result.message || 'Failed to save assignment'}`, 'error')
       }
     } catch (error) {
       console.error('❌ Error saving assignment:', error)
-      alert('Error saving assignment')
+      showToast('Error saving assignment', 'error')
     } finally {
       setSavingAssignments(prev => {
         const newSet = new Set(prev)
@@ -427,7 +502,7 @@ export default function USCCustomerAssignmentPage() {
   // Bulk save all assignments
   const handleBulkSave = async () => {
     if (editingAssignments.size === 0) {
-      alert('No changes to save')
+      showToast('No changes to save', 'info')
       return
     }
 
@@ -436,7 +511,7 @@ export default function USCCustomerAssignmentPage() {
     // Validate all and ensure user_unique and line are included
     for (const assignment of assignments) {
       if (!assignment.snr_account || !assignment.snr_account.trim()) {
-        alert(`Please select SNR Account for ${assignment.userkey}`)
+        showToast(`Please select SNR Account for ${assignment.userkey}`, 'warning')
         return
       }
       // Handler will be auto-fetched from snr_usc_handler table in API
@@ -448,7 +523,7 @@ export default function USCCustomerAssignmentPage() {
           assignment.user_unique = customer.user_unique
           assignment.line = customer.line
         } else {
-          alert(`Customer data not found for ${assignment.userkey}`)
+          showToast(`Customer data not found for ${assignment.userkey}`, 'error')
           return
         }
       }
@@ -473,27 +548,49 @@ export default function USCCustomerAssignmentPage() {
       const result = await response.json()
 
       if (result.success) {
-        // Reload data to get the handlers from database
-        await fetchCustomerData()
+        // ✅ Update local state without reload - update all saved assignments
+        if (result.results && Array.isArray(result.results)) {
+          const savedMap = new Map()
+          result.results.forEach((r: any) => {
+            if (r.success && r.userkey) {
+              savedMap.set(r.userkey, {
+                snr_account: r.snr_account,
+                snr_handler: r.handler
+              })
+            }
+          })
+          
+          setCustomerData(prev => prev.map(c => {
+            const saved = savedMap.get(c.userkey)
+            if (saved) {
+              return {
+                ...c,
+                snr_account: saved.snr_account || c.snr_account,
+                snr_handler: saved.snr_handler || c.snr_handler
+              }
+            }
+            return c
+          }))
+        }
         
         setEditingAssignments(new Map())
-        alert(`Successfully sent ${result.successCount || assignments.length} assignments!`)
+        showToast(`Successfully sent ${result.successCount || assignments.length} assignments!`, 'success')
       } else {
-        alert(`Error: ${result.error || result.message || 'Failed to save assignments'}`)
+        showToast(`Error: ${result.error || result.message || 'Failed to save assignments'}`, 'error')
         if (result.errors && result.errors.length > 0) {
           console.error('❌ Assignment errors:', result.errors)
         }
       }
     } catch (error) {
       console.error('❌ Error bulk saving:', error)
-      alert('Error saving assignments')
+      showToast('Error saving assignments', 'error')
     } finally {
       setBulkSaving(false)
     }
   }
 
   // Fetch available lines from blue_whale_usc
-  const fetchAvailableLines = async () => {
+  const fetchAvailableLines = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('blue_whale_usc')
@@ -514,10 +611,10 @@ export default function USCCustomerAssignmentPage() {
     } catch (error) {
       console.error('❌ Error fetching lines:', error)
     }
-  }
+  }, [])
 
   // Fetch handler setup data
-  const fetchHandlerData = async () => {
+  const fetchHandlerData = useCallback(async () => {
     try {
       setHandlerLoading(true)
       const response = await fetch('/api/usc-customer-assignment/handler-setup/data', {
@@ -539,7 +636,7 @@ export default function USCCustomerAssignmentPage() {
     } finally {
       setHandlerLoading(false)
     }
-  }
+  }, [])
 
   // Handle handler edit
   const handleHandlerChange = (id: string, field: 'snr_account' | 'line' | 'handler', value: string) => {
@@ -602,15 +699,15 @@ export default function USCCustomerAssignmentPage() {
     if (!handler) return
 
     if (!handler.snr_account || !handler.snr_account.trim()) {
-      alert('Please enter SNR Account')
+      showToast('Please enter SNR Account', 'warning')
       return
     }
     if (!handler.line || !handler.line.trim()) {
-      alert('Please enter Line')
+      showToast('Please enter Line', 'warning')
       return
     }
     if (!handler.handler || !handler.handler.trim()) {
-      alert('Please enter Handler name')
+      showToast('Please enter Handler name', 'warning')
       return
     }
 
@@ -645,13 +742,13 @@ export default function USCCustomerAssignmentPage() {
         newEditing.delete(id)
         setEditingHandlers(newEditing)
         
-        alert('Handler saved successfully!')
+        showToast('Handler saved successfully!', 'success')
       } else {
-        alert(`Error: ${result.error || result.message || 'Failed to save handler'}`)
+        showToast(`Error: ${result.error || result.message || 'Failed to save handler'}`, 'error')
       }
     } catch (error) {
       console.error('❌ Error saving handler:', error)
-      alert('Error saving handler')
+      showToast('Error saving handler', 'error')
     } finally {
       setSavingHandlers(prev => {
         const newSet = new Set(prev)
@@ -697,13 +794,13 @@ export default function USCCustomerAssignmentPage() {
         newEditing.delete(id)
         setEditingHandlers(newEditing)
         
-        alert('Handler cleared successfully!')
+        showToast('Handler cleared successfully!', 'success')
       } else {
-        alert(`Error: ${result.error || result.message || 'Failed to clear handler'}`)
+        showToast(`Error: ${result.error || result.message || 'Failed to clear handler'}`, 'error')
       }
     } catch (error) {
       console.error('❌ Error clearing handler:', error)
-      alert('Error clearing handler')
+      showToast('Error clearing handler', 'error')
     } finally {
       setSavingHandlers(prev => {
         const newSet = new Set(prev)
@@ -736,7 +833,7 @@ export default function USCCustomerAssignmentPage() {
     
     fetchSNRAccounts()
     fetchSlicerOptions()
-  }, [])
+  }, [fetchSNRAccounts, fetchSlicerOptions])
 
   // Fetch handler data and lines when Handler Setup bookmark is active
   useEffect(() => {
@@ -744,55 +841,46 @@ export default function USCCustomerAssignmentPage() {
       fetchAvailableLines()
       fetchHandlerData()
     }
-  }, [activeBookmark])
+  }, [activeBookmark, fetchAvailableLines, fetchHandlerData])
 
-  // Auto-load data ONCE when defaults are set from API (initial load only)
+  // ✅ Auto-load data ONCE when defaults are set from API (initial load only - tidak reload berulang)
   useEffect(() => {
     if (!initialLoadDone && year && month) {
       console.log('✅ [Customer Assignment] Initial load with defaults:', { line, year, month, tier })
       fetchCustomerData()
       setInitialLoadDone(true)
     }
-  }, [line, year, month, tier, initialLoadDone])
+  }, [year, month, initialLoadDone, fetchCustomerData]) // ✅ Hapus line dan tier dari dependency - hanya trigger saat year/month set pertama kali
 
-  // Auto-fetch data when slicers change (after initial load) - same as other slicers (line, year, month, tier)
+  // ✅ Fetch data when page changes (pagination only)
   useEffect(() => {
     if (initialLoadDone && year && month) {
-      console.log('🔄 [Customer Assignment] Slicers changed, auto-fetching data:', { line, year, month, tier })
-      setPagination(prev => ({ ...prev, currentPage: 1 }))
       fetchCustomerData()
     }
-  }, [line, year, month, tier])
-
-  // Fetch data when page changes
-  useEffect(() => {
-    if (initialLoadDone) {
-      fetchCustomerData()
-    }
-  }, [pagination.currentPage])
+  }, [pagination.currentPage, initialLoadDone, year, month, fetchCustomerData])
 
   // Format number
-  const formatNumber = (num: number | null | undefined): string => {
+  const formatNumber = useCallback((num: number | null | undefined): string => {
     if (num === null || num === undefined) return '-'
     return new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     }).format(num)
-  }
+  }, [])
 
   // Format integer
-  const formatInteger = (num: number | null | undefined): string => {
+  const formatInteger = useCallback((num: number | null | undefined): string => {
     if (num === null || num === undefined) return '-'
     return new Intl.NumberFormat('en-US').format(num)
-  }
+  }, [])
 
   // Get editing state for a row
-  const getEditingState = (userkey: string) => {
+  const getEditingState = useCallback((userkey: string) => {
     return editingAssignments.get(userkey) || {
       snr_account: customerData.find(c => c.userkey === userkey)?.snr_account || '',
       snr_handler: customerData.find(c => c.userkey === userkey)?.snr_handler || ''
     }
-  }
+  }, [editingAssignments, customerData])
 
   // Check if row has unsaved changes
   const hasUnsavedChanges = (userkey: string): boolean => {
@@ -802,28 +890,32 @@ export default function USCCustomerAssignmentPage() {
   // Handle apply filters (Search button)
   const handleApplyFilters = () => {
     if (!year || !month) {
-      alert('Please select Year and Month')
+      showToast('Please select Year and Month', 'warning')
       return
     }
     setPagination(prev => ({ ...prev, currentPage: 1 }))
     fetchCustomerData()
   }
 
+  // ✅ Hapus auto-search - hanya search saat user tekan Search button atau Enter
+
   // Handle search input key down
   const handleSearchInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
-      handleApplyFilters()
+      handleApplyFilters() // Trigger search via button logic
     }
   }
 
   // Handle clear search - Reset all to default
   const handleClearSearch = () => {
+    // Reset search input and pagination to first page
     setSearchInput('')
-    // Reset pagination to first page
     setPagination(prev => ({ ...prev, currentPage: 1 }))
-    // Fetch all data without search filter immediately (pass empty string)
+    
+    // Fetch all data without search filter (reset to default)
+    // fetchCustomerData will automatically reset pagination to page 1 when search is cleared
     if (year && month) {
-      fetchCustomerData('')
+      fetchCustomerData('', true) // Pass empty string to clear search filter, resetPage=true
     }
   }
 
@@ -843,7 +935,7 @@ export default function USCCustomerAssignmentPage() {
       case 'assignment':
       default:
         return {
-          subtitle: 'Customer Assignment',
+          subtitle: 'Manage Assignments',
           description: 'Assign customers to SNR accounts and handlers. Manage customer assignments, track assignments, and update handler information.'
         }
     }
@@ -938,7 +1030,7 @@ export default function USCCustomerAssignmentPage() {
           <span>Handler Setup</span>
         </button>
 
-        {/* Bookmark 2: Customer Assignment (Active) */}
+        {/* Bookmark 2: Manage Assignments (Active) */}
         <button
           onClick={() => {
             setActiveBookmark('assignment')
@@ -985,7 +1077,7 @@ export default function USCCustomerAssignmentPage() {
             <path d="M20 8v6"></path>
             <path d="M23 11h-6"></path>
           </svg>
-          <span>Customer Assignment</span>
+          <span>Manage Assignments</span>
         </button>
 
         {/* Bookmark 3: SNR Performance */}
@@ -1713,7 +1805,7 @@ export default function USCCustomerAssignmentPage() {
                   <thead>
                     <tr>
                       <th style={{ 
-                        textAlign: 'left',
+                        textAlign: 'center',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
@@ -1721,7 +1813,7 @@ export default function USCCustomerAssignmentPage() {
                         width: 'auto'
                       }}>Brand</th>
                       <th style={{ 
-                        textAlign: 'left',
+                        textAlign: 'center',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
@@ -1729,7 +1821,7 @@ export default function USCCustomerAssignmentPage() {
                         width: 'auto'
                       }}>Unique Code</th>
                       <th style={{ 
-                        textAlign: 'left',
+                        textAlign: 'center',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
@@ -1738,7 +1830,7 @@ export default function USCCustomerAssignmentPage() {
                         wordBreak: 'break-word'
                       }}>Traffic</th>
                       <th style={{ 
-                        textAlign: 'left',
+                        textAlign: 'center',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
@@ -1746,7 +1838,7 @@ export default function USCCustomerAssignmentPage() {
                         width: 'auto'
                       }}>LDD</th>
                       <th style={{ 
-                        textAlign: 'right',
+                        textAlign: 'center',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
@@ -1754,7 +1846,7 @@ export default function USCCustomerAssignmentPage() {
                         width: 'auto'
                       }}>Days Active</th>
                       <th style={{ 
-                        textAlign: 'right',
+                        textAlign: 'center',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
@@ -1762,7 +1854,7 @@ export default function USCCustomerAssignmentPage() {
                         width: 'auto'
                       }}>ATV</th>
                       <th style={{ 
-                        textAlign: 'right',
+                        textAlign: 'center',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
@@ -1770,7 +1862,7 @@ export default function USCCustomerAssignmentPage() {
                         width: 'auto'
                       }}>PF</th>
                       <th style={{ 
-                        textAlign: 'right',
+                        textAlign: 'center',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
@@ -1778,7 +1870,7 @@ export default function USCCustomerAssignmentPage() {
                         width: 'auto'
                       }}>DC</th>
                       <th style={{ 
-                        textAlign: 'right',
+                        textAlign: 'center',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
@@ -1786,7 +1878,7 @@ export default function USCCustomerAssignmentPage() {
                         width: 'auto'
                       }}>DA</th>
                       <th style={{ 
-                        textAlign: 'right',
+                        textAlign: 'center',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
@@ -1794,7 +1886,7 @@ export default function USCCustomerAssignmentPage() {
                         width: 'auto'
                       }}>WC</th>
                       <th style={{ 
-                        textAlign: 'right',
+                        textAlign: 'center',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
@@ -1802,7 +1894,7 @@ export default function USCCustomerAssignmentPage() {
                         width: 'auto'
                       }}>WA</th>
                       <th style={{ 
-                        textAlign: 'right',
+                        textAlign: 'center',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
@@ -1810,7 +1902,7 @@ export default function USCCustomerAssignmentPage() {
                         width: 'auto'
                       }}>GGR</th>
                       <th style={{ 
-                        textAlign: 'left',
+                        textAlign: 'center',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
@@ -1818,7 +1910,7 @@ export default function USCCustomerAssignmentPage() {
                         width: 'auto'
                       }}>Tier</th>
                       <th style={{ 
-                        textAlign: 'left',
+                        textAlign: 'center',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
@@ -1826,7 +1918,7 @@ export default function USCCustomerAssignmentPage() {
                         width: 'auto'
                       }}>Assignee</th>
                       <th style={{ 
-                        textAlign: 'left',
+                        textAlign: 'center',
                         border: '1px solid #e0e0e0',
                         borderBottom: '2px solid #d0d0d0',
                         padding: '8px 12px',
@@ -1869,7 +1961,7 @@ export default function USCCustomerAssignmentPage() {
                           <td style={{ 
                             border: '1px solid #e0e0e0',
                             padding: '8px 12px'
-                          }}>{customer.last_deposit_date ? new Date(customer.last_deposit_date).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '-'}</td>
+                          }}>{customer.last_deposit_date ? new Date(customer.last_deposit_date).toISOString().split('T')[0] : '-'}</td>
                           <td style={{ 
                             textAlign: 'right',
                             border: '1px solid #e0e0e0',
@@ -1879,12 +1971,12 @@ export default function USCCustomerAssignmentPage() {
                             textAlign: 'right',
                             border: '1px solid #e0e0e0',
                             padding: '8px 12px'
-                          }}>{customer.deposit_cases > 0 ? formatNumber(customer.deposit_amount / customer.deposit_cases) : '0.00'}</td>
+                          }}>{formatNumber(customer.atv)}</td>
                           <td style={{ 
                             textAlign: 'right',
                             border: '1px solid #e0e0e0',
                             padding: '8px 12px'
-                          }}>{customer.days_active > 0 ? formatNumber(customer.deposit_cases / customer.days_active) : '0.00'}</td>
+                          }}>{formatNumber(customer.pf)}</td>
                           <td style={{ 
                             textAlign: 'right',
                             border: '1px solid #e0e0e0',
@@ -1920,117 +2012,179 @@ export default function USCCustomerAssignmentPage() {
                           <td style={{ 
                             border: '1px solid #e0e0e0',
                             padding: '8px 12px',
-                            backgroundColor: hasChanges ? '#fef3c7' : (customer.snr_account ? '#dcfce7' : 'transparent') // Green background if has snr_account
+                            backgroundColor: 'transparent'
                           }}>
-                            <div style={{ position: 'relative', display: 'inline-block', width: '100%', maxWidth: '180px' }}>
-                              <select
-                                value={editing.snr_account || customer.snr_account || ''}
-                                onChange={(e) => handleAssignmentChange(customer.userkey, 'snr_account', e.target.value)}
+                            {customer.snr_account ? (
+                              /* Badge style if assignee already saved */
+                              <div
                                 style={{
-                                  width: '100%',
-                                  padding: '6px 32px 6px 10px',
-                                  border: customer.snr_account ? '1px solid #16a34a' : '1px solid #d1d5db', // Green border if has snr_account
-                                  borderRadius: '4px',
-                                  fontSize: '13px',
-                                  backgroundColor: customer.snr_account ? '#dcfce7' : '#ffffff', // Green background if has snr_account
-                                  minWidth: '120px',
-                                  appearance: 'none',
-                                  WebkitAppearance: 'none',
-                                  MozAppearance: 'none'
+                                  display: 'inline-block',
+                                  padding: '6px 12px',
+                                  backgroundColor: '#D1FAE5',
+                                  border: '1px solid #10B981',
+                                  borderRadius: '6px',
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  color: '#065F46',
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '0.5px'
                                 }}
                               >
-                                <option value="">Select SNR</option>
-                                {snrAccounts
-                                  .filter(account => {
-                                    // Filter SNR accounts based on customer line
-                                    if (!account.allowed_brands || !Array.isArray(account.allowed_brands)) {
-                                      return false
-                                    }
-                                    // Check if allowed_brands contains the customer's line
-                                    return account.allowed_brands.includes(customer.line)
-                                  })
-                                  .map(account => (
-                                    <option key={account.username} value={account.username}>
-                                      {account.username}
-                                    </option>
-                                  ))}
-                              </select>
-                              {/* Clear Button X - Only show if has snr_account (from database or editing) */}
-                              {(editing.snr_account || customer.snr_account) && (
-                                <button
-                                  onClick={() => handleClearAssignment(customer.userkey)}
+                                {customer.snr_account}
+                              </div>
+                            ) : (
+                              /* Select dropdown if assignee empty */
+                              <div style={{ position: 'relative', display: 'inline-block', width: '100%', maxWidth: '180px' }}>
+                                <select
+                                  value={editing.snr_account || ''}
+                                  onChange={(e) => handleAssignmentChange(customer.userkey, 'snr_account', e.target.value)}
                                   style={{
-                                    position: 'absolute',
-                                    right: '6px',
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    background: 'transparent',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    padding: '2px 4px',
-                                    color: '#6b7280',
-                                    fontSize: '18px',
-                                    lineHeight: 1,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    width: '20px',
-                                    height: '20px',
-                                    borderRadius: '50%',
-                                    transition: 'all 0.2s ease',
-                                    zIndex: 10
+                                    width: '100%',
+                                    padding: '6px 10px',
+                                    border: '1px solid #d1d5db',
+                                    borderRadius: '4px',
+                                    fontSize: '13px',
+                                    backgroundColor: '#ffffff',
+                                    minWidth: '120px',
+                                    appearance: 'none',
+                                    WebkitAppearance: 'none',
+                                    MozAppearance: 'none'
                                   }}
-                                  onMouseEnter={(e) => { 
-                                    e.currentTarget.style.color = '#ef4444'
-                                    e.currentTarget.style.backgroundColor = '#fee2e2'
-                                  }}
-                                  onMouseLeave={(e) => { 
-                                    e.currentTarget.style.color = '#6b7280'
-                                    e.currentTarget.style.backgroundColor = 'transparent'
-                                  }}
-                                  title="Clear assignment"
                                 >
-                                  ×
-                                </button>
-                              )}
-                            </div>
+                                  <option value="">Select SNR</option>
+                                  {snrAccounts
+                                    .filter(account => {
+                                      // Filter SNR accounts based on customer line
+                                      if (!account.allowed_brands || !Array.isArray(account.allowed_brands)) {
+                                        return false
+                                      }
+                                      // Check if allowed_brands contains the customer's line
+                                      return account.allowed_brands.includes(customer.line)
+                                    })
+                                    .map(account => (
+                                      <option key={account.username} value={account.username}>
+                                        {account.username}
+                                      </option>
+                                    ))}
+                                </select>
+                              </div>
+                            )}
                           </td>
                           <td style={{ 
                             border: '1px solid #e0e0e0',
                             padding: '8px 12px',
-                            backgroundColor: hasChanges ? '#fef3c7' : (customer.snr_handler ? '#fed7aa' : 'transparent') // Orange background if has snr_handler
+                            backgroundColor: 'transparent'
                           }}>
-                            <span style={{
-                              fontSize: '13px',
-                              color: customer.snr_handler ? '#ea580c' : '#9ca3af', // Orange text if has snr_handler
-                              fontStyle: customer.snr_handler ? 'normal' : 'italic',
-                              fontWeight: customer.snr_handler ? 500 : 400
-                            }}>
-                              {editing.snr_handler || customer.snr_handler || '-'}
-                            </span>
+                            {customer.snr_handler ? (
+                              /* Badge style if handler exists */
+                              <div
+                                style={{
+                                  display: 'inline-block',
+                                  padding: '6px 12px',
+                                  backgroundColor: '#FED7AA',
+                                  border: '1px solid #F59E0B',
+                                  borderRadius: '6px',
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  color: '#92400E',
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '0.5px'
+                                }}
+                              >
+                                {customer.snr_handler}
+                              </div>
+                            ) : editing.snr_handler ? (
+                              /* Show editing handler in badge if exists */
+                              <div
+                                style={{
+                                  display: 'inline-block',
+                                  padding: '6px 12px',
+                                  backgroundColor: '#FEF3C7',
+                                  border: '1px solid #F59E0B',
+                                  borderRadius: '6px',
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  color: '#92400E',
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '0.5px'
+                                }}
+                              >
+                                {editing.snr_handler}
+                              </div>
+                            ) : (
+                              /* Show dash if no handler */
+                              <span style={{
+                                fontSize: '13px',
+                                color: '#9ca3af'
+                              }}>
+                                -
+                              </span>
+                            )}
                           </td>
                           <td style={{ 
                             textAlign: 'center',
                             border: '1px solid #e0e0e0',
                             padding: '8px 12px'
                           }}>
-                            {hasChanges && (
+                            {/* Show "Clear" button if assignee already exists and saved (from database) */}
+                            {customer.snr_account && !hasChanges ? (
                               <button
-                                onClick={() => handleSaveAssignment(customer.userkey)}
+                                onClick={() => handleClearAssignment(customer.userkey)}
                                 disabled={isSaving}
                                 style={{
                                   padding: '6px 12px',
-                                  backgroundColor: '#3b82f6',
+                                  backgroundColor: '#ef4444',
                                   color: '#ffffff',
                                   border: 'none',
                                   borderRadius: '4px',
                                   fontSize: '12px',
                                   fontWeight: '500',
                                   cursor: isSaving ? 'not-allowed' : 'pointer',
-                                  opacity: isSaving ? 0.6 : 1
+                                  opacity: isSaving ? 0.6 : 1,
+                                  transition: 'all 0.2s ease'
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!isSaving) {
+                                    e.currentTarget.style.backgroundColor = '#dc2626'
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (!isSaving) {
+                                    e.currentTarget.style.backgroundColor = '#ef4444'
+                                  }
                                 }}
                               >
-                                {isSaving ? 'Sending...' : 'Send'}
+                                Clear
+                              </button>
+                            ) : (
+                              /* Show "Send" button standby if assignee is empty or selected (hasChanges) */
+                              <button
+                                onClick={() => handleSaveAssignment(customer.userkey)}
+                                disabled={isSaving || !hasChanges || !(editing.snr_account && editing.snr_account.trim())}
+                                style={{
+                                  padding: '6px 12px',
+                                  backgroundColor: (hasChanges && editing.snr_account && editing.snr_account.trim()) ? '#3b82f6' : '#9ca3af',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  fontSize: '12px',
+                                  fontWeight: '500',
+                                  cursor: (isSaving || !hasChanges || !(editing.snr_account && editing.snr_account.trim())) ? 'not-allowed' : 'pointer',
+                                  opacity: isSaving ? 0.6 : 1,
+                                  transition: 'all 0.2s ease'
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!isSaving && hasChanges && editing.snr_account && editing.snr_account.trim()) {
+                                    e.currentTarget.style.backgroundColor = '#2563eb'
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (!isSaving && hasChanges && editing.snr_account && editing.snr_account.trim()) {
+                                    e.currentTarget.style.backgroundColor = '#3b82f6'
+                                  }
+                                }}
+                              >
+                                Send
                               </button>
                             )}
                           </td>
@@ -2113,7 +2267,7 @@ export default function USCCustomerAssignmentPage() {
                         marginLeft: pagination.totalPages > 1 ? '16px' : '0'
                       }}
                     >
-                      {bulkSaving ? 'Sending...' : `Send All (${editingAssignments.size})`}
+                      Send All ({editingAssignments.size})
                     </button>
                   )}
                 </div>
@@ -2126,9 +2280,25 @@ export default function USCCustomerAssignmentPage() {
   }
 
   return (
-    <Layout customSubHeader={subHeaderContent}>
-      {renderPageContent()}
-    </Layout>
+    <>
+      <style jsx global>{`
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        .animate-spin {
+          animation: spin 1s linear infinite;
+        }
+      `}</style>
+      <Layout customSubHeader={subHeaderContent}>
+        {renderPageContent()}
+        <ToastComponent />
+      </Layout>
+    </>
   )
 }
 

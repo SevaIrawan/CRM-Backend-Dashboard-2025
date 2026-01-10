@@ -82,7 +82,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Assignment saved successfully'
+      message: 'Assignment saved successfully',
+      handler: snr_handler // ✅ Return handler so frontend can update without reload
     })
 
   } catch (error: any) {
