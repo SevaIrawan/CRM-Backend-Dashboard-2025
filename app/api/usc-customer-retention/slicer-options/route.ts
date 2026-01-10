@@ -58,6 +58,22 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
+    // Get unique tiers (tier_name)
+    const { data: tierData, error: tierError } = await supabase
+      .from('blue_whale_usc')
+      .select('tier_name')
+      .not('tier_name', 'is', null)
+      .order('tier_name')
+
+    if (tierError) {
+      console.error('❌ Error fetching tiers:', tierError)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Database error while fetching tiers',
+        message: tierError.message 
+      }, { status: 500 })
+    }
+
     // Get date range (min and max dates)
     const { data: dateRangeData, error: dateRangeError } = await supabase
       .from('blue_whale_usc')
@@ -113,6 +129,10 @@ export async function GET(request: NextRequest) {
     const sortedMonths = validMonths.sort((a, b) => monthNames.indexOf(a) - monthNames.indexOf(b))
     const months = sortedMonths.map(month => ({ value: month, label: month }))
 
+    // Process tiers - distinct tier_name values, sorted
+    const tiers = Array.from(new Set(tierData?.map(row => row.tier_name).filter(Boolean) || [])) as string[]
+    const sortedTiers = tiers.sort()
+
     const minDate = dateRangeData?.[0]?.date || ''
     const maxDate = maxDateData?.[0]?.date || ''
 
@@ -138,6 +158,7 @@ export async function GET(request: NextRequest) {
       lines_count: finalLines.length,
       years: years.length,
       months: months.length,
+      tiers: sortedTiers.length,
       dateRange: { min: minDate, max: maxDate },
       defaults: { year: defaultYear, month: defaultMonth }
     })
@@ -148,6 +169,7 @@ export async function GET(request: NextRequest) {
         lines: finalLines,
         years,
         months,
+        tiers: sortedTiers,
         dateRange: {
           min: minDate,
           max: maxDate

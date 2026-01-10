@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
-    const { line, year, month, startDate, endDate, filterMode, statusFilter } = await request.json()
+    const { line, year, month, tier, startDate, endDate, filterMode, statusFilter } = await request.json()
 
     // ✅ NEW: Get user's allowed brands from request header
     const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     const finalStatusFilter = statusFilter || 'ALL'
 
     console.log('📥 Exporting blue_whale_usc customer retention data with filters:', {
-      line, year, month, startDate, endDate, filterMode, statusFilter: finalStatusFilter,
+      line, year, month, tier, startDate, endDate, filterMode, statusFilter: finalStatusFilter,
       user_allowed_brands: userAllowedBrands
     })
 
@@ -45,6 +45,11 @@ export async function POST(request: NextRequest) {
       query = query
         .filter('date', 'gte', startDate)
         .filter('date', 'lte', endDate)
+    }
+
+    // Handle tier filtering
+    if (tier && tier.trim() && tier !== 'ALL') {
+      query = query.filter('tier_name', 'eq', tier)
     }
 
     // Get all data for processing - match data API ordering for consistency

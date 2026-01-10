@@ -13,6 +13,7 @@ interface SlicerOptions {
   lines: string[]
   years: string[]
   months: { value: string; label: string }[]
+  tiers: string[]
   dateRange: { min: string; max: string }
   defaults?: {
     line: string
@@ -34,6 +35,7 @@ export default function USCCustomerRetentionPage() {
   const [line, setLine] = useState('') // Will be set to 'ALL' from API defaults
   const [year, setYear] = useState('') // Will be set to max year from API defaults
   const [month, setMonth] = useState('') // Will be set to max month from API defaults
+  const [tier, setTier] = useState('ALL') // ✅ NEW: Tier filter, default 'ALL'
   const [statusFilter, setStatusFilter] = useState('ALL') // ✅ NEW: Status filter
   const [dateRange, setDateRange] = useState({ start: '', end: '' })
   const [filterMode, setFilterMode] = useState('month')
@@ -57,6 +59,7 @@ export default function USCCustomerRetentionPage() {
     lines: [],
     years: [],
     months: [],
+    tiers: [],
     dateRange: { min: '', max: '' }
   })
   const [loading, setLoading] = useState(true)
@@ -241,6 +244,7 @@ export default function USCCustomerRetentionPage() {
         line,
         year,
         month,
+        tier: tier === 'ALL' ? '' : tier,
         startDate: dateRange.start,
         endDate: dateRange.end,
         filterMode,
@@ -437,6 +441,7 @@ export default function USCCustomerRetentionPage() {
           line,
           year,
           month,
+          tier: tier === 'ALL' ? '' : tier,
           startDate: dateRange.start,
           endDate: dateRange.end,
           filterMode,
@@ -522,6 +527,22 @@ export default function USCCustomerRetentionPage() {
             {slicerOptions.months.map((monthOption) => (
               <option key={monthOption.value} value={monthOption.value}>
                 {monthOption.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="slicer-group">
+          <label className="slicer-label">TIER:</label>
+          <select 
+            value={tier} 
+            onChange={(e) => setTier(e.target.value)}
+            className="slicer-select"
+          >
+            <option value="ALL">All</option>
+            {slicerOptions.tiers.map((tierOption) => (
+              <option key={tierOption} value={tierOption}>
+                {tierOption}
               </option>
             ))}
           </select>

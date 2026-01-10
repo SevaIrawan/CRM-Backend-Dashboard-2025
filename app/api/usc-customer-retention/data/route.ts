@@ -7,6 +7,7 @@ export async function GET(request: NextRequest) {
   const line = searchParams.get('line')
   const year = searchParams.get('year')
   const month = searchParams.get('month')
+  const tier = searchParams.get('tier')
   const startDate = searchParams.get('startDate')
   const endDate = searchParams.get('endDate')
   const filterMode = searchParams.get('filterMode')
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
 
   try {
     console.log('📊 Fetching blue_whale_usc data for customer retention with filters:', { 
-      line, year, month, startDate, endDate, filterMode, statusFilter, page, limit,
+      line, year, month, tier, startDate, endDate, filterMode, statusFilter, page, limit,
       user_allowed_brands: userAllowedBrands
     })
 
@@ -57,6 +58,11 @@ export async function GET(request: NextRequest) {
       baseQuery = baseQuery
         .filter('date', 'gte', startDate)
         .filter('date', 'lte', endDate)
+    }
+
+    // Handle tier filtering
+    if (tier && tier.trim() && tier !== 'ALL') {
+      baseQuery = baseQuery.filter('tier_name', 'eq', tier)
     }
 
     // Get all data first (no pagination for aggregation)
@@ -121,6 +127,7 @@ export async function GET(request: NextRequest) {
         line,
         year,
         month,
+        tier,
         startDate,
         endDate,
         filterMode,
