@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     // Build base query
     let query = supabase
       .from('blue_whale_usc')
-      .select('user_unique, line, update_unique_code, traffic, last_deposit_date, date, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, snr_account, snr_handler, tier_name')
+      .select('userkey, user_unique, line, update_unique_code, user_name, traffic, first_deposit_date, last_deposit_date, date, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, snr_account, snr_handler, tier_name')
       .eq('currency', 'USC')
       .eq('year', parseInt(year))
       .eq('month', monthName) // ✅ Use month name (string) directly from slicer
@@ -108,12 +108,26 @@ export async function GET(request: NextRequest) {
 
       if (!userMap.has(key)) {
         // Initialize user record
+        // ✅ userkey langsung dari kolom userkey di database (tidak perlu construct)
+        // ✅ DEBUG: Log first few rows to verify userkey format
+        if (userMap.size < 3) {
+          console.log('🔍 DEBUG - Raw row from database:', {
+            userkey: row.userkey,
+            user_unique: row.user_unique,
+            unique_code: row.update_unique_code,
+            line: row.line,
+            user_name: row.user_name
+          })
+        }
+        
         userMap.set(key, {
-          userkey: `${row.user_unique}_${row.line}`, // For reference
+          userkey: row.userkey || null, // Ambil langsung dari kolom userkey (bisa null)
           user_unique: key,
           line: row.line,
           update_unique_code: row.update_unique_code || '',
+          user_name: row.user_name || null,
           traffic: row.traffic || '',
+          first_deposit_date: row.first_deposit_date || null,
           last_deposit_date: row.last_deposit_date || null,
           activeDates: new Set<string>(), // For Days Active calculation
           deposit_cases: 0,
@@ -164,7 +178,9 @@ export async function GET(request: NextRequest) {
         user_unique: user.user_unique,
         line: user.line,
         update_unique_code: user.update_unique_code,
+        user_name: user.user_name,
         traffic: user.traffic,
+        first_deposit_date: user.first_deposit_date,
         last_deposit_date: user.last_deposit_date,
         days_active: daysActive,
         deposit_cases: user.deposit_cases,
@@ -190,6 +206,17 @@ export async function GET(request: NextRequest) {
       }
       return (a.update_unique_code || '').localeCompare(b.update_unique_code || '')
     })
+
+    // ✅ DEBUG: Log first few userkeys to verify format
+    if (aggregatedData.length > 0) {
+      console.log('🔍 DEBUG - Sample userkeys from aggregated data:', aggregatedData.slice(0, 3).map((u: any) => ({
+        userkey: u.userkey,
+        user_unique: u.user_unique,
+        unique_code: u.update_unique_code,
+        line: u.line,
+        user_name: u.user_name
+      })))
+    }
 
     // Pagination
     const totalRecords = aggregatedData.length

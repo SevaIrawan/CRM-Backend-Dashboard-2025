@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import Layout from '@/components/Layout'
 import Frame from '@/components/Frame'
 import StandardLoadingSpinner from '@/components/StandardLoadingSpinner'
@@ -8,13 +9,60 @@ import ComingSoon from '@/components/ComingSoon'
 import { getAllowedBrandsFromStorage } from '@/utils/brandAccessHelper'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/useToast'
+import { formatCurrencyKPI, formatIntegerKPI, formatPercentageKPI } from '@/lib/formatHelpers'
+
+// Sidebar width constants
+const SIDEBAR_EXPANDED_WIDTH = '280px'
+const SIDEBAR_COLLAPSED_WIDTH = '80px'
+
+// Hook to detect sidebar state
+const useSidebarState = () => {
+  const [sidebarWidth, setSidebarWidth] = useState<string>(SIDEBAR_EXPANDED_WIDTH)
+
+  useEffect(() => {
+    const checkSidebarState = () => {
+      if (typeof document === 'undefined') return
+      
+      const sidebar = document.querySelector('.sidebar')
+      if (sidebar) {
+        const isCollapsed = sidebar.classList.contains('collapsed')
+        setSidebarWidth(isCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_EXPANDED_WIDTH)
+      } else {
+        setSidebarWidth(SIDEBAR_EXPANDED_WIDTH)
+      }
+    }
+
+    checkSidebarState()
+
+    const observer = new MutationObserver(checkSidebarState)
+    const sidebar = document.querySelector('.sidebar')
+    if (sidebar) {
+      observer.observe(sidebar, {
+        attributes: true,
+        attributeFilter: ['class'],
+        subtree: false
+      })
+    }
+
+    window.addEventListener('resize', checkSidebarState)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', checkSidebarState)
+    }
+  }, [])
+
+  return sidebarWidth
+}
 
 interface CustomerData {
   userkey: string
   user_unique: string
   line: string
   update_unique_code: string
+  user_name: string | null // User Name
   traffic: string
+  first_deposit_date: string | null // First Deposit Date
   last_deposit_date: string | null
   days_active: number
   deposit_cases: number
@@ -93,6 +141,7 @@ export default function USCCustomerAssignmentPage() {
   const [editingAssignments, setEditingAssignments] = useState<Map<string, AssignmentEdit>>(new Map())
   const [savingAssignments, setSavingAssignments] = useState<Set<string>>(new Set())
   const [bulkSaving, setBulkSaving] = useState(false)
+  const [exporting, setExporting] = useState(false)
   
   const [pagination, setPagination] = useState<Pagination>({
     currentPage: 1,
@@ -122,6 +171,19 @@ export default function USCCustomerAssignmentPage() {
   const [savingHandlers, setSavingHandlers] = useState<Set<string>>(new Set())
   const [handlerLoading, setHandlerLoading] = useState(false)
   const [availableLines, setAvailableLines] = useState<string[]>([]) // Lines from blue_whale_usc
+
+  // ✅ MODAL STATE for Days Active Transaction History Drill-Down
+  const [showDaysActiveModal, setShowDaysActiveModal] = useState(false)
+  const [selectedCustomer, setSelectedCustomer] = useState<{ 
+    userName: string | null
+    uniqueCode: string
+    userkey: string
+    line: string
+  } | null>(null)
+
+  // ✅ Sorting state
+  const [sortColumn, setSortColumn] = useState<string | null>(null)
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
 
   // Fetch SNR accounts (users with role snr_usc)
   const fetchSNRAccounts = useCallback(async () => {
@@ -226,21 +288,21 @@ export default function USCCustomerAssignmentPage() {
             years: slicerData.years,
             months: slicerData.months,
             tiers: slicerData.tiers
-          })
+        })
+        
+        // Auto-set to defaults from API
+        if (result.data.defaults) {
+          // Always set Line to 'ALL' (default)
+          setLine('ALL')
           
-          // Auto-set to defaults from API
-          if (result.data.defaults) {
-            // Always set Line to 'ALL' (default)
-            setLine('ALL')
-            
-            // Always set Year and Month to last data from table
-            if (result.data.defaults.year) {
-              setYear(result.data.defaults.year)
-            }
-            if (result.data.defaults.month) {
-              setMonth(result.data.defaults.month)
-            }
-            console.log('✅ [Customer Assignment] Auto-set to defaults:', result.data.defaults)
+          // Always set Year and Month to last data from table
+          if (result.data.defaults.year) {
+            setYear(result.data.defaults.year)
+          }
+          if (result.data.defaults.month) {
+            setMonth(result.data.defaults.month)
+          }
+          console.log('✅ [Customer Assignment] Auto-set to defaults:', result.data.defaults)
           }
         } else {
           // Update cache silently in background
@@ -255,7 +317,7 @@ export default function USCCustomerAssignmentPage() {
   }, [])
 
   // Fetch customer data
-  const fetchCustomerData = useCallback(async (overrideSearch?: string, resetPage: boolean = false) => {
+  const fetchCustomerData = useCallback(async (overrideSearch?: string, resetPage: boolean = false, overridePage?: number) => {
     if (!year || !month) {
       console.log('⏳ Waiting for slicers...')
       return
@@ -267,8 +329,17 @@ export default function USCCustomerAssignmentPage() {
       // Use overrideSearch if provided, otherwise use searchInput from state
       const searchValue = overrideSearch !== undefined ? overrideSearch : searchInput
       
-      // Reset pagination to page 1 if resetPage is true or if search is being cleared
-      const currentPage = resetPage || (overrideSearch === '') ? 1 : pagination.currentPage
+      // Use overridePage if provided, otherwise determine current page
+      let currentPage: number
+      if (overridePage !== undefined) {
+        currentPage = overridePage
+      } else if (resetPage || (overrideSearch === '')) {
+        currentPage = 1
+      } else {
+        // Use current pagination state from closure (pagination.currentPage sudah tidak di dependencies untuk avoid re-create)
+        // Semua manual calls sudah pass overridePage, jadi ini hanya fallback untuk edge cases
+        currentPage = pagination.currentPage
+      }
       
       const params = new URLSearchParams({
         year,
@@ -302,7 +373,10 @@ export default function USCCustomerAssignmentPage() {
       
       if (result.success) {
         setCustomerData(result.data || [])
-        setPagination(result.pagination || pagination)
+        // ✅ Use functional update to avoid stale closure
+        if (result.pagination) {
+          setPagination(result.pagination)
+        }
       } else {
         console.error('❌ API Error:', result.error)
         setCustomerData([])
@@ -313,12 +387,21 @@ export default function USCCustomerAssignmentPage() {
     } finally {
       setLoading(false)
     }
-  }, [year, month, line, tier, searchInput, pagination.currentPage, pagination.recordsPerPage])
+  }, [year, month, line, tier, searchInput, pagination.recordsPerPage]) // ✅ Removed pagination.currentPage from dependencies
 
   // Handle assignment edit
   const handleAssignmentChange = async (userkey: string, field: 'snr_account' | 'snr_handler', value: string) => {
     const customer = customerData.find(c => c.userkey === userkey)
     if (!customer) return
+
+    // ✅ If user cancels selection (selects "Unassigned"/empty), reset to default
+    if (field === 'snr_account' && (!value || !value.trim())) {
+      // Remove from editing assignments to reset to default
+      const newEditing = new Map(editingAssignments)
+      newEditing.delete(userkey)
+      setEditingAssignments(newEditing)
+      return
+    }
 
     const current = editingAssignments.get(userkey) || {
       userkey,
@@ -847,17 +930,13 @@ export default function USCCustomerAssignmentPage() {
   useEffect(() => {
     if (!initialLoadDone && year && month) {
       console.log('✅ [Customer Assignment] Initial load with defaults:', { line, year, month, tier })
-      fetchCustomerData()
+      // ✅ Pass page 1 explicitly untuk konsistensi (initial load selalu page 1)
+      fetchCustomerData(undefined, false, 1)
       setInitialLoadDone(true)
     }
-  }, [year, month, initialLoadDone, fetchCustomerData]) // ✅ Hapus line dan tier dari dependency - hanya trigger saat year/month set pertama kali
+  }, [year, month, initialLoadDone, fetchCustomerData]) // ✅ Hanya trigger saat initial load pertama kali
 
-  // ✅ Fetch data when page changes (pagination only)
-  useEffect(() => {
-    if (initialLoadDone && year && month) {
-      fetchCustomerData()
-    }
-  }, [pagination.currentPage, initialLoadDone, year, month, fetchCustomerData])
+  // ✅ REMOVED: Pagination auto-reload - pagination akan di-handle saat user tekan Search button atau ganti halaman manual
 
   // Format number
   const formatNumber = useCallback((num: number | null | undefined): string => {
@@ -873,6 +952,69 @@ export default function USCCustomerAssignmentPage() {
     if (num === null || num === undefined) return '-'
     return new Intl.NumberFormat('en-US').format(num)
   }, [])
+
+  // ✅ Handle column sorting (double click on header)
+  const handleColumnSort = useCallback((column: string) => {
+    if (sortColumn === column) {
+      // Toggle direction if same column
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')
+    } else {
+      // New column, default to ascending
+      setSortColumn(column)
+      setSortDirection('asc')
+    }
+  }, [sortColumn])
+
+  // ✅ Render sort indicator (arrow) for header
+  const renderSortIndicator = useCallback((column: string) => {
+    if (sortColumn !== column) return null
+    return (
+      <span style={{ marginLeft: '4px', color: '#3b82f6', fontSize: '12px' }}>
+        {sortDirection === 'asc' ? '↑' : '↓'}
+      </span>
+    )
+  }, [sortColumn, sortDirection])
+
+  // ✅ Sort customer data based on sortColumn and sortDirection
+  const sortedCustomerData = useMemo(() => {
+    if (!sortColumn) return customerData
+
+    const sorted = [...customerData].sort((a, b) => {
+      let aVal: any = (a as any)[sortColumn]
+      let bVal: any = (b as any)[sortColumn]
+
+      // Handle null/undefined values
+      if (aVal === null || aVal === undefined) aVal = ''
+      if (bVal === null || bVal === undefined) bVal = ''
+
+      // Handle numeric columns
+      const numericColumns = ['days_active', 'atv', 'pf', 'deposit_cases', 'deposit_amount', 'withdraw_cases', 'withdraw_amount', 'ggr']
+      if (numericColumns.includes(sortColumn)) {
+        aVal = typeof aVal === 'number' ? aVal : parseFloat(String(aVal)) || 0
+        bVal = typeof bVal === 'number' ? bVal : parseFloat(String(bVal)) || 0
+        return sortDirection === 'asc' ? aVal - bVal : bVal - aVal
+      }
+
+      // Handle date columns
+      if (sortColumn === 'first_deposit_date' || sortColumn === 'last_deposit_date') {
+        const aDate = aVal ? new Date(aVal).getTime() : 0
+        const bDate = bVal ? new Date(bVal).getTime() : 0
+        return sortDirection === 'asc' ? aDate - bDate : bDate - aDate
+      }
+
+      // Handle string columns (case-insensitive)
+      aVal = String(aVal).toLowerCase()
+      bVal = String(bVal).toLowerCase()
+      
+      if (sortDirection === 'asc') {
+        return aVal < bVal ? -1 : aVal > bVal ? 1 : 0
+      } else {
+        return aVal > bVal ? -1 : aVal < bVal ? 1 : 0
+      }
+    })
+
+    return sorted
+  }, [customerData, sortColumn, sortDirection])
 
   // Get editing state for a row
   const getEditingState = useCallback((userkey: string) => {
@@ -894,7 +1036,8 @@ export default function USCCustomerAssignmentPage() {
       return
     }
     setPagination(prev => ({ ...prev, currentPage: 1 }))
-    fetchCustomerData()
+    // ✅ Pass page 1 explicitly untuk avoid stale closure (setPagination async, jadi fetchCustomerData bisa menggunakan stale pagination)
+    fetchCustomerData(undefined, false, 1)
   }
 
   // ✅ Hapus auto-search - hanya search saat user tekan Search button atau Enter
@@ -916,6 +1059,117 @@ export default function USCCustomerAssignmentPage() {
     // fetchCustomerData will automatically reset pagination to page 1 when search is cleared
     if (year && month) {
       fetchCustomerData('', true) // Pass empty string to clear search filter, resetPage=true
+    }
+  }
+
+  // Handle Export to CSV
+  const handleExport = async () => {
+    if (!year || !month) {
+      showToast('Please select Year and Month', 'warning')
+      return
+    }
+
+    try {
+      setExporting(true)
+      
+      // Fetch ALL data without pagination for export
+      const params = new URLSearchParams({
+        year,
+        month,
+        line: line === 'ALL' ? '' : line,
+        tier: tier === 'ALL' ? '' : tier,
+        page: '1',
+        limit: '999999', // Get all records
+        search: searchInput,
+        searchColumn: 'update_unique_code'
+      })
+
+      // Get user's allowed brands from localStorage
+      const userStr = localStorage.getItem('nexmax_user')
+      const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
+
+      const response = await fetch(`/api/usc-customer-assignment/data?${params}`, {
+        headers: {
+          'x-user-allowed-brands': JSON.stringify(allowedBrands)
+        }
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch data for export')
+      }
+      
+      const result = await response.json()
+      
+      if (!result.success || !result.data || result.data.length === 0) {
+        showToast('No data to export', 'info')
+        return
+      }
+
+      // Create CSV content
+      const headers = [
+        'Brand', 
+        'User Name', 
+        'Unique Code', 
+        'Traffic', 
+        'FDD', 
+        'LDD', 
+        'Days Active', 
+        'ATV', 
+        'PF', 
+        'DC', 
+        'DA', 
+        'WC', 
+        'WA', 
+        'GGR', 
+        'Tier', 
+        'Assignee', 
+        'Handler'
+      ]
+      
+      const csvRows: string[] = []
+      csvRows.push(headers.join(','))
+
+      result.data.forEach((customer: CustomerData) => {
+        csvRows.push([
+          customer.line || '',
+          customer.user_name || '',
+          customer.update_unique_code || '',
+          customer.traffic || '',
+          customer.first_deposit_date ? new Date(customer.first_deposit_date).toISOString().split('T')[0] : '',
+          customer.last_deposit_date ? new Date(customer.last_deposit_date).toISOString().split('T')[0] : '',
+          String(customer.days_active),
+          customer.atv.toFixed(2),
+          customer.pf.toFixed(2),
+          String(customer.deposit_cases),
+          customer.deposit_amount.toFixed(2),
+          String(customer.withdraw_cases),
+          customer.withdraw_amount.toFixed(2),
+          customer.ggr.toFixed(2),
+          customer.tier_name || '',
+          customer.snr_account || '',
+          customer.snr_handler || ''
+        ].join(','))
+      })
+
+      const csvContent = csvRows.join('\n')
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const monthName = month || 'unknown'
+      const fileName = `customer-assignment-usc-${year}-${monthName}-${new Date().toISOString().split('T')[0]}.csv`
+      a.download = fileName
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+      
+      showToast(`Exported ${result.data.length} records successfully!`, 'success')
+    } catch (error) {
+      console.error('❌ Error exporting data:', error)
+      showToast('Error exporting data', 'error')
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -1812,119 +2066,263 @@ export default function USCCustomerAssignmentPage() {
                         whiteSpace: 'nowrap',
                         width: 'auto'
                       }}>Brand</th>
-                      <th style={{ 
-                        textAlign: 'center',
-                        border: '1px solid #e0e0e0',
-                        borderBottom: '2px solid #d0d0d0',
-                        padding: '8px 12px',
-                        whiteSpace: 'nowrap',
-                        width: 'auto'
-                      }}>Unique Code</th>
-                      <th style={{ 
-                        textAlign: 'center',
-                        border: '1px solid #e0e0e0',
-                        borderBottom: '2px solid #d0d0d0',
-                        padding: '8px 12px',
-                        whiteSpace: 'normal',
-                        maxWidth: '300px',
-                        wordBreak: 'break-word'
-                      }}>Traffic</th>
-                      <th style={{ 
-                        textAlign: 'center',
-                        border: '1px solid #e0e0e0',
-                        borderBottom: '2px solid #d0d0d0',
-                        padding: '8px 12px',
-                        whiteSpace: 'nowrap',
-                        width: 'auto'
-                      }}>LDD</th>
-                      <th style={{ 
-                        textAlign: 'center',
-                        border: '1px solid #e0e0e0',
-                        borderBottom: '2px solid #d0d0d0',
-                        padding: '8px 12px',
-                        whiteSpace: 'nowrap',
-                        width: 'auto'
-                      }}>Days Active</th>
-                      <th style={{ 
-                        textAlign: 'center',
-                        border: '1px solid #e0e0e0',
-                        borderBottom: '2px solid #d0d0d0',
-                        padding: '8px 12px',
-                        whiteSpace: 'nowrap',
-                        width: 'auto'
-                      }}>ATV</th>
-                      <th style={{ 
-                        textAlign: 'center',
-                        border: '1px solid #e0e0e0',
-                        borderBottom: '2px solid #d0d0d0',
-                        padding: '8px 12px',
-                        whiteSpace: 'nowrap',
-                        width: 'auto'
-                      }}>PF</th>
-                      <th style={{ 
-                        textAlign: 'center',
-                        border: '1px solid #e0e0e0',
-                        borderBottom: '2px solid #d0d0d0',
-                        padding: '8px 12px',
-                        whiteSpace: 'nowrap',
-                        width: 'auto'
-                      }}>DC</th>
-                      <th style={{ 
-                        textAlign: 'center',
-                        border: '1px solid #e0e0e0',
-                        borderBottom: '2px solid #d0d0d0',
-                        padding: '8px 12px',
-                        whiteSpace: 'nowrap',
-                        width: 'auto'
-                      }}>DA</th>
-                      <th style={{ 
-                        textAlign: 'center',
-                        border: '1px solid #e0e0e0',
-                        borderBottom: '2px solid #d0d0d0',
-                        padding: '8px 12px',
-                        whiteSpace: 'nowrap',
-                        width: 'auto'
-                      }}>WC</th>
-                      <th style={{ 
-                        textAlign: 'center',
-                        border: '1px solid #e0e0e0',
-                        borderBottom: '2px solid #d0d0d0',
-                        padding: '8px 12px',
-                        whiteSpace: 'nowrap',
-                        width: 'auto'
-                      }}>WA</th>
-                      <th style={{ 
-                        textAlign: 'center',
-                        border: '1px solid #e0e0e0',
-                        borderBottom: '2px solid #d0d0d0',
-                        padding: '8px 12px',
-                        whiteSpace: 'nowrap',
-                        width: 'auto'
-                      }}>GGR</th>
-                      <th style={{ 
-                        textAlign: 'center',
-                        border: '1px solid #e0e0e0',
-                        borderBottom: '2px solid #d0d0d0',
-                        padding: '8px 12px',
-                        whiteSpace: 'nowrap',
-                        width: 'auto'
-                      }}>Tier</th>
-                      <th style={{ 
-                        textAlign: 'center',
-                        border: '1px solid #e0e0e0',
-                        borderBottom: '2px solid #d0d0d0',
-                        padding: '8px 12px',
-                        whiteSpace: 'nowrap',
-                        width: 'auto'
-                      }}>Assignee</th>
-                      <th style={{ 
-                        textAlign: 'center',
-                        border: '1px solid #e0e0e0',
-                        borderBottom: '2px solid #d0d0d0',
-                        padding: '8px 12px',
-                        whiteSpace: 'nowrap',
-                        width: 'auto'
-                      }}>Handler</th>
+                      <th 
+                        onDoubleClick={() => handleColumnSort('user_name')}
+                        style={{ 
+                          textAlign: 'center',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          padding: '8px 12px',
+                          whiteSpace: 'nowrap',
+                          width: 'auto',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                        }}
+                        title="Double click to sort"
+                      >
+                        User Name{renderSortIndicator('user_name')}
+                      </th>
+                      <th 
+                        onDoubleClick={() => handleColumnSort('update_unique_code')}
+                        style={{ 
+                          textAlign: 'center',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          padding: '8px 12px',
+                          whiteSpace: 'nowrap',
+                          width: 'auto',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                        }}
+                        title="Double click to sort"
+                      >
+                        Unique Code{renderSortIndicator('update_unique_code')}
+                      </th>
+                      <th 
+                        onDoubleClick={() => handleColumnSort('traffic')}
+                        style={{ 
+                          textAlign: 'center',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          padding: '8px 12px',
+                          whiteSpace: 'normal',
+                          maxWidth: '300px',
+                          wordBreak: 'break-word',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                        }}
+                        title="Double click to sort"
+                      >
+                        Traffic{renderSortIndicator('traffic')}
+                      </th>
+                      <th 
+                        onDoubleClick={() => handleColumnSort('first_deposit_date')}
+                        style={{ 
+                          textAlign: 'center',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          padding: '8px 12px',
+                          whiteSpace: 'nowrap',
+                          width: 'auto',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                        }}
+                        title="Double click to sort"
+                      >
+                        FDD{renderSortIndicator('first_deposit_date')}
+                      </th>
+                      <th 
+                        onDoubleClick={() => handleColumnSort('last_deposit_date')}
+                        style={{ 
+                          textAlign: 'center',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          padding: '8px 12px',
+                          whiteSpace: 'nowrap',
+                          width: 'auto',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                        }}
+                        title="Double click to sort"
+                      >
+                        LDD{renderSortIndicator('last_deposit_date')}
+                      </th>
+                      <th 
+                        onDoubleClick={() => handleColumnSort('days_active')}
+                        style={{ 
+                          textAlign: 'center',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          padding: '8px 12px',
+                          whiteSpace: 'nowrap',
+                          width: 'auto',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                        }}
+                        title="Double click to sort"
+                      >
+                        Days Active{renderSortIndicator('days_active')}
+                      </th>
+                      <th 
+                        onDoubleClick={() => handleColumnSort('atv')}
+                        style={{ 
+                          textAlign: 'center',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          padding: '8px 12px',
+                          whiteSpace: 'nowrap',
+                          width: 'auto',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                        }}
+                        title="Double click to sort"
+                      >
+                        ATV{renderSortIndicator('atv')}
+                      </th>
+                      <th 
+                        onDoubleClick={() => handleColumnSort('pf')}
+                        style={{ 
+                          textAlign: 'center',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          padding: '8px 12px',
+                          whiteSpace: 'nowrap',
+                          width: 'auto',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                        }}
+                        title="Double click to sort"
+                      >
+                        PF{renderSortIndicator('pf')}
+                      </th>
+                      <th 
+                        onDoubleClick={() => handleColumnSort('deposit_cases')}
+                        style={{ 
+                          textAlign: 'center',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          padding: '8px 12px',
+                          whiteSpace: 'nowrap',
+                          width: 'auto',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                        }}
+                        title="Double click to sort"
+                      >
+                        DC{renderSortIndicator('deposit_cases')}
+                      </th>
+                      <th 
+                        onDoubleClick={() => handleColumnSort('deposit_amount')}
+                        style={{ 
+                          textAlign: 'center',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          padding: '8px 12px',
+                          whiteSpace: 'nowrap',
+                          width: 'auto',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                        }}
+                        title="Double click to sort"
+                      >
+                        DA{renderSortIndicator('deposit_amount')}
+                      </th>
+                      <th 
+                        onDoubleClick={() => handleColumnSort('withdraw_cases')}
+                        style={{ 
+                          textAlign: 'center',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          padding: '8px 12px',
+                          whiteSpace: 'nowrap',
+                          width: 'auto',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                        }}
+                        title="Double click to sort"
+                      >
+                        WC{renderSortIndicator('withdraw_cases')}
+                      </th>
+                      <th 
+                        onDoubleClick={() => handleColumnSort('withdraw_amount')}
+                        style={{ 
+                          textAlign: 'center',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          padding: '8px 12px',
+                          whiteSpace: 'nowrap',
+                          width: 'auto',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                        }}
+                        title="Double click to sort"
+                      >
+                        WA{renderSortIndicator('withdraw_amount')}
+                      </th>
+                      <th 
+                        onDoubleClick={() => handleColumnSort('ggr')}
+                        style={{ 
+                          textAlign: 'center',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          padding: '8px 12px',
+                          whiteSpace: 'nowrap',
+                          width: 'auto',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                        }}
+                        title="Double click to sort"
+                      >
+                        GGR{renderSortIndicator('ggr')}
+                      </th>
+                      <th 
+                        onDoubleClick={() => handleColumnSort('tier_name')}
+                        style={{ 
+                          textAlign: 'center',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          padding: '8px 12px',
+                          whiteSpace: 'nowrap',
+                          width: 'auto',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                        }}
+                        title="Double click to sort"
+                      >
+                        Tier{renderSortIndicator('tier_name')}
+                      </th>
+                      <th 
+                        onDoubleClick={() => handleColumnSort('snr_account')}
+                        style={{ 
+                          textAlign: 'center',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          padding: '8px 12px',
+                          whiteSpace: 'nowrap',
+                          width: 'auto',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                        }}
+                        title="Double click to sort"
+                      >
+                        Assignee{renderSortIndicator('snr_account')}
+                      </th>
+                      <th 
+                        onDoubleClick={() => handleColumnSort('snr_handler')}
+                        style={{ 
+                          textAlign: 'center',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          padding: '8px 12px',
+                          whiteSpace: 'nowrap',
+                          width: 'auto',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                        }}
+                        title="Double click to sort"
+                      >
+                        Handler{renderSortIndicator('snr_handler')}
+                      </th>
                       <th style={{ 
                         textAlign: 'center',
                         border: '1px solid #e0e0e0',
@@ -1936,7 +2334,7 @@ export default function USCCustomerAssignmentPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {customerData.map((customer, index) => {
+                    {sortedCustomerData.map((customer, index) => {
                       const editing = getEditingState(customer.userkey)
                       const hasChanges = hasUnsavedChanges(customer.userkey)
                       const isSaving = savingAssignments.has(customer.userkey)
@@ -1947,6 +2345,10 @@ export default function USCCustomerAssignmentPage() {
                             border: '1px solid #e0e0e0',
                             padding: '8px 12px'
                           }}>{customer.line}</td>
+                          <td style={{ 
+                            border: '1px solid #e0e0e0',
+                            padding: '8px 12px'
+                          }}>{customer.user_name || '-'}</td>
                           <td style={{ 
                             border: '1px solid #e0e0e0',
                             padding: '8px 12px'
@@ -1961,12 +2363,54 @@ export default function USCCustomerAssignmentPage() {
                           <td style={{ 
                             border: '1px solid #e0e0e0',
                             padding: '8px 12px'
+                          }}>{customer.first_deposit_date ? new Date(customer.first_deposit_date).toISOString().split('T')[0] : '-'}</td>
+                          <td style={{ 
+                            border: '1px solid #e0e0e0',
+                            padding: '8px 12px'
                           }}>{customer.last_deposit_date ? new Date(customer.last_deposit_date).toISOString().split('T')[0] : '-'}</td>
                           <td style={{ 
                             textAlign: 'right',
                             border: '1px solid #e0e0e0',
                             padding: '8px 12px'
-                          }}>{formatInteger(customer.days_active)}</td>
+                          }}>
+                            <button
+                              onClick={() => {
+                                if (!customer.userkey) {
+                                  console.error('❌ Customer userkey is null/empty:', customer)
+                                  return
+                                }
+                                console.log('🔍 Frontend - Customer clicked:', {
+                                  userkey: customer.userkey,
+                                  user_unique: customer.user_unique,
+                                  unique_code: customer.update_unique_code,
+                                  line: customer.line,
+                                  user_name: customer.user_name
+                                })
+                                setSelectedCustomer({
+                                  userName: customer.user_name,
+                                  uniqueCode: customer.update_unique_code,
+                                  userkey: customer.userkey, // userkey langsung dari database
+                                  line: customer.line
+                                })
+                                setShowDaysActiveModal(true)
+                              }}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#2563eb',
+                                textDecoration: 'underline',
+                                cursor: 'pointer',
+                                fontWeight: 600,
+                                fontSize: '14px',
+                                padding: 0
+                              }}
+                              onMouseEnter={(e) => { e.currentTarget.style.color = '#1d4ed8' }}
+                              onMouseLeave={(e) => { e.currentTarget.style.color = '#2563eb' }}
+                              title="Click to view transaction history"
+                            >
+                              {formatInteger(customer.days_active)}
+                            </button>
+                          </td>
                           <td style={{ 
                             textAlign: 'right',
                             border: '1px solid #e0e0e0',
@@ -2010,6 +2454,7 @@ export default function USCCustomerAssignmentPage() {
                             padding: '8px 12px'
                           }}>{customer.tier_name || '-'}</td>
                           <td style={{ 
+                            textAlign: 'center',
                             border: '1px solid #e0e0e0',
                             padding: '8px 12px',
                             backgroundColor: 'transparent'
@@ -2034,43 +2479,63 @@ export default function USCCustomerAssignmentPage() {
                               </div>
                             ) : (
                               /* Select dropdown if assignee empty */
-                              <div style={{ position: 'relative', display: 'inline-block', width: '100%', maxWidth: '180px' }}>
-                                <select
+                            <div style={{ position: 'relative', display: 'inline-block', width: '100%', maxWidth: '180px' }}>
+                              <select
                                   value={editing.snr_account || ''}
-                                  onChange={(e) => handleAssignmentChange(customer.userkey, 'snr_account', e.target.value)}
-                                  style={{
-                                    width: '100%',
-                                    padding: '6px 10px',
+                                onChange={(e) => handleAssignmentChange(customer.userkey, 'snr_account', e.target.value)}
+                                style={{
+                                  width: '100%',
+                                    padding: '6px 30px 6px 10px', // Extra padding right for arrow
                                     border: '1px solid #d1d5db',
-                                    borderRadius: '4px',
-                                    fontSize: '13px',
+                                  borderRadius: '4px',
+                                  fontSize: '13px',
                                     backgroundColor: '#ffffff',
-                                    minWidth: '120px',
-                                    appearance: 'none',
-                                    WebkitAppearance: 'none',
-                                    MozAppearance: 'none'
-                                  }}
-                                >
-                                  <option value="">Select SNR</option>
-                                  {snrAccounts
-                                    .filter(account => {
-                                      // Filter SNR accounts based on customer line
-                                      if (!account.allowed_brands || !Array.isArray(account.allowed_brands)) {
-                                        return false
-                                      }
-                                      // Check if allowed_brands contains the customer's line
-                                      return account.allowed_brands.includes(customer.line)
-                                    })
-                                    .map(account => (
-                                      <option key={account.username} value={account.username}>
-                                        {account.username}
-                                      </option>
-                                    ))}
-                                </select>
-                              </div>
+                                  minWidth: '120px',
+                                  appearance: 'none',
+                                  WebkitAppearance: 'none',
+                                    MozAppearance: 'none',
+                                    textAlign: 'center',
+                                    cursor: 'pointer'
+                                }}
+                              >
+                                  <option value="">Unassigned</option>
+                                {snrAccounts
+                                  .filter(account => {
+                                    // Filter SNR accounts based on customer line
+                                    if (!account.allowed_brands || !Array.isArray(account.allowed_brands)) {
+                                      return false
+                                    }
+                                    // Check if allowed_brands contains the customer's line
+                                    return account.allowed_brands.includes(customer.line)
+                                  })
+                                  .map(account => (
+                                    <option key={account.username} value={account.username}>
+                                      {account.username}
+                                    </option>
+                                  ))}
+                              </select>
+                                {/* Chevron dropdown icon - only show when value is empty/Unassigned */}
+                                {(!editing.snr_account || !editing.snr_account.trim()) && (
+                                  <div style={{
+                                    position: 'absolute',
+                                    right: '10px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    pointerEvents: 'none',
+                                    color: '#6b7280',
+                                    fontSize: '12px',
+                                    lineHeight: '1'
+                                  }}>
+                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                      <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                    </svg>
+                                  </div>
+                              )}
+                            </div>
                             )}
                           </td>
                           <td style={{ 
+                            textAlign: 'center',
                             border: '1px solid #e0e0e0',
                             padding: '8px 12px',
                             backgroundColor: 'transparent'
@@ -2113,12 +2578,12 @@ export default function USCCustomerAssignmentPage() {
                               </div>
                             ) : (
                               /* Show dash if no handler */
-                              <span style={{
-                                fontSize: '13px',
+                            <span style={{
+                              fontSize: '13px',
                                 color: '#9ca3af'
-                              }}>
+                            }}>
                                 -
-                              </span>
+                            </span>
                             )}
                           </td>
                           <td style={{ 
@@ -2220,7 +2685,12 @@ export default function USCCustomerAssignmentPage() {
                   {pagination.totalPages > 1 && (
                     <>
                       <button
-                        onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage - 1 }))}
+                        onClick={() => {
+                          const newPage = pagination.currentPage - 1
+                          setPagination(prev => ({ ...prev, currentPage: newPage }))
+                          // ✅ Manual reload dengan page yang baru (pass overridePage untuk avoid stale closure)
+                          fetchCustomerData(undefined, false, newPage)
+                        }}
                         disabled={!pagination.hasPrevPage}
                         style={{
                           padding: '6px 12px',
@@ -2238,7 +2708,12 @@ export default function USCCustomerAssignmentPage() {
                         Page {pagination.currentPage} of {pagination.totalPages}
                       </span>
                       <button
-                        onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage + 1 }))}
+                        onClick={() => {
+                          const newPage = pagination.currentPage + 1
+                          setPagination(prev => ({ ...prev, currentPage: newPage }))
+                          // ✅ Manual reload dengan page yang baru (pass overridePage untuk avoid stale closure)
+                          fetchCustomerData(undefined, false, newPage)
+                        }}
                         disabled={!pagination.hasNextPage}
                         style={{
                           padding: '6px 12px',
@@ -2270,6 +2745,20 @@ export default function USCCustomerAssignmentPage() {
                       Send All ({editingAssignments.size})
                     </button>
                   )}
+
+                  {/* Export Button */}
+                  <button
+                    onClick={handleExport}
+                    disabled={exporting || loading || customerData.length === 0}
+                    className="export-button"
+                    style={{ 
+                      backgroundColor: '#6366f1',
+                      minWidth: '120px',
+                      marginLeft: editingAssignments.size > 0 || pagination.totalPages > 1 ? '16px' : '0'
+                    }}
+                  >
+                    {exporting ? 'Exporting...' : 'Export'}
+                  </button>
                 </div>
               </div>
             )}
@@ -2290,15 +2779,1062 @@ export default function USCCustomerAssignmentPage() {
             transform: rotate(360deg);
           }
         }
+        @keyframes fadeInContent {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
         .animate-spin {
           animation: spin 1s linear infinite;
         }
       `}</style>
-      <Layout customSubHeader={subHeaderContent}>
-        {renderPageContent()}
+    <Layout customSubHeader={subHeaderContent}>
+      {renderPageContent()}
         <ToastComponent />
-      </Layout>
+    </Layout>
+
+      {/* ✅ Days Active Transaction History Modal */}
+      {showDaysActiveModal && selectedCustomer && (
+        <DaysActiveTransactionModal
+          isOpen={showDaysActiveModal}
+          onClose={() => {
+            setShowDaysActiveModal(false)
+            setSelectedCustomer(null)
+          }}
+          userName={selectedCustomer.userName || ''}
+          uniqueCode={selectedCustomer.uniqueCode}
+          userkey={selectedCustomer.userkey}
+          line={selectedCustomer.line}
+          year={year}
+          month={month}
+        />
+      )}
     </>
   )
 }
 
+// ✅ Days Active Transaction History Modal Component
+interface DaysActiveTransactionModalProps {
+  isOpen: boolean
+  onClose: () => void
+  userName: string
+  uniqueCode: string
+  userkey: string
+  line: string
+  year: string
+  month: string
+}
+
+function DaysActiveTransactionModal({
+  isOpen,
+  onClose,
+  userName,
+  uniqueCode,
+  userkey,
+  line,
+  year,
+  month
+}: DaysActiveTransactionModalProps) {
+  const sidebarWidth = useSidebarState()
+  const [transactions, setTransactions] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  
+  // ✅ Standard: Total baris = 11 (1 header + 10 data rows)
+  // ✅ CELL_HEIGHT = 42px (JANGAN KURANG!!!)
+  const STANDARD_DATA_ROWS = 10 // Data rows (bukan termasuk header)
+  const CELL_HEIGHT = 42 // ✅ WAJIB 42px (JANGAN KURANG!!!)
+  const MAX_TABLE_HEIGHT = 520 // ✅ 520px agar 10 data rows PENUH tidak terpotong (42px × 11 + buffer untuk border/padding)
+  const CELL_PADDING = '8px 12px' // ✅ Padding untuk cell 42px
+  const CELL_LINE_HEIGHT = '26px' // ✅ Line height untuk cell 42px
+  
+  // Pagination state
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(10) // Default 10 rows per page
+  const [totalRecords, setTotalRecords] = useState(0)
+
+  const fetchTransactionHistory = useCallback(async (overridePage?: number) => {
+    try {
+      setLoading(true)
+      
+      const userStr = localStorage.getItem('nexmax_user')
+      const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
+
+      // Use overridePage if provided, otherwise use current page state
+      const currentPage = overridePage !== undefined ? overridePage : page
+
+      console.log('🔍 Frontend - Sending request with:', { userkey, line, year, month, page: currentPage })
+
+      const params = new URLSearchParams({
+        userkey,
+        line,
+        year,
+        month,
+        page: currentPage.toString(),
+        limit: limit.toString()
+      })
+
+      console.log('🔍 Frontend - API URL:', `/api/usc-customer-assignment/days-active-details?${params.toString()}`)
+
+      const response = await fetch(`/api/usc-customer-assignment/days-active-details?${params}`, {
+        headers: allowedBrands ? {
+          'x-user-allowed-brands': JSON.stringify(allowedBrands)
+        } : {}
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch transaction history')
+      }
+
+      const result = await response.json()
+      
+      console.log('🔍 Frontend - API Response:', {
+        success: result.success,
+        dataCount: result.data?.length || 0,
+        totalRecords: result.pagination?.totalRecords || 0,
+        error: result.error
+      })
+      
+      if (result.success) {
+        setTransactions(result.data || [])
+        setTotalRecords(result.pagination?.totalRecords || 0)
+        setError(null)
+      } else {
+        console.error('❌ Frontend - API Error:', result.error, result.message)
+        setTransactions([])
+        setTotalRecords(0)
+        setError(result.error || 'Failed to fetch transaction history')
+      }
+    } catch (err: any) {
+      console.error('Error fetching transaction history:', err)
+      setTransactions([])
+      setTotalRecords(0)
+      setError(err.message || 'Failed to fetch transaction history')
+    } finally {
+      setLoading(false)
+    }
+  }, [userkey, line, year, month, limit]) // ✅ Removed page from dependencies - use overridePage parameter instead
+
+  // ✅ Fetch data hanya saat modal dibuka pertama kali (1x) - reset page dan fetch dalam 1 useEffect untuk avoid race condition
+  useEffect(() => {
+    if (isOpen) {
+      setPage(1)
+      setError(null)
+      // ✅ Fetch dengan page 1 secara eksplisit (pass overridePage untuk avoid stale closure)
+      fetchTransactionHistory(1)
+    }
+  }, [isOpen, fetchTransactionHistory]) // ✅ Include fetchTransactionHistory tapi dengan overridePage, jadi tidak akan re-trigger saat page berubah
+
+  // Format date to YYYY/MM/DD
+  const formatDateYYYYMMDD = (dateStr: string | null): string => {
+    if (!dateStr) return '-'
+    const date = new Date(dateStr)
+    if (isNaN(date.getTime())) return dateStr
+    
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}/${month}/${day}` // Format: YYYY/MM/DD
+  }
+
+  // Export CSV function
+  const handleExport = async () => {
+    if (transactions.length === 0) return
+    
+    try {
+      setExporting(true)
+      
+      // Headers
+      const headers = [
+        'TRANSACTION DATE',
+        'BRAND',
+        'UNIQUE CODE',
+        'FDD',
+        'LDD',
+        'DC',
+        'DA',
+        'WC',
+        'WA',
+        'GGR',
+        'NET PROFIT'
+      ]
+      
+      let csvContent = headers.join(',') + '\n'
+      
+      // Export all transactions (fetch all pages)
+      const batchSize = 1000
+      let allTransactions: any[] = []
+      let currentPage = 1
+      let hasMore = true
+
+      while (hasMore) {
+        const params = new URLSearchParams({
+          userkey,
+          line,
+          year,
+          month,
+          page: currentPage.toString(),
+          limit: batchSize.toString()
+        })
+
+        const userStr = localStorage.getItem('nexmax_user')
+        const allowedBrands = userStr ? JSON.parse(userStr).allowed_brands : null
+
+        const response = await fetch(`/api/usc-customer-assignment/days-active-details?${params}`, {
+          headers: allowedBrands ? {
+            'x-user-allowed-brands': JSON.stringify(allowedBrands)
+          } : {}
+        })
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch transaction data (page ${currentPage})`)
+        }
+
+        const result = await response.json()
+        
+        if (!result.success || !result.data) {
+          break
+        }
+
+        const batchData = result.data || []
+        allTransactions = [...allTransactions, ...batchData]
+
+        hasMore = batchData.length === batchSize && allTransactions.length < totalRecords
+        currentPage++
+
+        if (allTransactions.length >= totalRecords || currentPage > 100) {
+          hasMore = false
+        }
+      }
+      
+      allTransactions.forEach((transaction: any) => {
+        csvContent += [
+          formatDateYYYYMMDD(transaction.date || transaction.transaction_date),
+          transaction.line || transaction.brand || '-',
+          transaction.unique_code || '-',
+          formatDateYYYYMMDD(transaction.first_deposit_date),
+          formatDateYYYYMMDD(transaction.last_deposit_date),
+          transaction.deposit_cases || 0,
+          (transaction.deposit_amount || 0).toFixed(2),
+          transaction.withdraw_cases || 0,
+          (transaction.withdraw_amount || 0).toFixed(2),
+          (transaction.ggr || 0).toFixed(2),
+          (transaction.net_profit || 0).toFixed(2)
+        ].join(',') + '\n'
+      })
+      
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      
+      // Generate filename
+      const filename = `transaction-history-${uniqueCode}-${new Date().toISOString().split('T')[0]}.csv`
+      a.download = filename
+      
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+    } catch (e: any) {
+      console.error('❌ Export error:', e)
+      alert('Failed to export: ' + (e.message || 'Unknown error'))
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  // Calculate pagination
+  const totalPages = Math.ceil(totalRecords / limit)
+  const startIndex = (page - 1) * limit
+  const endIndex = startIndex + limit
+  const paginatedTransactions = transactions
+
+  // ✅ Calculate table height:
+  // - Jika limit >= 10: SELALU gunakan 520px (11 rows dengan cell height 42px)
+  // - Jika limit < 10: tinggi auto (ikut jumlah row yang ada)
+  const actualDataRows = paginatedTransactions.length
+  
+  // ✅ WAJIB: Jika limit >= 10, SELALU gunakan 520px untuk 11 rows (1 header + 10 data)
+  // ✅ WAJIB: Jika limit < 10, tinggi auto = header + (jumlah data rows × 42px)
+  const tableHeight = limit >= STANDARD_DATA_ROWS
+    ? MAX_TABLE_HEIGHT // 520px WAJIB untuk 11 rows (1 header + 10 data) - SELALU jika limit >= 10
+    : CELL_HEIGHT + (actualDataRows * CELL_HEIGHT) // Auto height jika limit < 10 (header 42px + data rows)
+  
+  // ✅ Scroll logic: scroll muncul jika data > 10 rows
+  const shouldShowScroll = actualDataRows > STANDARD_DATA_ROWS
+
+  if (!isOpen || typeof document === 'undefined') return null
+
+  return createPortal(
+    <div
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      style={{
+        position: 'fixed',
+        top: '10px', // ✅ Minimal top untuk maksimalkan tinggi modal
+        left: sidebarWidth,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 10001,
+        transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          backgroundColor: '#FFFFFF',
+          borderRadius: '16px',
+          width: '95%',
+          maxWidth: '1500px',
+          maxHeight: 'calc(100vh - 20px)', // ✅ Maksimalkan tinggi modal agar table 520px + header + footer tidak terpotong
+          height: 'auto', // ✅ Auto height untuk accommodate semua konten
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+          overflow: 'auto', // ✅ UBAH jadi auto agar konten tidak terpotong dan bisa scroll jika perlu
+          border: '2px solid #3b82f6',
+          borderTop: '4px solid #3b82f6'
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            padding: '18px 24px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+            backgroundColor: '#1F2937',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            borderRadius: '16px 16px 0 0',
+            position: 'relative',
+            overflow: 'hidden'
+          }}
+        >
+          {/* Decorative background */}
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            width: '200px',
+            height: '200px',
+            background: 'radial-gradient(circle, rgba(55, 65, 81, 0.2) 0%, transparent 70%)',
+            transform: 'translate(30%, -30%)',
+            pointerEvents: 'none'
+          }} />
+          
+          {/* Left: Title & Subtitle */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', position: 'relative', zIndex: 1 }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '40px',
+              height: '40px',
+              borderRadius: '10px',
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              color: '#FFFFFF',
+              flexShrink: 0
+            }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M9 12l2 2 4-4"></path>
+                <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"></path>
+              </svg>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
+              <h2
+                style={{
+                  fontSize: '18px',
+                  fontWeight: 700,
+                  color: '#FFFFFF',
+                  margin: 0,
+                  marginBottom: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                Transaction History - {userName || uniqueCode}
+              </h2>
+              <p
+                style={{
+                  fontSize: '12px',
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  margin: 0,
+                  fontWeight: 400
+                }}
+              >
+                User Code: {uniqueCode} • {totalRecords} transactions
+              </p>
+            </div>
+          </div>
+          
+          {/* Right: Close button */}
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#9CA3AF',
+              cursor: 'pointer',
+              fontSize: '24px',
+              padding: '0',
+              width: '32px',
+              height: '32px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '4px',
+              transition: 'all 0.2s',
+              position: 'relative',
+              zIndex: 1
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#4B5563'
+              e.currentTarget.style.color = '#FFFFFF'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent'
+              e.currentTarget.style.color = '#9CA3AF'
+            }}
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Content */}
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'visible', // ✅ UBAH jadi visible agar tidak memotong konten
+            padding: 0,
+            minHeight: 0 // ✅ Allow content to expand
+          }}
+        >
+          {/* Table Container - Always rendered for stable modal size */}
+          <div style={{ 
+            padding: '20px 24px'
+          }}>
+            <div style={{
+              overflowX: 'auto',
+              overflowY: shouldShowScroll ? 'auto' : 'hidden', // ✅ Scroll muncul jika data > 10 rows
+              height: limit >= STANDARD_DATA_ROWS ? `${MAX_TABLE_HEIGHT}px` : `${tableHeight}px`, // ✅ PURE TINGGI TABLE = 520px (42px × 11 rows)
+              position: 'relative',
+              borderRadius: '8px',
+              border: '1px solid #E5E7EB',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)',
+              boxSizing: 'border-box' // ✅ Border sudah termasuk dalam height, jadi 520px = pure tinggi table
+            }}>
+              {loading ? (
+                // ✅ Loading spinner di tengah table area
+                <div style={{ 
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '16px',
+                  zIndex: 10
+                }}>
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    border: '4px solid #E5E7EB',
+                    borderTop: '4px solid #3b82f6',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }} />
+                  <p style={{ 
+                    fontSize: '14px', 
+                    fontWeight: 500,
+                    color: '#6B7280',
+                    margin: 0,
+                    textAlign: 'center'
+                  }}>
+                    Loading transactions...
+                  </p>
+                </div>
+              ) : error ? (
+                // ✅ Error message di tengah table area
+                <div style={{ 
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  textAlign: 'center',
+                  color: '#EF4444',
+                  zIndex: 10
+                }}>
+                  Error: {error}
+                </div>
+              ) : transactions.length === 0 ? (
+                // ✅ No data message di tengah table area
+                <div style={{ 
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  textAlign: 'center',
+                  color: '#6B7280',
+                  zIndex: 10
+                }}>
+                  No transactions found.
+                </div>
+              ) : null}
+
+              {/* Table - Always rendered, hidden when loading/error/empty */}
+              <table style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                border: '1px solid #e5e7eb',
+                fontSize: '13px',
+                boxSizing: 'border-box',
+                opacity: loading || error || transactions.length === 0 ? 0.3 : 1,
+                transition: 'opacity 0.3s ease-in'
+              }}>
+                <thead>
+                      <tr style={{ height: `${CELL_HEIGHT}px` }}>
+                        <th style={{
+                          padding: CELL_PADDING,
+                          textAlign: 'left',
+                          fontWeight: 600,
+                          color: '#FFFFFF',
+                          backgroundColor: '#374151',
+                          borderBottom: '1px solid #4B5563',
+                          borderRight: '1px solid #4B5563',
+                          position: 'sticky',
+                          top: 0,
+                          zIndex: 1000,
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                          height: `${CELL_HEIGHT}px`,
+                          minHeight: `${CELL_HEIGHT}px`,
+                          maxHeight: `${CELL_HEIGHT}px`,
+                          lineHeight: CELL_LINE_HEIGHT,
+                          verticalAlign: 'middle',
+                          boxSizing: 'border-box'
+                        }}>TRANSACTION DATE</th>
+                        <th style={{
+                          padding: CELL_PADDING,
+                          textAlign: 'left',
+                          fontWeight: 600,
+                          color: '#FFFFFF',
+                          backgroundColor: '#374151',
+                          borderBottom: '1px solid #4B5563',
+                          borderRight: '1px solid #4B5563',
+                          position: 'sticky',
+                          top: 0,
+                          zIndex: 1000,
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                          height: `${CELL_HEIGHT}px`,
+                          minHeight: `${CELL_HEIGHT}px`,
+                          maxHeight: `${CELL_HEIGHT}px`,
+                          lineHeight: CELL_LINE_HEIGHT,
+                          verticalAlign: 'middle',
+                          boxSizing: 'border-box'
+                        }}>BRAND</th>
+                        <th style={{
+                          padding: CELL_PADDING,
+                          textAlign: 'left',
+                          fontWeight: 600,
+                          color: '#FFFFFF',
+                          backgroundColor: '#374151',
+                          borderBottom: '1px solid #4B5563',
+                          borderRight: '1px solid #4B5563',
+                          position: 'sticky',
+                          top: 0,
+                          zIndex: 1000,
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                          height: `${CELL_HEIGHT}px`,
+                          minHeight: `${CELL_HEIGHT}px`,
+                          maxHeight: `${CELL_HEIGHT}px`,
+                          lineHeight: CELL_LINE_HEIGHT,
+                          verticalAlign: 'middle',
+                          boxSizing: 'border-box'
+                        }}>UNIQUE CODE</th>
+                        <th style={{
+                          padding: CELL_PADDING,
+                          textAlign: 'left',
+                          fontWeight: 600,
+                          color: '#FFFFFF',
+                          backgroundColor: '#374151',
+                          borderBottom: '1px solid #4B5563',
+                          borderRight: '1px solid #4B5563',
+                          position: 'sticky',
+                          top: 0,
+                          zIndex: 1000,
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                          height: `${CELL_HEIGHT}px`,
+                          minHeight: `${CELL_HEIGHT}px`,
+                          maxHeight: `${CELL_HEIGHT}px`,
+                          lineHeight: CELL_LINE_HEIGHT,
+                          verticalAlign: 'middle',
+                          boxSizing: 'border-box'
+                        }}>FDD</th>
+                        <th style={{
+                          padding: CELL_PADDING,
+                          textAlign: 'left',
+                          fontWeight: 600,
+                          color: '#FFFFFF',
+                          backgroundColor: '#374151',
+                          borderBottom: '1px solid #4B5563',
+                          borderRight: '1px solid #4B5563',
+                          position: 'sticky',
+                          top: 0,
+                          zIndex: 1000,
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                          height: `${CELL_HEIGHT}px`,
+                          minHeight: `${CELL_HEIGHT}px`,
+                          maxHeight: `${CELL_HEIGHT}px`,
+                          lineHeight: CELL_LINE_HEIGHT,
+                          verticalAlign: 'middle',
+                          boxSizing: 'border-box'
+                        }}>LDD</th>
+                        <th style={{
+                          padding: CELL_PADDING,
+                          textAlign: 'right',
+                          fontWeight: 600,
+                          color: '#FFFFFF',
+                          backgroundColor: '#374151',
+                          borderBottom: '1px solid #4B5563',
+                          borderRight: '1px solid #4B5563',
+                          position: 'sticky',
+                          top: 0,
+                          zIndex: 1000,
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                          height: `${CELL_HEIGHT}px`,
+                          minHeight: `${CELL_HEIGHT}px`,
+                          maxHeight: `${CELL_HEIGHT}px`,
+                          lineHeight: CELL_LINE_HEIGHT,
+                          verticalAlign: 'middle',
+                          boxSizing: 'border-box'
+                        }}>DC</th>
+                        <th style={{
+                          padding: CELL_PADDING,
+                          textAlign: 'right',
+                          fontWeight: 600,
+                          color: '#FFFFFF',
+                          backgroundColor: '#374151',
+                          borderBottom: '1px solid #4B5563',
+                          borderRight: '1px solid #4B5563',
+                          position: 'sticky',
+                          top: 0,
+                          zIndex: 1000,
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                          height: `${CELL_HEIGHT}px`,
+                          minHeight: `${CELL_HEIGHT}px`,
+                          maxHeight: `${CELL_HEIGHT}px`,
+                          lineHeight: CELL_LINE_HEIGHT,
+                          verticalAlign: 'middle',
+                          boxSizing: 'border-box'
+                        }}>DA</th>
+                        <th style={{
+                          padding: CELL_PADDING,
+                          textAlign: 'right',
+                          fontWeight: 600,
+                          color: '#FFFFFF',
+                          backgroundColor: '#374151',
+                          borderBottom: '1px solid #4B5563',
+                          borderRight: '1px solid #4B5563',
+                          position: 'sticky',
+                          top: 0,
+                          zIndex: 1000,
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                          height: `${CELL_HEIGHT}px`,
+                          minHeight: `${CELL_HEIGHT}px`,
+                          maxHeight: `${CELL_HEIGHT}px`,
+                          lineHeight: CELL_LINE_HEIGHT,
+                          verticalAlign: 'middle',
+                          boxSizing: 'border-box'
+                        }}>WC</th>
+                        <th style={{
+                          padding: CELL_PADDING,
+                          textAlign: 'right',
+                          fontWeight: 600,
+                          color: '#FFFFFF',
+                          backgroundColor: '#374151',
+                          borderBottom: '1px solid #4B5563',
+                          borderRight: '1px solid #4B5563',
+                          position: 'sticky',
+                          top: 0,
+                          zIndex: 1000,
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                          height: `${CELL_HEIGHT}px`,
+                          minHeight: `${CELL_HEIGHT}px`,
+                          maxHeight: `${CELL_HEIGHT}px`,
+                          lineHeight: CELL_LINE_HEIGHT,
+                          verticalAlign: 'middle',
+                          boxSizing: 'border-box'
+                        }}>WA</th>
+                        <th style={{
+                          padding: CELL_PADDING,
+                          textAlign: 'right',
+                          fontWeight: 600,
+                          color: '#FFFFFF',
+                          backgroundColor: '#374151',
+                          borderBottom: '1px solid #4B5563',
+                          borderRight: '1px solid #4B5563',
+                          position: 'sticky',
+                          top: 0,
+                          zIndex: 1000,
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                          height: `${CELL_HEIGHT}px`,
+                          minHeight: `${CELL_HEIGHT}px`,
+                          maxHeight: `${CELL_HEIGHT}px`,
+                          lineHeight: CELL_LINE_HEIGHT,
+                          verticalAlign: 'middle',
+                          boxSizing: 'border-box'
+                        }}>GGR</th>
+                        <th style={{
+                          padding: CELL_PADDING,
+                          textAlign: 'right',
+                          fontWeight: 600,
+                          color: '#FFFFFF',
+                          backgroundColor: '#374151',
+                          borderBottom: '1px solid #4B5563',
+                          position: 'sticky',
+                          top: 0,
+                          zIndex: 1000,
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                          height: `${CELL_HEIGHT}px`,
+                          minHeight: `${CELL_HEIGHT}px`,
+                          maxHeight: `${CELL_HEIGHT}px`,
+                          lineHeight: CELL_LINE_HEIGHT,
+                          verticalAlign: 'middle',
+                          boxSizing: 'border-box'
+                        }}>NET PROFIT</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedTransactions.map((row, index) => (
+                        <tr
+                          key={index}
+                          style={{
+                            backgroundColor: index % 2 === 0 ? '#FFFFFF' : '#FAFAFA',
+                            borderBottom: '1px solid #E5E7EB',
+                            transition: 'all 0.2s ease',
+                            height: `${CELL_HEIGHT}px`
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#F3F4F6'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#FFFFFF' : '#FAFAFA'
+                          }}
+                        >
+                          <td
+                            style={{
+                              padding: CELL_PADDING,
+                              color: '#1F2937',
+                              borderRight: '1px solid #E5E7EB',
+                              height: `${CELL_HEIGHT}px`,
+                              minHeight: `${CELL_HEIGHT}px`,
+                              maxHeight: `${CELL_HEIGHT}px`,
+                              lineHeight: CELL_LINE_HEIGHT,
+                              verticalAlign: 'middle',
+                              boxSizing: 'border-box'
+                            }}
+                          >
+                            {formatDateYYYYMMDD(row.date || row.transaction_date)}
+                          </td>
+                          <td
+                            style={{
+                              padding: CELL_PADDING,
+                              color: '#1F2937',
+                              borderRight: '1px solid #E5E7EB',
+                              height: `${CELL_HEIGHT}px`,
+                              lineHeight: CELL_LINE_HEIGHT,
+                              verticalAlign: 'middle',
+                              boxSizing: 'border-box'
+                            }}
+                          >
+                            {row.line || row.brand || '-'}
+                          </td>
+                          <td
+                            style={{
+                              padding: CELL_PADDING,
+                              color: '#1F2937',
+                              borderRight: '1px solid #E5E7EB',
+                              height: `${CELL_HEIGHT}px`,
+                              lineHeight: CELL_LINE_HEIGHT,
+                              verticalAlign: 'middle',
+                              boxSizing: 'border-box'
+                            }}
+                          >
+                            {row.unique_code || '-'}
+                          </td>
+                          <td
+                            style={{
+                              padding: CELL_PADDING,
+                              color: '#1F2937',
+                              borderRight: '1px solid #E5E7EB',
+                              height: `${CELL_HEIGHT}px`,
+                              lineHeight: CELL_LINE_HEIGHT,
+                              verticalAlign: 'middle',
+                              boxSizing: 'border-box'
+                            }}
+                          >
+                            {formatDateYYYYMMDD(row.first_deposit_date)}
+                          </td>
+                          <td
+                            style={{
+                              padding: CELL_PADDING,
+                              color: '#1F2937',
+                              borderRight: '1px solid #E5E7EB',
+                              height: `${CELL_HEIGHT}px`,
+                              lineHeight: CELL_LINE_HEIGHT,
+                              verticalAlign: 'middle',
+                              boxSizing: 'border-box'
+                            }}
+                          >
+                            {formatDateYYYYMMDD(row.last_deposit_date)}
+                          </td>
+                          <td
+                            style={{
+                              padding: CELL_PADDING,
+                              textAlign: 'right',
+                              color: '#1F2937',
+                              borderRight: '1px solid #E5E7EB',
+                              height: `${CELL_HEIGHT}px`,
+                              lineHeight: CELL_LINE_HEIGHT,
+                              verticalAlign: 'middle',
+                              boxSizing: 'border-box'
+                            }}
+                          >
+                            {formatIntegerKPI(row.deposit_cases || 0)}
+                          </td>
+                          <td
+                            style={{
+                              padding: CELL_PADDING,
+                              textAlign: 'right',
+                              color: '#1F2937',
+                              borderRight: '1px solid #E5E7EB',
+                              height: `${CELL_HEIGHT}px`,
+                              lineHeight: CELL_LINE_HEIGHT,
+                              verticalAlign: 'middle',
+                              boxSizing: 'border-box'
+                            }}
+                          >
+                            {formatCurrencyKPI(row.deposit_amount || 0, 'USC')}
+                          </td>
+                          <td
+                            style={{
+                              padding: CELL_PADDING,
+                              textAlign: 'right',
+                              color: '#1F2937',
+                              borderRight: '1px solid #E5E7EB',
+                              height: `${CELL_HEIGHT}px`,
+                              lineHeight: CELL_LINE_HEIGHT,
+                              verticalAlign: 'middle',
+                              boxSizing: 'border-box'
+                            }}
+                          >
+                            {formatIntegerKPI(row.withdraw_cases || 0)}
+                          </td>
+                          <td
+                            style={{
+                              padding: CELL_PADDING,
+                              textAlign: 'right',
+                              color: '#1F2937',
+                              borderRight: '1px solid #E5E7EB',
+                              height: `${CELL_HEIGHT}px`,
+                              lineHeight: CELL_LINE_HEIGHT,
+                              verticalAlign: 'middle',
+                              boxSizing: 'border-box'
+                            }}
+                          >
+                            {formatCurrencyKPI(row.withdraw_amount || 0, 'USC')}
+                          </td>
+                          <td
+                            style={{
+                              padding: CELL_PADDING,
+                              textAlign: 'right',
+                              color: (row.ggr || 0) >= 0 ? '#059669' : '#dc2626',
+                              fontWeight: 600,
+                              borderRight: '1px solid #E5E7EB',
+                              height: `${CELL_HEIGHT}px`,
+                              lineHeight: CELL_LINE_HEIGHT,
+                              verticalAlign: 'middle',
+                              boxSizing: 'border-box'
+                            }}
+                          >
+                            {formatCurrencyKPI(row.ggr || 0, 'USC')}
+                          </td>
+                          <td
+                            style={{
+                              padding: CELL_PADDING,
+                              textAlign: 'right',
+                              color: (row.net_profit || 0) < 0 ? '#dc2626' : (row.net_profit || 0) > 0 ? '#059669' : '#374151',
+                              fontWeight: 600,
+                              height: `${CELL_HEIGHT}px`,
+                              lineHeight: CELL_LINE_HEIGHT,
+                              verticalAlign: 'middle',
+                              boxSizing: 'border-box'
+                            }}
+                          >
+                            {formatCurrencyKPI(row.net_profit || 0, 'USC')}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Footer with Pagination & Export */}
+              <div
+                style={{
+                  padding: '16px 24px',
+                  borderTop: '1px solid #E5E7EB',
+                  backgroundColor: '#FFFFFF',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexShrink: 0,
+                  borderRadius: '0 0 16px 16px' // ✅ Rounded bottom corners
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <select
+                    value={limit}
+                    onChange={async (e) => {
+                      const newLimit = Number(e.target.value)
+                      setLimit(newLimit)
+                      setPage(1)
+                      // ✅ Manual reload dengan limit dan page 1 yang baru (pass overridePage untuk avoid stale closure)
+                      // Limit akan digunakan dari state yang sudah di-update karena masih dalam dependencies
+                      fetchTransactionHistory(1)
+                    }}
+                    style={{
+                      padding: '6px 10px',
+                      border: '1px solid #D1D5DB',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                      backgroundColor: 'white',
+                      color: '#374151',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                  <div style={{ fontSize: '13px', color: '#6B7280' }}>
+                    Showing {startIndex + 1} to {Math.min(endIndex, totalRecords)} of {totalRecords} transactions
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <button
+                        onClick={() => {
+                          const newPage = Math.max(1, page - 1)
+                          setPage(newPage)
+                          // ✅ Manual reload dengan page yang baru (pass overridePage untuk avoid stale closure)
+                          fetchTransactionHistory(newPage)
+                        }}
+                        disabled={page === 1}
+                        style={{
+                          padding: '6px 12px',
+                          border: '1px solid #D1D5DB',
+                          borderRadius: '6px',
+                          fontSize: '13px',
+                          backgroundColor: page === 1 ? '#F3F4F6' : 'white',
+                          color: page === 1 ? '#9CA3AF' : '#374151',
+                          cursor: page === 1 ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        Previous
+                      </button>
+                      <div style={{ fontSize: '13px', color: '#6B7280', padding: '0 8px' }}>
+                        Page {page} of {totalPages}
+                      </div>
+                      <button
+                        onClick={() => {
+                          const newPage = Math.min(totalPages, page + 1)
+                          setPage(newPage)
+                          // ✅ Manual reload dengan page yang baru (pass overridePage untuk avoid stale closure)
+                          fetchTransactionHistory(newPage)
+                        }}
+                        disabled={page === totalPages}
+                        style={{
+                          padding: '6px 12px',
+                          border: '1px solid #D1D5DB',
+                          borderRadius: '6px',
+                          fontSize: '13px',
+                          backgroundColor: page === totalPages ? '#F3F4F6' : 'white',
+                          color: page === totalPages ? '#9CA3AF' : '#374151',
+                          cursor: page === totalPages ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
+                  {/* Export Button */}
+                  <button
+                    onClick={handleExport}
+                    disabled={exporting || transactions.length === 0}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: exporting || transactions.length === 0 ? '#F3F4F6' : '#10B981',
+                      color: exporting || transactions.length === 0 ? '#9CA3AF' : '#FFFFFF',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      cursor: exporting || transactions.length === 0 ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!exporting && transactions.length > 0) {
+                        e.currentTarget.style.backgroundColor = '#059669'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!exporting && transactions.length > 0) {
+                        e.currentTarget.style.backgroundColor = '#10B981'
+                      }
+                    }}
+                  >
+                    {exporting ? (
+                      <>
+                        <span>Exporting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M8 12V4M4 8l4-4 4 4" />
+                        </svg>
+                        Export
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  )
+}
