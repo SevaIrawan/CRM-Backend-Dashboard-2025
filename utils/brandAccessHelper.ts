@@ -121,9 +121,9 @@ export const applyBrandFilter = (
 }
 
 /**
- * Get default brand for Squad Lead user (first brand in their allowed list)
+ * Get default brand for Squad Lead user (first brand after sorting A to Z)
  * @param userAllowedBrands - User's allowed brands
- * @returns First brand name or null
+ * @returns First brand name (sorted A to Z) or null
  */
 export const getDefaultBrandForSquadLead = (
   userAllowedBrands: string[] | null
@@ -131,7 +131,9 @@ export const getDefaultBrandForSquadLead = (
   if (!userAllowedBrands || userAllowedBrands.length === 0) {
     return null
   }
-  return userAllowedBrands[0] || null
+  // ✅ Sort A to Z first, then return the first brand
+  const sortedBrands = [...userAllowedBrands].sort()
+  return sortedBrands[0] || null
 }
 
 /**

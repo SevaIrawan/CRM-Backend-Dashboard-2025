@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { getDefaultBrandForSquadLead } from '@/utils/brandAccessHelper'
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,9 +31,11 @@ export async function GET(request: NextRequest) {
     
     // ✅ LOGIC: Squad Lead = filtered brands only | Admin = ALL + all brands
     let finalLines: string[]
+    let filteredBrands: string[] = []
     if (userAllowedBrands && userAllowedBrands.length > 0) {
       // Squad Lead: Filter to only their brands (NO 'ALL')
-      finalLines = cleanLines.filter(brand => userAllowedBrands.includes(brand)).sort()
+      filteredBrands = cleanLines.filter(brand => userAllowedBrands.includes(brand)).sort()
+      finalLines = filteredBrands
       console.log('🔐 [MYR KPI Comparison API] Squad Lead - filtered brands:', finalLines)
     } else {
       // Admin/Manager/SQ: Add 'ALL' + all brands
@@ -41,6 +44,11 @@ export async function GET(request: NextRequest) {
     }
     
     const linesWithAll = finalLines
+    
+    // ✅ Set default line for Squad Lead to first brand (sorted A to Z), others to 'ALL'
+    const defaultLine = userAllowedBrands && userAllowedBrands.length > 0 
+      ? getDefaultBrandForSquadLead(userAllowedBrands) || filteredBrands[0] 
+      : 'ALL'
 
     // Get latest record for date range defaults from master table (real-time data)
     const { data: latestRecord } = await supabase
@@ -69,7 +77,7 @@ export async function GET(request: NextRequest) {
         max: maxDate
       },
       defaults: {
-        line: 'ALL',
+        line: defaultLine,
         latestDate: maxDate
       }
     }

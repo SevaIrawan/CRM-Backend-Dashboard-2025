@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { filterBrandsByUser, removeAllOptionForSquadLead } from '@/utils/brandAccessHelper'
+import { filterBrandsByUser, removeAllOptionForSquadLead, getDefaultBrandForSquadLead } from '@/utils/brandAccessHelper'
 
 export async function GET(request: NextRequest) {
   try {
@@ -106,9 +106,11 @@ export async function GET(request: NextRequest) {
     
     // ✅ LOGIC: Squad Lead = filtered brands only | Admin = ALL + all brands
     let finalLines: string[]
+    let filteredBrands: string[] = []
     if (userAllowedBrands && userAllowedBrands.length > 0) {
       // Squad Lead: Filter to only their brands (NO 'ALL')
-      finalLines = lines.filter(brand => userAllowedBrands.includes(brand)).sort()
+      filteredBrands = lines.filter(brand => userAllowedBrands.includes(brand)).sort()
+      finalLines = filteredBrands
       console.log('🔐 [USC Customer Retention API] Squad Lead - filtered brands:', finalLines)
     } else {
       // Admin/Manager/SQ: Remove 'ALL'/'All' from database, then add 'ALL' manually
@@ -154,13 +156,18 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // ✅ Set default line for Squad Lead to first brand (sorted A to Z), others to 'ALL'
+    const defaultLine = userAllowedBrands && userAllowedBrands.length > 0 
+      ? getDefaultBrandForSquadLead(userAllowedBrands) || filteredBrands[0] 
+      : 'ALL'
+
     console.log('✅ Blue_whale_usc slicer options processed:', {
       lines_count: finalLines.length,
       years: years.length,
       months: months.length,
       tiers: sortedTiers.length,
       dateRange: { min: minDate, max: maxDate },
-      defaults: { year: defaultYear, month: defaultMonth }
+      defaults: { line: defaultLine, year: defaultYear, month: defaultMonth }
     })
 
     return NextResponse.json({
@@ -175,7 +182,7 @@ export async function GET(request: NextRequest) {
           max: maxDate
         },
         defaults: {
-          line: 'ALL',
+          line: defaultLine,
           year: defaultYear,
           month: defaultMonth
         }

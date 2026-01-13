@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { filterBrandsByUser, removeAllOptionForSquadLead } from '@/utils/brandAccessHelper'
+import { filterBrandsByUser, removeAllOptionForSquadLead, getDefaultBrandForSquadLead } from '@/utils/brandAccessHelper'
 
 export async function GET(request: NextRequest) {
   try {
@@ -33,6 +33,11 @@ export async function GET(request: NextRequest) {
     const filteredLines = filterBrandsByUser(cleanLines, userAllowedBrands)
     let linesWithAll = ['ALL', ...filteredLines.sort()]
     linesWithAll = removeAllOptionForSquadLead(linesWithAll, userAllowedBrands)
+    
+    // ✅ Set default line for Squad Lead to first brand (sorted A to Z), others to 'ALL'
+    const defaultLine = userAllowedBrands && userAllowedBrands.length > 0 
+      ? getDefaultBrandForSquadLead(userAllowedBrands) || filteredLines[0] 
+      : 'ALL'
 
     // Get latest record for date range defaults from master table (real-time data)
     const { data: latestRecord } = await supabase
@@ -61,7 +66,7 @@ export async function GET(request: NextRequest) {
         max: maxDate
       },
       defaults: {
-        line: 'ALL',
+        line: defaultLine,
         latestDate: maxDate
       }
     }

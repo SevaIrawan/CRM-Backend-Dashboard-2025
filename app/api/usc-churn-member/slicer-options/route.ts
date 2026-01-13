@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { getDefaultBrandForSquadLead } from '@/utils/brandAccessHelper'
 
 export async function GET(request: NextRequest) {
   try {
@@ -77,9 +78,11 @@ export async function GET(request: NextRequest) {
     
     // ✅ LOGIC: Squad Lead = filtered brands only | Admin = ALL + all brands
     let finalLines: string[]
+    let filteredBrands: string[] = []
     if (userAllowedBrands && userAllowedBrands.length > 0) {
       // Squad Lead: Filter to only their brands (NO 'ALL')
-      finalLines = lines.filter(brand => userAllowedBrands.includes(brand)).sort()
+      filteredBrands = lines.filter(brand => userAllowedBrands.includes(brand)).sort()
+      finalLines = filteredBrands
       console.log('🔐 [USC Churn Member API] Squad Lead - filtered brands:', finalLines)
     } else {
       // Admin/Manager/SQ: Add 'ALL' + all brands
@@ -99,8 +102,10 @@ export async function GET(request: NextRequest) {
     const sortedMonths = validMonths.sort((a, b) => monthNames.indexOf(a) - monthNames.indexOf(b))
     const months = sortedMonths.map(month => ({ value: month, label: month }))
 
-    // ✅ Defaults: Line = "ALL", Year & Month = latest data (from max date like Customer Retention)
-    const defaultLine = 'ALL' // ✅ Always default to "ALL"
+    // ✅ Set default line for Squad Lead to first brand (sorted A to Z), others to 'ALL'
+    const defaultLine = userAllowedBrands && userAllowedBrands.length > 0 
+      ? getDefaultBrandForSquadLead(userAllowedBrands) || filteredBrands[0] 
+      : 'ALL'
     
     // Get default year and month from MAX date in database
     let defaultYear = years.length > 0 ? years[0] : '' // Latest year (already sorted DESC)

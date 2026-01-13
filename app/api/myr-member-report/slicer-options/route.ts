@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { filterBrandsByUser, removeAllOptionForSquadLead } from '@/utils/brandAccessHelper'
+import { filterBrandsByUser, removeAllOptionForSquadLead, getDefaultBrandForSquadLead } from '@/utils/brandAccessHelper'
 
 export async function GET(request: NextRequest) {
   try {
@@ -95,9 +95,11 @@ export async function GET(request: NextRequest) {
     
     // ✅ LOGIC: Squad Lead = filtered brands only | Admin = ALL + all brands
     let finalLines: string[]
+    let filteredBrands: string[] = []
     if (userAllowedBrands && userAllowedBrands.length > 0) {
       // Squad Lead: Filter to only their brands (NO 'ALL')
-      finalLines = lines.filter(brand => userAllowedBrands.includes(brand)).sort()
+      filteredBrands = lines.filter(brand => userAllowedBrands.includes(brand)).sort()
+      finalLines = filteredBrands
       console.log('🔐 [MYR Member Report API] Squad Lead - filtered brands:', finalLines)
     } else {
       // Admin/Manager/SQ: Add 'ALL' + all brands
@@ -123,7 +125,11 @@ export async function GET(request: NextRequest) {
     // ✅ Get default year and month from MAX date in database
     let defaultYear = years.length > 0 ? years[0] : '' // Latest year (already sorted DESC)
     let defaultMonth = ''
-    let defaultLine = finalLines.length > 0 ? finalLines[0] : 'ALL'
+    
+    // ✅ Set default line for Squad Lead to first brand (sorted A to Z), others to 'ALL'
+    const defaultLine = userAllowedBrands && userAllowedBrands.length > 0 
+      ? getDefaultBrandForSquadLead(userAllowedBrands) || filteredBrands[0] 
+      : 'ALL'
     
     if (maxDate && typeof maxDate === 'string' && maxDate.length > 0) {
       // Extract year and month from max date
