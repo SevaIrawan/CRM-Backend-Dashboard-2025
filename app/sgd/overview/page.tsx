@@ -60,7 +60,7 @@ export default function SGDOverviewPage() {
   const [selectedMonth, setSelectedMonth] = useState('');
   const [selectedCurrency] = useState('SGD'); // Locked to SGD
   const [selectedLine, setSelectedLine] = useState('');
-  const [isDailyMode, setIsDailyMode] = useState(false); // ✅ Toggle Daily Mode
+  const [isDailyMode, setIsDailyMode] = useState(true); // ✅ Toggle Daily Mode - Default ON
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [kpiLoaded, setKpiLoaded] = useState(false);
@@ -252,15 +252,15 @@ export default function SGDOverviewPage() {
     }
   };
 
-  // ✅ Initial load ONCE when page first loads (auto-load monthly data)
+  // ✅ Initial load ONCE when page first loads (auto-load daily data)
   useEffect(() => {
     // Only load once when page first mounts and slicers are ready
     if (!initialLoadDone && selectedYear && selectedMonth && selectedLine) {
       console.log('✅ [SGD Overview] Initial load (first time):', { selectedYear, selectedMonth, selectedLine });
-      // Auto-load monthly data on first page load
+      // Auto-load daily data on first page load (toggle default ON)
       // Note: isLoading will be set to false by the useEffect that watches kpiLoaded and chartsLoaded
       loadKPIData();
-      loadChartData(false); // false = monthly mode for initial load
+      loadChartData(true); // true = daily mode for initial load (default active)
       setInitialLoadDone(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
