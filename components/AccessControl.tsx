@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { hasPermission } from '@/utils/rolePermissions'
 
 interface AccessControlProps {
   children: React.ReactNode
@@ -13,12 +12,12 @@ export default function AccessControl({ children }: AccessControlProps) {
   const pathname = usePathname()
   const [isAuthorized, setIsAuthorized] = useState(true) // Start as authorized
   const [hasChecked, setHasChecked] = useState(false) // Track if we've checked maintenance mode
-  const [isMounted, setIsMounted] = useState(false) // ✅ Hydration fix: Track if component is mounted
-
-  // ✅ Hydration fix: Only run on client side
+  // ✅ Hydration fix: Only run on client side (not needed for maintenance check, but kept for consistency)
+  const [isMounted, setIsMounted] = useState(false)
   useEffect(() => {
     setIsMounted(true)
   }, [])
+
 
   useEffect(() => {
     // ✅ Only check maintenance mode after component is mounted (client-side only)
@@ -31,6 +30,7 @@ export default function AccessControl({ children }: AccessControlProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, isMounted])
+
 
   const checkMaintenanceMode = async () => {
     try {
@@ -125,17 +125,12 @@ export default function AccessControl({ children }: AccessControlProps) {
     }
   }
 
-  // ✅ Always render children immediately (no loading screen)
-  // Check maintenance mode in background and redirect if needed
-  // Note: isAuthorized starts as true, so server and client render the same initially
-  
-  // Only return null if maintenance mode is ON (after check completes)
-  // This prevents hydration mismatch because initial render is always children
+  // ✅ Only return null if maintenance mode is ON (after check completes)
   if (!isAuthorized && hasChecked) {
     // If not authorized (maintenance mode), return null (redirect will happen)
     return null
   }
 
-  // Always render children (same on server and client)
+  // ✅ Always render children (permission check redirects if needed, but doesn't block render)
   return <>{children}</>
 }

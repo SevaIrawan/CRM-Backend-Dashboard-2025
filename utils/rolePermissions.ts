@@ -260,22 +260,12 @@ export const hasPermission = (userRole: string, pagePath: string): boolean => {
   // ✅ Manager and Squad Lead can also access SNR Customer pages in their market
   // (SNR pages are already mapped in pathToPermission below, so they'll get access via normal permission check)
 
-  // Map page paths to permission names
+  // Map page paths to permission names (exact matches take priority)
   const pathToPermission: { [key: string]: string } = {
     '/dashboard': 'dashboard',
     '/myr': 'myr',
     '/sgd': 'sgd',
     '/usc': 'usc',
-    '/usc/overview': 'usc',
-    '/usc/member-analytic': 'usc',
-    '/usc/brand-comparison': 'usc',
-    '/usc/kpi-comparison': 'usc',
-    '/myr/snr-customers': 'myr',
-    '/sgd/snr-customers': 'sgd',
-    '/usc/snr-customers': 'usc',
-    '/myr/customer-assignment': 'myr',
-    '/sgd/customer-assignment': 'sgd',
-    '/usc/customer-assignment': 'usc',
     '/transaction': 'transaction',
     '/transaction/adjustment': 'transaction',
     '/transaction/deposit': 'transaction',
@@ -290,7 +280,24 @@ export const hasPermission = (userRole: string, pagePath: string): boolean => {
     '/users': 'users'
   }
 
-  const permission = pathToPermission[pagePath]
+  // ✅ Check exact match first
+  let permission = pathToPermission[pagePath]
+  
+  // ✅ If no exact match, check prefix matching
+  if (!permission) {
+    if (pagePath.startsWith('/myr/')) {
+      permission = 'myr'
+    } else if (pagePath.startsWith('/sgd/')) {
+      permission = 'sgd'
+    } else if (pagePath.startsWith('/usc/')) {
+      permission = 'usc'
+    } else if (pagePath.startsWith('/transaction/')) {
+      permission = 'transaction'
+    } else if (pagePath.startsWith('/admin/')) {
+      permission = 'admin'
+    }
+  }
+
   console.log('🎯 Required permission:', permission)
   console.log('📋 User permissions:', role.permissions)
   
