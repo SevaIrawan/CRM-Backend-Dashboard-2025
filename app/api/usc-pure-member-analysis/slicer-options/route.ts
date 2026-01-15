@@ -26,31 +26,35 @@ export async function GET(request: NextRequest) {
       sampleData: monthlyData?.slice(0, 10) || []
     })
 
-    // Process years - langsung dari kolom [year]
+    // Process years - langsung dari kolom [year] - IKUT DATA DATABASE
     const years = Array.from(new Set(monthlyData?.map(row => row.year?.toString()).filter(Boolean) || [])) as string[]
     const sortedYears = years.sort((a, b) => parseInt(b || '0') - parseInt(a || '0'))
 
-    // Process months - langsung dari kolom [month] yang sudah TEXT (month name)
-    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                       'July', 'August', 'September', 'October', 'November', 'December']
-    
-    // Ambil unique month names langsung dari kolom month (sudah text, bukan number)
+    // Process months - langsung dari kolom [month] - IKUT DATA DATABASE (NO HARDCODED FILTER)
+    // Ambil unique month values langsung dari database tanpa filter hardcoded
     const rawMonths = Array.from(new Set(monthlyData?.map(row => String(row.month)).filter(Boolean) || [])) as string[]
     
-    // Filter hanya month names yang valid
-    const validMonths = rawMonths.filter(month => monthNames.includes(month))
+    // Sort secara chronological order (January, February, March, ..., December)
+    const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June',
+                       'July', 'August', 'September', 'October', 'November', 'December']
     
-    // Sort sesuai urutan
-    const sortedMonths = validMonths.sort((a, b) => monthNames.indexOf(a) - monthNames.indexOf(b))
+    const sortedMonths = rawMonths.sort((a, b) => {
+      const indexA = monthOrder.findIndex(m => m.toLowerCase() === a.toLowerCase())
+      const indexB = monthOrder.findIndex(m => m.toLowerCase() === b.toLowerCase())
+      // Jika bulan tidak ditemukan di monthOrder, taruh di akhir
+      if (indexA === -1 && indexB === -1) return a.localeCompare(b)
+      if (indexA === -1) return 1
+      if (indexB === -1) return -1
+      return indexA - indexB
+    })
     
-    // Create months array
+    // Create months array - semua bulan dari database
     const months = [
       { value: 'ALL', label: 'ALL' },
       ...sortedMonths.map(month => ({ value: month, label: month }))
     ]
     
     console.log('🔍 [Pure Member Analysis USC] Raw months from DB:', rawMonths)
-    console.log('🔍 [Pure Member Analysis USC] Valid months:', validMonths)
     console.log('🔍 [Pure Member Analysis USC] Sorted months:', sortedMonths)
     
     console.log('🔍 [Pure Member Analysis USC] Processed years:', sortedYears)
