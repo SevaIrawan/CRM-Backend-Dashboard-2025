@@ -23,9 +23,16 @@ export async function GET(request: NextRequest) {
 
     console.log(`✅ Fetched ${data?.length || 0} handler records`)
 
+    // ✅ Add cache control headers to prevent caching
     return NextResponse.json({
       success: true,
       data: data || []
+    }, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
     })
 
   } catch (error: any) {

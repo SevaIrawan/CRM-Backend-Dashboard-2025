@@ -700,15 +700,20 @@ export default function USCCustomerAssignmentPage() {
   const fetchHandlerData = useCallback(async () => {
     try {
       setHandlerLoading(true)
-      const response = await fetch('/api/usc-customer-assignment/handler-setup/data', {
-        cache: 'no-store'
+      // ✅ Add timestamp to prevent cache issues
+      const response = await fetch(`/api/usc-customer-assignment/handler-setup/data?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
       })
       
       const result = await response.json()
       
       if (result.success) {
         setHandlerData(result.data || [])
-        console.log('✅ Handler data fetched:', result.data?.length || 0)
+        console.log('✅ Handler data fetched:', result.data?.length || 0, 'records')
       } else {
         console.error('❌ Error fetching handler data:', result.error)
         setHandlerData([])
@@ -817,13 +822,15 @@ export default function USCCustomerAssignmentPage() {
       const result = await response.json()
 
       if (result.success) {
-        // Reload handler data
-        await fetchHandlerData()
-        
-        // Remove from editing
+        // ✅ Remove from editing first (optimistic update)
         const newEditing = new Map(editingHandlers)
         newEditing.delete(id)
         setEditingHandlers(newEditing)
+        
+        // ✅ Reload handler data to ensure sync with database
+        // Small delay to ensure database commit is complete
+        await new Promise(resolve => setTimeout(resolve, 100))
+        await fetchHandlerData()
         
         showToast('Handler saved successfully!', 'success')
       } else {
@@ -869,13 +876,15 @@ export default function USCCustomerAssignmentPage() {
       const result = await response.json()
 
       if (result.success) {
-        // Reload handler data
-        await fetchHandlerData()
-        
-        // Remove from editing
+        // ✅ Remove from editing first (optimistic update)
         const newEditing = new Map(editingHandlers)
         newEditing.delete(id)
         setEditingHandlers(newEditing)
+        
+        // ✅ Reload handler data to ensure sync with database
+        // Small delay to ensure database commit is complete
+        await new Promise(resolve => setTimeout(resolve, 100))
+        await fetchHandlerData()
         
         showToast('Handler cleared successfully!', 'success')
       } else {

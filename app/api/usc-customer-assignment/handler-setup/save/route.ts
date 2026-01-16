@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
     // If id exists, update existing record
     if (id) {
-      const { error: updateError } = await supabase
+      const { data: updatedData, error: updateError } = await supabase
         .from('snr_usc_handler')
         .update({
           line: line.trim(),
@@ -40,6 +40,8 @@ export async function POST(request: NextRequest) {
           assigned_time: assignedTime
         })
         .eq('id', id)
+        .select()
+        .single()
 
       if (updateError) {
         console.error(`❌ Error updating handler:`, updateError)
@@ -53,11 +55,12 @@ export async function POST(request: NextRequest) {
       console.log(`✅ Successfully updated handler for ${snr_account}`)
       return NextResponse.json({
         success: true,
-        message: 'Handler updated successfully'
+        message: 'Handler updated successfully',
+        data: updatedData // ✅ Return updated data
       })
     } else {
       // Insert new record
-      const { error: insertError } = await supabase
+      const { data: insertedData, error: insertError } = await supabase
         .from('snr_usc_handler')
         .insert({
           snr_account: snr_account.trim(),
@@ -66,6 +69,8 @@ export async function POST(request: NextRequest) {
           assigned_by: assignedBy,
           assigned_time: assignedTime
         })
+        .select()
+        .single()
 
       if (insertError) {
         console.error(`❌ Error inserting handler:`, insertError)
@@ -87,7 +92,8 @@ export async function POST(request: NextRequest) {
       console.log(`✅ Successfully created handler for ${snr_account}`)
       return NextResponse.json({
         success: true,
-        message: 'Handler created successfully'
+        message: 'Handler created successfully',
+        data: insertedData // ✅ Return inserted data
       })
     }
 
