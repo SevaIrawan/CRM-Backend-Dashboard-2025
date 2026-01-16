@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 import Image from 'next/image'
 import { logActivityViaAPI, generateSessionId, storeSessionId } from '@/lib/activityLogger'
-import { getDefaultPageByRole } from '@/utils/rolePermissions'
+import { getDefaultPageByRole, getAvailableRoles } from '@/utils/rolePermissions'
 
 // Supabase configuration with correct API key
 const supabaseUrl = 'https://bbuxfnchflhtulainndm.supabase.co'
@@ -68,7 +68,8 @@ export default function LoginPage() {
       }
 
       // Validate role exists in system
-      const validRoles = ['admin', 'executive', 'manager_myr', 'manager_sgd', 'manager_usc', 'sq_myr', 'sq_sgd', 'sq_usc', 'analyst', 'ops', 'demo', 'squad_lead_myr', 'squad_lead_sgd', 'squad_lead_usc', 'snr_myr', 'snr_sgd', 'snr_usc']
+      // ✅ Use getAvailableRoles() to get all valid roles dynamically (includes Marketing roles)
+      const validRoles = getAvailableRoles()
       if (!validRoles.includes(users.role)) {
         setError(`Invalid user role: ${users.role}. Please contact administrator.`)
         setLoading(false)

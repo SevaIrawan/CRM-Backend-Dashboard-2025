@@ -15,11 +15,13 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f8f9fa;
+  background-color: #f8f9fa !important; /* ✅ Force background color to prevent flash */
   overflow: hidden; /* Prevent body scroll */
   /* ✅ PREVENT WHITE FLASH during transitions */
   min-height: 100vh;
   min-width: 100vw;
+  /* ✅ Ensure background is always visible during transitions */
+  transition: background-color 0s; /* No transition delay for background */
 }
 
 /* PERFORMANCE OPTIMIZATION - Smooth transitions */
@@ -983,7 +985,7 @@ body {
   left: 280px; /* Match sidebar width */
   right: 0; /* ✅ FLEXIBLE - width auto from left+right */
   bottom: 0;
-  background-color: #f8f9fa;
+  background-color: #f8f9fa !important; /* ✅ Force background to prevent white flash */
   /* ✅ SMOOTH TRANSITION: Only transition left - width auto adjust from left+right */
   transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow-y: auto; /* Vertical scroll only */
@@ -995,6 +997,8 @@ body {
   contain: layout style;
   backface-visibility: hidden; /* Prevent flickering */
   -webkit-overflow-scrolling: touch;
+  /* ✅ Ensure content area always has background during page transitions */
+  min-height: 100%;
 }
 
 /* ✅ FORCE: Prevent horizontal overflow in all main-content children */

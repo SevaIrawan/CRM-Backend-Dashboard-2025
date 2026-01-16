@@ -13,6 +13,9 @@
 // 11. SNR MYR = Marketing role for MYR Market (Brand-level access, auto-locked from username)
 // 12. SNR SGD = Marketing role for SGD Market (Brand-level access, auto-locked from username)
 // 13. SNR USC = Marketing role for USC Market (Brand-level access, auto-locked from username)
+// 14. Marketing USC = Marketing role for USC Market (All Brand access)
+// 15. Marketing MYR = Marketing role for MYR Market (All Brand access)
+// 16. Marketing SGD = Marketing role for SGD Market (All Brand access)
 
 export interface UserRole {
   id: string
@@ -225,6 +228,36 @@ export const USER_ROLES: { [key: string]: UserRole } = {
     canAccessUserManagement: false,
     isReadOnly: true,
     allowedBrands: null // Will be populated from database per user (auto-locked from username)
+  },
+  // Marketing USC = Marketing role for USC market (All Brand access)
+  'marketing_usc': {
+    id: 'marketing_usc',
+    name: 'marketing_usc',
+    displayName: 'Marketing USC',
+    permissions: ['usc'], // USC market only, All Brand
+    canAccessUserManagement: false,
+    isReadOnly: true,
+    allowedBrands: null // null = ALL brands (unrestricted)
+  },
+  // Marketing MYR = Marketing role for MYR market (All Brand access)
+  'marketing_myr': {
+    id: 'marketing_myr',
+    name: 'marketing_myr',
+    displayName: 'Marketing MYR',
+    permissions: ['myr'], // MYR market only, All Brand
+    canAccessUserManagement: false,
+    isReadOnly: true,
+    allowedBrands: null // null = ALL brands (unrestricted)
+  },
+  // Marketing SGD = Marketing role for SGD market (All Brand access)
+  'marketing_sgd': {
+    id: 'marketing_sgd',
+    name: 'marketing_sgd',
+    displayName: 'Marketing SGD',
+    permissions: ['sgd'], // SGD market only, All Brand
+    canAccessUserManagement: false,
+    isReadOnly: true,
+    allowedBrands: null // null = ALL brands (unrestricted)
   }
 }
 
@@ -373,6 +406,12 @@ export const getDefaultPageByRole = (userRole: string): string => {
       return '/sgd/snr-customers'
     case 'snr_usc':  // SNR USC → USC SNR Customers (will be created later)
       return '/usc/snr-customers'
+    case 'marketing_usc':  // Marketing USC → USC Overview
+      return '/usc/overview'
+    case 'marketing_myr':  // Marketing MYR → MYR Overview
+      return '/myr/overview'
+    case 'marketing_sgd':  // Marketing SGD → SGD Overview
+      return '/sgd/overview'
     case 'admin':
     case 'analyst':
     case 'demo':
@@ -413,4 +452,9 @@ export const isSquadLead = (userRole: string): boolean => {
 // NEW: Check if user is SNR (any market)
 export const isSNR = (userRole: string): boolean => {
   return userRole.startsWith('snr_')
+}
+
+// NEW: Check if user is Marketing (any market)
+export const isMarketing = (userRole: string): boolean => {
+  return userRole.startsWith('marketing_')
 } 

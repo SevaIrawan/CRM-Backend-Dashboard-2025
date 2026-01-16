@@ -34,10 +34,11 @@ const filterMenuItemsByRole = (menuItems: any[], userRole: string) => {
   // Pages to hide for USC roles (manager_usc, sq_usc, executive)
   const hiddenPagesForUSCRoles = ['/usc/member-analytic', '/usc/churn-member']
   
-  // Check if user is SNR, Manager, or Squad Lead
+  // Check if user is SNR, Manager, Squad Lead, or Marketing
   const isSNR = userRole.startsWith('snr_')
   const isManager = userRole.startsWith('manager_')
   const isSquadLead = userRole.startsWith('squad_lead_')
+  const isMarketing = userRole.startsWith('marketing_')
   
   // Only admin can see all pages
   if (userRole === 'admin') {
@@ -46,37 +47,37 @@ const filterMenuItemsByRole = (menuItems: any[], userRole: string) => {
   
   return menuItems.map(item => {
     // Filter MYR pages for MYR roles and executive
-    if (item.title === 'MYR' && item.submenu && (userRole === 'manager_myr' || userRole === 'sq_myr' || userRole === 'squad_lead_myr' || userRole === 'executive')) {
+    if (item.title === 'MYR' && item.submenu && (userRole === 'manager_myr' || userRole === 'sq_myr' || userRole === 'squad_lead_myr' || userRole === 'marketing_myr' || userRole === 'executive')) {
       return {
         ...item,
         submenu: item.submenu.filter((subItem: any) => 
           !hiddenPagesForMYRRoles.includes(subItem.path) &&
-          // SNR Customers: visible for SNR, Manager, and Squad Lead
-          (!subItem.snrOnly || isSNR || (isManager && userRole === 'manager_myr') || (isSquadLead && userRole === 'squad_lead_myr'))
+          // SNR Customers: visible for SNR, Manager, Squad Lead, and Marketing
+          (!subItem.snrOnly || isSNR || (isManager && userRole === 'manager_myr') || (isSquadLead && userRole === 'squad_lead_myr') || (isMarketing && userRole === 'marketing_myr'))
         )
       }
     }
     
     // Filter SGD pages for SGD roles and executive
-    if (item.title === 'SGD' && item.submenu && (userRole === 'manager_sgd' || userRole === 'sq_sgd' || userRole === 'squad_lead_sgd' || userRole === 'executive')) {
+    if (item.title === 'SGD' && item.submenu && (userRole === 'manager_sgd' || userRole === 'sq_sgd' || userRole === 'squad_lead_sgd' || userRole === 'marketing_sgd' || userRole === 'executive')) {
       return {
         ...item,
         submenu: item.submenu.filter((subItem: any) => 
           !hiddenPagesForSGDRoles.includes(subItem.path) &&
-          // SNR Customers: visible for SNR, Manager, and Squad Lead
-          (!subItem.snrOnly || isSNR || (isManager && userRole === 'manager_sgd') || (isSquadLead && userRole === 'squad_lead_sgd'))
+          // SNR Customers: visible for SNR, Manager, Squad Lead, and Marketing
+          (!subItem.snrOnly || isSNR || (isManager && userRole === 'manager_sgd') || (isSquadLead && userRole === 'squad_lead_sgd') || (isMarketing && userRole === 'marketing_sgd'))
         )
       }
     }
     
     // Filter USC pages for USC roles and executive
-    if (item.title === 'USC' && item.submenu && (userRole === 'manager_usc' || userRole === 'sq_usc' || userRole === 'squad_lead_usc' || userRole === 'executive')) {
+    if (item.title === 'USC' && item.submenu && (userRole === 'manager_usc' || userRole === 'sq_usc' || userRole === 'squad_lead_usc' || userRole === 'marketing_usc' || userRole === 'executive')) {
       return {
         ...item,
         submenu: item.submenu.filter((subItem: any) => 
           !hiddenPagesForUSCRoles.includes(subItem.path) &&
-          // SNR Customers: visible for SNR, Manager, and Squad Lead
-          (!subItem.snrOnly || isSNR || (isManager && userRole === 'manager_usc') || (isSquadLead && userRole === 'squad_lead_usc'))
+          // SNR Customers: visible for SNR, Manager, Squad Lead, and Marketing
+          (!subItem.snrOnly || isSNR || (isManager && userRole === 'manager_usc') || (isSquadLead && userRole === 'squad_lead_usc') || (isMarketing && userRole === 'marketing_usc'))
         )
       }
     }

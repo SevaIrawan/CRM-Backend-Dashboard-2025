@@ -92,7 +92,14 @@ export default function UsersPage() {
     market: 'USC', // Default market for Squad Lead
     allowed_brands: [] as string[]
   })
-  const [availableRoles] = useState(getAvailableRoles())
+  const [availableRoles] = useState(() => {
+    const roles = getAvailableRoles()
+    console.log('📋 Available roles for User Management:', roles)
+    // ✅ Verify Marketing roles are included
+    const hasMarketing = roles.includes('marketing_usc') || roles.includes('marketing_myr') || roles.includes('marketing_sgd')
+    console.log('✅ Marketing roles included:', hasMarketing)
+    return roles
+  })
   const [availableBrands, setAvailableBrands] = useState<string[]>([])
   const [brandsLoading, setBrandsLoading] = useState(false)
   const [authLoading, setAuthLoading] = useState(true)
@@ -642,6 +649,12 @@ export default function UsersPage() {
         return 'SNR Marketing SGD'
       case 'snr_usc':
         return 'SNR Marketing USC'
+      case 'marketing_usc':
+        return 'MARKETING USC'
+      case 'marketing_myr':
+        return 'MARKETING MYR'
+      case 'marketing_sgd':
+        return 'MARKETING SGD'
       default:
         return role.toUpperCase()
     }
