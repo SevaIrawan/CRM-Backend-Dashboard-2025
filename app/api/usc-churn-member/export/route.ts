@@ -374,23 +374,25 @@ export async function POST(request: NextRequest) {
             return value.toFixed(2)
           }
         }
-        // Escape commas and quotes in strings
+        // ✅ Always wrap string values (especially traffic with Khmer text) with quotes for proper CSV encoding
         const stringValue = String(value)
-        if (stringValue.includes(',') || stringValue.includes('"')) {
-          return `"${stringValue.replace(/"/g, '""')}"`
-        }
-        return stringValue
+        return `"${stringValue.replace(/"/g, '""')}"`
       })
       csvRows.push(values.join(','))
     })
 
     const csvContent = csvRows.join('\n')
+    
+    // ✅ Add BOM (Byte Order Mark) for proper UTF-8 encoding in Excel
+    // This ensures Khmer text and other Unicode characters display correctly
+    const csvWithBOM = '\ufeff' + csvContent
 
     // Return CSV file
-    return new NextResponse(csvContent, {
+    return new NextResponse(csvWithBOM, {
       headers: {
-        'Content-Type': 'text/csv',
-        'Content-Disposition': `attachment; filename="usc_churn_member_${year}_${month}_${line || 'ALL'}_${new Date().toISOString().split('T')[0]}.csv"`
+        'Content-Type': 'text/csv; charset=utf-8', // ✅ Add charset=utf-8 for proper encoding
+        'Content-Disposition': `attachment; filename="usc_churn_member_${year}_${month}_${line || 'ALL'}_${new Date().toISOString().split('T')[0]}.csv"`,
+        'Cache-Control': 'no-cache'
       }
     })
 

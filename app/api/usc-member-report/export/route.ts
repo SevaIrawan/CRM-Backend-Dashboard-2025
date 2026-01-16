@@ -381,7 +381,8 @@ export async function POST(request: NextRequest) {
               return value.toFixed(2)
             }
           }
-          if (typeof value === 'string' && value.includes(',')) {
+          if (typeof value === 'string') {
+            // ✅ Always wrap string values (especially traffic with Khmer text) with quotes for proper CSV encoding
             return `"${value.replace(/"/g, '""')}"`
           }
           return value
@@ -394,11 +395,16 @@ export async function POST(request: NextRequest) {
     const filterStr = [line, year, month].filter(f => f && f !== 'ALL').join('_') || 'all'
     const filename = `usc_member_report_data_${filterStr}_${timestamp}.csv`
 
-    return new NextResponse(csvContent, {
+    // ✅ Add BOM (Byte Order Mark) for proper UTF-8 encoding in Excel
+    // This ensures Khmer text and other Unicode characters display correctly
+    const csvWithBOM = '\ufeff' + csvContent
+
+    return new NextResponse(csvWithBOM, {
       status: 200,
       headers: {
-        'Content-Type': 'text/csv',
-        'Content-Disposition': `attachment; filename="${filename}"`
+        'Content-Type': 'text/csv; charset=utf-8', // ✅ Add charset=utf-8 for proper encoding
+        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Cache-Control': 'no-cache'
       }
     })
 

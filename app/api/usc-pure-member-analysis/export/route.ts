@@ -228,8 +228,8 @@ export async function POST(request: NextRequest) {
       getRowValues = (row: any) => [
         row.line || '',
         row.unique_code || '',
-        `"${row.user_name || ''}"`,
-        row.traffic || '',
+        `"${String(row.user_name || '').replace(/"/g, '""')}"`,
+        `"${String(row.traffic || '').replace(/"/g, '""')}"`, // ✅ Wrap traffic in quotes and escape quotes for proper CSV encoding
         row.first_deposit_date || '',
         row.first_deposit_amount || 0,
         row.atv || 0,
@@ -248,14 +248,19 @@ export async function POST(request: NextRequest) {
     })
 
     const csv = csvRows.join('\n')
+    // ✅ Add BOM (Byte Order Mark) for proper UTF-8 encoding in Excel
+    // This ensures Khmer text and other Unicode characters display correctly
+    const csvWithBOM = '\ufeff' + csv
+    
     const metricsName = metrics.replace(/_/g, '_')
     const monthSuffix = month === 'ALL' ? 'yearly' : month.toLowerCase()
     const filename = `usc_pure_member_${metricsName}_${year}_${monthSuffix}.csv`
 
-    return new Response(csv, {
+    return new Response(csvWithBOM, {
       headers: {
-        'Content-Type': 'text/csv',
-        'Content-Disposition': `attachment; filename="${filename}"`
+        'Content-Type': 'text/csv; charset=utf-8', // ✅ Add charset=utf-8 for proper encoding
+        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Cache-Control': 'no-cache'
       }
     })
 
