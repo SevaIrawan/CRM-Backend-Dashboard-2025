@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Month is already string (January, February, etc) from slicer, or 'ALL'
-    const monthName = month
+    const monthName = month || ''
 
     console.log('📊 [Customer Assignment API] Using month:', { month, monthName })
 
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       .eq('year', parseInt(year))
     
     // ✅ Handle Month = "ALL"/"All" - query all months in the year
-    if (month && month.toUpperCase() !== 'ALL') {
+    if (month && month.toUpperCase() !== 'ALL' && monthName) {
       query = query.eq('month', monthName) // Filter by specific month
     }
     // If month = "ALL"/"All" or empty, no month filter (get all months in year)
