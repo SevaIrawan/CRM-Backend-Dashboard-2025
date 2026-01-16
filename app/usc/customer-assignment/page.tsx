@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Layout from '@/components/Layout'
 import Frame from '@/components/Frame'
@@ -171,6 +171,10 @@ export default function USCCustomerAssignmentPage() {
   const [savingHandlers, setSavingHandlers] = useState<Set<string>>(new Set())
   const [handlerLoading, setHandlerLoading] = useState(false)
   const [availableLines, setAvailableLines] = useState<string[]>([]) // Lines from blue_whale_usc
+
+  // ✅ Refs to prevent race conditions on rapid clicks
+  const savingHandlersRef = useRef<Set<string>>(new Set())
+  const savingAssignmentsRef = useRef<Set<string>>(new Set())
 
   // ✅ MODAL STATE for Days Active Transaction History Drill-Down
   const [showDaysActiveModal, setShowDaysActiveModal] = useState(false)
@@ -446,12 +450,21 @@ export default function USCCustomerAssignmentPage() {
 
   // Clear assignment - Reset to null in database
   const handleClearAssignment = async (userkey: string) => {
+    // ✅ Guard: Prevent multiple simultaneous calls (check both state and ref)
+    if (savingAssignments.has(userkey) || savingAssignmentsRef.current.has(userkey)) {
+      return
+    }
+    
+    // ✅ Mark as saving immediately (synchronous)
+    savingAssignmentsRef.current.add(userkey)
+
     const customer = customerData.find(c => c.userkey === userkey)
     if (!customer) return
 
     // If customer already has snr_account in database, clear it via API
     if (customer.snr_account) {
       try {
+        setSavingAssignments(prev => new Set(prev).add(userkey))
         const userStr = localStorage.getItem('nexmax_user')
         const currentUser = userStr ? JSON.parse(userStr) : null
 
@@ -497,6 +510,14 @@ export default function USCCustomerAssignmentPage() {
       } catch (error) {
         console.error('❌ Error clearing assignment:', error)
         showToast('Error clearing assignment', 'error')
+      } finally {
+        // ✅ Clear from both state and ref
+        savingAssignmentsRef.current.delete(userkey)
+        setSavingAssignments(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(userkey)
+          return newSet
+        })
       }
     } else {
       // If no snr_account in database, just remove from editing state
@@ -508,6 +529,14 @@ export default function USCCustomerAssignmentPage() {
 
   // Save single assignment
   const handleSaveAssignment = async (userkey: string) => {
+    // ✅ Guard: Prevent multiple simultaneous calls (check both state and ref)
+    if (savingAssignments.has(userkey) || savingAssignmentsRef.current.has(userkey)) {
+      return
+    }
+    
+    // ✅ Mark as saving immediately (synchronous)
+    savingAssignmentsRef.current.add(userkey)
+
     const assignment = editingAssignments.get(userkey)
     if (!assignment) return
 
@@ -574,6 +603,8 @@ export default function USCCustomerAssignmentPage() {
       console.error('❌ Error saving assignment:', error)
       showToast('Error saving assignment', 'error')
     } finally {
+      // ✅ Clear from both state and ref
+      savingAssignmentsRef.current.delete(userkey)
       setSavingAssignments(prev => {
         const newSet = new Set(prev)
         newSet.delete(userkey)
@@ -783,6 +814,14 @@ export default function USCCustomerAssignmentPage() {
 
   // Save handler (update or create)
   const handleSaveHandler = async (id: string) => {
+    // ✅ Guard: Prevent multiple simultaneous calls (check both state and ref)
+    if (savingHandlers.has(id) || savingHandlersRef.current.has(id)) {
+      return
+    }
+    
+    // ✅ Mark as saving immediately (synchronous)
+    savingHandlersRef.current.add(id)
+
     const handler = editingHandlers.get(id)
     if (!handler) return
 
@@ -840,6 +879,8 @@ export default function USCCustomerAssignmentPage() {
       console.error('❌ Error saving handler:', error)
       showToast('Error saving handler', 'error')
     } finally {
+      // ✅ Clear from both state and ref
+      savingHandlersRef.current.delete(id)
       setSavingHandlers(prev => {
         const newSet = new Set(prev)
         newSet.delete(id)
@@ -850,6 +891,14 @@ export default function USCCustomerAssignmentPage() {
 
   // Clear handler
   const handleClearHandler = async (id: string) => {
+    // ✅ Guard: Prevent multiple simultaneous calls (check both state and ref)
+    if (savingHandlers.has(id) || savingHandlersRef.current.has(id)) {
+      return
+    }
+    
+    // ✅ Mark as saving immediately (synchronous)
+    savingHandlersRef.current.add(id)
+
     if (!id || id.startsWith('new-')) {
       // Just remove from editing if it's a new row
       const newEditing = new Map(editingHandlers)
@@ -894,6 +943,8 @@ export default function USCCustomerAssignmentPage() {
       console.error('❌ Error clearing handler:', error)
       showToast('Error clearing handler', 'error')
     } finally {
+      // ✅ Clear from both state and ref
+      savingHandlersRef.current.delete(id)
       setSavingHandlers(prev => {
         const newSet = new Set(prev)
         newSet.delete(id)
@@ -910,6 +961,52 @@ export default function USCCustomerAssignmentPage() {
       handler: handlerData.find(h => h.id === id)?.handler || ''
     }
   }
+
+  // ✅ Calculate Status (ND/OLD) based on first_deposit_date
+  const getCustomerStatus = useCallback((firstDepositDate: string | null): 'ND' | 'OLD' => {
+    if (!firstDepositDate || !year) {
+      return 'OLD'
+    }
+
+    try {
+      const depositDate = new Date(firstDepositDate)
+      // ✅ Validate date (Invalid Date will return NaN)
+      if (isNaN(depositDate.getTime())) {
+        return 'OLD'
+      }
+      
+      const depositYear = depositDate.getFullYear()
+      const depositMonth = depositDate.getMonth() + 1 // getMonth() returns 0-11
+      
+      const selectedYear = parseInt(year)
+      // ✅ Validate year parsing
+      if (isNaN(selectedYear)) {
+        return 'OLD'
+      }
+      
+      // Map month names to month numbers
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                         'July', 'August', 'September', 'October', 'November', 'December']
+      
+      // If month is 'ALL', check only year
+      if (month === 'ALL' || !month) {
+        return depositYear === selectedYear ? 'ND' : 'OLD'
+      }
+      
+      // If month is selected, check both year and month
+      const selectedMonthIndex = monthNames.findIndex(m => m.toLowerCase() === month.toLowerCase())
+      if (selectedMonthIndex === -1) {
+        return 'OLD' // Invalid month, default to OLD
+      }
+      
+      const selectedMonth = selectedMonthIndex + 1
+      
+      return (depositYear === selectedYear && depositMonth === selectedMonth) ? 'ND' : 'OLD'
+    } catch (error) {
+      console.error('❌ Error parsing first_deposit_date:', error)
+      return 'OLD'
+    }
+  }, [year, month])
 
   // Initialize
   useEffect(() => {
@@ -1011,6 +1108,18 @@ export default function USCCustomerAssignmentPage() {
         return sortDirection === 'asc' ? aDate - bDate : bDate - aDate
       }
 
+      // ✅ Handle Status column (ND/OLD)
+      if (sortColumn === 'status') {
+        const aStatus = getCustomerStatus(a.first_deposit_date)
+        const bStatus = getCustomerStatus(b.first_deposit_date)
+        // ND < OLD alphabetically, so ascending will show ND first
+        if (sortDirection === 'asc') {
+          return aStatus < bStatus ? -1 : aStatus > bStatus ? 1 : 0
+        } else {
+          return aStatus > bStatus ? -1 : aStatus < bStatus ? 1 : 0
+        }
+      }
+
       // Handle string columns (case-insensitive)
       aVal = String(aVal).toLowerCase()
       bVal = String(bVal).toLowerCase()
@@ -1023,7 +1132,7 @@ export default function USCCustomerAssignmentPage() {
     })
 
     return sorted
-  }, [customerData, sortColumn, sortDirection])
+  }, [customerData, sortColumn, sortDirection, getCustomerStatus])
 
   // Get editing state for a row
   const getEditingState = useCallback((userkey: string) => {
@@ -1130,7 +1239,8 @@ export default function USCCustomerAssignmentPage() {
         'WC', 
         'WA', 
         'GGR', 
-        'Tier', 
+        'Tier',
+        'Status',
         'Assignee', 
         'Handler'
       ]
@@ -1139,11 +1249,14 @@ export default function USCCustomerAssignmentPage() {
       csvRows.push(headers.join(','))
 
       result.data.forEach((customer: CustomerData) => {
+        // ✅ Calculate Status for export
+        const status = getCustomerStatus(customer.first_deposit_date)
+        
         csvRows.push([
-          customer.line || '',
-          customer.user_name || '',
-          customer.update_unique_code || '',
-          customer.traffic || '',
+          `"${String(customer.line || '').replace(/"/g, '""')}"`, // ✅ Wrap with quotes for proper CSV encoding
+          `"${String(customer.user_name || '').replace(/"/g, '""')}"`, // ✅ Wrap with quotes
+          `"${String(customer.update_unique_code || '').replace(/"/g, '""')}"`, // ✅ Wrap with quotes
+          `"${String(customer.traffic || '').replace(/"/g, '""')}"`, // ✅ Wrap traffic with quotes for Khmer text support
           customer.first_deposit_date ? new Date(customer.first_deposit_date).toISOString().split('T')[0] : '',
           customer.last_deposit_date ? new Date(customer.last_deposit_date).toISOString().split('T')[0] : '',
           String(customer.days_active),
@@ -1154,14 +1267,18 @@ export default function USCCustomerAssignmentPage() {
           String(customer.withdraw_cases),
           customer.withdraw_amount.toFixed(2),
           customer.ggr.toFixed(2),
-          customer.tier_name || '',
-          customer.snr_account || '',
-          customer.snr_handler || ''
+          `"${String(customer.tier_name || '').replace(/"/g, '""')}"`, // ✅ Wrap with quotes
+          status, // ✅ Status (ND or OLD)
+          `"${String(customer.snr_account || '').replace(/"/g, '""')}"`, // ✅ Wrap with quotes
+          `"${String(customer.snr_handler || '').replace(/"/g, '""')}"` // ✅ Wrap with quotes
         ].join(','))
       })
 
       const csvContent = csvRows.join('\n')
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      // ✅ Add BOM (Byte Order Mark) for proper UTF-8 encoding in Excel
+      // This ensures Khmer text and other Unicode characters display correctly
+      const csvWithBOM = '\ufeff' + csvContent
+      const blob = new Blob([csvWithBOM], { type: 'text/csv;charset=utf-8;' })
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -2301,6 +2418,22 @@ export default function USCCustomerAssignmentPage() {
                         Tier{renderSortIndicator('tier_name')}
                       </th>
                       <th 
+                        onDoubleClick={() => handleColumnSort('status')}
+                        style={{ 
+                          textAlign: 'center',
+                          border: '1px solid #e0e0e0',
+                          borderBottom: '2px solid #d0d0d0',
+                          padding: '8px 12px',
+                          whiteSpace: 'nowrap',
+                          width: 'auto',
+                          cursor: 'pointer',
+                          userSelect: 'none'
+                        }}
+                        title="Double click to sort"
+                      >
+                        Status{renderSortIndicator('status')}
+                      </th>
+                      <th 
                         onDoubleClick={() => handleColumnSort('snr_account')}
                         style={{ 
                           textAlign: 'center',
@@ -2462,6 +2595,31 @@ export default function USCCustomerAssignmentPage() {
                             border: '1px solid #e0e0e0',
                             padding: '8px 12px'
                           }}>{customer.tier_name || '-'}</td>
+                          <td style={{ 
+                            textAlign: 'center',
+                            border: '1px solid #e0e0e0',
+                            padding: '8px 12px'
+                          }}>
+                            {(() => {
+                              const status = getCustomerStatus(customer.first_deposit_date)
+                              return (
+                                <span
+                                  style={{
+                                    display: 'inline-block',
+                                    padding: '4px 12px',
+                                    borderRadius: '12px',
+                                    fontSize: '12px',
+                                    fontWeight: 600,
+                                    backgroundColor: status === 'ND' ? '#10b981' : '#f97316',
+                                    color: '#ffffff',
+                                    whiteSpace: 'nowrap'
+                                  }}
+                                >
+                                  {status}
+                                </span>
+                              )
+                            })()}
+                          </td>
                           <td style={{ 
                             textAlign: 'center',
                             border: '1px solid #e0e0e0',
