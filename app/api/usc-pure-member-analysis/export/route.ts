@@ -163,6 +163,7 @@ export async function POST(request: NextRequest) {
           unique_code: row.unique_code,
           user_name: row.user_name,
           traffic: row.traffic,
+          register_date: row.register_date || null,
           first_deposit_date: row.first_deposit_date,
           first_deposit_amount: row.first_deposit_amount || 0,
           atv: row.atv || 0,
@@ -182,6 +183,7 @@ export async function POST(request: NextRequest) {
           unique_code: row.unique_code,
           user_name: row.user_name,
           traffic: row.traffic,
+          register_date: row.register_date || null,
           first_deposit_date: row.first_deposit_date,
           first_deposit_amount: row.first_deposit_amount || 0,
           atv: row.atv || 0,
@@ -220,9 +222,9 @@ export async function POST(request: NextRequest) {
         row.ggr || 0
       ]
     } else {
-      // Old Member & New Depositor: 13 columns
+      // Old Member & New Depositor: 14 columns (added REGISTER DATE after TRAFFIC)
       headers = [
-        'BRAND', 'UNIQUE CODE', 'USER NAME', 'TRAFFIC', 'FDD', 'FDA', 'ATV',
+        'BRAND', 'UNIQUE CODE', 'USER NAME', 'TRAFFIC', 'REGISTER DATE', 'FDD', 'FDA', 'ATV',
         'DC', 'DA', 'WC', 'WA', 'BONUS', 'GGR (D-W)'
       ]
       getRowValues = (row: any) => [
@@ -230,6 +232,7 @@ export async function POST(request: NextRequest) {
         row.unique_code || '',
         `"${String(row.user_name || '').replace(/"/g, '""')}"`,
         `"${String(row.traffic || '').replace(/"/g, '""')}"`, // ✅ Wrap traffic in quotes and escape quotes for proper CSV encoding
+        row.register_date ? new Date(row.register_date).toISOString().split('T')[0] : '',
         row.first_deposit_date || '',
         row.first_deposit_amount || 0,
         row.atv || 0,

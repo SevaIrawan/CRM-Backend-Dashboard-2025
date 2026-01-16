@@ -99,12 +99,13 @@ export default function USCPureMemberAnalysisPage() {
         'ggr'
       ]
     } else {
-      // Old Member & New Depositor: 13 columns
+      // Old Member & New Depositor: 14 columns (added register_date after traffic)
       return [
         'line',
         'unique_code',
         'user_name',
         'traffic',
+        'register_date',
         'first_deposit_date',
         'first_deposit_amount',
         'atv',
