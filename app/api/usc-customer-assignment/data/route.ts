@@ -23,14 +23,14 @@ export async function GET(request: NextRequest) {
       user_allowed_brands: userAllowedBrands
     })
 
-    if (!year || !month) {
+    if (!year) {
       return NextResponse.json({
         success: false,
-        error: 'Year and Month are required'
+        error: 'Year is required'
       }, { status: 400 })
     }
 
-    // Month is already string (January, February, etc) from slicer
+    // Month is already string (January, February, etc) from slicer, or 'ALL'
     const monthName = month
 
     console.log('📊 [Customer Assignment API] Using month:', { month, monthName })
@@ -41,7 +41,12 @@ export async function GET(request: NextRequest) {
       .select('userkey, user_unique, line, update_unique_code, user_name, traffic, first_deposit_date, last_deposit_date, date, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, snr_account, snr_handler, tier_name')
       .eq('currency', 'USC')
       .eq('year', parseInt(year))
-      .eq('month', monthName) // ✅ Use month name (string) directly from slicer
+    
+    // ✅ Handle Month = "ALL"/"All" - query all months in the year
+    if (month && month.toUpperCase() !== 'ALL') {
+      query = query.eq('month', monthName) // Filter by specific month
+    }
+    // If month = "ALL"/"All" or empty, no month filter (get all months in year)
 
     // Apply line filter
     if (line && line !== 'ALL') {
@@ -57,8 +62,9 @@ export async function GET(request: NextRequest) {
       query = query.in('line', userAllowedBrands)
     }
 
-    // Apply tier filter
-    if (tier && tier !== 'ALL' && tier.trim()) {
+    // ✅ Apply tier filter - DISABLED when Month = "ALL"/"All" (hold logic for tier filter)
+    // When month = "ALL"/"All", tier filter is ignored (logic on hold)
+    if (month && month.toUpperCase() !== 'ALL' && tier && tier !== 'ALL' && tier.trim()) {
       query = query.eq('tier_name', tier)
     }
 
@@ -136,7 +142,8 @@ export async function GET(request: NextRequest) {
           withdraw_amount: 0,
           snr_account: row.snr_account || null,
           snr_handler: row.snr_handler || null,
-          tier_name: row.tier_name || null
+          // ✅ Set tier_name to "N/A" when Month = "ALL"/"All" (hold tier logic)
+          tier_name: (month && month.toUpperCase() !== 'ALL') ? (row.tier_name || null) : 'N/A'
         })
       }
 

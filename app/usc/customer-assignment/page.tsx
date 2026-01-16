@@ -246,7 +246,8 @@ export default function USCCustomerAssignmentPage() {
             if (parsed.defaults.year) {
               setYear(parsed.defaults.year)
             }
-            if (parsed.defaults.month) {
+            // ✅ Only set month if not empty and not "ALL"/"All" (prevent default to ALL)
+            if (parsed.defaults.month && parsed.defaults.month.toUpperCase() !== 'ALL') {
               setMonth(parsed.defaults.month)
             }
             console.log('✅ [Customer Assignment] Using cached slicer options')
@@ -303,7 +304,8 @@ export default function USCCustomerAssignmentPage() {
           if (result.data.defaults.year) {
             setYear(result.data.defaults.year)
           }
-          if (result.data.defaults.month) {
+          // ✅ Only set month if not empty and not "ALL"/"All" (prevent default to ALL)
+          if (result.data.defaults.month && result.data.defaults.month.toUpperCase() !== 'ALL') {
             setMonth(result.data.defaults.month)
           }
           console.log('✅ [Customer Assignment] Auto-set to defaults:', result.data.defaults)
@@ -988,8 +990,8 @@ export default function USCCustomerAssignmentPage() {
       const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                          'July', 'August', 'September', 'October', 'November', 'December']
       
-      // If month is 'ALL', check only year
-      if (month === 'ALL' || !month) {
+      // If month is 'ALL'/'All', check only year
+      if (!month || month.toUpperCase() === 'ALL') {
         return depositYear === selectedYear ? 'ND' : 'OLD'
       }
       
@@ -1238,15 +1240,17 @@ export default function USCCustomerAssignmentPage() {
         'DA', 
         'WC', 
         'WA', 
-        'GGR', 
-        'Tier',
+        'GGR',
+        // ✅ Hide Tier column in export when Month = "ALL"/"All" (tier logic on hold)
+        ...(month && month.toUpperCase() !== 'ALL' ? ['Tier'] : []),
         'Status',
         'Assignee', 
         'Handler'
       ]
       
       const csvRows: string[] = []
-      csvRows.push(headers.join(','))
+      // ✅ Wrap headers with quotes for consistency and proper CSV format
+      csvRows.push(headers.map(header => `"${header.replace(/"/g, '""')}"`).join(','))
 
       result.data.forEach((customer: CustomerData) => {
         // ✅ Calculate Status for export
@@ -1267,8 +1271,9 @@ export default function USCCustomerAssignmentPage() {
           String(customer.withdraw_cases),
           customer.withdraw_amount.toFixed(2),
           customer.ggr.toFixed(2),
-          `"${String(customer.tier_name || '').replace(/"/g, '""')}"`, // ✅ Wrap with quotes
-          status, // ✅ Status (ND or OLD)
+          // ✅ Hide Tier column in export when Month = "ALL"/"All" (tier logic on hold)
+          ...(month && month.toUpperCase() !== 'ALL' ? [`"${String(customer.tier_name || '').replace(/"/g, '""')}"`] : []),
+          `"${String(status).replace(/"/g, '""')}"`, // ✅ Status (ND or OLD) - Wrap with quotes
           `"${String(customer.snr_account || '').replace(/"/g, '""')}"`, // ✅ Wrap with quotes
           `"${String(customer.snr_handler || '').replace(/"/g, '""')}"` // ✅ Wrap with quotes
         ].join(','))
@@ -2130,22 +2135,25 @@ export default function USCCustomerAssignmentPage() {
                 </select>
               </div>
 
-              <div className="slicer-group">
-                <label className="slicer-label">TIER:</label>
-                <select 
-                  value={tier} 
-                  onChange={(e) => setTier(e.target.value)}
-                  className={`slicer-select ${slicerLoading ? 'disabled' : ''}`}
-                  disabled={slicerLoading}
-                >
-                  <option value="ALL">All</option>
-                  {slicerOptions.tiers.map((tierOption) => (
-                    <option key={tierOption} value={tierOption}>
-                      {tierOption}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* ✅ Hide Tier filter when Month = "ALL"/"All" (tier logic on hold) */}
+              {month && month.toUpperCase() !== 'ALL' && (
+                <div className="slicer-group">
+                  <label className="slicer-label">TIER:</label>
+                  <select 
+                    value={tier} 
+                    onChange={(e) => setTier(e.target.value)}
+                    className={`slicer-select ${slicerLoading ? 'disabled' : ''}`}
+                    disabled={slicerLoading}
+                  >
+                    <option value="ALL">All</option>
+                    {slicerOptions.tiers.map((tierOption) => (
+                      <option key={tierOption} value={tierOption}>
+                        {tierOption}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <button 
                 onClick={handleApplyFilters}
@@ -2401,22 +2409,25 @@ export default function USCCustomerAssignmentPage() {
                       >
                         GGR{renderSortIndicator('ggr')}
                       </th>
-                      <th 
-                        onDoubleClick={() => handleColumnSort('tier_name')}
-                        style={{ 
-                          textAlign: 'center',
-                          border: '1px solid #e0e0e0',
-                          borderBottom: '2px solid #d0d0d0',
-                          padding: '8px 12px',
-                          whiteSpace: 'nowrap',
-                          width: 'auto',
-                          cursor: 'pointer',
-                          userSelect: 'none',
-                        }}
-                        title="Double click to sort"
-                      >
-                        Tier{renderSortIndicator('tier_name')}
-                      </th>
+                      {/* ✅ Hide Tier column header when Month = "ALL"/"All" (tier logic on hold) */}
+                      {month && month.toUpperCase() !== 'ALL' && (
+                        <th 
+                          onDoubleClick={() => handleColumnSort('tier_name')}
+                          style={{ 
+                            textAlign: 'center',
+                            border: '1px solid #e0e0e0',
+                            borderBottom: '2px solid #d0d0d0',
+                            padding: '8px 12px',
+                            whiteSpace: 'nowrap',
+                            width: 'auto',
+                            cursor: 'pointer',
+                            userSelect: 'none',
+                          }}
+                          title="Double click to sort"
+                        >
+                          Tier{renderSortIndicator('tier_name')}
+                        </th>
+                      )}
                       <th 
                         onDoubleClick={() => handleColumnSort('status')}
                         style={{ 
@@ -2590,11 +2601,14 @@ export default function USCCustomerAssignmentPage() {
                             color: customer.ggr < 0 ? '#dc2626' : customer.ggr > 0 ? '#059669' : '#374151',
                             fontWeight: 600
                           }}>{formatNumber(customer.ggr)}</td>
-                          <td style={{ 
-                            textAlign: 'left',
-                            border: '1px solid #e0e0e0',
-                            padding: '8px 12px'
-                          }}>{customer.tier_name || '-'}</td>
+                          {/* ✅ Hide Tier column data when Month = "ALL"/"All" (tier logic on hold) */}
+                          {month && month.toUpperCase() !== 'ALL' && (
+                            <td style={{ 
+                              textAlign: 'left',
+                              border: '1px solid #e0e0e0',
+                              padding: '8px 12px'
+                            }}>{customer.tier_name || '-'}</td>
+                          )}
                           <td style={{ 
                             textAlign: 'center',
                             border: '1px solid #e0e0e0',

@@ -136,8 +136,8 @@ export async function GET(request: NextRequest) {
     }
     
     // Fallback if maxDate extraction failed
-    if (!defaultMonth && months.length > 0) {
-      defaultMonth = months[months.length - 1].value // Last month (latest) - already string
+    if (!defaultMonth && sortedMonths.length > 0) {
+      defaultMonth = sortedMonths[sortedMonths.length - 1] // Last month (latest) - already string
     }
     if (!defaultYear && years.length > 0) {
       defaultYear = years[0] // First year (latest, already sorted DESC)
@@ -161,7 +161,7 @@ export async function GET(request: NextRequest) {
       data: {
         lines: finalLines,
         years,
-        months,
+        months: months,
         tiers: sortedTiers,
         defaults: {
           line: defaultLine,
