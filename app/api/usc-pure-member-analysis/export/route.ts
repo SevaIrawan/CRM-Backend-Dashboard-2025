@@ -36,24 +36,22 @@ export async function POST(request: NextRequest) {
       periodEnd = `${year}-${monthNumber}-${lastDay.toString().padStart(2, '0')}`
     }
     
-    // ✅ Switch MV table berdasarkan month parameter
-    // Month = ALL → pakai YEARLY MV (pre-aggregated, SUPER FAST!)
-    // Month = specific → pakai MONTHLY MV (per month data)
+    // ✅ SELALU pakai MV MONTHLY saja (1 table)
+    // Month = ALL → query semua bulan dalam tahun, lalu aggregate di application level
+    // Month = specific → query bulan tersebut saja
     const isYearlyView = month === 'ALL'
-    const mvTable = isYearlyView 
-      ? 'db_usc_lifetime_customer_yearly_summary'  // Yearly MV (pre-aggregated)
-      : 'db_usc_monthly_customer_monthly_summary'   // Monthly MV (per month)
     
     let baseQuery = supabase
-      .from(mvTable)
+      .from('db_usc_monthly_customer_monthly_summary')
       .select('*')
       .eq('year', parseInt(year))
       .gt('deposit_cases', 0)  // ✅ WAJIB: active main (deposit_cases > 0)
     
-    // ✅ Filter by month (only for monthly MV) - month adalah TEXT (month name)
+    // ✅ Filter by month (only if specific month selected) - month adalah TEXT (month name)
     if (!isYearlyView) {
       baseQuery = baseQuery.eq('month', month) // Month adalah TEXT (month name seperti "January")
     }
+    // If Month = ALL, tidak filter month (ambil semua bulan dalam tahun)
     
     // ✅ FILTER di DATABASE berdasarkan metrics
     if (metrics === 'existing_member') {
@@ -66,7 +64,7 @@ export async function POST(request: NextRequest) {
       baseQuery = baseQuery.gte('first_deposit_date_market', periodStart).lte('first_deposit_date_market', periodEnd)
     }
     
-    console.log(`📊 [Pure Member Analysis Export] Querying ${isYearlyView ? 'YEARLY' : 'MONTHLY'} MV for metrics: ${metrics}, year: ${year}, month: ${month}`)
+    console.log(`📊 [Pure Member Analysis Export] Querying MONTHLY MV (${isYearlyView ? 'ALL months' : month}) for metrics: ${metrics}, year: ${year}`)
     
     // ✅ Sort berdasarkan metrics: Brand untuk Non-Pure, Unique Code untuk Pure
     const isPureMetric = metrics === 'pure_existing_member' || metrics === 'pure_new_depositor'
@@ -94,7 +92,7 @@ export async function POST(request: NextRequest) {
     let filteredData = rawData
     
     if (isPure) {
-      // Pure metrics: AGGREGATE by unique_code (deduplicate across brands)
+      // Pure metrics: AGGREGATE by unique_code (deduplicate across brands AND months if Yearly)
       const dataMap = new Map<string, any>()
       
       rawData.forEach((row: any) => {
@@ -108,8 +106,8 @@ export async function POST(request: NextRequest) {
         if (!dataMap.has(key)) {
           dataMap.set(key, {
             unique_code: row.unique_code,
-            brand_count: 0, // Will calculate UNIQUE brands
-            brand_names: new Set<string>(), // Track UNIQUE brands
+            brand_count: 0, // Will calculate UNIQUE brands across ALL months
+            brand_names: new Set<string>(), // Track UNIQUE brands across ALL months
             deposit_cases: 0,
             deposit_amount: 0,
             withdraw_cases: 0,
@@ -122,23 +120,27 @@ export async function POST(request: NextRequest) {
         
         const record = dataMap.get(key)
         
-        // ✅ SUM financial metrics
+        // ✅ SUM financial metrics (across all months if Yearly, or per month if Monthly)
+        // Note: GGR will be recalculated after aggregation, don't SUM row.ggr
         record.deposit_cases += (row.deposit_cases || 0)
         record.deposit_amount += (row.deposit_amount || 0)
         record.withdraw_cases += (row.withdraw_cases || 0)
         record.withdraw_amount += (row.withdraw_amount || 0)
         record.bonus += (row.bonus || 0)
-        record.ggr += (row.ggr || 0)
         
-        // ✅ Track UNIQUE brands (not SUM brand_count)
+        // ✅ Track UNIQUE brands across ALL months (not per month brand_count from MV)
+        // This ensures brand_count is correct for Yearly view
         if (row.line) {
           record.brand_names.add(row.line)
         }
       })
       
       filteredData = Array.from(dataMap.values()).map((record: any) => {
-        // ✅ Calculate brand_count and brand_name from UNIQUE brands
+        // ✅ Calculate brand_count and brand_name from UNIQUE brands across ALL months
         const uniqueBrands = Array.from(record.brand_names).sort()
+        const ggr = record.deposit_amount - record.withdraw_amount
+        const atv = record.deposit_cases > 0 ? record.deposit_amount / record.deposit_cases : 0
+        
         return {
           unique_code: record.unique_code,
           brand_count: uniqueBrands.length,
@@ -148,34 +150,85 @@ export async function POST(request: NextRequest) {
           withdraw_cases: record.withdraw_cases,
           withdraw_amount: record.withdraw_amount,
           bonus: record.bonus,
-          ggr: record.ggr,
-          atv: record.deposit_cases > 0 ? record.deposit_amount / record.deposit_cases : 0
+          ggr: ggr,
+          atv: atv
         }
       })
       
-      console.log(`📊 [Pure Member Analysis Export] Deduplicated to ${filteredData.length} unique customers`)
+      console.log(`📊 [Pure Member Analysis Export] Deduplicated to ${filteredData.length} unique customers (${isYearlyView ? 'yearly aggregated' : 'monthly'})`)
     } else {
-      // Non-Pure metrics
+      // Non-Pure metrics (Old, ND)
       if (isYearlyView) {
-        // ✅ Yearly view (Month=ALL): Data sudah pre-aggregated dari yearly MV, DIRECT data
-        filteredData = rawData.map((row: any) => ({
-          line: row.line,
-          unique_code: row.unique_code,
-          user_name: row.user_name,
-          traffic: row.traffic,
-          register_date: row.register_date || null,
-          first_deposit_date: row.first_deposit_date,
-          first_deposit_amount: row.first_deposit_amount || 0,
-          atv: row.atv || 0,
-          deposit_cases: row.deposit_cases || 0,
-          deposit_amount: row.deposit_amount || 0,
-          withdraw_cases: row.withdraw_cases || 0,
-          withdraw_amount: row.withdraw_amount || 0,
-          bonus: row.bonus || 0,
-          ggr: row.ggr || 0
-        }))
+        // ✅ Yearly view (Month=ALL): AGGREGATE by (user_unique, line) across all months
+        const dataMap = new Map<string, any>()
         
-        console.log(`📊 [Pure Member Analysis Export] Yearly MV direct data: ${filteredData.length} records`)
+        rawData.forEach((row: any) => {
+          // Key = user_unique + line (aggregate across all months)
+          const key = `${row.user_unique || ''}_${row.line || ''}`
+          
+          if (!dataMap.has(key)) {
+            dataMap.set(key, {
+              user_unique: row.user_unique,
+              unique_code: row.unique_code,
+              line: row.line,
+              user_name: row.user_name || null,
+              traffic: row.traffic || null,
+              register_date: row.register_date || null,
+              first_deposit_date: row.first_deposit_date,
+              first_deposit_amount: 0, // Will SUM
+              deposit_cases: 0,
+              deposit_amount: 0,
+              withdraw_cases: 0,
+              withdraw_amount: 0,
+              bonus: 0,
+              ggr: 0,
+              atv: 0
+            })
+          }
+          
+          const record = dataMap.get(key)
+          
+          // ✅ SUM financial metrics across all months
+          record.first_deposit_amount += (row.first_deposit_amount || 0)
+          record.deposit_cases += (row.deposit_cases || 0)
+          record.deposit_amount += (row.deposit_amount || 0)
+          record.withdraw_cases += (row.withdraw_cases || 0)
+          record.withdraw_amount += (row.withdraw_amount || 0)
+          record.bonus += (row.bonus || 0)
+          
+          // ✅ Take MAX for user_name, traffic (or first non-null)
+          if (!record.user_name && row.user_name) {
+            record.user_name = row.user_name
+          }
+          if (!record.traffic && row.traffic) {
+            record.traffic = row.traffic
+          }
+        })
+        
+        filteredData = Array.from(dataMap.values()).map((record: any) => {
+          // ✅ Recalculate GGR and ATV after aggregation
+          const ggr = record.deposit_amount - record.withdraw_amount
+          const atv = record.deposit_cases > 0 ? record.deposit_amount / record.deposit_cases : 0
+          
+          return {
+            line: record.line,
+            unique_code: record.unique_code,
+            user_name: record.user_name,
+            traffic: record.traffic,
+            register_date: record.register_date,
+            first_deposit_date: record.first_deposit_date,
+            first_deposit_amount: record.first_deposit_amount,
+            atv: atv,
+            deposit_cases: record.deposit_cases,
+            deposit_amount: record.deposit_amount,
+            withdraw_cases: record.withdraw_cases,
+            withdraw_amount: record.withdraw_amount,
+            bonus: record.bonus,
+            ggr: ggr
+          }
+        })
+        
+        console.log(`📊 [Pure Member Analysis Export] Yearly aggregated (from monthly MV): ${filteredData.length} records`)
       } else {
         // ✅ Monthly view: DIRECT data (no aggregation, FDA is real value)
         filteredData = rawData.map((row: any) => ({
