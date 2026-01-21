@@ -496,13 +496,24 @@ export default function MYRMemberAnalyticPage() {
     try {
       setSlicerLoading(true)
       
-      const userAllowedBrands = localStorage.getItem('userAllowedBrands')
+      // Get user's allowed brands from localStorage
+      let allowedBrands: string[] | null = null
+      try {
+        const userStr = localStorage.getItem('nexmax_user')
+        if (userStr) {
+          allowedBrands = JSON.parse(userStr).allowed_brands || null
+        }
+      } catch (parseError) {
+        console.warn('⚠️ [Member Analytic] Failed to parse user data from localStorage:', parseError)
+        allowedBrands = null
+      }
+
       const headers: HeadersInit = {
         'Content-Type': 'application/json'
       }
       
-      if (userAllowedBrands) {
-        headers['x-user-allowed-brands'] = userAllowedBrands
+      if (allowedBrands) {
+        headers['x-user-allowed-brands'] = JSON.stringify(allowedBrands)
       }
 
       const response = await fetch('/api/myr-member-analytic/slicer-options', {
@@ -539,13 +550,24 @@ export default function MYRMemberAnalyticPage() {
       if (tierData.length === 0) {
         setLoading(true)
       }
-      const userAllowedBrands = localStorage.getItem('userAllowedBrands')
+      // Get user's allowed brands from localStorage
+      let allowedBrands: string[] | null = null
+      try {
+        const userStr = localStorage.getItem('nexmax_user')
+        if (userStr) {
+          allowedBrands = JSON.parse(userStr).allowed_brands || null
+        }
+      } catch (parseError) {
+        console.warn('⚠️ [Member Analytic] Failed to parse user data from localStorage:', parseError)
+        allowedBrands = null
+      }
+
       const headers: HeadersInit = {
         'Content-Type': 'application/json'
       }
       
-      if (userAllowedBrands) {
-        headers['x-user-allowed-brands'] = userAllowedBrands
+      if (allowedBrands) {
+        headers['x-user-allowed-brands'] = JSON.stringify(allowedBrands)
       }
 
       const params = new URLSearchParams({
@@ -607,13 +629,24 @@ export default function MYRMemberAnalyticPage() {
       if (customerBehaviorData.length === 0) {
         setCustomerBehaviorLoading(true)
       }
-      const userAllowedBrands = localStorage.getItem('userAllowedBrands')
+      // Get user's allowed brands from localStorage
+      let allowedBrands: string[] | null = null
+      try {
+        const userStr = localStorage.getItem('nexmax_user')
+        if (userStr) {
+          allowedBrands = JSON.parse(userStr).allowed_brands || null
+        }
+      } catch (parseError) {
+        console.warn('⚠️ [Member Analytic] Failed to parse user data from localStorage:', parseError)
+        allowedBrands = null
+      }
+
       const headers: HeadersInit = {
         'Content-Type': 'application/json'
       }
       
-      if (userAllowedBrands) {
-        headers['x-user-allowed-brands'] = userAllowedBrands
+      if (allowedBrands) {
+        headers['x-user-allowed-brands'] = JSON.stringify(allowedBrands)
       }
 
       const params = new URLSearchParams({

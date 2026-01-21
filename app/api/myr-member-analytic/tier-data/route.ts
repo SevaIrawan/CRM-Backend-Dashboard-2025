@@ -15,9 +15,12 @@ export async function GET(request: NextRequest) {
     const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
     const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
 
+    console.log('🔍 [Tier Data] User allowed brands:', userAllowedBrands, 'Selected line:', line)
+
     // ✅ Validate brand access for Squad Lead
     if (line && line !== 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
       if (!userAllowedBrands.includes(line)) {
+        console.log('❌ [Tier Data] Unauthorized access attempt:', { line, userAllowedBrands })
         return NextResponse.json({
           success: false,
           error: 'Unauthorized',
@@ -34,8 +37,12 @@ export async function GET(request: NextRequest) {
     // ✅ Apply line filter
     if (line && line !== 'ALL') {
       baseQuery = baseQuery.eq('line', line)
+      console.log('🔍 [Tier Data] Applied line filter:', line)
     } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
       baseQuery = baseQuery.in('line', userAllowedBrands)
+      console.log('🔍 [Tier Data] Applied SquadLead filter (ALL):', userAllowedBrands)
+    } else {
+      console.log('🔍 [Tier Data] No line filter applied (showing all brands)')
     }
 
     // ✅ Get total count first (separate query for count)
