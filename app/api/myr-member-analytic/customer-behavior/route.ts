@@ -52,8 +52,18 @@ export async function GET(request: NextRequest) {
       // If no userAllowedBrands, show all lines (no additional filter)
     }
 
-    // ✅ Get total count first
-    const { count, error: countError } = await baseQuery.select('*', { count: 'exact', head: true })
+    // ✅ Get total count first (separate query for count)
+    let countQuery = supabase
+      .from('mv_deposit_myr_summary')
+      .select('*', { count: 'exact', head: true })
+    
+    if (line && line !== 'ALL') {
+      countQuery = countQuery.eq('line', line)
+    } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
+      countQuery = countQuery.in('line', userAllowedBrands)
+    }
+    
+    const { count, error: countError } = await countQuery
 
     if (countError) {
       console.error('❌ Count error:', countError)
