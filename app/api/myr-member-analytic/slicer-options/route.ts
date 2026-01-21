@@ -46,8 +46,53 @@ export async function GET(request: NextRequest) {
       ? getDefaultBrandForSquadLead(userAllowedBrands) || filteredBrands[0] 
       : 'ALL'
     
+    // ✅ Get DISTINCT payment_method from mv_deposit_myr_summary
+    const { data: allPaymentMethods, error: paymentMethodsError } = await supabase
+      .from('mv_deposit_myr_summary')
+      .select('payment_method')
+      .not('payment_method', 'is', null)
+
+    if (paymentMethodsError) {
+      console.error('❌ Error fetching payment_methods:', paymentMethodsError)
+    }
+
+    const uniquePaymentMethods = Array.from(new Set(allPaymentMethods?.map(row => row.payment_method).filter(Boolean) || [])) as string[]
+    const sortedPaymentMethods = uniquePaymentMethods.sort()
+    const paymentMethodsWithAll = ['ALL', ...sortedPaymentMethods]
+
+    // ✅ Get DISTINCT peak (active time) from mv_deposit_myr_summary
+    const { data: allPeaks, error: peaksError } = await supabase
+      .from('mv_deposit_myr_summary')
+      .select('peak')
+      .not('peak', 'is', null)
+
+    if (peaksError) {
+      console.error('❌ Error fetching peaks:', peaksError)
+    }
+
+    const uniquePeaks = Array.from(new Set(allPeaks?.map(row => row.peak).filter(Boolean) || [])) as string[]
+    const sortedPeaks = uniquePeaks.sort()
+    const peaksWithAll = ['ALL', ...sortedPeaks]
+
+    // ✅ Get DISTINCT fba_label from mv_deposit_myr_summary
+    const { data: allFbaLabels, error: fbaLabelsError } = await supabase
+      .from('mv_deposit_myr_summary')
+      .select('fba_label')
+      .not('fba_label', 'is', null)
+
+    if (fbaLabelsError) {
+      console.error('❌ Error fetching fba_labels:', fbaLabelsError)
+    }
+
+    const uniqueFbaLabels = Array.from(new Set(allFbaLabels?.map(row => row.fba_label).filter(Boolean) || [])) as string[]
+    const sortedFbaLabels = uniqueFbaLabels.sort()
+    const fbaLabelsWithAll = ['ALL', ...sortedFbaLabels]
+
     const slicerOptions = {
       lines: linesWithAll,
+      paymentMethods: paymentMethodsWithAll,
+      activeTimes: peaksWithAll,
+      fbaLabels: fbaLabelsWithAll,
       defaults: {
         line: defaultLine
       }
@@ -55,6 +100,9 @@ export async function GET(request: NextRequest) {
 
     console.log('✅ [MYR Member-Analytic API] Slicer options loaded:', {
       lines: linesWithAll.length,
+      paymentMethods: paymentMethodsWithAll.length,
+      activeTimes: peaksWithAll.length,
+      fbaLabels: fbaLabelsWithAll.length,
       defaultLine
     })
 

@@ -7,9 +7,13 @@ export async function GET(request: NextRequest) {
   const line = searchParams.get('line') || 'ALL'
   const page = parseInt(searchParams.get('page') || '1')
   const limit = parseInt(searchParams.get('limit') || '1000')
+  const searchUserName = searchParams.get('searchUserName') || ''
+  const paymentMethod = searchParams.get('paymentMethod') || 'ALL'
+  const activeTime = searchParams.get('activeTime') || 'ALL'
+  const fba = searchParams.get('fba') || 'ALL'
 
   try {
-    console.log('📊 [MYR Member-Analytic Customer Behavior] Fetching data:', { line, page, limit })
+    console.log('📊 [MYR Member-Analytic Customer Behavior] Fetching data:', { line, page, limit, searchUserName, paymentMethod, activeTime, fba })
 
     // ✅ Get user's allowed brands from request header
     const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
@@ -41,7 +45,7 @@ export async function GET(request: NextRequest) {
         line
       `)
 
-    // ✅ Apply line filter only
+    // ✅ Apply line filter
     if (line && line !== 'ALL') {
       baseQuery = baseQuery.eq('line', line)
     } else if (line === 'ALL') {
@@ -50,6 +54,22 @@ export async function GET(request: NextRequest) {
         baseQuery = baseQuery.in('line', userAllowedBrands)
       }
       // If no userAllowedBrands, show all lines (no additional filter)
+    }
+
+    // ✅ Apply search filter if provided
+    if (searchUserName && searchUserName.trim()) {
+      baseQuery = baseQuery.ilike('user_name', `%${searchUserName.trim()}%`)
+    }
+
+    // ✅ Apply slicer filters
+    if (paymentMethod && paymentMethod !== 'ALL') {
+      baseQuery = baseQuery.eq('payment_method', paymentMethod)
+    }
+    if (activeTime && activeTime !== 'ALL') {
+      baseQuery = baseQuery.eq('peak', activeTime)
+    }
+    if (fba && fba !== 'ALL') {
+      baseQuery = baseQuery.eq('fba_label', fba)
     }
 
     // ✅ Get total count first (separate query for count)
@@ -61,6 +81,22 @@ export async function GET(request: NextRequest) {
       countQuery = countQuery.eq('line', line)
     } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
       countQuery = countQuery.in('line', userAllowedBrands)
+    }
+
+    // ✅ Apply search filter to count query
+    if (searchUserName && searchUserName.trim()) {
+      countQuery = countQuery.ilike('user_name', `%${searchUserName.trim()}%`)
+    }
+
+    // ✅ Apply slicer filters to count query
+    if (paymentMethod && paymentMethod !== 'ALL') {
+      countQuery = countQuery.eq('payment_method', paymentMethod)
+    }
+    if (activeTime && activeTime !== 'ALL') {
+      countQuery = countQuery.eq('peak', activeTime)
+    }
+    if (fba && fba !== 'ALL') {
+      countQuery = countQuery.eq('fba_label', fba)
     }
     
     const { count, error: countError } = await countQuery
@@ -108,6 +144,7 @@ export async function GET(request: NextRequest) {
 
     // ✅ Map data to match requested columns
     const finalData = rawData.map((row: any) => ({
+      line: row.line || null,
       unique_code: row.unique_code || null,
       user_name: row.user_name || null,
       absent: row.absent ?? null,

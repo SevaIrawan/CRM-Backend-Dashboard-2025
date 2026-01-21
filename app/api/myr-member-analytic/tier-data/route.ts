@@ -94,6 +94,7 @@ export async function GET(request: NextRequest) {
 
     // ✅ Map data to match requested columns - only return exact fields needed
     const finalData = rawData.map((row: any) => ({
+      line: row.line || null,
       unique_code: row.unique_code || null,
       user_name: row.user_name || null,
       absent: row.absent ?? null,

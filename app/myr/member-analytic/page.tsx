@@ -8,6 +8,9 @@ import { KPI_ICONS } from '@/lib/CentralIcon'
 
 interface SlicerOptions {
   lines: string[]
+  paymentMethods?: string[]
+  activeTimes?: string[]
+  fbaLabels?: string[]
   defaults?: {
     line: string
   }
@@ -28,7 +31,10 @@ interface Pagination {
 
 export default function MYRMemberAnalyticPage() {
   const [slicerOptions, setSlicerOptions] = useState<SlicerOptions>({
-    lines: []
+    lines: [],
+    paymentMethods: [],
+    activeTimes: [],
+    fbaLabels: []
   })
   const [selectedLine, setSelectedLine] = useState('ALL')
   const [loading, setLoading] = useState(true)
@@ -64,9 +70,20 @@ export default function MYRMemberAnalyticPage() {
   const [customerBehaviorSearchUserName, setCustomerBehaviorSearchUserName] = useState('')
   const [customerBehaviorSearchInput, setCustomerBehaviorSearchInput] = useState('')
   const [customerBehaviorLoading, setCustomerBehaviorLoading] = useState(false)
+  
+  // Customer Behavior slicer states (selected - for UI)
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('ALL')
+  const [selectedActiveTime, setSelectedActiveTime] = useState('ALL')
+  const [selectedFBA, setSelectedFBA] = useState('ALL')
+  
+  // Customer Behavior slicer applied states (for filtering - only updated when Search clicked)
+  const [appliedPaymentMethod, setAppliedPaymentMethod] = useState('ALL')
+  const [appliedActiveTime, setAppliedActiveTime] = useState('ALL')
+  const [appliedFBA, setAppliedFBA] = useState('ALL')
 
   // Column order for Tier_Data bookmark
   const tierDataColumnOrder = [
+    'line',
     'unique_code',
     'user_name',
     'absent',
@@ -92,6 +109,7 @@ export default function MYRMemberAnalyticPage() {
 
   // Column order for Customer Behavior bookmark
   const customerBehaviorColumnOrder = [
+    'line',
     'unique_code',
     'user_name',
     'absent',
@@ -106,6 +124,7 @@ export default function MYRMemberAnalyticPage() {
   const formatHeaderTitle = (column: string): string => {
     const headerMap: { [key: string]: string } = {
       // Tier Data headers
+      'line': 'BRAND',
       'unique_code': 'UNIQUE CODE',
       'user_name': 'USER NAME',
       'absent': 'ABSENT',
@@ -161,6 +180,9 @@ export default function MYRMemberAnalyticPage() {
   const getColumnAlignment = (column: string, value: any): string => {
     // User name should always be left aligned
     if (column === 'user_name') return 'left'
+    
+    // Brand (line) should be center aligned
+    if (column === 'line') return 'center'
     
     // Customer Behavior columns should be center aligned
     if (column === 'absent' || column === 'payment_method' || column === 'peak' || column === 'bonus_type' || column === 'provider' || column === 'fba_label') {
@@ -438,6 +460,13 @@ export default function MYRMemberAnalyticPage() {
         setCustomerBehaviorSearchUserName('')
         setCustomerBehaviorSearchInput('')
       }
+      // Reset slicers when line changes (both selected and applied)
+      setSelectedPaymentMethod('ALL')
+      setSelectedActiveTime('ALL')
+      setSelectedFBA('ALL')
+      setAppliedPaymentMethod('ALL')
+      setAppliedActiveTime('ALL')
+      setAppliedFBA('ALL')
       // Fetch data immediately (no setTimeout to prevent flash)
       fetchCustomerBehaviorData()
     } else if (activeBookmark !== 'tier-data' && activeBookmark !== 'customer-behavior') {
@@ -453,11 +482,15 @@ export default function MYRMemberAnalyticPage() {
   }, [pagination.currentPage])
 
   useEffect(() => {
-    const isInitialMount = customerBehaviorPagination.currentPage === 1 && customerBehaviorPagination.totalPages === 1 && customerBehaviorPagination.totalRecords === 0
-    if (activeBookmark === 'customer-behavior' && selectedLine && !isInitialMount) {
-      fetchCustomerBehaviorData()
+    // Skip initial mount - handled by the main useEffect above
+    if (activeBookmark === 'customer-behavior' && selectedLine) {
+      const isInitialMount = customerBehaviorPagination.currentPage === 1 && customerBehaviorPagination.totalPages === 1 && customerBehaviorPagination.totalRecords === 0
+      // Always fetch when filters change, but skip true initial mount
+      if (!isInitialMount) {
+        fetchCustomerBehaviorData()
+      }
     }
-  }, [customerBehaviorPagination.currentPage])
+  }, [customerBehaviorPagination.currentPage, appliedPaymentMethod, appliedActiveTime, appliedFBA, customerBehaviorSearchUserName, selectedLine, activeBookmark])
 
   const fetchSlicerOptions = async () => {
     try {
@@ -586,7 +619,11 @@ export default function MYRMemberAnalyticPage() {
       const params = new URLSearchParams({
         line: selectedLine,
         page: customerBehaviorPagination.currentPage.toString(),
-        limit: customerBehaviorPagination.recordsPerPage.toString()
+        limit: customerBehaviorPagination.recordsPerPage.toString(),
+        searchUserName: customerBehaviorSearchUserName || '',
+        paymentMethod: appliedPaymentMethod,
+        activeTime: appliedActiveTime,
+        fba: appliedFBA
       })
 
       const response = await fetch(`/api/myr-member-analytic/customer-behavior?${params}`, {
@@ -631,29 +668,54 @@ export default function MYRMemberAnalyticPage() {
     }
   }
 
-  // Filter customer behavior data based on search
+  // ✅ Data already filtered by server (API), so no need for client-side filtering
+  // Filter customer behavior data - NO LONGER NEEDED, data already filtered by API
   const getFilteredCustomerBehaviorData = () => {
-    if (!customerBehaviorSearchUserName.trim()) {
-      return customerBehaviorData
-    }
-    
-    return customerBehaviorData.filter((row: TierDataRow) => {
-      const userName = row.user_name || ''
-      return userName.toLowerCase().includes(customerBehaviorSearchUserName.toLowerCase())
-    })
+    // API sudah filter berdasarkan searchUserName, paymentMethod, activeTime, fba
+    // Jadi langsung return customerBehaviorData tanpa filter tambahan
+    return customerBehaviorData
   }
 
   const filteredCustomerBehaviorData = getFilteredCustomerBehaviorData()
+  
+  // ✅ Use slicer options from API (all available options, not filtered)
+  const paymentMethodOptions = slicerOptions.paymentMethods || ['ALL']
+  const activeTimeOptions = slicerOptions.activeTimes || ['ALL']
+  const fbaOptions = slicerOptions.fbaLabels || ['ALL']
 
   // Handle customer behavior search
   const handleCustomerBehaviorSearch = () => {
     setCustomerBehaviorSearchUserName(customerBehaviorSearchInput)
+    setCustomerBehaviorPagination(prev => ({ ...prev, currentPage: 1 }))
+    // Trigger fetch will happen via useEffect when customerBehaviorSearchUserName changes
   }
 
   // Handle clear customer behavior search
   const handleClearCustomerBehaviorSearch = () => {
     setCustomerBehaviorSearchInput('')
     setCustomerBehaviorSearchUserName('')
+  }
+  
+  // Handle slicer changes - only update selected (not applied) - no auto-reload
+  const handlePaymentMethodChange = (value: string) => {
+    setSelectedPaymentMethod(value)
+  }
+  
+  const handleActiveTimeChange = (value: string) => {
+    setSelectedActiveTime(value)
+  }
+  
+  const handleFBAChange = (value: string) => {
+    setSelectedFBA(value)
+  }
+  
+  // Handle Search button click - apply filters and reset pagination
+  const handleCustomerBehaviorSlicerSearch = () => {
+    setAppliedPaymentMethod(selectedPaymentMethod)
+    setAppliedActiveTime(selectedActiveTime)
+    setAppliedFBA(selectedFBA)
+    setCustomerBehaviorPagination(prev => ({ ...prev, currentPage: 1 }))
+    // Trigger fetch will happen via useEffect when applied filters change
   }
 
   const handleExport = async () => {
@@ -671,17 +733,36 @@ export default function MYRMemberAnalyticPage() {
         ? searchInput 
         : customerBehaviorSearchUserName
       
+      const exportBody: any = {
+        exportType,
+        line: selectedLine,
+        searchUserName: searchUserName || null
+      }
+      
+      // Add slicer filters for customer-behavior export
+      if (activeBookmark === 'customer-behavior') {
+        exportBody.paymentMethod = appliedPaymentMethod !== 'ALL' ? appliedPaymentMethod : null
+        exportBody.activeTime = appliedActiveTime !== 'ALL' ? appliedActiveTime : null
+        exportBody.fba = appliedFBA !== 'ALL' ? appliedFBA : null
+        
+        console.log('📤 [Export] Customer Behavior filters:', {
+          paymentMethod: exportBody.paymentMethod,
+          activeTime: exportBody.activeTime,
+          fba: exportBody.fba,
+          searchUserName: exportBody.searchUserName,
+          line: exportBody.line,
+          filteredCount: filteredCustomerBehaviorData.length,
+          totalCount: customerBehaviorData.length
+        })
+      }
+      
       const response = await fetch('/api/myr-member-analytic/export', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-user-allowed-brands': JSON.stringify(allowedBrands)
         },
-        body: JSON.stringify({
-          exportType,
-          line: selectedLine,
-          searchUserName: searchUserName || null
-        }),
+        body: JSON.stringify(exportBody),
         // Increase timeout for large datasets
         signal: AbortSignal.timeout(300000) // 5 minutes timeout
       })
@@ -1157,6 +1238,15 @@ export default function MYRMemberAnalyticPage() {
                                       }}>
                                         {formatTableCell(row[column])}
                                       </span>
+                                    ) : (column === 'winrate' || column === 'wd_rate') ? (
+                                      (() => {
+                                        const numericValue = typeof row[column] === 'number' ? row[column] : parseFloat(row[column])
+                                        if (isNaN(numericValue) || row[column] === null || row[column] === undefined || row[column] === '') {
+                                          return '-'
+                                        }
+                                        const percentValue = (numericValue * 100).toFixed(2)
+                                        return `${percentValue}%`
+                                      })()
                                     ) : (column === 'unique_code') ? (
                                       <span style={{ 
                                         fontWeight: 600,
@@ -1287,15 +1377,8 @@ export default function MYRMemberAnalyticPage() {
       return (
         <Frame variant="compact">
           <div className="deposit-container" style={{ opacity: customerBehaviorLoading && customerBehaviorData.length === 0 ? 0.5 : 1, transition: 'opacity 0.2s ease-in-out' }}>
-            {customerBehaviorLoading && customerBehaviorData.length === 0 ? (
+            {customerBehaviorLoading && customerBehaviorData.length === 0 && !customerBehaviorSearchUserName && appliedPaymentMethod === 'ALL' && appliedActiveTime === 'ALL' && appliedFBA === 'ALL' ? (
               <StandardLoadingSpinner message="Loading Customer Behavior MYR" />
-            ) : customerBehaviorData.length === 0 ? (
-              <div className="empty-container">
-                <div className="empty-icon">📭</div>
-                <div className="empty-text">
-                  No customer behavior data found for line {selectedLine}
-                </div>
-              </div>
             ) : (
               <>
                 <div className="simple-table-container" style={{ marginTop: '0' }}>
@@ -1417,6 +1500,168 @@ export default function MYRMemberAnalyticPage() {
                         </button>
                       )}
                     </div>
+                    
+                    {/* Slicers - Payment Method, Active Time, FBA */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      {/* Payment Method Slicer */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <label style={{
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          color: '#475569',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          Payment:
+                        </label>
+                        <select
+                          value={selectedPaymentMethod}
+                          onChange={(e) => handlePaymentMethodChange(e.target.value)}
+                          style={{
+                            padding: '6px 12px',
+                            fontSize: '12px',
+                            border: '2px solid #cbd5e1',
+                            borderRadius: '6px',
+                            backgroundColor: '#ffffff',
+                            color: '#1e293b',
+                            cursor: 'pointer',
+                            outline: 'none',
+                            transition: 'all 0.2s ease',
+                            minWidth: '150px'
+                          }}
+                          onFocus={(e) => {
+                            e.target.style.borderColor = '#3b82f6'
+                            e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'
+                          }}
+                          onBlur={(e) => {
+                            e.target.style.borderColor = '#cbd5e1'
+                            e.target.style.boxShadow = 'none'
+                          }}
+                        >
+                          {paymentMethodOptions.map((option) => (
+                            <option key={option} value={option}>{option}</option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      {/* Active Time Slicer */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <label style={{
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          color: '#475569',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          Active Time:
+                        </label>
+                        <select
+                          value={selectedActiveTime}
+                          onChange={(e) => handleActiveTimeChange(e.target.value)}
+                          style={{
+                            padding: '6px 12px',
+                            fontSize: '12px',
+                            border: '2px solid #cbd5e1',
+                            borderRadius: '6px',
+                            backgroundColor: '#ffffff',
+                            color: '#1e293b',
+                            cursor: 'pointer',
+                            outline: 'none',
+                            transition: 'all 0.2s ease',
+                            minWidth: '150px'
+                          }}
+                          onFocus={(e) => {
+                            e.target.style.borderColor = '#3b82f6'
+                            e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'
+                          }}
+                          onBlur={(e) => {
+                            e.target.style.borderColor = '#cbd5e1'
+                            e.target.style.boxShadow = 'none'
+                          }}
+                        >
+                          {activeTimeOptions.map((option) => (
+                            <option key={option} value={option}>{option}</option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      {/* FBA Slicer */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <label style={{
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          color: '#475569',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          FBA:
+                        </label>
+                        <select
+                          value={selectedFBA}
+                          onChange={(e) => handleFBAChange(e.target.value)}
+                          style={{
+                            padding: '6px 12px',
+                            fontSize: '12px',
+                            border: '2px solid #cbd5e1',
+                            borderRadius: '6px',
+                            backgroundColor: '#ffffff',
+                            color: '#1e293b',
+                            cursor: 'pointer',
+                            outline: 'none',
+                            transition: 'all 0.2s ease',
+                            minWidth: '150px'
+                          }}
+                          onFocus={(e) => {
+                            e.target.style.borderColor = '#3b82f6'
+                            e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'
+                          }}
+                          onBlur={(e) => {
+                            e.target.style.borderColor = '#cbd5e1'
+                            e.target.style.boxShadow = 'none'
+                          }}
+                        >
+                          {fbaOptions.map((option) => (
+                            <option key={option} value={option}>{option}</option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      {/* Search Button */}
+                      <button
+                        onClick={handleCustomerBehaviorSlicerSearch}
+                        disabled={customerBehaviorLoading}
+                        style={{
+                          backgroundColor: customerBehaviorLoading ? '#9ca3af' : '#10b981',
+                          padding: '8px 16px',
+                          border: 'none',
+                          borderRadius: '6px',
+                          color: 'white',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          cursor: customerBehaviorLoading ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.2s ease',
+                          whiteSpace: 'nowrap',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!customerBehaviorLoading) {
+                            e.currentTarget.style.backgroundColor = '#059669'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!customerBehaviorLoading) {
+                            e.currentTarget.style.backgroundColor = '#10b981'
+                          }
+                        }}
+                      >
+                        {customerBehaviorLoading ? 'Loading...' : 'Search'}
+                      </button>
+                    </div>
                   </div>
                   
                   {/* Add CSS for spinner animation */}
@@ -1464,10 +1709,10 @@ export default function MYRMemberAnalyticPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredCustomerBehaviorData.length === 0 && customerBehaviorSearchUserName ? (
+                      {filteredCustomerBehaviorData.length === 0 ? (
                         <tr>
                           <td 
-                            colSpan={customerBehaviorData.length > 0 ? getSortedColumns(Object.keys(customerBehaviorData[0]), 'customer-behavior').length : 8}
+                            colSpan={customerBehaviorData.length > 0 ? getSortedColumns(Object.keys(customerBehaviorData[0]), 'customer-behavior').length : customerBehaviorColumnOrder.length}
                             style={{
                               textAlign: 'center',
                               padding: '60px 20px',
@@ -1487,33 +1732,55 @@ export default function MYRMemberAnalyticPage() {
                                 color: '#64748b',
                                 fontWeight: 500
                               }}>
-                                No results found for "<strong style={{ color: '#1e293b' }}>{customerBehaviorSearchUserName}</strong>"
+                                {customerBehaviorSearchUserName || appliedPaymentMethod !== 'ALL' || appliedActiveTime !== 'ALL' || appliedFBA !== 'ALL' ? (
+                                  <>
+                                    No results found for the selected filters
+                                    <div style={{ marginTop: '8px', fontSize: '13px', color: '#94a3b8' }}>
+                                      Try adjusting your filters or search criteria
+                                    </div>
+                                  </>
+                                ) : (
+                                  <>
+                                    No customer behavior data found for line {selectedLine}
+                                  </>
+                                )}
                               </div>
-                              <button
-                                onClick={handleClearCustomerBehaviorSearch}
-                                style={{
-                                  marginTop: '8px',
-                                  padding: '8px 16px',
-                                  fontSize: '12px',
-                                  fontWeight: 600,
-                                  color: '#3b82f6',
-                                  backgroundColor: '#eff6ff',
-                                  border: '2px solid #3b82f6',
-                                  borderRadius: '6px',
-                                  cursor: 'pointer',
-                                  transition: 'all 0.2s'
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.backgroundColor = '#3b82f6'
-                                  e.currentTarget.style.color = '#ffffff'
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.backgroundColor = '#eff6ff'
-                                  e.currentTarget.style.color = '#3b82f6'
-                                }}
-                              >
-                                Clear Search
-                              </button>
+                              {(customerBehaviorSearchUserName || appliedPaymentMethod !== 'ALL' || appliedActiveTime !== 'ALL' || appliedFBA !== 'ALL') && (
+                                <button
+                                  onClick={() => {
+                                    handleClearCustomerBehaviorSearch()
+                                    setSelectedPaymentMethod('ALL')
+                                    setSelectedActiveTime('ALL')
+                                    setSelectedFBA('ALL')
+                                    setAppliedPaymentMethod('ALL')
+                                    setAppliedActiveTime('ALL')
+                                    setAppliedFBA('ALL')
+                                    setCustomerBehaviorPagination(prev => ({ ...prev, currentPage: 1 }))
+                                  }}
+                                  style={{
+                                    marginTop: '8px',
+                                    padding: '8px 16px',
+                                    fontSize: '12px',
+                                    fontWeight: 600,
+                                    color: '#3b82f6',
+                                    backgroundColor: '#eff6ff',
+                                    border: '2px solid #3b82f6',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s'
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#3b82f6'
+                                    e.currentTarget.style.color = '#ffffff'
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#eff6ff'
+                                    e.currentTarget.style.color = '#3b82f6'
+                                  }}
+                                >
+                                  Clear All Filters
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -1586,7 +1853,7 @@ export default function MYRMemberAnalyticPage() {
                     color: '#64748b',
                     fontWeight: 500
                   }}>
-                    {customerBehaviorSearchUserName ? (
+                    {(customerBehaviorSearchUserName || appliedPaymentMethod !== 'ALL' || appliedActiveTime !== 'ALL' || appliedFBA !== 'ALL') ? (
                       <>
                         Filtered: <strong style={{ color: '#3b82f6' }}>{filteredCustomerBehaviorData.length}</strong> records
                         {' '}<span style={{ color: '#94a3b8' }}>(of {customerBehaviorData.length} total)</span>

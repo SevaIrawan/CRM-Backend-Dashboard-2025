@@ -3,13 +3,28 @@ import { supabase } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
-    const { exportType, line, searchUserName } = await request.json()
+    const { exportType, line, searchUserName, paymentMethod, activeTime, fba } = await request.json()
 
     // ✅ Get user's allowed brands from request header
     const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
     const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
 
-    console.log('📊 [MYR Member-Analytic Export] Exporting data:', { exportType, line, searchUserName, user_allowed_brands: userAllowedBrands })
+    console.log('📊 [MYR Member-Analytic Export] Exporting data:', { 
+      exportType, 
+      line, 
+      searchUserName, 
+      paymentMethod, 
+      activeTime, 
+      fba, 
+      user_allowed_brands: userAllowedBrands,
+      filters_applied: {
+        line: line && line !== 'ALL',
+        searchUserName: !!(searchUserName && searchUserName.trim()),
+        paymentMethod: !!(paymentMethod && paymentMethod !== 'ALL' && paymentMethod !== null),
+        activeTime: !!(activeTime && activeTime !== 'ALL' && activeTime !== null),
+        fba: !!(fba && fba !== 'ALL' && fba !== null)
+      }
+    })
 
     // ✅ Validate brand access for Squad Lead
     if (line && line !== 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
@@ -117,6 +132,7 @@ export async function POST(request: NextRequest) {
 
       // Map data to match requested columns
       const finalData = rawData.map((row: any) => ({
+        line: row.line || null,
         unique_code: row.unique_code || null,
         user_name: row.user_name || null,
         absent: row.absent ?? null,
@@ -142,6 +158,7 @@ export async function POST(request: NextRequest) {
 
       // Define columns order for Tier Data
       const tierDataColumns = [
+        'line',
         'unique_code',
         'user_name',
         'absent',
@@ -166,6 +183,7 @@ export async function POST(request: NextRequest) {
       ]
 
       const tierDataHeaders: { [key: string]: string } = {
+        'line': 'BRAND',
         'unique_code': 'UNIQUE CODE',
         'user_name': 'USER NAME',
         'absent': 'ABSENT',
@@ -198,6 +216,14 @@ export async function POST(request: NextRequest) {
           const value = row[col]
           if (value === null || value === undefined || value === '') {
             return '-'
+          }
+          // Format winrate and wd_rate as percentage with 2 decimals
+          if (col === 'winrate' || col === 'wd_rate') {
+            const numericValue = typeof value === 'number' ? value : parseFloat(value)
+            if (isNaN(numericValue)) {
+              return '-'
+            }
+            return `${(numericValue * 100).toFixed(2)}%`
           }
           if (typeof value === 'number') {
             if (Number.isInteger(value)) {
@@ -241,6 +267,17 @@ export async function POST(request: NextRequest) {
         baseQuery = baseQuery.ilike('user_name', `%${searchUserName.trim()}%`)
       }
 
+      // ✅ Apply slicer filters (only if not null and not 'ALL')
+      if (paymentMethod && paymentMethod !== 'ALL' && paymentMethod !== null) {
+        baseQuery = baseQuery.eq('payment_method', paymentMethod)
+      }
+      if (activeTime && activeTime !== 'ALL' && activeTime !== null) {
+        baseQuery = baseQuery.eq('peak', activeTime)
+      }
+      if (fba && fba !== 'ALL' && fba !== null) {
+        baseQuery = baseQuery.eq('fba_label', fba)
+      }
+
       // ✅ Fetch ALL data in batches to handle large datasets
       const batchSize = 1000
       let allRawData: any[] = []
@@ -273,6 +310,17 @@ export async function POST(request: NextRequest) {
 
         if (searchUserName && searchUserName.trim()) {
           batchQuery = batchQuery.ilike('user_name', `%${searchUserName.trim()}%`)
+        }
+
+        // Apply slicer filters (only if not null and not 'ALL')
+        if (paymentMethod && paymentMethod !== 'ALL' && paymentMethod !== null) {
+          batchQuery = batchQuery.eq('payment_method', paymentMethod)
+        }
+        if (activeTime && activeTime !== 'ALL' && activeTime !== null) {
+          batchQuery = batchQuery.eq('peak', activeTime)
+        }
+        if (fba && fba !== 'ALL' && fba !== null) {
+          batchQuery = batchQuery.eq('fba_label', fba)
         }
 
         // Apply ordering and pagination
@@ -325,6 +373,7 @@ export async function POST(request: NextRequest) {
 
       // Map data to match requested columns
       const finalData = rawData.map((row: any) => ({
+        line: row.line || null,
         unique_code: row.unique_code || null,
         user_name: row.user_name || null,
         absent: row.absent ?? null,
@@ -337,6 +386,7 @@ export async function POST(request: NextRequest) {
 
       // Define columns order for Customer Behavior
       const customerBehaviorColumns = [
+        'line',
         'unique_code',
         'user_name',
         'absent',
@@ -348,6 +398,7 @@ export async function POST(request: NextRequest) {
       ]
 
       const customerBehaviorHeaders: { [key: string]: string } = {
+        'line': 'BRAND',
         'unique_code': 'UNIQUE CODE',
         'user_name': 'USER NAME',
         'absent': 'ABSENT',
