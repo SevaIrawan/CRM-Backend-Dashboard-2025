@@ -13,6 +13,8 @@ interface PureMemberData {
 interface SlicerOptions {
   years: string[]
   months: Array<{ value: string; label: string }>
+  brands?: string[]
+  traffic?: string[]
   defaults?: {
     year: string
     month: string
@@ -32,6 +34,8 @@ interface Pagination {
 export default function USCPureMemberAnalysisPage() {
   const [year, setYear] = useState('')
   const [month, setMonth] = useState('ALL')
+  const [selectedBrand, setSelectedBrand] = useState('ALL')
+  const [selectedTraffic, setSelectedTraffic] = useState('ALL')
   const [metrics, setMetrics] = useState('') // existing_member, pure_existing_member, new_depositor, pure_new_depositor
   const [pureMemberData, setPureMemberData] = useState<PureMemberData[]>([])
   const [pagination, setPagination] = useState<Pagination>({
@@ -44,7 +48,9 @@ export default function USCPureMemberAnalysisPage() {
   })
   const [slicerOptions, setSlicerOptions] = useState<SlicerOptions>({
     years: [],
-    months: []
+    months: [],
+    brands: [],
+    traffic: []
   })
   const [loading, setLoading] = useState(true)
   const [slicerLoading, setSlicerLoading] = useState(false)
@@ -53,6 +59,7 @@ export default function USCPureMemberAnalysisPage() {
   const [searchUserName, setSearchUserName] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const [isSearching, setIsSearching] = useState(false)
+  const [shouldFetchData, setShouldFetchData] = useState(false)
 
   // Columns to hide (always hidden from all metrics)
   const alwaysHiddenColumns = [
@@ -99,7 +106,7 @@ export default function USCPureMemberAnalysisPage() {
         'ggr'
       ]
     } else {
-      // Old Member & New Depositor: 14 columns (added register_date after traffic)
+      // Old Member & New Depositor: 15 columns (added days_active after first_deposit_amount)
       return [
         'line',
         'unique_code',
@@ -108,6 +115,7 @@ export default function USCPureMemberAnalysisPage() {
         'register_date',
         'first_deposit_date',
         'first_deposit_amount',
+        'days_active',
         'atv',
         'deposit_cases',
         'deposit_amount',
@@ -135,6 +143,7 @@ export default function USCPureMemberAnalysisPage() {
       'traffic': 'TRAFFIC',
       'first_deposit_date': 'FDD',
       'first_deposit_amount': 'FDA',
+      'days_active': 'DAYS ACTIVE',
       'last_deposit_date': 'LDD',
       'deposit_cases': 'DC',
       'deposit_amount': 'DA',
@@ -223,17 +232,20 @@ export default function USCPureMemberAnalysisPage() {
 
   const filteredData = getFilteredData()
 
-  // Handle search button click
-  const handleSearchUser = () => {
-    if (isPure) return
+  // Handle search (both user name and slicer filters)
+  const handleSearch = () => {
+    // Handle user name search if not Pure metrics
+    if (!isPure && searchInput.trim()) {
+      setIsSearching(true)
+      setTimeout(() => {
+        setSearchUserName(searchInput)
+        setIsSearching(false)
+      }, 300)
+    }
     
-    setIsSearching(true)
-    
-    // Simulate smooth loading (minimal delay untuk UX)
-    setTimeout(() => {
-      setSearchUserName(searchInput)
-      setIsSearching(false)
-    }, 300)
+    // Trigger data fetch for slicer filters (brand/traffic)
+    setShouldFetchData(true)
+    setPagination(prev => ({ ...prev, currentPage: 1 }))
   }
 
   // Handle clear search
@@ -244,57 +256,79 @@ export default function USCPureMemberAnalysisPage() {
 
   // Handle Enter key press
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handleSearchUser()
+    if (e.key === 'Enter' && !isPure) {
+      handleSearch()
     }
   }
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchSlicerOptions()
+      fetchSlicerOptions('ALL')
     }, 100)
     return () => clearTimeout(timer)
   }, [])
 
   useEffect(() => {
     if (!initialLoadDone && year && metrics) {
-      console.log('✅ [Pure Member Analysis] Initial load with defaults:', { year, month, metrics })
-      fetchPureMemberData()
+      console.log('✅ [Pure Member Analysis] Initial load with defaults:', { year, month, metrics, brand: selectedBrand })
+      fetchPureMemberData(true) // Force fetch for initial load
       setInitialLoadDone(true)
     } else if (initialLoadDone && year && metrics) {
-      console.log('✅ [Pure Member Analysis] Filters changed, fetching data:', { year, month, metrics })
-      // Clear search when switching to Pure metrics
-      if (isPure && (searchUserName || searchInput)) {
-        setSearchUserName('')
-        setSearchInput('')
+      // Auto fetch when year, month, or metrics change (not brand/traffic)
+      // Brand/traffic changes only fetch when Search button is clicked
+      console.log('✅ [Pure Member Analysis] Fetching data:', { year, month, metrics, brand: selectedBrand, traffic: selectedTraffic, triggeredBy: shouldFetchData ? 'search' : 'year/month/metrics' })
+      // Clear search and reset traffic/brand when switching to Pure metrics
+      if (isPure) {
+        if (searchUserName || searchInput) {
+          setSearchUserName('')
+          setSearchInput('')
+        }
+        // Reset brand and traffic to ALL for Pure metrics
+        setSelectedBrand('ALL')
+        setSelectedTraffic('ALL')
       }
-      fetchPureMemberData()
+      fetchPureMemberData(true)
+      if (shouldFetchData) {
+        setShouldFetchData(false) // Reset after fetch if triggered by search
+      }
     }
-  }, [year, month, metrics, initialLoadDone])
+  }, [year, month, metrics, shouldFetchData, initialLoadDone])
 
   useEffect(() => {
     const isInitialMount = pagination.currentPage === 1 && pagination.totalPages === 1 && pagination.totalRecords === 0
-    if (!isInitialMount && year && metrics) {
-      fetchPureMemberData()
+    if (!isInitialMount && year && metrics && (shouldFetchData || initialLoadDone)) {
+      fetchPureMemberData(true)
     }
-  }, [pagination.currentPage, year, month, metrics])
+  }, [pagination.currentPage])
 
-  const fetchSlicerOptions = async () => {
+  const fetchSlicerOptions = async (brandForTraffic: string = 'ALL') => {
     try {
       setSlicerLoading(true)
       
-      const response = await fetch('/api/usc-pure-member-analysis/slicer-options', {
+      // Fetch all options (years, months, brands) - no brand filter
+      const response = await fetch('/api/usc-pure-member-analysis/slicer-options?brand=ALL', {
         cache: 'no-store'
       })
       const result = await response.json()
       
       if (result.success) {
+        // Fetch traffic options will be handled by useEffect when year and metrics are set
+        // For initial load, use empty array (will be populated by useEffect)
+        let trafficOptions: string[] = ['ALL']
+        
+        const updatedOptions = {
+          ...result.data,
+          traffic: trafficOptions
+        }
+        
         console.log('✅ [Pure Member Analysis] Slicer options received:', {
-          years: result.data.years?.length || 0,
-          months: result.data.months?.length || 0,
-          monthsData: result.data.months
+          years: updatedOptions.years?.length || 0,
+          months: updatedOptions.months?.length || 0,
+          brands: updatedOptions.brands?.length || 0,
+          traffic: updatedOptions.traffic?.length || 0,
+          brand_filter: brandForTraffic
         })
-        setSlicerOptions(result.data)
+        setSlicerOptions(updatedOptions)
         
         if (result.data.defaults) {
           setYear(result.data.defaults.year || '')
@@ -311,19 +345,63 @@ export default function USCPureMemberAnalysisPage() {
       setSlicerLoading(false)
     }
   }
+  
+  // Fetch traffic options when brand, year, month, or metrics changes (separate from initial load)
+  useEffect(() => {
+    // Only refetch traffic options if initial load is done and year and metrics are set
+    if (initialLoadDone && year && metrics) {
+      const brandForTraffic = isPure ? 'ALL' : selectedBrand
+      const fetchTrafficOptions = async () => {
+        try {
+          const params = new URLSearchParams({
+            brand: brandForTraffic,
+            year: year,
+            month: month || 'ALL',
+            metrics: metrics
+          })
+          
+          const trafficResponse = await fetch(`/api/usc-pure-member-analysis/slicer-options?${params.toString()}`, {
+            cache: 'no-store'
+          })
+          const trafficResult = await trafficResponse.json()
+          
+          if (trafficResult.success) {
+            setSlicerOptions(prev => ({
+              ...prev,
+              traffic: trafficResult.data.traffic || []
+            }))
+            // Reset traffic to ALL when brand/year/month/metrics changes
+            setSelectedTraffic('ALL')
+          }
+        } catch (error) {
+          console.error('❌ [Pure Member Analysis] Error fetching traffic options:', error)
+        }
+      }
+      
+      fetchTrafficOptions()
+    }
+  }, [selectedBrand, year, month, metrics, isPure, initialLoadDone])
 
-  const fetchPureMemberData = async () => {
+  const fetchPureMemberData = async (forceFetch: boolean = false) => {
     if (!year || !metrics) {
       console.log('⏳ [Pure Member Analysis] Waiting for slicers to be set...')
       return
     }
     
+    // For non-initial loads, only fetch if shouldFetchData is true or forceFetch is true
+    if (initialLoadDone && !forceFetch && !shouldFetchData) {
+      return
+    }
+    
     try {
       setLoading(true)
+      setShouldFetchData(false) // Reset flag after fetching
       const params = new URLSearchParams({
         year,
         month: month || 'ALL',
         metrics,
+        brand: selectedBrand || 'ALL',
+        traffic: selectedTraffic || 'ALL',
         page: pagination.currentPage.toString(),
         limit: pagination.recordsPerPage.toString()
       })
@@ -386,7 +464,9 @@ export default function USCPureMemberAnalysisPage() {
         body: JSON.stringify({
           year,
           month: month || 'ALL',
-          metrics
+          metrics,
+          brand: selectedBrand || 'ALL',
+          traffic: selectedTraffic || 'ALL'
         }),
         signal: AbortSignal.timeout(300000)
       })
@@ -561,19 +641,22 @@ export default function USCPureMemberAnalysisPage() {
         
         <button
           onClick={() => {
+            if (selectedBrand !== 'ALL') return // Disabled when brand is not ALL
             setMetrics('pure_existing_member')
             setPagination(prev => ({ ...prev, currentPage: 1 }))
           }}
+          disabled={selectedBrand !== 'ALL'}
           style={{
             padding: '8px 18px',
             border: '1px solid #e2e8f0',
             borderRight: '0',
             borderRadius: '0',
-            backgroundColor: metrics === 'pure_existing_member' ? '#f59e0b' : '#ffffff',
-            color: metrics === 'pure_existing_member' ? '#ffffff' : '#64748b',
+            backgroundColor: metrics === 'pure_existing_member' ? '#f59e0b' : (selectedBrand !== 'ALL' ? '#f1f5f9' : '#ffffff'),
+            color: metrics === 'pure_existing_member' ? '#ffffff' : (selectedBrand !== 'ALL' ? '#94a3b8' : '#64748b'),
             fontWeight: 600,
             fontSize: '11px',
-            cursor: 'pointer',
+            cursor: selectedBrand !== 'ALL' ? 'not-allowed' : 'pointer',
+            opacity: selectedBrand !== 'ALL' ? 0.6 : 1,
             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             display: 'flex',
             alignItems: 'center',
@@ -609,18 +692,21 @@ export default function USCPureMemberAnalysisPage() {
         
         <button
           onClick={() => {
+            if (selectedBrand !== 'ALL') return // Disabled when brand is not ALL
             setMetrics('pure_new_depositor')
             setPagination(prev => ({ ...prev, currentPage: 1 }))
           }}
+          disabled={selectedBrand !== 'ALL'}
           style={{
             padding: '8px 18px',
             border: '1px solid #e2e8f0',
             borderRadius: '0 6px 6px 0',
-            backgroundColor: metrics === 'pure_new_depositor' ? '#f59e0b' : '#ffffff',
-            color: metrics === 'pure_new_depositor' ? '#ffffff' : '#64748b',
+            backgroundColor: metrics === 'pure_new_depositor' ? '#f59e0b' : (selectedBrand !== 'ALL' ? '#f1f5f9' : '#ffffff'),
+            color: metrics === 'pure_new_depositor' ? '#ffffff' : (selectedBrand !== 'ALL' ? '#94a3b8' : '#64748b'),
             fontWeight: 600,
             fontSize: '11px',
-            cursor: 'pointer',
+            cursor: selectedBrand !== 'ALL' ? 'not-allowed' : 'pointer',
+            opacity: selectedBrand !== 'ALL' ? 0.6 : 1,
             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             display: 'flex',
             alignItems: 'center',
@@ -664,17 +750,9 @@ export default function USCPureMemberAnalysisPage() {
         <div className="deposit-container">
           {loading ? (
             <StandardLoadingSpinner message="Loading Pure Member Analysis USC" />
-          ) : pureMemberData.length === 0 ? (
-            <div className="empty-container">
-              <div className="empty-icon">📭</div>
-              <div className="empty-text">
-                No data found for {getMetricsDisplayName(metrics)} in {year}
-              </div>
-            </div>
           ) : (
-            <>
-              <div className="simple-table-container" style={{ marginTop: '0' }}>
-                {/* Search User Name - Top Left */}
+            <div className="simple-table-container" style={{ marginTop: '0' }}>
+                {/* Search User Name - Top Left | Brand Slicer - Top Right */}
                 <div style={{
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -696,13 +774,94 @@ export default function USCPureMemberAnalysisPage() {
                     }}>
                       User Name:
                     </label>
-                    <input
-                      type="text"
-                      value={searchInput}
-                      onChange={(e) => setSearchInput(e.target.value)}
-                      onKeyPress={handleKeyPress}
-                      placeholder={isPure ? 'Not available for Pure metrics' : 'Enter user name...'}
-                      disabled={isPure || isSearching}
+                    <div style={{ position: 'relative', display: 'inline-block' }}>
+                      <input
+                        type="text"
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                        onKeyPress={handleKeyPress}
+                        placeholder={isPure ? 'Not available for Pure metrics' : 'Enter user name...'}
+                        disabled={isPure || isSearching}
+                        style={{
+                          padding: '8px 32px 8px 14px',
+                          fontSize: '13px',
+                          border: '2px solid #cbd5e1',
+                          borderRadius: '6px',
+                          outline: 'none',
+                          transition: 'all 0.2s ease',
+                          width: '300px',
+                          backgroundColor: (isPure || isSearching) ? '#f1f5f9' : '#ffffff',
+                          color: (isPure || isSearching) ? '#94a3b8' : '#1e293b',
+                          cursor: (isPure || isSearching) ? 'not-allowed' : 'text'
+                        }}
+                        onFocus={(e) => {
+                          if (!isPure && !isSearching) {
+                            e.target.style.borderColor = '#3b82f6'
+                            e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'
+                          }
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#cbd5e1'
+                          e.target.style.boxShadow = 'none'
+                        }}
+                      />
+                      {/* Clear Button (X icon inside input) */}
+                      {searchInput && !isPure && !isSearching && (
+                        <button
+                          onClick={handleClearSearch}
+                          type="button"
+                          style={{
+                            position: 'absolute',
+                            right: '8px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#94a3b8',
+                            fontSize: '16px',
+                            lineHeight: '1',
+                            transition: 'color 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.color = '#dc2626'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.color = '#94a3b8'
+                          }}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Brand Slicer - Top Right */}
+                  <div className="slicer-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <label className="slicer-label" style={{ 
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: isPure ? '#94a3b8' : '#475569',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      whiteSpace: 'nowrap'
+                    }}>BRAND:</label>
+                    <select 
+                      value={selectedBrand} 
+                      onChange={(e) => {
+                        // If Pure bookmark active, keep brand at ALL (shouldn't happen as select is disabled)
+                        if (isPure) {
+                          return
+                        }
+                        setSelectedBrand(e.target.value)
+                        setSelectedTraffic('ALL') // Reset traffic when brand changes
+                        // Don't auto fetch, wait for search button
+                      }}
+                      disabled={isPure || slicerLoading || !slicerOptions.brands || slicerOptions.brands.length === 0}
                       style={{
                         padding: '8px 14px',
                         fontSize: '13px',
@@ -710,13 +869,14 @@ export default function USCPureMemberAnalysisPage() {
                         borderRadius: '6px',
                         outline: 'none',
                         transition: 'all 0.2s ease',
-                        width: '300px',
-                        backgroundColor: (isPure || isSearching) ? '#f1f5f9' : '#ffffff',
-                        color: (isPure || isSearching) ? '#94a3b8' : '#1e293b',
-                        cursor: (isPure || isSearching) ? 'not-allowed' : 'text'
+                        backgroundColor: (isPure || slicerLoading || !slicerOptions.brands || slicerOptions.brands.length === 0) ? '#f1f5f9' : '#ffffff',
+                        color: (isPure || slicerLoading || !slicerOptions.brands || slicerOptions.brands.length === 0) ? '#94a3b8' : '#1e293b',
+                        cursor: (isPure || slicerLoading || !slicerOptions.brands || slicerOptions.brands.length === 0) ? 'not-allowed' : 'pointer',
+                        opacity: isPure ? 0.6 : 1,
+                        minWidth: '150px'
                       }}
                       onFocus={(e) => {
-                        if (!isPure && !isSearching) {
+                        if (!isPure && !slicerLoading && slicerOptions.brands && slicerOptions.brands.length > 0) {
                           e.target.style.borderColor = '#3b82f6'
                           e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'
                         }
@@ -725,89 +885,105 @@ export default function USCPureMemberAnalysisPage() {
                         e.target.style.borderColor = '#cbd5e1'
                         e.target.style.boxShadow = 'none'
                       }}
-                    />
-                    
-                    {/* Search Button */}
-                    <button
-                      onClick={handleSearchUser}
-                      disabled={isPure || isSearching || !searchInput.trim()}
+                    >
+                      {slicerOptions.brands && slicerOptions.brands.length > 0 ? (
+                        slicerOptions.brands.map((brand) => (
+                          <option key={brand} value={brand}>{brand}</option>
+                        ))
+                      ) : (
+                        <option value="ALL">Loading brands...</option>
+                      )}
+                    </select>
+                  </div>
+                  
+                  {/* Traffic Slicer - After Brand Slicer */}
+                  <div className="slicer-group" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '24px' }}>
+                    <label className="slicer-label" style={{ 
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: isPure ? '#94a3b8' : '#475569',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      whiteSpace: 'nowrap'
+                    }}>TRAFFIC:</label>
+                    <select 
+                      value={selectedTraffic} 
+                      onChange={(e) => {
+                        // If Pure bookmark active, keep traffic at ALL (shouldn't happen as select is disabled)
+                        if (isPure) {
+                          return
+                        }
+                        setSelectedTraffic(e.target.value)
+                        // Don't auto fetch, wait for search button
+                      }}
+                      disabled={isPure || slicerLoading || !slicerOptions.traffic || slicerOptions.traffic.length === 0}
                       style={{
-                        padding: '8px 20px',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        color: '#ffffff',
-                        backgroundColor: (isPure || isSearching || !searchInput.trim()) ? '#cbd5e1' : '#3b82f6',
-                        border: 'none',
+                        padding: '8px 14px',
+                        fontSize: '13px',
+                        border: '2px solid #cbd5e1',
                         borderRadius: '6px',
-                        cursor: (isPure || isSearching || !searchInput.trim()) ? 'not-allowed' : 'pointer',
+                        outline: 'none',
                         transition: 'all 0.2s ease',
-                        whiteSpace: 'nowrap',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px'
+                        backgroundColor: (isPure || slicerLoading || !slicerOptions.traffic || slicerOptions.traffic.length === 0) ? '#f1f5f9' : '#ffffff',
+                        color: (isPure || slicerLoading || !slicerOptions.traffic || slicerOptions.traffic.length === 0) ? '#94a3b8' : '#1e293b',
+                        cursor: (isPure || slicerLoading || !slicerOptions.traffic || slicerOptions.traffic.length === 0) ? 'not-allowed' : 'pointer',
+                        opacity: isPure ? 0.6 : 1,
+                        minWidth: '150px'
                       }}
-                      onMouseEnter={(e) => {
-                        if (!isPure && !isSearching && searchInput.trim()) {
-                          e.currentTarget.style.backgroundColor = '#2563eb'
+                      onFocus={(e) => {
+                        if (!slicerLoading && slicerOptions.traffic && slicerOptions.traffic.length > 0) {
+                          e.target.style.borderColor = '#3b82f6'
+                          e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'
                         }
                       }}
-                      onMouseLeave={(e) => {
-                        if (!isPure && !isSearching && searchInput.trim()) {
-                          e.currentTarget.style.backgroundColor = '#3b82f6'
-                        }
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#cbd5e1'
+                        e.target.style.boxShadow = 'none'
                       }}
                     >
-                      {isSearching ? (
-                        <>
-                          <span style={{ 
-                            display: 'inline-block',
-                            width: '12px',
-                            height: '12px',
-                            border: '2px solid #ffffff',
-                            borderTopColor: 'transparent',
-                            borderRadius: '50%',
-                            animation: 'spin 0.6s linear infinite'
-                          }} />
-                          Searching...
-                        </>
+                      {slicerOptions.traffic && slicerOptions.traffic.length > 0 ? (
+                        slicerOptions.traffic.map((traffic) => (
+                          <option key={traffic} value={traffic}>{traffic}</option>
+                        ))
                       ) : (
-                        <>
-                          🔍 Search
-                        </>
+                        <option value="ALL">Loading traffic...</option>
                       )}
-                    </button>
-                    
-                    {/* Clear Button */}
-                    {searchUserName && (
-                      <button
-                        onClick={handleClearSearch}
-                        style={{
-                          padding: '8px 14px',
-                          fontSize: '11px',
-                          fontWeight: 600,
-                          color: '#64748b',
-                          backgroundColor: '#ffffff',
-                          border: '1px solid #cbd5e1',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          whiteSpace: 'nowrap'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = '#fee2e2'
-                          e.currentTarget.style.color = '#dc2626'
-                          e.currentTarget.style.borderColor = '#dc2626'
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = '#ffffff'
-                          e.currentTarget.style.color = '#64748b'
-                          e.currentTarget.style.borderColor = '#cbd5e1'
-                        }}
-                      >
-                        ✕ Clear
-                      </button>
-                    )}
+                    </select>
                   </div>
+                  
+                  {/* Search Button for User Name and Brand/Traffic Slicers */}
+                  <button
+                    onClick={handleSearch}
+                    disabled={isSearching}
+                    style={{
+                      padding: '8px 16px',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      color: '#ffffff',
+                      backgroundColor: isSearching ? '#cbd5e1' : '#10b981',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: isSearching ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.2s ease',
+                      marginLeft: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      whiteSpace: 'nowrap'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isSearching) {
+                        e.currentTarget.style.backgroundColor = '#059669'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSearching) {
+                        e.currentTarget.style.backgroundColor = '#10b981'
+                      }
+                    }}
+                    >
+                    {isSearching ? 'Loading...' : 'Search'}
+                  </button>
                 </div>
                 
                 {/* Add CSS for spinner animation */}
@@ -835,8 +1011,19 @@ export default function USCPureMemberAnalysisPage() {
                   }}>
                     <thead>
                       <tr style={{ backgroundColor: '#1e293b' }}>
-                        {filteredData.length > 0 && getSortedColumns(Object.keys(filteredData[0]))
-                          .map((column) => (
+                        {(() => {
+                          // Determine columns to show
+                          let columns: string[] = []
+                          if (filteredData.length > 0) {
+                            columns = getSortedColumns(Object.keys(filteredData[0]))
+                          } else if (pureMemberData.length > 0) {
+                            columns = getSortedColumns(Object.keys(pureMemberData[0]))
+                          } else if (year && metrics) {
+                            // Default columns when no data
+                            columns = ['unique_code', 'user_name', 'line', 'first_deposit_date', 'deposit_cases', 'deposit_amount', 'withdraw_amount', 'net_profit']
+                          }
+                          
+                          return columns.map((column) => (
                             <th key={column} style={{ 
                               textAlign: 'center',
                               color: '#ffffff',
@@ -850,11 +1037,49 @@ export default function USCPureMemberAnalysisPage() {
                             }}>
                               {formatHeaderTitle(column)}
                             </th>
-                          ))}
+                          ))
+                        })()}
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredData.length === 0 && searchUserName ? (
+                      {pureMemberData.length === 0 ? (
+                        <tr>
+                          <td 
+                            colSpan={(() => {
+                              if (pureMemberData.length > 0) {
+                                return getSortedColumns(Object.keys(pureMemberData[0])).length
+                              } else if (year && metrics) {
+                                return 8
+                              }
+                              return 10
+                            })()}
+                            style={{
+                              textAlign: 'center',
+                              padding: '60px 20px',
+                              backgroundColor: '#fafafa',
+                              borderBottom: '1px solid #e2e8f0'
+                            }}
+                          >
+                            <div style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              gap: '12px'
+                            }}>
+                              <div style={{ fontSize: '48px', opacity: 0.3 }}>📭</div>
+                              <div style={{
+                                fontSize: '15px',
+                                color: '#64748b',
+                                fontWeight: 500
+                              }}>
+                                No data found for {getMetricsDisplayName(metrics)} in {year}
+                                {selectedBrand && selectedBrand !== 'ALL' && ` (Brand: ${selectedBrand})`}
+                                {selectedTraffic && selectedTraffic !== 'ALL' && ` (Traffic: ${selectedTraffic})`}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : filteredData.length === 0 && searchUserName ? (
                         <tr>
                           <td 
                             colSpan={pureMemberData.length > 0 ? getSortedColumns(Object.keys(pureMemberData[0])).length : 10}
@@ -1043,18 +1268,18 @@ export default function USCPureMemberAnalysisPage() {
 
                     <button 
                       onClick={handleExport}
-                      disabled={exporting || filteredData.length === 0}
+                      disabled={exporting || pureMemberData.length === 0}
                       style={{
                         padding: '8px 20px',
-                        backgroundColor: exporting || filteredData.length === 0 ? '#cbd5e1' : '#10b981',
+                        backgroundColor: exporting || pureMemberData.length === 0 ? '#cbd5e1' : '#10b981',
                         color: '#ffffff',
                         border: 'none',
                         borderRadius: '6px',
                         fontSize: '13px',
                         fontWeight: 700,
-                        cursor: exporting || filteredData.length === 0 ? 'not-allowed' : 'pointer',
+                        cursor: exporting || pureMemberData.length === 0 ? 'not-allowed' : 'pointer',
                         transition: 'all 0.2s',
-                        boxShadow: exporting || filteredData.length === 0 ? 'none' : '0 2px 4px rgba(16, 185, 129, 0.2)'
+                        boxShadow: exporting || pureMemberData.length === 0 ? 'none' : '0 2px 4px rgba(16, 185, 129, 0.2)'
                       }}
                     >
                       {exporting ? '⏳ Exporting...' : 'Export'}
@@ -1062,7 +1287,6 @@ export default function USCPureMemberAnalysisPage() {
                   </div>
                 </div>
               </div>
-            </>
           )}
         </div>
       </Frame>

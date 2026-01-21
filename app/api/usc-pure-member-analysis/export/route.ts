@@ -3,9 +3,9 @@ import { supabase } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
-    const { year, month = 'ALL', metrics } = await request.json()
+    const { year, month = 'ALL', metrics, brand = 'ALL', traffic = 'ALL' } = await request.json()
 
-    console.log('📥 [Pure Member Analysis USC] Exporting data:', { year, month, metrics })
+    console.log('📥 [Pure Member Analysis USC] Exporting data:', { year, month, metrics, brand, traffic })
 
     if (!year || !metrics) {
       return NextResponse.json({
@@ -54,6 +54,19 @@ export async function POST(request: NextRequest) {
     // If Month = ALL, tidak filter month (ambil semua bulan dalam tahun)
     
     // ✅ FILTER di DATABASE berdasarkan metrics
+    const isPureMetric = metrics === 'pure_existing_member' || metrics === 'pure_new_depositor'
+    
+    // ✅ Apply brand filter ONLY for Non-Pure metrics (Pure metrics aggregate by unique_code, no brand filter)
+    if (!isPureMetric && brand && brand !== 'ALL') {
+      baseQuery = baseQuery.eq('line', brand)
+    }
+    // If Pure metric, tidak filter brand (aggregate by unique_code across all brands)
+    
+    // ✅ Apply traffic filter
+    if (traffic && traffic !== 'ALL') {
+      baseQuery = baseQuery.eq('traffic', traffic)
+    }
+    
     if (metrics === 'existing_member') {
       baseQuery = baseQuery.lt('first_deposit_date', periodStart)
     } else if (metrics === 'new_depositor') {
@@ -67,7 +80,6 @@ export async function POST(request: NextRequest) {
     console.log(`📊 [Pure Member Analysis Export] Querying MONTHLY MV (${isYearlyView ? 'ALL months' : month}) for metrics: ${metrics}, year: ${year}`)
     
     // ✅ Sort berdasarkan metrics: Brand untuk Non-Pure, Unique Code untuk Pure
-    const isPureMetric = metrics === 'pure_existing_member' || metrics === 'pure_new_depositor'
     const { data: rawData, error: fetchError } = await baseQuery
       .order(isPureMetric ? 'unique_code' : 'line', { ascending: true })
     
@@ -87,8 +99,67 @@ export async function POST(request: NextRequest) {
 
     console.log(`📊 [Pure Member Analysis Export] Fetched ${rawData.length} records from MV`)
 
-    // ✅ Process data berdasarkan metrics
+    // ✅ Calculate days_active from blue_whale_usc for Non-Pure metrics
     const isPure = metrics === 'pure_existing_member' || metrics === 'pure_new_depositor'
+    let daysActiveMap = new Map<string, number>()
+    
+    if (!isPure) {
+      // Fetch days_active from blue_whale_usc for Non-Pure metrics
+      let daysActiveQuery = supabase
+        .from('blue_whale_usc')
+        .select('user_unique, line, date')
+        .eq('currency', 'USC')
+        .eq('year', parseInt(year))
+        .gt('deposit_cases', 0)
+      
+      // Apply month filter if not yearly view
+      if (!isYearlyView) {
+        daysActiveQuery = daysActiveQuery.eq('month', month)
+      }
+      
+      // Apply brand filter if brand is not ALL
+      if (brand && brand !== 'ALL') {
+        daysActiveQuery = daysActiveQuery.eq('line', brand)
+      }
+      
+      // Apply traffic filter if traffic is not ALL
+      if (traffic && traffic !== 'ALL') {
+        daysActiveQuery = daysActiveQuery.eq('traffic', traffic)
+      }
+      
+      // Apply metrics filter for date range
+      if (metrics === 'existing_member') {
+        daysActiveQuery = daysActiveQuery.lt('first_deposit_date', periodStart)
+      } else if (metrics === 'new_depositor') {
+        daysActiveQuery = daysActiveQuery.gte('first_deposit_date', periodStart).lte('first_deposit_date', periodEnd)
+      }
+      
+      const { data: daysActiveData, error: daysActiveError } = await daysActiveQuery
+      
+      if (!daysActiveError && daysActiveData) {
+        // Count distinct dates per (user_unique, line)
+        const userDateMap = new Map<string, Set<string>>()
+        
+        daysActiveData.forEach((row: any) => {
+          const key = `${row.user_unique || ''}_${row.line || ''}`
+          if (!userDateMap.has(key)) {
+            userDateMap.set(key, new Set())
+          }
+          if (row.date) {
+            userDateMap.get(key)!.add(row.date)
+          }
+        })
+        
+        // Convert to count
+        userDateMap.forEach((dates, key) => {
+          daysActiveMap.set(key, dates.size)
+        })
+        
+        console.log(`📊 [Pure Member Analysis Export] Calculated days_active for ${daysActiveMap.size} users from blue_whale_usc`)
+      }
+    }
+
+    // ✅ Process data berdasarkan metrics
     let filteredData = rawData
     
     if (isPure) {
@@ -176,6 +247,7 @@ export async function POST(request: NextRequest) {
               register_date: row.register_date || null,
               first_deposit_date: row.first_deposit_date,
               first_deposit_amount: 0, // Will SUM
+              days_active: 0, // Will be set from daysActiveMap
               deposit_cases: 0,
               deposit_amount: 0,
               withdraw_cases: 0,
@@ -190,6 +262,7 @@ export async function POST(request: NextRequest) {
           
           // ✅ SUM financial metrics across all months
           record.first_deposit_amount += (row.first_deposit_amount || 0)
+          // days_active will be set from daysActiveMap after aggregation
           record.deposit_cases += (row.deposit_cases || 0)
           record.deposit_amount += (row.deposit_amount || 0)
           record.withdraw_cases += (row.withdraw_cases || 0)
@@ -210,6 +283,10 @@ export async function POST(request: NextRequest) {
           const ggr = record.deposit_amount - record.withdraw_amount
           const atv = record.deposit_cases > 0 ? record.deposit_amount / record.deposit_cases : 0
           
+          // ✅ Get days_active from daysActiveMap
+          const daysActiveKey = `${record.user_unique || ''}_${record.line || ''}`
+          const daysActive = daysActiveMap.get(daysActiveKey) || 0
+          
           return {
             line: record.line,
             unique_code: record.unique_code,
@@ -218,6 +295,7 @@ export async function POST(request: NextRequest) {
             register_date: record.register_date,
             first_deposit_date: record.first_deposit_date,
             first_deposit_amount: record.first_deposit_amount,
+            days_active: daysActive,
             atv: atv,
             deposit_cases: record.deposit_cases,
             deposit_amount: record.deposit_amount,
@@ -231,22 +309,29 @@ export async function POST(request: NextRequest) {
         console.log(`📊 [Pure Member Analysis Export] Yearly aggregated (from monthly MV): ${filteredData.length} records`)
       } else {
         // ✅ Monthly view: DIRECT data (no aggregation, FDA is real value)
-        filteredData = rawData.map((row: any) => ({
-          line: row.line,
-          unique_code: row.unique_code,
-          user_name: row.user_name,
-          traffic: row.traffic,
-          register_date: row.register_date || null,
-          first_deposit_date: row.first_deposit_date,
-          first_deposit_amount: row.first_deposit_amount || 0,
-          atv: row.atv || 0,
-          deposit_cases: row.deposit_cases || 0,
-          deposit_amount: row.deposit_amount || 0,
-          withdraw_cases: row.withdraw_cases || 0,
-          withdraw_amount: row.withdraw_amount || 0,
-          bonus: row.bonus || 0,
-          ggr: row.ggr || 0
-        }))
+        filteredData = rawData.map((row: any) => {
+          // ✅ Get days_active from daysActiveMap
+          const daysActiveKey = `${row.user_unique || ''}_${row.line || ''}`
+          const daysActive = daysActiveMap.get(daysActiveKey) || 0
+          
+          return {
+            line: row.line,
+            unique_code: row.unique_code,
+            user_name: row.user_name,
+            traffic: row.traffic,
+            register_date: row.register_date || null,
+            first_deposit_date: row.first_deposit_date,
+            first_deposit_amount: row.first_deposit_amount || 0,
+            days_active: daysActive,
+            atv: row.atv || 0,
+            deposit_cases: row.deposit_cases || 0,
+            deposit_amount: row.deposit_amount || 0,
+            withdraw_cases: row.withdraw_cases || 0,
+            withdraw_amount: row.withdraw_amount || 0,
+            bonus: row.bonus || 0,
+            ggr: row.ggr || 0
+          }
+        })
         
         console.log(`📊 [Pure Member Analysis Export] Monthly direct data: ${filteredData.length} records`)
       }
@@ -275,9 +360,9 @@ export async function POST(request: NextRequest) {
         row.ggr || 0
       ]
     } else {
-      // Old Member & New Depositor: 14 columns (added REGISTER DATE after TRAFFIC)
+      // Old Member & New Depositor: 15 columns (added DAYS ACTIVE after FDA)
       headers = [
-        'BRAND', 'UNIQUE CODE', 'USER NAME', 'TRAFFIC', 'REGISTER DATE', 'FDD', 'FDA', 'ATV',
+        'BRAND', 'UNIQUE CODE', 'USER NAME', 'TRAFFIC', 'REGISTER DATE', 'FDD', 'FDA', 'DAYS ACTIVE', 'ATV',
         'DC', 'DA', 'WC', 'WA', 'BONUS', 'GGR (D-W)'
       ]
       getRowValues = (row: any) => [
@@ -288,6 +373,7 @@ export async function POST(request: NextRequest) {
         row.register_date ? new Date(row.register_date).toISOString().split('T')[0] : '',
         row.first_deposit_date || '',
         row.first_deposit_amount || 0,
+        row.days_active || 0,
         row.atv || 0,
         row.deposit_cases || 0,
         row.deposit_amount || 0,

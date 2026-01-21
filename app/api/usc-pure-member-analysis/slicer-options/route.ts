@@ -4,13 +4,37 @@ import { supabase } from '@/lib/supabase'
 export async function GET(request: NextRequest) {
   try {
     console.log('🔍 [Pure Member Analysis USC] Fetching slicer options...')
+    
+    const { searchParams } = new URL(request.url)
+    const brand = searchParams.get('brand') || 'ALL'
+    const year = searchParams.get('year') || null
+    const month = searchParams.get('month') || 'ALL'
+    const metrics = searchParams.get('metrics') || null
 
     // Get years and months from MONTHLY MV table - ambil semua data yang ada
-    const { data: monthlyData, error: monthlyError } = await supabase
+    let monthlyQuery = supabase
       .from('db_usc_monthly_customer_monthly_summary')
-      .select('year, month')
+      .select('year, month, line, traffic, first_deposit_date, first_deposit_date_market')
       .not('year', 'is', null)
       .not('month', 'is', null)
+      .gt('deposit_cases', 0)  // Only active members
+    
+    // Filter by brand if brand is not ALL
+    if (brand && brand !== 'ALL') {
+      monthlyQuery = monthlyQuery.eq('line', brand)
+    }
+    
+    // Filter by year if year is provided
+    if (year) {
+      monthlyQuery = monthlyQuery.eq('year', parseInt(year))
+    }
+    
+    // Filter by month if month is not ALL
+    if (month && month !== 'ALL') {
+      monthlyQuery = monthlyQuery.eq('month', month)
+    }
+    
+    const { data: monthlyData, error: monthlyError } = await monthlyQuery
 
     if (monthlyError) {
       console.error('❌ [Pure Member Analysis USC] Error fetching monthly data:', monthlyError)
@@ -20,6 +44,72 @@ export async function GET(request: NextRequest) {
         message: monthlyError.message 
       }, { status: 500 })
     }
+    
+    // Get distinct brands (line) from MONTHLY MV table - always fetch all brands
+    const { data: allBrandData } = await supabase
+      .from('db_usc_monthly_customer_monthly_summary')
+      .select('line')
+      .not('line', 'is', null)
+    
+    const uniqueBrands = Array.from(new Set(allBrandData?.map(row => row.line).filter(Boolean) || [])) as string[]
+    const sortedBrands = uniqueBrands.sort()
+    const brands = ['ALL', ...sortedBrands]
+    
+    // Get distinct traffic based on brand + year + month + metrics filter
+    let filteredTrafficData = monthlyData || []
+    
+    // Apply metrics filter if metrics is provided (for traffic options)
+    if (metrics && year) {
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                         'July', 'August', 'September', 'October', 'November', 'December']
+      
+      let periodStart: string
+      let periodEnd: string
+      
+      if (month === 'ALL') {
+        periodStart = `${year}-01-01`
+        periodEnd = `${year}-12-31`
+      } else {
+        const monthIndex = monthNames.indexOf(month)
+        if (monthIndex !== -1) {
+          const monthNumber = (monthIndex + 1).toString().padStart(2, '0')
+          periodStart = `${year}-${monthNumber}-01`
+          const lastDay = new Date(parseInt(year), monthIndex + 1, 0).getDate()
+          periodEnd = `${year}-${monthNumber}-${lastDay.toString().padStart(2, '0')}`
+        }
+      }
+      
+      // Filter based on metrics
+      if (metrics === 'existing_member') {
+        // Old Member: first_deposit_date < periodStart
+        filteredTrafficData = filteredTrafficData.filter(row => 
+          row.first_deposit_date && row.first_deposit_date < periodStart
+        )
+      } else if (metrics === 'new_depositor') {
+        // New Depositor: first_deposit_date di periode slicer
+        filteredTrafficData = filteredTrafficData.filter(row => 
+          row.first_deposit_date && 
+          row.first_deposit_date >= periodStart && 
+          row.first_deposit_date <= periodEnd
+        )
+      } else if (metrics === 'pure_existing_member') {
+        // Pure Old Member: first_deposit_date < periodStart
+        filteredTrafficData = filteredTrafficData.filter(row => 
+          row.first_deposit_date && row.first_deposit_date < periodStart
+        )
+      } else if (metrics === 'pure_new_depositor') {
+        // Pure ND: first_deposit_date_market di periode slicer
+        filteredTrafficData = filteredTrafficData.filter(row => 
+          row.first_deposit_date_market && 
+          row.first_deposit_date_market >= periodStart && 
+          row.first_deposit_date_market <= periodEnd
+        )
+      }
+    }
+    
+    const uniqueTraffic = Array.from(new Set(filteredTrafficData.map(row => row.traffic).filter(Boolean) || [])) as string[]
+    const sortedTraffic = uniqueTraffic.sort()
+    const traffic = ['ALL', ...sortedTraffic]
 
     console.log('🔍 [Pure Member Analysis USC] Raw monthlyData from DB:', {
       totalRows: monthlyData?.length || 0,
@@ -69,6 +159,9 @@ export async function GET(request: NextRequest) {
     console.log('✅ [Pure Member Analysis USC] Slicer options loaded:', {
       years_count: sortedYears.length,
       months_count: months.length,
+      brands_count: brands.length,
+      traffic_count: traffic.length,
+      filters: { brand, year, month },
       defaults: { year: defaultYear, month: defaultMonth, metrics: defaultMetrics }
     })
 
@@ -77,6 +170,8 @@ export async function GET(request: NextRequest) {
       data: {
         years: sortedYears,
         months,
+        brands,
+        traffic,
         defaults: {
           year: defaultYear,
           month: defaultMonth,
