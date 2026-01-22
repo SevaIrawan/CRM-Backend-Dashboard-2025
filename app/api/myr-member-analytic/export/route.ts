@@ -46,9 +46,9 @@ export async function POST(request: NextRequest) {
         .from('mv_blue_whale_myr_summary')
         .select('*')
 
-      // ✅ Apply line filter
+      // ✅ Apply line filter (SAME AS TIER-DATA ROUTE)
       if (line && line !== 'ALL') {
-        baseQuery = baseQuery.eq('line', line)
+        baseQuery = baseQuery.filter('line', 'eq', line)
       } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
         baseQuery = baseQuery.in('line', userAllowedBrands)
       }
@@ -58,67 +58,22 @@ export async function POST(request: NextRequest) {
         baseQuery = baseQuery.ilike('user_name', `%${searchUserName.trim()}%`)
       }
 
-      // ✅ Fetch ALL data in batches to handle large datasets
-      const batchSize = 1000
-      let allRawData: any[] = []
-      let currentPage = 0
-      let hasMore = true
+      // ✅ Get all data first (no pagination) - SAME AS TIER-DATA ROUTE
+      // ✅ CRITICAL: Use deterministic ordering to ensure consistent results
+      const result = await baseQuery
+        .order('absent', { ascending: true, nullsFirst: false })
+        .order('unique_code', { ascending: true, nullsFirst: false }) // ✅ Additional tie-breaker for 100% deterministic ordering
 
-      while (hasMore) {
-        const offset = currentPage * batchSize
-        // Rebuild query for each batch to avoid query builder mutation issues
-        let batchQuery = supabase
-          .from('mv_blue_whale_myr_summary')
-          .select('*')
-
-        // Apply filters
-        if (line && line !== 'ALL') {
-          batchQuery = batchQuery.eq('line', line)
-        } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
-          batchQuery = batchQuery.in('line', userAllowedBrands)
-        }
-
-        if (searchUserName && searchUserName.trim()) {
-          batchQuery = batchQuery.ilike('user_name', `%${searchUserName.trim()}%`)
-        }
-
-        // Apply ordering and pagination
-        const queryResult = await batchQuery
-          .order('absent', { ascending: true, nullsFirst: false })
-          .range(offset, offset + batchSize - 1)
-        
-        const { data: batchData, error: fetchError } = queryResult
-        
-        console.log(`📊 [Tier Data Export] Batch ${currentPage + 1}: offset=${offset}, fetched=${batchData?.length || 0} records`)
-
-        if (fetchError) {
-          console.error('❌ Export query error:', fetchError)
-          console.error('❌ Export query error details:', JSON.stringify(fetchError, null, 2))
-          console.error('❌ Export query error code:', fetchError.code)
-          console.error('❌ Export query error hint:', fetchError.hint)
-          return NextResponse.json({
-            success: false,
-            error: 'Database error',
-            message: fetchError.message || fetchError.hint || 'Failed to fetch data from database'
-          }, { status: 500 })
-        }
-
-        if (!batchData || batchData.length === 0) {
-          hasMore = false
-        } else {
-          allRawData = [...allRawData, ...batchData]
-          hasMore = batchData.length === batchSize
-          currentPage++
-        }
-
-        // Safety limit to prevent infinite loops
-        if (currentPage > 10000) {
-          console.warn('⚠️ Export: Reached safety limit of 10000 pages')
-          break
-        }
+      if (result.error) {
+        console.error('❌ Export query error:', result.error)
+        return NextResponse.json({
+          success: false,
+          error: 'Database error',
+          message: result.error.message || 'Failed to fetch data from database'
+        }, { status: 500 })
       }
 
-      const rawData = allRawData
+      const rawData = result.data || []
 
       if (!rawData || rawData.length === 0) {
         return NextResponse.json({

@@ -599,6 +599,7 @@ export default function MYRMemberAnalyticPage() {
       const result = await response.json()
       
       if (result.success) {
+        console.log(`✅ [Tier Data] Loaded ${result.data?.length || 0} records (Page ${result.pagination?.currentPage || 1} of ${result.pagination?.totalPages || 1})`)
         setTierData(result.data || [])
         setPagination(result.pagination || {
           currentPage: 1,
@@ -1325,7 +1326,7 @@ export default function MYRMemberAnalyticPage() {
                         </>
                       ) : (
                         <>
-                          Showing <strong style={{ color: '#1e293b' }}>{Math.min(tierData.length, 1000)}</strong> of <strong style={{ color: '#1e293b' }}>{pagination.totalRecords.toLocaleString()}</strong> records
+                          Showing <strong style={{ color: '#1e293b' }}>{tierData.length.toLocaleString()}</strong> of <strong style={{ color: '#1e293b' }}>{pagination.totalRecords.toLocaleString()}</strong> records
                         </>
                       )}
                     </div>

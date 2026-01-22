@@ -11,13 +11,13 @@ export async function GET(request: NextRequest) {
   try {
     console.log('📊 [MYR Member-Analytic Tier Data] Fetching data:', { line, page, limit })
 
-    // ✅ Get user's allowed brands from request header
+    // ✅ Get user's allowed brands from request header (SAME AS CUSTOMER-RETENTION)
     const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
     const userAllowedBrands = userAllowedBrandsHeader ? JSON.parse(userAllowedBrandsHeader) : null
 
     console.log('🔍 [Tier Data] User allowed brands:', userAllowedBrands, 'Selected line:', line)
 
-    // ✅ Validate brand access for Squad Lead
+    // ✅ Validate brand access for Squad Lead (SAME AS CUSTOMER-RETENTION)
     if (line && line !== 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
       if (!userAllowedBrands.includes(line)) {
         console.log('❌ [Tier Data] Unauthorized access attempt:', { line, userAllowedBrands })
@@ -29,14 +29,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // ✅ Query from mv_blue_whale_myr_summary
+    // ✅ Build base query with LINE filter (SAME PATTERN AS CUSTOMER-RETENTION)
     let baseQuery = supabase
       .from('mv_blue_whale_myr_summary')
       .select('*')
 
-    // ✅ Apply line filter
+    // ✅ Apply line filter (SAME AS CUSTOMER-RETENTION)
     if (line && line !== 'ALL') {
-      baseQuery = baseQuery.eq('line', line)
+      baseQuery = baseQuery.filter('line', 'eq', line)
       console.log('🔍 [Tier Data] Applied line filter:', line)
     } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
       baseQuery = baseQuery.in('line', userAllowedBrands)
@@ -45,61 +45,26 @@ export async function GET(request: NextRequest) {
       console.log('🔍 [Tier Data] No line filter applied (showing all brands)')
     }
 
-    // ✅ Get total count first (separate query for count)
-    let countQuery = supabase
-      .from('mv_blue_whale_myr_summary')
-      .select('*', { count: 'exact', head: true })
-    
-    if (line && line !== 'ALL') {
-      countQuery = countQuery.eq('line', line)
-    } else if (line === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
-      countQuery = countQuery.in('line', userAllowedBrands)
-    }
-    
-    const { count, error: countError } = await countQuery
-
-    if (countError) {
-      console.error('❌ Count error:', countError)
-      return NextResponse.json({
-        success: false,
-        error: 'Database error',
-        message: countError.message
-      }, { status: 500 })
-    }
-
-    // ✅ Fetch paginated data - Sort by absent A to Z (ascending)
-    const offset = (page - 1) * limit
-    const { data: rawData, error: fetchError } = await baseQuery
+    // ✅ Get all data first (no pagination for aggregation) - SAME AS CUSTOMER-RETENTION
+    // ✅ CRITICAL: Use deterministic ordering to ensure consistent results
+    const result = await baseQuery
       .order('absent', { ascending: true, nullsFirst: false })
-      .range(offset, offset + limit - 1)
+      .order('unique_code', { ascending: true, nullsFirst: false }) // ✅ Additional tie-breaker for 100% deterministic ordering
 
-    if (fetchError) {
-      console.error('❌ Query error:', fetchError)
-      return NextResponse.json({
-        success: false,
-        error: 'Database error',
-        message: fetchError.message
+    if (result.error) {
+      console.error('❌ Supabase query error:', result.error)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Database error while fetching tier data',
+        message: result.error.message 
       }, { status: 500 })
     }
 
-    if (!rawData || rawData.length === 0) {
-      return NextResponse.json({
-        success: true,
-        data: [],
-        pagination: {
-          currentPage: 1,
-          totalPages: 0,
-          totalRecords: 0,
-          recordsPerPage: limit,
-          hasNextPage: false,
-          hasPrevPage: false
-        }
-      })
-    }
+    const rawData = result.data || []
+    console.log(`📊 Raw mv_blue_whale_myr_summary records found: ${rawData.length}`)
+    console.log(`📊 Sample raw data:`, rawData.slice(0, 3))
 
-    console.log(`📊 [MYR Member-Analytic Tier Data] Fetched ${rawData.length} records`)
-
-    // ✅ Map data to match requested columns - only return exact fields needed
+    // ✅ Map data to match requested columns - SAME AS CUSTOMER-RETENTION
     const finalData = rawData.map((row: any) => ({
       line: row.line || null,
       unique_code: row.unique_code || null,
@@ -126,12 +91,19 @@ export async function GET(request: NextRequest) {
       nd_tier: row.nd_tier || null
     }))
 
-    const totalRecords = count || 0
+    console.log(`📊 Processed tier data: ${finalData.length} records`)
+
+    // ✅ Apply pagination to data (SAME AS CUSTOMER-RETENTION)
+    const totalRecords = finalData.length
     const totalPages = Math.ceil(totalRecords / limit)
+    const offset = (page - 1) * limit
+    const paginatedData = finalData.slice(offset, offset + limit)
+
+    console.log(`✅ Processed ${paginatedData.length} tier data records (Page ${page} of ${totalPages})`)
 
     return NextResponse.json({
       success: true,
-      data: finalData,
+      data: paginatedData,
       pagination: {
         currentPage: page,
         totalPages: totalPages,
