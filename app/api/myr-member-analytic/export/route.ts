@@ -150,10 +150,11 @@ export async function POST(request: NextRequest) {
         avg_ggr: row.avg_ggr || null,
         pf: row.pf || row.purchase_frequency || null,
         atv: row.atv || row.avg_transaction_value || (row.deposit_cases > 0 ? row.deposit_amount / row.deposit_cases : 0),
-        winrate: row.winrate || null,
-        wd_rate: row.wd_rate || row.withdrawal_rate || null,
-        lifetime_tier: row.lifetime_tier || null,
-        recent_tier: row.recent_tier || null
+      winrate: row.winrate || null,
+      wd_rate: row.wd_rate || row.withdrawal_rate || null,
+      lifetime_tier: row.lifetime_tier || null,
+      recent_tier: row.recent_tier || null,
+      nd_tier: row.nd_tier || null
       }))
 
       // Define columns order for Tier Data
@@ -179,7 +180,8 @@ export async function POST(request: NextRequest) {
         'winrate',
         'wd_rate',
         'lifetime_tier',
-        'recent_tier'
+        'recent_tier',
+        'nd_tier'
       ]
 
       const tierDataHeaders: { [key: string]: string } = {
@@ -204,7 +206,8 @@ export async function POST(request: NextRequest) {
         'winrate': 'WINRATE',
         'wd_rate': 'WD RATE',
         'lifetime_tier': 'LIFETIME TIER',
-        'recent_tier': 'RECENT TIER'
+        'recent_tier': 'RECENT TIER',
+        'nd_tier': 'ND TIER'
       }
 
       // Create CSV header

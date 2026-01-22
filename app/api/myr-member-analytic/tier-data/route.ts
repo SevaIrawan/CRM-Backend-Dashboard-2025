@@ -122,7 +122,8 @@ export async function GET(request: NextRequest) {
       winrate: row.winrate || null,
       wd_rate: row.wd_rate || row.withdrawal_rate || null,
       lifetime_tier: row.lifetime_tier || null,
-      recent_tier: row.recent_tier || null
+      recent_tier: row.recent_tier || null,
+      nd_tier: row.nd_tier || null
     }))
 
     const totalRecords = count || 0

@@ -104,7 +104,8 @@ export default function MYRMemberAnalyticPage() {
     'winrate',
     'wd_rate',
     'lifetime_tier',
-    'recent_tier'
+    'recent_tier',
+    'nd_tier'
   ]
 
   // Column order for Customer Behavior bookmark
@@ -146,6 +147,7 @@ export default function MYRMemberAnalyticPage() {
       'wd_rate': 'WD RATE',
       'lifetime_tier': 'LIFETIME TIER',
       'recent_tier': 'RECENT TIER',
+      'nd_tier': 'ND TIER',
       // Customer Behavior headers
       'payment_method': 'PAYMENT METHOD',
       'peak': 'ACTIVE TIME',
