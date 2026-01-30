@@ -43,10 +43,14 @@ export async function GET(request: NextRequest) {
       maxDate
     })
 
+    // ✅ Period A: no limit (same as Brand Comparison Trend USC) - full range for user choice
+    const periodADateRange = { min: '2020-01-01', max: '2099-12-31' }
+
     return NextResponse.json({
       success: true,
       data: {
         dateRange: { min: minDate, max: maxDate },
+        periodADateRange,
         defaults: { latestDate: maxDate }
       }
     })

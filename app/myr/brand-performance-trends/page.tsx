@@ -15,6 +15,8 @@ import { getChartIcon } from '@/lib/CentralIcon'
 
 interface SlicerOptions {
   dateRange: { min: string; max: string }
+  /** Period A: no date limit (same as Brand Comparison Trend USC) */
+  periodADateRange?: { min: string; max: string }
   defaults: { latestDate: string }
 }
 
@@ -580,8 +582,8 @@ export default function BrandPerformanceTrendsPage() {
                 <input 
                   type="date" 
                   value={tempAStart} 
-                  min={slicerOptions?.dateRange?.min || '2021-01-01'}
-                  max={slicerOptions?.dateRange?.max || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]}
+                  min={slicerOptions?.periodADateRange?.min ?? slicerOptions?.dateRange?.min ?? '2021-01-01'}
+                  max={slicerOptions?.periodADateRange?.max ?? slicerOptions?.dateRange?.max ?? new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]}
                   onChange={e=>setTempAStart(e.target.value)}
                   style={{
                     width:'100%',
@@ -613,8 +615,8 @@ export default function BrandPerformanceTrendsPage() {
                 <input 
                   type="date" 
                   value={tempAEnd} 
-                  min={tempAStart || slicerOptions?.dateRange?.min || '2021-01-01'}
-                  max={slicerOptions?.dateRange?.max || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]}
+                  min={tempAStart || slicerOptions?.periodADateRange?.min || slicerOptions?.dateRange?.min || '2021-01-01'}
+                  max={slicerOptions?.periodADateRange?.max ?? slicerOptions?.dateRange?.max ?? new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]}
                   onChange={e=>setTempAEnd(e.target.value)}
                   style={{
                     width:'100%',
