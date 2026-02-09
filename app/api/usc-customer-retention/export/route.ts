@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Build query with same filters as data endpoint (no currency filter needed, include first_deposit_date)
-    let query = supabase.from('blue_whale_usc').select('userkey, user_name, unique_code, update_unique_code, date, line, year, month, first_deposit_date, days_inactive, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, net_profit, tier_name')
+    let query = supabase.from('blue_whale_usc').select('userkey, user_name, unique_code, update_unique_code, register_date, date, line, year, month, first_deposit_date, days_inactive, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, net_profit, tier_name')
 
     // ✅ NEW: Apply brand filter with user permission check
     if (line && line !== 'ALL') {
@@ -100,6 +100,7 @@ export async function POST(request: NextRequest) {
       'line',  // ✅ NEW: Brand column (first column)
       'user_name',
       'unique_code',
+      'register_date',  // Joined
       'first_deposit_date',
       'last_deposit_date',
       'days_inactive',  // ✅ NEW: Absent column after LDD
@@ -119,7 +120,7 @@ export async function POST(request: NextRequest) {
     ]
 
     // Create CSV header
-    const csvHeader = retentionColumns.map(col => col.toUpperCase().replace(/_/g, ' ')).join(',')
+    const csvHeader = retentionColumns.map(col => col === 'register_date' ? 'JOINED' : col.toUpperCase().replace(/_/g, ' ')).join(',')
     
     // Create CSV rows
     const csvRows = filteredData.map(row => {
@@ -303,6 +304,7 @@ function processCustomerRetentionData(rawData: any[], previousMonthUsers: Set<st
         line: row.line,  // Will be updated if multiple brands
         user_name: row.user_name,
         unique_code: row.update_unique_code || row.unique_code,  // ✅ Use update_unique_code, fallback to unique_code
+        register_date: row.register_date || null,  // Joined date from blue_whale_usc
         first_deposit_date: row.first_deposit_date || null,  // Initialize (might be null)
         last_deposit_date: row.date,
         days_inactive: row.days_inactive || 0,  // ✅ Store days_inactive (Absent)

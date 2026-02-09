@@ -71,6 +71,7 @@ export default function USCCustomerRetentionPage() {
     'line',  // ✅ NEW: Brand column (first column)
     'user_name',
     'unique_code',
+    'register_date',  // Joined (after unique_code)
     'first_deposit_date',
     'last_deposit_date',
     'days_inactive',  // ✅ NEW: Absent column after LDD
@@ -99,6 +100,7 @@ export default function USCCustomerRetentionPage() {
   const getColumnHeader = (column: string): string => {
     const headerMap: { [key: string]: string } = {
       'line': 'BRAND',
+      'register_date': 'JOINED',
       'first_deposit_date': 'FDD',
       'last_deposit_date': 'LDD',
       'days_inactive': 'ABSENT',  // ✅ NEW: Map days_inactive to ABSENT
