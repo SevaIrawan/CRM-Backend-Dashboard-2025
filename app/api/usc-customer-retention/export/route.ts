@@ -122,23 +122,30 @@ export async function POST(request: NextRequest) {
     // Create CSV header
     const csvHeader = retentionColumns.map(col => col === 'register_date' ? 'JOINED' : col.toUpperCase().replace(/_/g, ' ')).join(',')
     
-    // Create CSV rows
+    // Create CSV rows - format values to match table display
     const csvRows = filteredData.map(row => {
       return retentionColumns.map(col => {
         const value = row[col]
-        // Format numbers and handle null values
         if (value === null || value === undefined || value === '') {
           return '-'
         }
+        // winrate & wd_rate: table shows percentage (0-100), same as table
+        if (col === 'winrate' || col === 'wd_rate') {
+          const num = typeof value === 'number' ? value : parseFloat(String(value))
+          return (!isNaN(num) ? (num * 100).toFixed(2) : '0.00')
+        }
         if (typeof value === 'number') {
-          // For integers, return as-is (no decimal)
           if (Number.isInteger(value)) {
             return value.toString()
           }
-          // For decimals, return with 2 decimal places (no comma separator)
           return value.toFixed(2)
         }
-        // Escape commas and quotes in string values
+        // Date columns: normalize to YYYY-MM-DD to match table
+        if (col === 'register_date' || col === 'first_deposit_date' || col === 'last_deposit_date') {
+          const s = String(value)
+          const dateOnly = s.includes('T') ? s.split('T')[0] : s
+          return dateOnly ? `"${dateOnly}"` : '-'
+        }
         return `"${String(value).replace(/"/g, '""')}"`
       }).join(',')
     })
