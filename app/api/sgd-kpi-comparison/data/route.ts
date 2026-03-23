@@ -90,7 +90,6 @@ export async function GET(request: NextRequest) {
       const addTransaction = mvData.reduce((sum: number, row: any) => sum + (row.add_transaction || 0), 0);
       const deductTransaction = mvData.reduce((sum: number, row: any) => sum + (row.deduct_transaction || 0), 0);
       const newRegister = mvData.reduce((sum: number, row: any) => sum + (row.new_register || 0), 0);
-      const newDepositor = mvData.reduce((sum: number, row: any) => sum + (row.new_depositor || 0), 0);
       
       // Active Member: count unique userkey in master table with deposit_cases > 0
       let amQuery = supabase
@@ -103,6 +102,8 @@ export async function GET(request: NextRequest) {
 
       if (selectedLine && selectedLine !== 'ALL') {
         amQuery = amQuery.eq('line', selectedLine);
+      } else if (selectedLine === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
+        amQuery = amQuery.in('line', userAllowedBrands);
       }
 
       const { data: amData, error: amError } = await amQuery;
@@ -111,6 +112,27 @@ export async function GET(request: NextRequest) {
         throw amError;
       }
       const activeMember = new Set((amData || []).map((r: any) => r.userkey)).size;
+
+      // New Depositor: from master table by first_deposit_date within active period range
+      let ndQuery = supabase
+        .from('blue_whale_sgd')
+        .select('userkey')
+        .eq('currency', 'SGD')
+        .gte('first_deposit_date', startDate)
+        .lte('first_deposit_date', endDate);
+
+      if (selectedLine && selectedLine !== 'ALL') {
+        ndQuery = ndQuery.eq('line', selectedLine);
+      } else if (selectedLine === 'ALL' && userAllowedBrands && userAllowedBrands.length > 0) {
+        ndQuery = ndQuery.in('line', userAllowedBrands);
+      }
+
+      const { data: ndData, error: ndError } = await ndQuery;
+      if (ndError) {
+        console.error('❌ [SGD KPI Comparison] Error fetching new depositors:', ndError);
+        throw ndError;
+      }
+      const newDepositor = new Set((ndData || []).map((r: any) => r.userkey)).size;
 
       // Derived metrics (as requested)
       const pureMember = Math.max(0, activeMember - newDepositor);
@@ -136,10 +158,10 @@ export async function GET(request: NextRequest) {
 
     // Calculate KPIs for both periods
     console.log('🔄 [SGD KPI Comparison] Calculating Period A KPIs...');
-    const periodAData = await calculatePeriodKPIs(periodAStart, periodAEnd, line === 'ALL' ? undefined : line);
+    const periodAData = await calculatePeriodKPIs(periodAStart, periodAEnd, line);
 
     console.log('🔄 [SGD KPI Comparison] Calculating Period B KPIs...');
-    const periodBData = await calculatePeriodKPIs(periodBStart, periodBEnd, line === 'ALL' ? undefined : line);
+    const periodBData = await calculatePeriodKPIs(periodBStart, periodBEnd, line);
 
     // Define metrics structure with their properties (SIMPLIFIED LIST)
     const metricsConfig = [
