@@ -585,6 +585,8 @@ export default function SGDCustomerRetentionPage() {
                       <option value="ALL">All</option>
                       <option value="RETENTION">Retention</option>
                       <option value="REACTIVATION">Reactivation</option>
+                      <option value="RECOMMEND">Recommend</option>
+                      <option value="ND_INCLUDE_RECOMMEND">ND include Recommend</option>
                       <option value="NEW DEPOSITOR">New Depositor</option>
                     </select>
                   </div>
@@ -732,6 +734,7 @@ export default function SGDCustomerRetentionPage() {
                                 const statusColors = {
                                   'RETENTION': { bg: '#dcfce7', color: '#166534', border: '#86efac' },
                                   'REACTIVATION': { bg: '#dbeafe', color: '#1e40af', border: '#93c5fd' },
+                                  'RECOMMEND': { bg: '#ede9fe', color: '#5b21b6', border: '#c4b5fd' },
                                   'NEW DEPOSITOR': { bg: '#fed7aa', color: '#9a3412', border: '#fdba74' },
                                   'N/A': { bg: '#f3f4f6', color: '#6b7280', border: '#d1d5db' }
                                 }

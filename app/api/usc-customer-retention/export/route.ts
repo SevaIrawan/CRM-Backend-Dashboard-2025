@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Build query with same filters as data endpoint (no currency filter needed, include first_deposit_date)
-    let query = supabase.from('blue_whale_usc').select('userkey, user_name, unique_code, update_unique_code, register_date, date, line, year, month, first_deposit_date, days_inactive, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, net_profit, tier_name')
+    let query = supabase.from('blue_whale_usc').select('userkey, user_name, unique_code, update_unique_code, register_date, date, line, year, month, traffic, first_deposit_date, days_inactive, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, net_profit, tier_name')
 
     // ✅ NEW: Apply brand filter with user permission check
     if (line && line !== 'ALL') {
@@ -85,6 +85,8 @@ export async function POST(request: NextRequest) {
     // ✅ Apply status filter if specified (consistent with data route)
     const filteredData = finalStatusFilter === 'ALL' 
       ? processedData 
+      : finalStatusFilter === 'ND_INCLUDE_RECOMMEND'
+      ? processedData.filter(user => user.status === 'NEW DEPOSITOR' || user.status === 'RECOMMEND')
       : processedData.filter(user => user.status === finalStatusFilter)
     
     console.log(`📊 After status filter (${finalStatusFilter}): ${filteredData.length} users`)
@@ -324,7 +326,8 @@ function processCustomerRetentionData(rawData: any[], previousMonthUsers: Set<st
         net_profit: 0,
         activeDates: new Set(),
         brands: new Set([row.line]),  // ✅ Track multiple brands
-        tier_name: row.tier_name || ''  // ✅ Store tier_name (userkey unique per brand, so tier_name is consistent)
+        tier_name: row.tier_name || '',  // ✅ Store tier_name (userkey unique per brand, so tier_name is consistent)
+        has_recommend_traffic: String(row.traffic || '').trim().toLowerCase() === 'recommend'
       })
     }
     
@@ -411,7 +414,8 @@ function processCustomerRetentionData(rawData: any[], previousMonthUsers: Set<st
     if (canCalculateStatus) {
       // Check if NEW DEPOSITOR (first_deposit_date dalam bulan yang dipilih)
       if (user.first_deposit_date && user.first_deposit_date.startsWith(selectedYearMonth)) {
-        status = 'NEW DEPOSITOR'
+        // ND + traffic Recommend => RECOMMEND
+        status = user.has_recommend_traffic ? 'RECOMMEND' : 'NEW DEPOSITOR'
       }
       // Check if RETENTION (main bulan lalu DAN bulan ini)
       else if (previousMonthUsers.has(user.userkey)) {
