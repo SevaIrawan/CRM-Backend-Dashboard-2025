@@ -86,7 +86,7 @@ export default function USCCustomerRetentionPage() {
     'net_profit',
     'winrate',  // ✅ NEW: After net_profit
     'wd_rate',  // ✅ NEW: After winrate
-    'tier_name',  // ✅ NEW: Tier column after wd_rate
+    'tier_label',
     'status'
   ]
   
@@ -108,7 +108,7 @@ export default function USCCustomerRetentionPage() {
       'deposit_amount': 'DA',
       'withdraw_cases': 'WC',
       'withdraw_amount': 'WA',
-      'tier_name': 'TIER'  // ✅ NEW: Map tier_name to TIER
+      'tier_label': 'TIER'
     }
     return headerMap[column] || column.toUpperCase().replace(/_/g, ' ')
   }

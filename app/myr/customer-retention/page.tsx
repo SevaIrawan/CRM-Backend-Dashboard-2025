@@ -13,6 +13,7 @@ interface SlicerOptions {
   lines: string[]
   years: string[]
   months: { value: string; label: string }[]
+  tiers: string[]
   dateRange: { min: string; max: string }
   defaults?: {
     line: string
@@ -34,6 +35,7 @@ export default function MYRCustomerRetentionPage() {
   const [line, setLine] = useState('') // Will be set to 'ALL' from API defaults
   const [year, setYear] = useState('') // Will be set to max year from API defaults
   const [month, setMonth] = useState('') // Will be set to max month from API defaults
+  const [tier, setTier] = useState('ALL')
   const [statusFilter, setStatusFilter] = useState('ALL') // ✅ NEW: Status filter
   const [dateRange, setDateRange] = useState({ start: '', end: '' })
   const [filterMode, setFilterMode] = useState('month')
@@ -57,6 +59,7 @@ export default function MYRCustomerRetentionPage() {
     lines: [],
     years: [],
     months: [],
+    tiers: [],
     dateRange: { min: '', max: '' }
   })
   const [loading, setLoading] = useState(true)
@@ -65,23 +68,25 @@ export default function MYRCustomerRetentionPage() {
 
   // Columns to display for customer retention - updated with new columns
   const retentionColumns = [
-    'line',  // ✅ NEW: Brand column (first column)
+    'line',
     'user_name',
     'unique_code',
+    'register_date',
     'first_deposit_date',
     'last_deposit_date',
-    'days_inactive',  // ✅ NEW: Absent column after LDD
+    'days_inactive',
     'active_days',
-    'atv',  // ✅ NEW: After active_days
-    'pf',   // ✅ NEW: After atv
+    'atv',
+    'pf',
     'deposit_cases',
     'deposit_amount',
     'withdraw_cases',
     'withdraw_amount',
     'bonus',
     'net_profit',
-    'winrate',  // ✅ NEW: After net_profit
-    'wd_rate',  // ✅ NEW: After winrate
+    'winrate',
+    'wd_rate',
+    'tier_label',
     'status'
   ]
   
@@ -95,13 +100,15 @@ export default function MYRCustomerRetentionPage() {
   const getColumnHeader = (column: string): string => {
     const headerMap: { [key: string]: string } = {
       'line': 'BRAND',
+      'register_date': 'JOINED',
       'first_deposit_date': 'FDD',
       'last_deposit_date': 'LDD',
-      'days_inactive': 'ABSENT',  // ✅ NEW: Map days_inactive to ABSENT
+      'days_inactive': 'ABSENT',
       'deposit_cases': 'DC',
       'deposit_amount': 'DA',
       'withdraw_cases': 'WC',
-      'withdraw_amount': 'WA'
+      'withdraw_amount': 'WA',
+      'tier_label': 'TIER'
     }
     return headerMap[column] || column.toUpperCase().replace(/_/g, ' ')
   }
@@ -239,6 +246,7 @@ export default function MYRCustomerRetentionPage() {
         line,
         year,
         month,
+        tier: tier === 'ALL' ? '' : tier,
         startDate: dateRange.start,
         endDate: dateRange.end,
         filterMode,
@@ -435,6 +443,7 @@ export default function MYRCustomerRetentionPage() {
           line,
           year,
           month,
+          tier: tier === 'ALL' ? '' : tier,
           startDate: dateRange.start,
           endDate: dateRange.end,
           filterMode,
@@ -520,6 +529,22 @@ export default function MYRCustomerRetentionPage() {
             {slicerOptions.months.map((monthOption) => (
               <option key={monthOption.value} value={monthOption.value}>
                 {monthOption.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="slicer-group">
+          <label className="slicer-label">TIER:</label>
+          <select 
+            value={tier} 
+            onChange={(e) => setTier(e.target.value)}
+            className="slicer-select"
+          >
+            <option value="ALL">All</option>
+            {slicerOptions.tiers.map((tierOption) => (
+              <option key={tierOption} value={tierOption}>
+                {tierOption}
               </option>
             ))}
           </select>

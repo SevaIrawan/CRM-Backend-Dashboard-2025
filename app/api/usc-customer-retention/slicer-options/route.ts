@@ -58,12 +58,11 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    // Get unique tiers (tier_name)
     const { data: tierData, error: tierError } = await supabase
       .from('blue_whale_usc')
-      .select('tier_name')
-      .not('tier_name', 'is', null)
-      .order('tier_name')
+      .select('tier_label')
+      .not('tier_label', 'is', null)
+      .order('tier_label')
 
     if (tierError) {
       console.error('❌ Error fetching tiers:', tierError)
@@ -131,8 +130,7 @@ export async function GET(request: NextRequest) {
     const sortedMonths = validMonths.sort((a, b) => monthNames.indexOf(a) - monthNames.indexOf(b))
     const months = sortedMonths.map(month => ({ value: month, label: month }))
 
-    // Process tiers - distinct tier_name values, sorted
-    const tiers = Array.from(new Set(tierData?.map(row => row.tier_name).filter(Boolean) || [])) as string[]
+    const tiers = Array.from(new Set(tierData?.map(row => row.tier_label).filter(Boolean) || [])) as string[]
     const sortedTiers = tiers.sort()
 
     const minDate = dateRangeData?.[0]?.date || ''

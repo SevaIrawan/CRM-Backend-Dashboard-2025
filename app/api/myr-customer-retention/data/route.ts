@@ -7,6 +7,7 @@ export async function GET(request: NextRequest) {
   const line = searchParams.get('line')
   const year = searchParams.get('year')
   const month = searchParams.get('month')
+  const tier = searchParams.get('tier')
   const startDate = searchParams.get('startDate')
   const endDate = searchParams.get('endDate')
   const filterMode = searchParams.get('filterMode')
@@ -20,12 +21,12 @@ export async function GET(request: NextRequest) {
 
   try {
     console.log('📊 Fetching blue_whale_myr data for customer retention with filters:', { 
-      line, year, month, startDate, endDate, filterMode, statusFilter, page, limit,
+      line, year, month, tier, startDate, endDate, filterMode, statusFilter, page, limit,
       user_allowed_brands: userAllowedBrands
     })
 
     // Build base query for filtering - using blue_whale_myr table (include first_deposit_date and line)
-    let baseQuery = supabase.from('blue_whale_myr').select('userkey, user_name, unique_code, update_unique_code, date, line, year, month, traffic, first_deposit_date, days_inactive, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, net_profit')
+    let baseQuery = supabase.from('blue_whale_myr').select('userkey, user_name, unique_code, update_unique_code, register_date, date, line, year, month, traffic, first_deposit_date, days_inactive, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, net_profit, tier_label')
 
     // No currency filter needed since table is blue_whale_myr
 
@@ -57,6 +58,11 @@ export async function GET(request: NextRequest) {
       baseQuery = baseQuery
         .filter('date', 'gte', startDate)
         .filter('date', 'lte', endDate)
+    }
+
+    // Handle tier filtering
+    if (tier && tier.trim() && tier !== 'ALL') {
+      baseQuery = baseQuery.filter('tier_label', 'eq', tier)
     }
 
     // Get all data first (no pagination for aggregation)
@@ -123,6 +129,7 @@ export async function GET(request: NextRequest) {
         line,
         year,
         month,
+        tier,
         startDate,
         endDate,
         filterMode,
@@ -281,6 +288,7 @@ function processCustomerRetentionData(rawData: any[], previousMonthUsers: Set<st
         line: row.line,  // Will be updated if multiple brands
         user_name: row.user_name,
         unique_code: row.update_unique_code || row.unique_code,  // ✅ Use update_unique_code, fallback to unique_code
+        register_date: row.register_date || null,  // Joined date from blue_whale_myr
         first_deposit_date: row.first_deposit_date || null,  // Initialize (might be null)
         last_deposit_date: row.date,
         days_inactive: row.days_inactive || 0,  // ✅ Store days_inactive (Absent)
@@ -293,6 +301,7 @@ function processCustomerRetentionData(rawData: any[], previousMonthUsers: Set<st
         net_profit: 0,
         activeDates: new Set(),
         brands: new Set([row.line]),  // ✅ Track multiple brands
+        tier_label: row.tier_label || '',  // userkey per brand: tier_label konsisten per baris
         has_recommend_traffic: String(row.traffic || '').trim().toLowerCase() === 'recommend'
       })
     }
@@ -302,6 +311,10 @@ function processCustomerRetentionData(rawData: any[], previousMonthUsers: Set<st
     // ✅ Track multiple brands for this user
     if (row.line) {
       userData.brands.add(row.line)
+    }
+    
+    if (row.tier_label) {
+      userData.tier_label = row.tier_label
     }
     
     // ✅ Update first deposit date (MIN date) - for data consistency
@@ -371,6 +384,7 @@ function processCustomerRetentionData(rawData: any[], previousMonthUsers: Set<st
     if (canCalculateStatus) {
       // Check if NEW DEPOSITOR (first_deposit_date dalam bulan yang dipilih)
       if (user.first_deposit_date && user.first_deposit_date.startsWith(selectedYearMonth)) {
+        // ND + traffic Recommend => RECOMMEND
         status = user.has_recommend_traffic ? 'RECOMMEND' : 'NEW DEPOSITOR'
       }
       // Check if RETENTION (main bulan lalu DAN bulan ini)
@@ -402,6 +416,7 @@ function processCustomerRetentionData(rawData: any[], previousMonthUsers: Set<st
       pf,   // ✅ NEW: Play Frequency
       winrate,  // ✅ NEW: Winrate (GGR / Deposit Amount)
       wd_rate,  // ✅ NEW: Withdrawal Rate
+      tier_label: user.tier_label || '',
       status,
       activeDates: undefined, // Remove from final data
       brands: undefined // Remove from final data

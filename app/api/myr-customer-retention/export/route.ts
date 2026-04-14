@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
-    const { line, year, month, startDate, endDate, filterMode, statusFilter } = await request.json()
+    const { line, year, month, tier, startDate, endDate, filterMode, statusFilter } = await request.json()
 
     // ✅ NEW: Get user's allowed brands from request header
     const userAllowedBrandsHeader = request.headers.get('x-user-allowed-brands')
@@ -13,12 +13,12 @@ export async function POST(request: NextRequest) {
     const finalStatusFilter = statusFilter || 'ALL'
 
     console.log('📥 Exporting blue_whale_myr customer retention data with filters:', {
-      line, year, month, startDate, endDate, filterMode, statusFilter: finalStatusFilter,
+      line, year, month, tier, startDate, endDate, filterMode, statusFilter: finalStatusFilter,
       user_allowed_brands: userAllowedBrands
     })
 
     // Build query with same filters as data endpoint (no currency filter needed, include first_deposit_date)
-    let query = supabase.from('blue_whale_myr').select('userkey, user_name, unique_code, update_unique_code, date, line, year, month, traffic, first_deposit_date, days_inactive, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, net_profit')
+    let query = supabase.from('blue_whale_myr').select('userkey, user_name, unique_code, update_unique_code, register_date, date, line, year, month, traffic, first_deposit_date, days_inactive, deposit_cases, deposit_amount, withdraw_cases, withdraw_amount, bonus, add_bonus, deduct_bonus, net_profit, tier_label')
 
     // ✅ NEW: Apply brand filter with user permission check
     if (line && line !== 'ALL') {
@@ -45,6 +45,11 @@ export async function POST(request: NextRequest) {
       query = query
         .filter('date', 'gte', startDate)
         .filter('date', 'lte', endDate)
+    }
+
+    // Handle tier filtering
+    if (tier && tier.trim() && tier !== 'ALL') {
+      query = query.filter('tier_label', 'eq', tier)
     }
 
     // Get all data for processing - match data API ordering for consistency
@@ -97,6 +102,7 @@ export async function POST(request: NextRequest) {
       'line',  // ✅ NEW: Brand column (first column)
       'user_name',
       'unique_code',
+      'register_date',  // Joined
       'first_deposit_date',
       'last_deposit_date',
       'days_inactive',  // ✅ NEW: Absent column after LDD
@@ -111,29 +117,37 @@ export async function POST(request: NextRequest) {
       'net_profit',
       'winrate',  // ✅ NEW: After net_profit
       'wd_rate',  // ✅ NEW: After winrate
+      'tier_label',
       'status'
     ]
 
     // Create CSV header
-    const csvHeader = retentionColumns.map(col => col.toUpperCase().replace(/_/g, ' ')).join(',')
+    const csvHeader = retentionColumns.map(col => col === 'register_date' ? 'JOINED' : col.toUpperCase().replace(/_/g, ' ')).join(',')
     
-    // Create CSV rows
+    // Create CSV rows - format values to match table display
     const csvRows = filteredData.map(row => {
       return retentionColumns.map(col => {
         const value = row[col]
-        // Format numbers and handle null values
         if (value === null || value === undefined || value === '') {
           return '-'
         }
+        // winrate & wd_rate: table shows percentage (0-100), same as table
+        if (col === 'winrate' || col === 'wd_rate') {
+          const num = typeof value === 'number' ? value : parseFloat(String(value))
+          return (!isNaN(num) ? (num * 100).toFixed(2) : '0.00')
+        }
         if (typeof value === 'number') {
-          // For integers, return as-is (no decimal)
           if (Number.isInteger(value)) {
             return value.toString()
           }
-          // For decimals, return with 2 decimal places (no comma separator)
           return value.toFixed(2)
         }
-        // Escape commas and quotes in string values
+        // Date columns: normalize to YYYY-MM-DD to match table
+        if (col === 'register_date' || col === 'first_deposit_date' || col === 'last_deposit_date') {
+          const s = String(value)
+          const dateOnly = s.includes('T') ? s.split('T')[0] : s
+          return dateOnly ? `"${dateOnly}"` : '-'
+        }
         return `"${String(value).replace(/"/g, '""')}"`
       }).join(',')
     })
@@ -299,6 +313,7 @@ function processCustomerRetentionData(rawData: any[], previousMonthUsers: Set<st
         line: row.line,  // Will be updated if multiple brands
         user_name: row.user_name,
         unique_code: row.update_unique_code || row.unique_code,  // ✅ Use update_unique_code, fallback to unique_code
+        register_date: row.register_date || null,  // Joined date from blue_whale_myr
         first_deposit_date: row.first_deposit_date || null,  // Initialize (might be null)
         last_deposit_date: row.date,
         days_inactive: row.days_inactive || 0,  // ✅ Store days_inactive (Absent)
@@ -311,6 +326,7 @@ function processCustomerRetentionData(rawData: any[], previousMonthUsers: Set<st
         net_profit: 0,
         activeDates: new Set(),
         brands: new Set([row.line]),  // ✅ Track multiple brands
+        tier_label: row.tier_label || '',
         has_recommend_traffic: String(row.traffic || '').trim().toLowerCase() === 'recommend'
       })
     }
@@ -320,6 +336,10 @@ function processCustomerRetentionData(rawData: any[], previousMonthUsers: Set<st
     // ✅ Track multiple brands for this user
     if (row.line) {
       userData.brands.add(row.line)
+    }
+    
+    if (row.tier_label) {
+      userData.tier_label = row.tier_label
     }
     
     // ✅ Update first deposit date (MIN date) - for data consistency
@@ -392,6 +412,7 @@ function processCustomerRetentionData(rawData: any[], previousMonthUsers: Set<st
     if (canCalculateStatus) {
       // Check if NEW DEPOSITOR (first_deposit_date dalam bulan yang dipilih)
       if (user.first_deposit_date && user.first_deposit_date.startsWith(selectedYearMonth)) {
+        // ND + traffic Recommend => RECOMMEND
         status = user.has_recommend_traffic ? 'RECOMMEND' : 'NEW DEPOSITOR'
       }
       // Check if RETENTION (main bulan lalu DAN bulan ini)
@@ -423,6 +444,7 @@ function processCustomerRetentionData(rawData: any[], previousMonthUsers: Set<st
       pf,   // ✅ NEW: Play Frequency
       winrate,  // ✅ NEW: Winrate (GGR / Deposit Amount)
       wd_rate,  // ✅ NEW: Withdrawal Rate
+      tier_label: user.tier_label || '',
       status,
       activeDates: undefined, // Remove from final data
       brands: undefined // Remove from final data
