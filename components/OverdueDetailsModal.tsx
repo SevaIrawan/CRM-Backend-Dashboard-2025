@@ -29,7 +29,6 @@ interface OverdueDetailsModalProps {
   isDateRange?: boolean
   startDate?: string
   endDate?: string
-  type?: 'deposit' | 'withdraw' // Type to determine which API endpoint to use
   timeRange?: '30s+' | '2m-5m' | '5m-30m' // Time range for overdue filter
 }
 
@@ -43,7 +42,6 @@ export default function OverdueDetailsModal({
   isDateRange = false,
   startDate,
   endDate,
-  type = 'deposit', // Default to deposit for backward compatibility
   timeRange = '30s+' // Default to 30s+ for backward compatibility
 }: OverdueDetailsModalProps) {
   const [transactions, setTransactions] = useState<OverdueTransaction[]>([])
@@ -93,10 +91,7 @@ export default function OverdueDetailsModal({
       // Add timeRange param
       params.append('timeRange', timeRange)
       
-      // Determine API endpoint based on type
-      const apiEndpoint = type === 'withdraw' 
-        ? '/api/myr-auto-approval-withdraw/overdue-details'
-        : '/api/myr-auto-approval-monitor/overdue-details'
+      const apiEndpoint = '/api/myr-auto-approval-monitor/overdue-details'
       
       // ✅ Get user's allowed brands for Squad Lead filtering
       const allowedBrands = getAllowedBrandsFromStorage()
@@ -134,13 +129,10 @@ export default function OverdueDetailsModal({
   const handleExport = async () => {
     try {
       setExporting(true)
-      const typeLabel = type === 'withdraw' ? 'Approval' : 'Type'
+      const typeLabel = 'Type'
       const csvHeaders = ['Date Time', typeLabel, 'Brand', 'Unique Code', 'User Name', 'Amount', 'Operator', 'Process Time', 'Processing Time (s)']
       
-      // Determine API endpoint based on type
-      const apiEndpoint = type === 'withdraw' 
-        ? '/api/myr-auto-approval-withdraw/overdue-details'
-        : '/api/myr-auto-approval-monitor/overdue-details'
+      const apiEndpoint = '/api/myr-auto-approval-monitor/overdue-details'
 
       // ✅ Get user's allowed brands for Squad Lead filtering
       const allowedBrands = getAllowedBrandsFromStorage()
@@ -192,7 +184,7 @@ export default function OverdueDetailsModal({
       // Create CSV content
       const rows = allTransactions.map((t: OverdueTransaction) => {
         const dateTime = t.time ? `${t.date} ${t.time}` : t.date
-        const typeOrApproval = type === 'withdraw' ? (t.approval || 'N/A') : (t.type || 'N/A')
+        const typeOrApproval = t.type || 'N/A'
         return [
           dateTime,
           typeOrApproval,
@@ -216,7 +208,7 @@ export default function OverdueDetailsModal({
       const link = document.createElement('a')
       const url = URL.createObjectURL(blob)
       link.setAttribute('href', url)
-      const transactionType = type === 'withdraw' ? 'withdraw' : 'deposit'
+      const transactionType = 'deposit'
       link.setAttribute('download', `overdue-${transactionType}-transactions-${line}-${year}-${month}-ALL-${new Date().toISOString().split('T')[0]}.csv`)
       link.style.visibility = 'hidden'
       document.body.appendChild(link)
@@ -355,7 +347,7 @@ export default function OverdueDetailsModal({
                         Date Time
                       </th>
                       <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
-                        {type === 'withdraw' ? 'Approval' : 'Type'}
+                        Type
                       </th>
                       <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, border: '1px solid #e5e7eb', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap' }}>
                         Brand
@@ -387,7 +379,7 @@ export default function OverdueDetailsModal({
                           {transaction.time ? `${transaction.date} ${transaction.time}` : transaction.date}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
-                          {type === 'withdraw' ? transaction.approval : transaction.type}
+                          {transaction.type}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900" style={{ border: '1px solid #e5e7eb' }}>
                           {transaction.line}

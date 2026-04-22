@@ -6,15 +6,6 @@ import Image from 'next/image'
 import { getRoleDisplayName } from '@/utils/rolePermissions'
 import RealtimeTimestamp from './RealtimeTimestamp'
 import { logActivityViaAPI, getStoredSessionId, clearStoredSessionId, calculateSessionDuration } from '@/lib/activityLogger'
-import TierAnalyticsAlertDropdown from './TierAnalyticsAlertDropdown'
-
-interface Alert {
-  id: string
-  title: string
-  message: string
-  type: 'warning' | 'info' | 'error'
-  priority?: 'high' | 'medium' | 'low'
-}
 
 interface HeaderProps {
   pageTitle?: string
@@ -42,7 +33,6 @@ export default function Header({
   const [userInfo, setUserInfo] = useState<{username: string, role: string} | null>(null)
   const [notificationCount, setNotificationCount] = useState(0)
   const [isAlertDropdownOpen, setIsAlertDropdownOpen] = useState(false)
-  const [alerts, setAlerts] = useState<Alert[]>([])
   const bellIconRef = useRef<HTMLDivElement>(null)
 
   // Auto-close dropdown when click outside
@@ -90,7 +80,6 @@ export default function Header({
 
   // Update notification count based on current page
   useEffect(() => {
-    // Brand Performance Trends page - use pageInsights
     if (pathname === '/usc/brand-performance-trends') {
       if (pageInsights) {
         setNotificationCount(pageInsights.decliningBrands || 0)
@@ -99,62 +88,9 @@ export default function Header({
       }
       return
     }
-    
-    // Business Performance page - use localStorage
-    if (pathname !== '/usc/business-performance') {
-      setNotificationCount(0)
-      setIsAlertDropdownOpen(false)
-      return
-    }
 
-    const updateNotification = () => {
-      try {
-        // First, update alerts from localStorage
-        const alertsData = localStorage.getItem('tier_analytics_alerts')
-        if (alertsData) {
-          try {
-            const parsedAlerts = JSON.parse(alertsData)
-            setAlerts(parsedAlerts)
-            // Notification count = actual alerts length (not from localStorage count)
-            setNotificationCount(parsedAlerts.length || 0)
-          } catch (e) {
-            console.error('Error parsing alerts:', e)
-            setAlerts([])
-            setNotificationCount(0)
-          }
-        } else {
-          // No alerts data = no notifications
-          setAlerts([])
-          setNotificationCount(0)
-        }
-        
-        // Also check notification data for marketing tab count
-        const notificationData = localStorage.getItem('business_performance_notification')
-        if (notificationData) {
-          try {
-            const data = JSON.parse(notificationData)
-            const currentTab = data.tab || 'marketing'
-            // For marketing tab, use stored count. For tier-analytics, use alerts.length (already set above)
-            if (currentTab === 'marketing') {
-              const marketingCount = data.marketing || data.count || 0
-              setNotificationCount(marketingCount)
-            }
-            // For tier-analytics, count is already set from alerts.length above
-          } catch (e) {
-            console.error('Error parsing notification data:', e)
-          }
-        }
-      } catch (e) {
-        console.error('Error reading notification count:', e)
-        setNotificationCount(0)
-        setAlerts([])
-      }
-    }
-    
-    updateNotification()
-    // Listen for storage changes (when tab switches)
-    const interval = setInterval(updateNotification, 100)
-    return () => clearInterval(interval)
+    setNotificationCount(0)
+    setIsAlertDropdownOpen(false)
   }, [pathname, pageInsights])
 
   // ✅ Memoize page title for instant update when pathname changes
@@ -397,7 +333,7 @@ export default function Header({
           </div>
 
           {/* Notification Bell - Show on specific pages */}
-          {(pathname === '/usc/business-performance' || pathname === '/usc/brand-performance-trends') && (
+          {pathname === '/usc/brand-performance-trends' && (
             <>
               <div 
                 ref={bellIconRef}
@@ -416,18 +352,6 @@ export default function Header({
                   e.preventDefault()
                   e.stopPropagation()
                   console.log('🔔 Bell icon clicked in Header, notificationCount:', notificationCount)
-                  
-                  // Fetch alerts from localStorage
-                  try {
-                    const alertsData = localStorage.getItem('tier_analytics_alerts')
-                    if (alertsData) {
-                      const parsedAlerts = JSON.parse(alertsData)
-                      setAlerts(parsedAlerts)
-                    }
-                  } catch (e) {
-                    console.error('Error reading alerts from localStorage:', e)
-                  }
-                  
                   setIsAlertDropdownOpen(!isAlertDropdownOpen)
                 }}
                 onMouseEnter={(e) => {
@@ -510,16 +434,6 @@ export default function Header({
         </div>
       </div>
     </header>
-    
-    {/* Business Performance Alert Dropdown */}
-    {pathname === '/usc/business-performance' && (
-      <TierAnalyticsAlertDropdown
-        isOpen={isAlertDropdownOpen}
-        onClose={() => setIsAlertDropdownOpen(false)}
-        alerts={alerts}
-        triggerElement={bellIconRef.current}
-      />
-    )}
     
     {/* Brand Performance Trends Insights Dropdown - RENDERED OUTSIDE HEADER */}
     {pathname === '/usc/brand-performance-trends' && isAlertDropdownOpen && pageInsights && (

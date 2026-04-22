@@ -138,10 +138,7 @@ export function generateFallbackPageVisibility(): PageVisibilityData[] {
     { path: '/myr/pure-member-analysis', name: 'Pure Member Analysis', section: 'MYR', defaultRoles: ['admin', 'executive', 'manager_myr', 'sq_myr'] },
     { path: '/myr/brand-performance-trends', name: 'Brand Comparison Trends', section: 'MYR', defaultRoles: ['admin', 'executive', 'manager_myr', 'sq_myr'] },
     { path: '/myr/kpi-comparison', name: 'KPI Comparison', section: 'MYR', defaultRoles: ['admin', 'executive', 'manager_myr', 'sq_myr'] },
-    { path: '/myr/overall-label', name: 'Overall Label', section: 'MYR', defaultRoles: ['admin', 'executive', 'manager_myr', 'sq_myr'] },
-    { path: '/myr/aia-candy-tracking', name: 'AIA Candy Mechanism', section: 'MYR', defaultRoles: ['admin', 'executive', 'manager_myr', 'sq_myr'] },
     { path: '/myr/auto-approval-monitor', name: 'Deposit Auto-Approval', section: 'MYR', defaultRoles: ['admin', 'executive', 'manager_myr', 'sq_myr'] },
-    { path: '/myr/auto-approval-withdraw', name: 'Withdrawal Auto-Approval', section: 'MYR', defaultRoles: ['admin', 'executive', 'manager_myr', 'sq_myr'] },
     { path: '/myr/customer-retention', name: 'Customer Retention', section: 'MYR', defaultRoles: ['admin', 'executive', 'manager_myr', 'sq_myr'] },
     { path: '/myr/churn-member', name: 'Churned Members', section: 'MYR', defaultRoles: ['admin'] },
     { path: '/myr/member-report', name: 'Member Report', section: 'MYR', defaultRoles: ['admin', 'executive', 'manager_myr', 'sq_myr'] },
@@ -151,7 +148,6 @@ export function generateFallbackPageVisibility(): PageVisibilityData[] {
     { path: '/sgd/member-analytic', name: 'Member Analytic', section: 'SGD', defaultRoles: ['admin'] },
     { path: '/sgd/brand-performance-trends', name: 'Brand Comparison Trends', section: 'SGD', defaultRoles: ['admin', 'executive', 'manager_sgd', 'sq_sgd'] },
     { path: '/sgd/kpi-comparison', name: 'KPI Comparison', section: 'SGD', defaultRoles: ['admin', 'executive', 'manager_sgd', 'sq_sgd'] },
-    { path: '/sgd/auto-approval-monitor', name: 'Auto-Approval Monitor', section: 'SGD', defaultRoles: ['admin', 'executive', 'manager_sgd', 'sq_sgd'] },
     { path: '/sgd/customer-retention', name: 'Customer Retention', section: 'SGD', defaultRoles: ['admin', 'executive', 'manager_sgd', 'sq_sgd'] },
     { path: '/sgd/churn-member', name: 'Churned Members', section: 'SGD', defaultRoles: ['admin'] },
     { path: '/sgd/member-report', name: 'Member Report', section: 'SGD', defaultRoles: ['admin', 'executive', 'manager_sgd', 'sq_sgd'] },
@@ -161,20 +157,9 @@ export function generateFallbackPageVisibility(): PageVisibilityData[] {
     { path: '/usc/member-analytic', name: 'Member Analytic', section: 'USC', defaultRoles: ['admin'] },
     { path: '/usc/brand-performance-trends', name: 'Brand Comparison Trends', section: 'USC', defaultRoles: ['admin', 'executive', 'manager_usc', 'sq_usc'] },
     { path: '/usc/kpi-comparison', name: 'KPI Comparison', section: 'USC', defaultRoles: ['admin', 'executive', 'manager_usc', 'sq_usc'] },
-    { path: '/usc/auto-approval-monitor', name: 'Auto-Approval Monitor', section: 'USC', defaultRoles: ['admin', 'executive', 'manager_usc', 'sq_usc'] },
     { path: '/usc/customer-retention', name: 'Customer Retention', section: 'USC', defaultRoles: ['admin', 'executive', 'manager_usc', 'sq_usc'] },
     { path: '/usc/churn-member', name: 'Churned Members', section: 'USC', defaultRoles: ['admin'] },
     { path: '/usc/member-report', name: 'Member Report', section: 'USC', defaultRoles: ['admin', 'executive', 'manager_usc', 'sq_usc'] },
-    { path: '/usc/customer-assignment', name: 'Customer Assignment', section: 'USC', defaultRoles: ['admin', 'manager_usc', 'squad_lead_usc'] },
-    { path: '/usc/snr-customers', name: 'SNR Customers', section: 'USC', defaultRoles: ['admin', 'snr_usc', 'manager_usc', 'squad_lead_usc'] },
-    
-    // MYR SNR Pages
-    { path: '/myr/customer-assignment', name: 'Customer Assignment', section: 'MYR', defaultRoles: ['admin', 'manager_myr', 'squad_lead_myr'] },
-    { path: '/myr/snr-customers', name: 'SNR Customers', section: 'MYR', defaultRoles: ['admin', 'snr_myr', 'manager_myr', 'squad_lead_myr'] },
-    
-    // SGD SNR Pages
-    { path: '/sgd/customer-assignment', name: 'Customer Assignment', section: 'SGD', defaultRoles: ['admin', 'manager_sgd', 'squad_lead_sgd'] },
-    { path: '/sgd/snr-customers', name: 'SNR Customers', section: 'SGD', defaultRoles: ['admin', 'snr_sgd', 'manager_sgd', 'squad_lead_sgd'] },
     
     // Admin & Other Pages
     { path: '/users', name: 'User Management', section: 'Admin', defaultRoles: ['admin'] },

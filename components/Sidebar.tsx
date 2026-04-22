@@ -334,20 +334,14 @@ export default function Sidebar({
         permission: 'myr',
         submenu: [
           { title: 'Overview', path: '/myr/overview' },
-          { title: 'Business Performance', path: '/myr/business-performance' },
           { title: 'Brand Comparison Trends', path: '/myr/brand-performance-trends' },
           { title: 'KPI Comparison', path: '/myr/kpi-comparison' },
-          { title: 'Overall Label', path: '/myr/overall-label' },
-          { title: 'AIA Candy Mechanism', path: '/myr/aia-candy-tracking' },
           { title: 'Deposit Auto‑Approval', path: '/myr/auto-approval-monitor' },
-          { title: 'Withdrawal Auto‑Approval', path: '/myr/auto-approval-withdraw' },
           { title: 'Member Analytic', path: '/myr/member-analytic' },
           { title: 'Pure Member Analysis', path: '/myr/pure-member-analysis' },
           { title: 'Customer Retention', path: '/myr/customer-retention' },
           { title: 'Churned Members', path: '/myr/churn-member' },
-          { title: 'Member Report', path: '/myr/member-report' },
-          { title: 'Customer Assignment', path: '/myr/customer-assignment' },
-          { title: 'SNR Customers', path: '/myr/snr-customers', snrOnly: true }
+          { title: 'Member Report', path: '/myr/member-report' }
         ]
       },
       {
@@ -356,17 +350,12 @@ export default function Sidebar({
         permission: 'sgd',
         submenu: [
         { title: 'Overview', path: '/sgd/overview' },
-        { title: 'Business Performance', path: '/sgd/business-performance' },
         { title: 'Brand Comparison Trends', path: '/sgd/brand-performance-trends' },
         { title: 'KPI Comparison', path: '/sgd/kpi-comparison' },
-        { title: 'AIA Candy Mechanism', path: '/sgd/aia-candy-tracking' },
-        { title: 'Auto-Approval Monitor', path: '/sgd/auto-approval-monitor' },
         { title: 'Member Analytic', path: '/sgd/member-analytic' },
         { title: 'Customer Retention', path: '/sgd/customer-retention' },
           { title: 'Churned Members', path: '/sgd/churn-member' },
-          { title: 'Member Report', path: '/sgd/member-report' },
-          { title: 'Customer Assignment', path: '/sgd/customer-assignment' },
-          { title: 'SNR Customers', path: '/sgd/snr-customers', snrOnly: true }
+          { title: 'Member Report', path: '/sgd/member-report' }
         ]
       },
       {
@@ -375,18 +364,13 @@ export default function Sidebar({
         permission: 'usc',
         submenu: [
         { title: 'Overview', path: '/usc/overview' },
-        { title: 'Business Performance', path: '/usc/business-performance' },
-        { title: 'Target Management', path: '/usc/target-management' },
         { title: 'Brand Comparison Trends', path: '/usc/brand-performance-trends' },
         { title: 'KPI Comparison', path: '/usc/kpi-comparison' },
-        { title: 'Auto-Approval Monitor', path: '/usc/auto-approval-monitor' },
         { title: 'Member Analytic', path: '/usc/member-analytic' },
         { title: 'Pure Member Analysis', path: '/usc/pure-member-analysis' },
         { title: 'Customer Retention', path: '/usc/customer-retention' },
           { title: 'Churned Members', path: '/usc/churn-member' },
-          { title: 'Member Report', path: '/usc/member-report' },
-          { title: 'Customer Assignment', path: '/usc/customer-assignment' },
-          { title: 'SNR Customers', path: '/usc/snr-customers', snrOnly: true }
+          { title: 'Member Report', path: '/usc/member-report' }
         ]
       },
       {

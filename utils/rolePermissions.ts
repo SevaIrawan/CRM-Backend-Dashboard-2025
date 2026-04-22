@@ -60,6 +60,20 @@ export const USER_ROLES: { [key: string]: UserRole } = {
     canAccessUserManagement: false,
     isReadOnly: true
   },
+  // Legacy role alias: "user" behaves like executive-level read-only dashboard access
+  'user': {
+    id: 'user',
+    name: 'user',
+    displayName: 'User',
+    permissions: [
+      'dashboard',
+      'myr',
+      'sgd',
+      'usc'
+    ],
+    canAccessUserManagement: false,
+    isReadOnly: true
+  },
   // Manager MYR = Level/Role Manager = Limited Access > MYR
   'manager_myr': {
     id: 'manager_myr',
@@ -278,21 +292,6 @@ export const hasPermission = (userRole: string, pagePath: string): boolean => {
     return false
   }
 
-  // ✅ SNR roles can ONLY access their SNR customer pages
-  if (userRole.startsWith('snr_')) {
-    const allowedSNRPages = [
-      '/myr/snr-customers',
-      '/sgd/snr-customers',
-      '/usc/snr-customers'
-    ]
-    const hasAccess = allowedSNRPages.includes(pagePath)
-    console.log('🔒 [SNR] Access check:', { pagePath, hasAccess })
-    return hasAccess
-  }
-
-  // ✅ Manager and Squad Lead can also access SNR Customer pages in their market
-  // (SNR pages are already mapped in pathToPermission below, so they'll get access via normal permission check)
-
   // Map page paths to permission names (exact matches take priority)
   const pathToPermission: { [key: string]: string } = {
     '/dashboard': 'dashboard',
@@ -400,12 +399,12 @@ export const getDefaultPageByRole = (userRole: string): string => {
     case 'sq_usc':
     case 'squad_lead_usc':  // Squad Lead USC → USC Overview
       return '/usc/overview'
-    case 'snr_myr':  // SNR MYR → MYR SNR Customers (will be created later)
-      return '/myr/snr-customers'
-    case 'snr_sgd':  // SNR SGD → SGD SNR Customers (will be created later)
-      return '/sgd/snr-customers'
-    case 'snr_usc':  // SNR USC → USC SNR Customers (will be created later)
-      return '/usc/snr-customers'
+    case 'snr_myr':
+      return '/myr/overview'
+    case 'snr_sgd':
+      return '/sgd/overview'
+    case 'snr_usc':
+      return '/usc/overview'
     case 'marketing_usc':  // Marketing USC → USC Overview
       return '/usc/overview'
     case 'marketing_myr':  // Marketing MYR → MYR Overview

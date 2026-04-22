@@ -178,9 +178,6 @@ function getPageTitle(path: string): string {
     '/myr/churn-member': 'MYR Churned Members',
     '/myr/brand-performance-trends': 'MYR Brand Performance Trends',
     '/myr/auto-approval-monitor': 'MYR Auto-Approval Monitor',
-    '/myr/auto-approval-withdraw': 'MYR Auto-Approval Withdraw',
-    '/myr/aia-candy-tracking': 'MYR AIA Candy Tracking',
-    '/myr/overall-label': 'MYR Overall Label',
     
     // SGD Pages
     '/sgd': 'SGD Dashboard',

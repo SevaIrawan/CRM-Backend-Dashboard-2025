@@ -29,7 +29,6 @@ interface TotalTransactionsDetailsModalProps {
   isDateRange?: boolean
   startDate?: string
   endDate?: string
-  type?: 'deposit' | 'withdraw' // Type to determine which API endpoint to use
 }
 
 export default function TotalTransactionsDetailsModal({
@@ -41,8 +40,7 @@ export default function TotalTransactionsDetailsModal({
   month,
   isDateRange = false,
   startDate,
-  endDate,
-  type = 'deposit' // Default to deposit for backward compatibility
+  endDate
 }: TotalTransactionsDetailsModalProps) {
   const [transactions, setTransactions] = useState<TotalTransaction[]>([])
   const [loading, setLoading] = useState(false)
@@ -87,10 +85,7 @@ export default function TotalTransactionsDetailsModal({
         params.append('endDate', endDate)
       }
       
-      // Determine API endpoint based on type
-      const apiEndpoint = type === 'withdraw' 
-        ? '/api/myr-auto-approval-withdraw/total-transactions-details'
-        : '/api/myr-auto-approval-monitor/total-transactions-details'
+      const apiEndpoint = '/api/myr-auto-approval-monitor/total-transactions-details'
       
       // ✅ Get user's allowed brands for Squad Lead filtering
       const allowedBrands = getAllowedBrandsFromStorage()
@@ -127,15 +122,12 @@ export default function TotalTransactionsDetailsModal({
   const handleExport = async () => {
     try {
       setExporting(true)
-      const typeLabel = type === 'withdraw' ? 'Approval' : 'Type'
+      const typeLabel = 'Type'
       const headers = ['Date Time', typeLabel, 'Brand', 'Unique Code', 'User Name', 'Amount', 'Operator', 'Process Time', 'Processing Time (s)']
       const allRows: string[] = []
       allRows.push(headers.join(','))
 
-      // Determine API endpoint based on type
-      const apiEndpoint = type === 'withdraw' 
-        ? '/api/myr-auto-approval-withdraw/total-transactions-details'
-        : '/api/myr-auto-approval-monitor/total-transactions-details'
+      const apiEndpoint = '/api/myr-auto-approval-monitor/total-transactions-details'
 
       // Fetch all pages in batches of 1000 rows
       const exportLimit = 1000
@@ -169,7 +161,7 @@ export default function TotalTransactionsDetailsModal({
         if (!rows.length) break
         rows.forEach(t => {
           const dateTime = t.time ? `${t.date} ${t.time}` : t.date
-          const typeOrApproval = type === 'withdraw' ? (t.approval || 'N/A') : (t.type || 'N/A')
+          const typeOrApproval = t.type || 'N/A'
           allRows.push([
             dateTime,
             typeOrApproval,
@@ -189,7 +181,7 @@ export default function TotalTransactionsDetailsModal({
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      const transactionType = type === 'withdraw' ? 'withdraw' : 'deposit'
+      const transactionType = 'deposit'
       a.download = `total-${transactionType}-transactions-${line}-${year}-${month}-ALL-${new Date().toISOString().split('T')[0]}.csv`
       document.body.appendChild(a)
       a.click()
@@ -316,7 +308,7 @@ export default function TotalTransactionsDetailsModal({
                         Date Time
                       </th>
                       <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, border: '1px solid #4b5563', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap', borderBottom: '2px solid #4b5563' }}>
-                        {type === 'withdraw' ? 'Approval' : 'Type'}
+                        Type
                       </th>
                       <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, border: '1px solid #4b5563', backgroundColor: '#374151', color: 'white', whiteSpace: 'nowrap', borderBottom: '2px solid #4b5563' }}>
                         Brand
@@ -348,7 +340,7 @@ export default function TotalTransactionsDetailsModal({
                           {transaction.time ? `${transaction.date} ${transaction.time}` : transaction.date}
                         </td>
                         <td style={{ padding: '10px 14px', border: '1px solid #e0e0e0', color: '#374151', whiteSpace: 'nowrap', fontSize: '14px' }}>
-                          {type === 'withdraw' ? transaction.approval : transaction.type}
+                          {transaction.type}
                         </td>
                         <td style={{ padding: '10px 14px', border: '1px solid #e0e0e0', color: '#374151', whiteSpace: 'nowrap', fontSize: '14px' }}>
                           {transaction.line}
