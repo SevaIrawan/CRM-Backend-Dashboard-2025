@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
+/**
+ * Per-user force logout flags were previously stored in public.system_flags.
+ * That table is no longer used — GET always returns no server flag; POST does not persist.
+ */
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
@@ -10,22 +14,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, error: 'User ID is required' }, { status: 400 })
     }
 
-    // Read from system_flags for specific user
-    const flagKey = `force_logout_user_${userId}`
-    const { data, error } = await supabase
-      .from('system_flags')
-      .select('value, updated_at')
-      .eq('key', flagKey)
-      .maybeSingle()
-
-    if (error) {
-      console.error('❌ [ForceLogoutUser GET] DB error:', error)
-      return NextResponse.json({ success: false, error: 'DB error' }, { status: 500 })
-    }
-
-    const forceLogoutAt = data?.value ? Number(data.value) : 0
-    return NextResponse.json({ success: true, forceLogoutAt })
-  } catch (error: any) {
+    return NextResponse.json({ success: true, forceLogoutAt: 0 })
+  } catch (error: unknown) {
     console.error('❌ [ForceLogoutUser GET] Exception:', error)
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
   }
@@ -50,7 +40,6 @@ export async function POST(request: Request) {
       )
     }
 
-    // Verify admin user
     const { data: adminUser, error: adminError } = await supabase
       .from('users')
       .select('role')
@@ -65,25 +54,21 @@ export async function POST(request: Request) {
     }
 
     const forceLogoutAt = Number(timestamp) || Date.now()
-    const flagKey = `force_logout_user_${userId}`
-    
-    // Upsert into system_flags for specific user
-    const { error: upsertError } = await supabase
-      .from('system_flags')
-      .upsert({ key: flagKey, value: String(forceLogoutAt) }, { onConflict: 'key' })
-
-    if (upsertError) {
-      console.error('❌ [ForceLogoutUser POST] Upsert error:', upsertError)
-      return NextResponse.json({ success: false, error: 'DB upsert error' }, { status: 500 })
-    }
-
-    console.log('🔐 Force logout user requested by admin:', adminId, 'for user:', userId, 'at', forceLogoutAt)
+    console.log(
+      '🔐 [ForceLogoutUser POST] Acknowledged (no server persistence):',
+      adminId,
+      'for user:',
+      userId,
+      'at',
+      forceLogoutAt
+    )
 
     return NextResponse.json({
       success: true,
-      message: 'Force logout flag set successfully for user',
+      message: 'Acknowledged; server-side force logout flags are disabled',
       forceLogoutAt,
-      userId
+      userId,
+      persisted: false
     })
   } catch (error) {
     console.error('❌ Error in force-logout-user API:', error)
@@ -93,4 +78,3 @@ export async function POST(request: Request) {
     )
   }
 }
-

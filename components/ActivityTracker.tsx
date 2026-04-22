@@ -112,52 +112,11 @@ export default function ActivityTracker({ children }: ActivityTrackerProps) {
         }
 
         const loginAt = Number(session?.loginAt || 0)
-        const userId = session?.id
 
-        // 1) Check per-user logout flag (specific user logout)
-        let userSpecificFlag = 0
-        if (userId) {
-          try {
-            const userRes = await fetch(`/api/admin/force-logout-user?userId=${userId}`, { 
-              cache: 'no-store',
-              method: 'GET'
-            })
-            if (userRes.ok) {
-              const userJson = await userRes.json()
-              userSpecificFlag = Number(userJson?.forceLogoutAt || 0)
-              if (userSpecificFlag > 0) {
-                console.log('🔍 [ActivityTracker] User-specific logout flag:', userSpecificFlag, 'for user:', userId)
-              }
-            }
-          } catch (userFetchError) {
-            console.error('❌ [ActivityTracker] User logout fetch error:', userFetchError)
-          }
-        }
-
-        // 2) Check global logout flag (logout all except admin)
-        let serverFlag = 0
-        try {
-          const res = await fetch('/api/admin/force-logout-all', { 
-            cache: 'no-store',
-            method: 'GET'
-          })
-          if (res.ok) {
-            const json = await res.json()
-            serverFlag = Number(json?.forceLogoutAt || 0)
-            if (serverFlag > 0) {
-              console.log('🔍 [ActivityTracker] Global logout flag:', serverFlag)
-            }
-          }
-        } catch (fetchError) {
-          console.error('❌ [ActivityTracker] Global logout fetch error:', fetchError)
-        }
-
-        // 3) Check local flags (fallback)
+        // Local-only force logout (server system_flags removed)
         const localFlagStr = localStorage.getItem('nexmax_force_logout_all') || sessionStorage.getItem('nexmax_force_logout_all')
         const localFlag = localFlagStr ? Number(localFlagStr) : 0
-        
-        // Use the maximum flag (most recent logout request)
-        const flag = Math.max(userSpecificFlag, serverFlag, localFlag)
+        const flag = localFlag
         
         if (!flag) return
 

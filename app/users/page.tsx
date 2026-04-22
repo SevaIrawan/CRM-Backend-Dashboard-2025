@@ -556,8 +556,11 @@ export default function UsersPage() {
         
         if (response.ok) {
           const result = await response.json()
-          console.log('✅ [LogoutUser] Force logout flag set for user:', username, result)
-          alert(`User "${username}" has been logged out. They will need to login again.`)
+          console.log('✅ [LogoutUser] Force logout acknowledged for user:', username, result)
+          alert(
+            `User "${username}": server-side force logout is disabled (no system_flags). ` +
+              `They may stay logged in on other devices.`
+          )
         } else {
           const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
           console.error('❌ [LogoutUser] API error:', response.status, errorData)
@@ -602,8 +605,11 @@ export default function UsersPage() {
         
         if (response.ok) {
           const result = await response.json()
-          console.log('✅ [LogoutAll] Force logout flag set in database:', result)
-          alert('All non-admin users have been logged out. They will need to login again.')
+          console.log('✅ [LogoutAll] Force logout acknowledged:', result)
+          alert(
+            'Server-side global logout is disabled (no system_flags). ' +
+              'Other users are not notified; use maintenance mode or other tools if needed.'
+          )
         } else {
           const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
           console.error('❌ [LogoutAll] API error:', response.status, errorData)
